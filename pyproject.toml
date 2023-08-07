@@ -27,12 +27,11 @@ name = "repodynamics"
 #    "trove-classifiers",
 #    # pycolorit
 #]
+requires-python = ">=3.9"
+
 
 [project.optional-dependencies]
 workflow_context = ["markitup"]
-
-
-requires-python = ">=3.9"
 
 
 #[project.scripts]
