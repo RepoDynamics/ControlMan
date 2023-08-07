@@ -18,7 +18,7 @@ namespaces = true
 #
 [project]
 version = "0.0.0.dev0"
-name = "repodynamics"
+name = "RepoDynamics"
 #dependencies = [
 #    # https://yaml.readthedocs.io/en/stable/
 #    "ruamel.yaml >= 0.17.32, < 0.18",
