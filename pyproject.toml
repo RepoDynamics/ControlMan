@@ -1,0 +1,41 @@
+
+[build-system]
+requires = ["setuptools>=61.0", "versioningit"]
+build-backend = "setuptools.build_meta"
+
+
+# ----------------------------------------- setuptools -------------------------------------------
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+
+# ----------------------------------------- Project Metadata -------------------------------------
+#
+[project]
+version = "0.0.0.dev0"
+name = "repodynamics"
+#dependencies = [
+#    # https://yaml.readthedocs.io/en/stable/
+#    "ruamel.yaml >= 0.17.32, < 0.18",
+#    # https://tomlkit.readthedocs.io/en/stable/
+#    "tomlkit >= 0.11.8, < 0.12",
+#    "trove-classifiers",
+#    # pycolorit
+#]
+
+[project.optional-dependencies]
+workflow_context = ["markitup"]
+
+
+requires-python = ">=3.9"
+
+
+#[project.scripts]
+#repodynamics-get-metadata = "pypackit.metadata:__main__"
+#repodynamics-sync-files = "pypackit.templates:__main__"
+#repodynamics-deploy = "pypackit.cd:__main__"
