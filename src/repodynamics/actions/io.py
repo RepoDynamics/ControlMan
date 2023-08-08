@@ -27,7 +27,7 @@ def input(action: Callable) -> dict:
             if isinstance(val, bool):
                 args[param] = val
             elif isinstance(val, str):
-                if val.lower() not in ("true", "false"):
+                if val.lower() not in ("true", "false", ""):
                     print(
                         "ERROR! Invalid boolean input: "
                         f"'{param_env_name}' has value '{val}' with type {type(val)}."
