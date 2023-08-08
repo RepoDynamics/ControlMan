@@ -47,16 +47,15 @@ def meta(
 
     metadata_details = html.details(
         content=md.code_block(metadata_str_pretty, "json"),
-        summary="🖥 Metadata",
+        summary=" 🖥 Metadata",
         content_indent=""
     )
-    results_list = html.ul(
+    results_list = html.ElementCollection(
         [
-            f"{force_update_emoji}  Force update (input: {force_update})",
-            f"{cache_hit_emoji}  Cache hit",
-            f"➡️ {result}",
+            html.li(f"{force_update_emoji}  Force update (input: {force_update})", content_indent=""),
+            html.li(f"{cache_hit_emoji}  Cache hit", content_indent=""),
+            html.li(f"➡️ {result}", content_indent=""),
         ],
-        content_indent="",
     )
-    log = f"<h2>Repository Metadata</h2>{results_list}<br>\n{metadata_details}"
+    log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
     return output, log

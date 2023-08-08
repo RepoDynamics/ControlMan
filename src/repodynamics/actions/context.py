@@ -16,6 +16,6 @@ def context(github: dict) -> tuple[None, str]:
         summary="🖥 Event Payload",
         content_indent=""
     )
-    return None, f"<h3>Workflow Context</h3>{context_details}\n{payload_details}"
+    return None, f"<h2>Workflow Context</h2>{context_details}\n{payload_details}"
 
 
