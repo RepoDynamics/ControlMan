@@ -28,11 +28,17 @@ def input(action: Callable) -> dict:
                 args[param] = val
             elif isinstance(val, str):
                 if val.lower() not in ("true", "false"):
-                    print(f"ERROR: Invalid boolean input: {param_env_name}")
+                    print(
+                        "ERROR! Invalid boolean input: "
+                        f"'{param_env_name}' has value '{val}' with type {type(val)}."
+                    )
                     sys.exit(1)
                 args[param] = val.lower() == "true"
             else:
-                print(f"ERROR: Invalid boolean input: {param_env_name}")
+                print(
+                    "ERROR! Invalid boolean input: "
+                    f"'{param_env_name}' has value '{val}' with type {type(val)}."
+                )
                 sys.exit(1)
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
