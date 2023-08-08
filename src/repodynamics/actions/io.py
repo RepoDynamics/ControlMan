@@ -14,7 +14,9 @@ def input(action: Callable) -> dict:
         return args
     params.pop("return", None)
     for param, typ in params.items():
-        param_env_name = f"RD__{action.__name__.upper()}__{param.upper()}"
+        action_name = action.__name__.upper().replace('_', '-')
+        param_name = param.upper().replace('_', '-')
+        param_env_name = f"RD__{action_name}__{param_name}"
         val = os.environ.get(param_env_name)
         if val is None:
             print(f"ERROR: Missing input: {param_env_name}")
@@ -22,10 +24,16 @@ def input(action: Callable) -> dict:
         if typ is str:
             args[param] = val
         elif typ is bool:
-            if val.lower() not in ("true", "false"):
+            if isinstance(val, bool):
+                args[param] = val
+            elif isinstance(val, str):
+                if val.lower() not in ("true", "false"):
+                    print(f"ERROR: Invalid boolean input: {param_env_name}")
+                    sys.exit(1)
+                args[param] = val.lower() == "true"
+            else:
                 print(f"ERROR: Invalid boolean input: {param_env_name}")
                 sys.exit(1)
-            args[param] = val.lower() == "true"
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
         else:

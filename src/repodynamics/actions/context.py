@@ -3,7 +3,7 @@ import json
 from markitup import html, md
 
 
-def workflow_context(github: dict) -> tuple[None, str]:
+def context(github: dict) -> tuple[None, str]:
     _ = github.pop("token")
     payload_data = github.pop("event")
     context_details = html.details(
