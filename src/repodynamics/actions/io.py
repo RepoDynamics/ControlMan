@@ -3,14 +3,27 @@ import os
 import sys
 import json
 
+from repodynamics.ansi import SGR
 
 def input(action: Callable) -> dict:
     """
     Parse inputs from environment variables.
     """
+    print(
+        SGR.format(
+            f"Reading inputs for action '{action.__name__}':",
+            styles=SGR.style("bold", "cyan"),
+        )
+    )
     params = get_type_hints(action)
     args = {}
     if not params:
+        print(
+            SGR.format(
+                f"\tAction requires no inputs.",
+                styles=SGR.style(text_color="green"),
+            )
+        )
         return args
     params.pop("return", None)
     for param, typ in params.items():
@@ -48,7 +61,7 @@ def input(action: Callable) -> dict:
     return args
 
 
-def output(**kwargs) -> Optional[dict]:
+def output(**kwargs) -> None:
     with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
         for name, value in kwargs.items():
             print(f"{name.replace('_', '-')}={value}", file=fh)

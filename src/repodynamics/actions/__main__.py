@@ -3,12 +3,15 @@ import importlib
 import sys
 
 from repodynamics.actions import io
+from repodynamics.ansi import SGR
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", type=str, help="Name of the action to run.")
-    action_name = parser.parse_args().action.replace('-', '_')
+    action = parser.parse_args().action
+    print()
+    action_name = action.replace('-', '_')
     try:
         action_module = importlib.import_module(f"repodynamics.actions.{action_name}")
         action = getattr(action_module, action_name)
