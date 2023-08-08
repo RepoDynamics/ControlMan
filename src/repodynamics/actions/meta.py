@@ -4,6 +4,7 @@ from markitup import html, md
 
 from repodynamics.ansi import SGR
 
+
 def meta(
     cache_hit: bool,
     force_update: str,
@@ -13,12 +14,7 @@ def meta(
 ) -> tuple[dict, str]:
 
     if force_update not in ["all", "core", "none"]:
-        print(
-           SGR.format(
-                f"ERROR! Invalid input for 'force_update': '{force_update}'.",
-                styles=SGR.style(background_color="red"),
-           )
-        )
+        print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.","error"))
         sys.exit(1)
 
     if force_update != "none" or not cache_hit:
@@ -46,10 +42,8 @@ def meta(
         result = "Updated all metadata"
     elif force_update == "core":
         result = "Updated core metadata but loaded API metadata from cache"
-    elif force_update == "none":
-        result = "Loaded all metadata from cache"
     else:
-        raise ValueError(f"Unknown force_update value: {force_update}")
+        result = "Loaded all metadata from cache"
 
     metadata_details = html.details(
         content=md.code_block(metadata_str_pretty, "json"),

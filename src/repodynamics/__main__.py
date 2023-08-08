@@ -11,4 +11,4 @@ logo = """
        ╰╯        ╰━━╯
 """
 
-print(SGR.format(logo, styles=SGR.style("bold", "blue")))
+print(SGR.format(logo, style=SGR.style("bold", "blue")))

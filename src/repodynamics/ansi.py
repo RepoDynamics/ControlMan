@@ -83,5 +83,17 @@ class SGR:
         return SGR.temp.format(style_str.removesuffix(";"))
 
     @staticmethod
-    def format(text, styles: str):
-        return f"{styles}{text}{SGR.reset}"
+    def format(text, style: str):
+        if style == "error":
+            s1 = SGR.style(text_styles="bold", text_color="b_white", background_color="red")
+            s2 = SGR.style(text_styles="bold", background_color="red")
+            return f"{s1}ERROR! {s2}{text}{SGR.reset}"
+        if style == "warning":
+            s1 = SGR.style(text_styles="bold", text_color="b_white", background_color="yellow")
+            s2 = SGR.style(text_styles="bold", background_color="yellow")
+            return f"{s1}WARNING! {s2}{text}{SGR.reset}"
+        if style == "info":
+            style = SGR.style(text_styles="bold", text_color="b_blue")
+        elif style == "success":
+            style = SGR.style(text_styles="bold", text_color="green")
+        return f"{style}{text}{SGR.reset}"
