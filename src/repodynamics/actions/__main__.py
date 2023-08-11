@@ -22,8 +22,8 @@ def main():
             io.summary(content=summary)
     except Exception as e:
         print(SGR.format("An unexpected error occurred:", "error"))
-        print(e)
-        sys.exit(1)
+        raise e
+        # sys.exit(1)
     return
 
 
