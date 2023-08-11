@@ -76,10 +76,17 @@ class URLs:
         return
 
     def distributions(self):
+        if not self.metadata.get("package"):
+            return
         url = self.metadata["url"]
         package_name = self.metadata["package"]["name"]
-        url["conda"] = f"https://anaconda.org/conda-forge/{package_name}/"
-        url["pypi"] = f"https://pypi.org/project/{package_name}/"
+        language = self.metadata["package"]["language"]
+        match language:
+            case "python":
+                url["conda"] = f"https://anaconda.org/conda-forge/{package_name}/"
+                url["pypi"] = f"https://pypi.org/project/{package_name}/"
+            case _:
+                raise NotImplementedError(f"Language '{language}' not supported.")
         return
 
 

@@ -32,9 +32,9 @@ class Metadata:
 
     def fill(self):
         project.fill(metadata=self.metadata, cache=self.cache, github_token=self.github_token)
-        urls.fill(metadata=self.metadata)
         if self.metadata.get("package"):
             package.fill(metadata=self.metadata, cache=self.cache)
+        urls.fill(metadata=self.metadata)
         return
 
     @staticmethod

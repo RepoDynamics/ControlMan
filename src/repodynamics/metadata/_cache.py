@@ -10,9 +10,9 @@ from ruamel.yaml import YAML
 class Cache:
     def __init__(self, filepath: str | Path, expiration_days: int, update: bool = False):
         self._exp_days = expiration_days
-        self.path = Path(filepath)
+        self.path = Path(filepath).with_suffix(".yaml")
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.cache = dict() if not self.path.exists() or update else YAML(typ="safe").load(self.path)
+        self.cache = dict() if (update or not self.path.exists()) else YAML(typ="safe").load(self.path)
         return
 
     def __getitem__(self, item):

@@ -56,7 +56,7 @@ class Project:
                 for person in people:
                     self.add_user(person)
 
-        for codeowner_entry in self.metadata["maintainer"]["pulls"]:
+        for codeowner_entry in self.metadata["maintainers"]["pulls"]:
             for person in codeowner_entry["reviewers"]:
                 self.add_user(person)
         return
@@ -81,7 +81,7 @@ class Project:
             repo_info["discussions"] = repo_api.discussion_categories(self.github_token)
         else:
             warnings.warn("GitHub token not provided. Cannot get discussions categories.")
-        self.cache["repo"] = repo_info
+        self.metadata["repo"] = self.cache["repo"] = repo_info
         return
 
     def keywords(self):
