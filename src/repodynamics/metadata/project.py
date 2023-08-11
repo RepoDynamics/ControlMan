@@ -1,6 +1,7 @@
 import datetime
 import re
 import warnings
+from typing import Optional
 
 import pylinks
 
@@ -104,7 +105,7 @@ class Project:
     def publications(self):
         if not self.metadata['config']['meta']['get_owner_publications']:
             return
-        orcid_id = self.metadata["user"][metadata["owner"]]["external_urls"].get("orcid")
+        orcid_id = self.metadata["user"][self.metadata["owner"]]["external_urls"].get("orcid")
         if not orcid_id:
             raise ValueError(
                 "The `get_owner_publications` config is enabled, "
