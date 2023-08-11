@@ -1,4 +1,6 @@
 import sys
+import json
+from pathlib import Path
 
 from markitup import html, md
 
@@ -8,34 +10,47 @@ from repodynamics.ansi import SGR
 def meta(
     cache_hit: bool,
     force_update: str,
-    metadata_filepath: str,
-    cache_filepath: str,
     github_token: str,
+    filepath_full: str,
+    filepath_cache: str,
+    dirpath_main: str,
+    dirpath_alt1: str,
+    dirpath_alt2: str,
+    dirpath_alt3: str,
 ) -> tuple[dict, str]:
 
     if force_update not in ["all", "core", "none"]:
-        print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.","error"))
+        print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.", "error"))
         sys.exit(1)
 
     if force_update != "none" or not cache_hit:
-        from repodynamics.metadata import Metadata
-        metadata = Metadata(
-            path_cache=cache_filepath,
+        from repodynamics.metadata import metadata
+
+        dirpath_alts = []
+        for dirpath_alt in [dirpath_alt1, dirpath_alt2, dirpath_alt3]:
+            path = Path(dirpath_alt) / "data"
+            if list(path.glob("*.yaml")):
+                dirpath_alts.append(dirpath_alt)
+
+        metadata_dict = metadata.fill(
+            dirpath_main=dirpath_main,
+            dirpath_alts=dirpath_alts,
+            filepath_cache=filepath_cache,
             update_cache=force_update == "all",
             github_token=github_token,
         )
-        metadata_str = metadata.json()
-        metadata_str_pretty = metadata.json(indent=4)
-        metadata.json(write_to_file=True, output_filepath=metadata_filepath)
+        with open(filepath_full, "w") as f:
+            json.dump(metadata_dict, f)
     else:
-        import json
-        with open(metadata_filepath) as f:
+        with open(filepath_full) as f:
             metadata_dict = json.load(f)
-        metadata_str = json.dumps(metadata_dict)
-        metadata_str_pretty = json.dumps(metadata_dict, indent=4)
+    metadata_str = json.dumps(metadata_dict)
+    metadata_str_pretty = json.dumps(metadata_dict, indent=4)
 
+    # Set output
     output = {"json": metadata_str}
 
+    # Generate summary
     force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
     cache_hit_emoji = "✅" if cache_hit else "❌"
     if not cache_hit or force_update == "all":
@@ -47,14 +62,14 @@ def meta(
 
     metadata_details = html.details(
         content=md.code_block(metadata_str_pretty, "json"),
-        summary=" 🖥 Metadata",
+        summary=" 🖥  Metadata",
         content_indent=""
     )
     results_list = html.ElementCollection(
         [
             html.li(f"{force_update_emoji}  Force update (input: {force_update})", content_indent=""),
             html.li(f"{cache_hit_emoji}  Cache hit", content_indent=""),
-            html.li(f"➡️ {result}", content_indent=""),
+            html.li(f"➡️  {result}", content_indent=""),
         ],
     )
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"

@@ -5,6 +5,7 @@ References
 - https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters
 """
 
+
 class SGR:
     temp = "\033[{}m"
     reset = temp.format(0)
@@ -42,9 +43,35 @@ class SGR:
     @staticmethod
     def style(
         text_styles: int | str | list[int | str] = None,
-        text_color: int | str = None,
-        background_color: int | str = None
+        text_color: int | str | tuple = None,
+        background_color: int | str | tuple = None
     ):
+
+        def add_color(color: int | str | tuple, bg: bool = False):
+            int_range = (
+                list(range(40, 48)) + list(range(100, 108)) if bg else
+                list(range(30, 38)) + list(range(90, 98))
+            )
+            int_offset = 10 if bg else 0
+            rgb_code = 48 if bg else 38
+            if isinstance(color, int):
+                if color not in int_range:
+                    raise ValueError(f"Invalid color code: {color}")
+                return f"{color};"
+            if isinstance(color, str):
+                if color not in SGR.color:
+                    raise ValueError(f"Invalid color name: {color}")
+                return f"{SGR.color[color] + int_offset};"
+            if isinstance(color, tuple):
+                if len(color) != 3:
+                    raise ValueError(f"Invalid color tuple: {color}")
+                if not all(isinstance(c, int) for c in color):
+                    raise ValueError(f"Invalid color tuple: {color}")
+                if not all(c in range(256) for c in color):
+                    raise ValueError(f"Invalid color tuple: {color}")
+                return f"{rgb_code};2;{';'.join([str(c) for c in color])};"
+            raise TypeError(f"Invalid color type: {type(color)}")
+
         style_str = ""
         if text_styles:
             if isinstance(text_styles, (str, int)):
@@ -64,25 +91,9 @@ class SGR:
                     raise TypeError(f"Invalid style type: {type(text_style)}")
                 style_str += f"{text_style_code};"
         if text_color:
-            if isinstance(text_color, int):
-                if text_color not in list(range(30, 38)) + list(range(90, 98)):
-                    raise ValueError(f"Invalid color code: {text_color}")
-            elif isinstance(text_color, str):
-                if text_color not in SGR.color:
-                    raise ValueError(f"Invalid color name: {text_color}")
-            else:
-                raise TypeError(f"Invalid color type: {type(text_color)}")
-            style_str += f"{SGR.color[text_color]};"
+            style_str += add_color(text_color, bg=False)
         if background_color:
-            if isinstance(background_color, int):
-                if background_color not in list(range(40, 48)) + list(range(100, 108)):
-                    raise ValueError(f"Invalid color code: {background_color}")
-            elif isinstance(background_color, str):
-                if background_color not in SGR.color:
-                    raise ValueError(f"Invalid color name: {background_color}")
-            else:
-                raise TypeError(f"Invalid color type: {type(background_color)}")
-            style_str += f"{SGR.color[background_color] + 10};"
+            style_str += add_color(background_color, bg=True)
         if not style_str:
             return SGR.reset
         return SGR.temp.format(style_str.removesuffix(";"))
@@ -90,13 +101,13 @@ class SGR:
     @staticmethod
     def format(text, style: str):
         if style == "error":
-            s1 = SGR.style(text_styles="bold", text_color="b_white", background_color="red")
-            s2 = SGR.style(text_styles="bold", background_color="red")
-            return f"{s1}ERROR! {s2}{text}{SGR.reset}"
+            s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(255, 0, 0))
+            s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(120, 0, 0))
+            return f"{s1}ERROR! {SGR.reset}{s2}{text}{SGR.reset}"
         if style == "warning":
-            s1 = SGR.style(text_styles="bold", text_color="b_white", background_color="yellow")
-            s2 = SGR.style(text_styles="bold", background_color="yellow")
-            return f"{s1}WARNING! {s2}{text}{SGR.reset}"
+            s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(200, 140, 0))
+            s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(150, 70, 0))
+            return f"{s1}WARNING! {SGR.reset}{s2}{text}{SGR.reset}"
         if style == "info":
             style = SGR.style(text_styles="bold", text_color="b_blue")
         elif style == "success":

@@ -15,8 +15,21 @@ class Templates:
     def __init__(self, metadata: dict, log: Optional[Literal["github"]] = None):
         self.metadata = metadata
         self.log = log
-        self._path_root = Path(self.metadata["path"]["abs"]["root"])
+        self.path_root = Path(path_root).resolve() if path_root else Path.cwd().resolve()
+        self.metadata["path"]["abs"] = self._get_absolute_paths()
+        self.metadata["path"]["abs"]["root"] = str(self.path_root)
         return
+
+    def _get_absolute_paths(self):
+        def recursive(dic, new_dic):
+            for key, val in dic.items():
+                if isinstance(val, str):
+                    new_dic[key] = str(self.path_root / val)
+                else:
+                    new_dic[key] = recursive(val, dict())
+            return new_dic
+
+        return recursive(self.metadata["path"], dict())
 
     def update(self):
         self.update_license()

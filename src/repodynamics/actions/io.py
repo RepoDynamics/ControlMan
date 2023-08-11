@@ -37,40 +37,28 @@ def input(action: Callable) -> dict:
                 args[param] = val
             elif isinstance(val, str):
                 if val.lower() not in ("true", "false", ""):
-                    print(
-                        SGR.format(
-                            (
-                                "Invalid boolean input: "
-                                f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
-                            ),
-                            "error",
-                        )
+                    error_msg = (
+                        "Invalid boolean input: "
+                        f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                     )
+                    print(SGR.format(error_msg, "error"))
                     sys.exit(1)
                 args[param] = val.lower() == "true"
             else:
-                print(
-                    SGR.format(
-                        (
-                            "Invalid boolean input: "
-                            f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
-                        ),
-                        "error",
-                    )
+                error_msg = (
+                    "Invalid boolean input: "
+                    f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                 )
+                print(SGR.format(error_msg, "error"))
                 sys.exit(1)
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
         else:
-            print(
-                SGR.format(
-                    (
-                        "Unknown input type: "
-                        f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
-                    ),
-                    "error",
-                )
+            error_msg = (
+                "Unknown input type: "
+                f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
             )
+            print(SGR.format(error_msg, "error"))
             sys.exit(1)
     return args
 
