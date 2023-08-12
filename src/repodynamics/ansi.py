@@ -117,6 +117,6 @@ class SGR:
             case "success":
                 style = SGR.style(text_styles="bold", text_color="green")
             case "heading":
-                style = SGR.style(text_styles="bold", background_color=_db.action_color[action_name])
+                style = SGR.style(text_styles="bold", text_color="black", background_color=_db.action_color[action_name])
                 return f"{style} {text}  {SGR.reset}"
         return f"{style}{text}{SGR.reset}"
