@@ -76,8 +76,8 @@ def meta(
     return output, log
 
 
-def files(repository: str, ref: str, path: str, path_dl: str, is_main: bool = False):
-    fullpath = Path(repository) / ref / path / "data"
+def files(repo: str, ref: str, path: str, path_dl: str, is_main: bool = False):
+    fullpath = Path(repo) / ref / path / "data"
     meta_path = Path(path_dl) / path / "data"
     metadata_paths = list(meta_path.glob("*.yaml"))
     if not metadata_paths:
