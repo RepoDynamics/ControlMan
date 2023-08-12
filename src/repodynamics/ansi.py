@@ -5,6 +5,9 @@ References
 - https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters
 """
 
+from typing import Optional
+from repodynamics.actions import _db
+
 
 class SGR:
     temp = "\033[{}m"
@@ -99,17 +102,21 @@ class SGR:
         return SGR.temp.format(style_str.removesuffix(";"))
 
     @staticmethod
-    def format(text, style: str):
-        if style == "error":
-            s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(255, 0, 0))
-            s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(120, 0, 0))
-            return f"{s1}ERROR! {SGR.reset}{s2}{text}{SGR.reset}"
-        if style == "warning":
-            s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(200, 140, 0))
-            s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(150, 70, 0))
-            return f"{s1}WARNING! {SGR.reset}{s2}{text}{SGR.reset}"
-        if style == "info":
-            style = SGR.style(text_styles="bold", text_color="b_blue")
-        elif style == "success":
-            style = SGR.style(text_styles="bold", text_color="green")
+    def format(text, style: str, action_name: Optional[str] = None):
+        match style:
+            case "error":
+                s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(255, 0, 0))
+                s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(120, 0, 0))
+                return f"{s1}ERROR!{SGR.reset}{s2} {text} {SGR.reset}"
+            case "warning":
+                s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(200, 140, 0))
+                s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(150, 70, 0))
+                return f"{s1}WARNING! {SGR.reset}{s2}{text} {SGR.reset}"
+            case "info":
+                style = SGR.style(text_styles="bold", text_color="b_blue")
+            case "success":
+                style = SGR.style(text_styles="bold", text_color="green")
+            case "heading":
+                style = SGR.style(text_styles="bold", background_color=_db.action_color[action_name])
+                return f"{style} {text}  {SGR.reset}"
         return f"{style}{text}{SGR.reset}"

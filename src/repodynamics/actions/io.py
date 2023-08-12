@@ -2,35 +2,31 @@ from typing import Callable, get_type_hints
 import os
 import sys
 import json
+import inspect
 
 from repodynamics.ansi import SGR
 
 
-def input(action: Callable) -> dict:
+def input(module_name: str, function: Callable) -> dict:
     """
     Parse inputs from environment variables.
     """
-    print(
-        SGR.format(
-            f"Reading inputs for action '{action.__name__}':",
-            style=SGR.style("bold", "b_blue"),
-        )
-    )
-    params = get_type_hints(action)
+    print(SGR.format(f"Reading inputs for `{module_name}.{function.__name__}`:", style="info"))
+    params = get_type_hints(function)
+    default_args = _default_args(function)
     args = {}
     if not params:
         print(SGR.format(f"Action requires no inputs.", "success"))
         return args
     params.pop("return", None)
     for param, typ in params.items():
-        action_name = action.__name__.upper().replace('_', '-')
-        param_name = param.upper()
-        param_env_name = f"RD__{action_name}__{param_name}"
+        param_env_name = f"RD_{module_name.upper()}_{function.__name__.upper()}__{param.upper()}"
         val = os.environ.get(param_env_name)
         if val is None:
-            print(SGR.format(f"Missing input: {param_env_name}", "error"))
-            sys.exit(1)
-        if typ is str:
+            if param not in default_args:
+                print(SGR.format(f"Missing input: {param_env_name}", "error"))
+                sys.exit(1)
+        elif typ is str:
             args[param] = val
         elif typ is bool:
             if isinstance(val, bool):
@@ -60,6 +56,7 @@ def input(action: Callable) -> dict:
             )
             print(SGR.format(error_msg, "error"))
             sys.exit(1)
+        print(SGR.format(f"  {param.upper()}: {'☑️' if val is None else '✅'}", style="success"))
     return args
 
 
@@ -69,12 +66,20 @@ def output(**kwargs) -> None:
         for name, value in kwargs.items():
             output_name = name.replace('_', '-')
             print(f"{output_name}={value}", file=fh)
-            print(SGR.format(f"  {output_name}", style="success"), f"= {value}")
+            print(SGR.format(f"   {output_name}", style="success"), f"= {value}")
     return
 
 
 def summary(content: str) -> None:
-    print(SGR.format("Writing summary", style="info"))
+    print(SGR.format("Writing job summary ...", style="info"))
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as fh:
         print(content, file=fh)
     return
+
+
+def _default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }

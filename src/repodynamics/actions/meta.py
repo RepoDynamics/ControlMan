@@ -74,3 +74,73 @@ def meta(
     )
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
     return output, log
+
+
+def files(repository: str, ref: str, path: str, path_dl: str, is_main: bool = False):
+    fullpath = Path(repository) / ref / path / "data"
+    meta_path = Path(path_dl) / path / "data"
+    metadata_paths = list(meta_path.glob("*.yaml"))
+    if not metadata_paths:
+        print(SGR.format(f"No metadata files found in '{fullpath}'.", "attention"))
+    else:
+        print(SGR.format(f"Following metadata files were downloaded from {fullpath}:", "success"))
+        for path_file in metadata_paths:
+            print(SGR.format(f"  {path_file.name}", "success"))
+    if not is_main:
+        return
+    path_extension = Path(path_dl) / path / "extensions.json"
+    if not path_extension.exists():
+        if not metadata_paths:
+            error_msg = (
+                f"Neither metadata files nor extensions file found in the current repository at '{fullpath}'. "
+                f"The repository must contain a 'data' subdirectory in the provided path '{path}', "
+                "with metadata files stored in '.yaml' files, and/or an 'extensions.json' file "
+                f"in the '{path}' directory."
+            )
+            print(SGR.format(error_msg, "error"))
+            sys.exit(1)
+        msg = f"No 'extensions.json' file found in '{path}'; the next step will be skipped."
+        print(SGR.format(msg, "attention"))
+        extensions = {"alt_1": {"repo": ""}, "alt_2": {"repo": ""}, "alt_3": {"repo": ""}}
+    else:
+        print(SGR.format(f"  extensions.json", "success"))
+        print(SGR.format(f"Reading 'extensions.json':", "info"))
+        try:
+            with open(path_extension) as f:
+                extensions = json.load(f)
+        except json.JSONDecodeError as e:
+            print(SGR.format(f"There was a problem reading 'extensions.json': {e}", "error"))
+            sys.exit(1)
+        if not isinstance(extensions, dict) or len(extensions) == 0:
+            print(SGR.format(f"Invalid 'extensions.json': {extensions}", "error"))
+            sys.exit(1)
+        for key, val in extensions.items():
+            if key not in ("alt_1", "alt_2", "alt_3"):
+                print(SGR.format(f"Invalid root key in 'extensions.json': '{key}'", "error"))
+                sys.exit(1)
+            if not isinstance(val, dict):
+                print(SGR.format(f"Invalid value for '{key}' in 'extensions.json': '{val}'", "error"))
+                sys.exit(1)
+            print(SGR.format(f"  {key}:", "success"))
+            if "repo" not in val:
+                print(SGR.format(f"Missing key in 'extensions.json': '{key}.repo'", "error"))
+                sys.exit(1)
+            for subkey, subval in val.items():
+                if subkey not in ("repo", "ref", "path"):
+                    print(SGR.format(f"Invalid key in 'extensions.json': '{key}.{subkey}'", "error"))
+                    sys.exit(1)
+                if not isinstance(subval, str):
+                    print(SGR.format(f"Invalid value for '{key}.{subkey}' in 'extensions.json': '{subval}'", "error"))
+                    sys.exit(1)
+                if subkey in ("repo", "path") and subval == "":
+                    print(SGR.format(f"Empty value for '{key}.{subkey}' in 'extensions.json'.", "error"))
+                    sys.exit(1)
+                print(SGR.format(f"    {subkey}: {subval}", "success"))
+            if "path" not in val:
+                extensions[key]["path"] = "meta"
+                print(SGR.format(f"    path: meta (set to default)", "attention"))
+
+    print(SGR.format(f"4. Checkout Extension Repositories", "heading", "meta"))
+    if not path_extension.exists():
+        print(SGR.format(f"No 'extensions.json' was found; skipping.", "success"))
+    return {"ext": json.dumps(extensions)}, None

@@ -17,25 +17,25 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev11"
+version = "0.0.0.dev12"
 name = "RepoDynamics"
-#dependencies = [
+dependencies = [
+    "markitup",
 #    # https://yaml.readthedocs.io/en/stable/
 #    "ruamel.yaml >= 0.17.32, < 0.18",
 #    # https://tomlkit.readthedocs.io/en/stable/
 #    "tomlkit >= 0.11.8, < 0.12",
 #    "trove-classifiers",
 #    # pycolorit
-#]
+]
 requires-python = ">=3.9"
-
 
 [project.optional-dependencies]
 context = ["markitup"]
-meta-summary = ["markitup"]
-meta = ["markitup", "pylinks", "trove-classifiers", "ruamel.yaml >= 0.17.32, < 0.18"]
+meta = ["pylinks", "trove-classifiers", "ruamel.yaml >= 0.17.32, < 0.18"]
 
-#[project.scripts]
+[project.scripts]
+rd-print = "repodynamics.actions._print:main"
 #repodynamics-get-metadata = "pypackit.metadata:__main__"
 #repodynamics-sync-files = "pypackit.templates:__main__"
 #repodynamics-deploy = "pypackit.cd:__main__"
