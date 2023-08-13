@@ -107,7 +107,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
         return True
 
     if alt_num != 0:
-        extension = extensions[alt_num - 1]
+        extension = extensions[f"alt{alt_num - 1}"]
         repo = extension["repo"]
         ref = extension["ref"]
         path = extension["path"]
