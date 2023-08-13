@@ -52,7 +52,7 @@ def input(module_name: str, function: Callable) -> dict:
                 sys.exit(1)
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
-        elif type is int:
+        elif typ is int:
             try:
                 args[param] = int(val)
             except ValueError:

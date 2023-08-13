@@ -10,7 +10,7 @@ import ruamel.yaml
 
 
 class Templates:
-    def __init__(self, metadata: dict, log: Optional[Literal["github"]] = None):
+    def __init__(self, metadata: dict, path_root: str | Path, extensions: dict, log: Optional[Literal["github"]] = None):
         self.metadata = metadata
         self.log = log
         self.path_root = Path(path_root).resolve() if path_root else Path.cwd().resolve()
@@ -218,3 +218,5 @@ class Templates:
         pass
 
 
+def sync():
+    return
