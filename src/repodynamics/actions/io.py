@@ -73,12 +73,15 @@ def input(module_name: str, function: Callable) -> dict:
 
 
 def output(kwargs: dict, env: bool = False) -> None:
+
     def format_value(val):
         if isinstance(val, str):
             return val
-        if isinstance(val, (dict, list, tuple, bool)):
+        if isinstance(val, (dict, list, tuple, bool, int)):
             return json.dumps(val)
-        raise ValueError(f"Invalid output value: {val} with type {type(val)}.")
+        print(SGR.format(f"Invalid output value: {val} with type {type(val)}.", "error"))
+        sys.exit(1)
+
     msg = f"Setting {'environment variables' if env else 'step outputs'}:"
     print(SGR.format(msg, style="info"))
     with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
