@@ -14,7 +14,7 @@ def meta(
     force_update: str,
     github_token: str,
     extensions: dict,
-) -> tuple[dict, str]:
+) -> tuple[dict, None, str]:
 
     if force_update not in ["all", "core", "none"]:
         print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.", "error"))
@@ -88,7 +88,7 @@ def meta(
         ],
     )
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
-    return output, log
+    return output, None, log
 
 
 def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, extensions: dict = None):
