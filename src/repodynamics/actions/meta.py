@@ -9,7 +9,7 @@ from repodynamics.ansi import SGR
 
 
 def meta(
-    mode: Literal["read", "sync", "diff"],
+    mode: str,
     cache_hit: bool,
     force_update: str,
     github_token: str,
