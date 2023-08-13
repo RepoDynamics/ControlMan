@@ -20,8 +20,11 @@ def input(module_name: str, function: Callable) -> dict:
         return args
     params.pop("return", None)
     for param, typ in params.items():
-        param_env_name = f"RD_{module_name.upper()}_{function.__name__.upper()}__{param.upper()}"
+        param_env_name = f"RD_{module_name.upper()}__{param.upper()}"
         val = os.environ.get(param_env_name)
+        if val is None:
+            param_env_name = f"RD_{module_name.upper()}_{function.__name__.upper()}__{param.upper()}"
+            val = os.environ.get(param_env_name)
         if val is None:
             if param not in default_args:
                 print(SGR.format(f"Missing input: {param_env_name}", "error"))

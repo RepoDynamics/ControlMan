@@ -1,6 +1,7 @@
 import sys
 import json
 from pathlib import Path
+from typing import Literal
 
 from markitup import html, md
 
@@ -8,45 +9,63 @@ from repodynamics.ansi import SGR
 
 
 def meta(
+    mode: Literal["read", "sync", "diff"],
     cache_hit: bool,
     force_update: str,
     github_token: str,
-    filepath_full: str,
-    filepath_cache: str,
-    dirpath_main: str,
-    dirpath_alt1: str,
-    dirpath_alt2: str,
-    dirpath_alt3: str,
+    extensions: dict,
 ) -> tuple[dict, str]:
 
     if force_update not in ["all", "core", "none"]:
         print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.", "error"))
+        sys.exit(1)
+    if mode not in ["read", "sync", "diff"]:
+        print(SGR.format(f"Invalid input for 'mode': '{mode}'.", "error"))
         sys.exit(1)
 
     if force_update != "none" or not cache_hit:
         from repodynamics.metadata import metadata
 
         dirpath_alts = []
-        for dirpath_alt in [dirpath_alt1, dirpath_alt2, dirpath_alt3]:
-            path = Path(dirpath_alt) / "data"
-            if list(path.glob("*.yaml")):
+        for typ, data in extensions.items():
+            if typ == "main":
+                continue
+            if data["has_files"]["data"]:
+                dirpath_alt = data["path_dl"] / data["path"]
                 dirpath_alts.append(dirpath_alt)
 
         metadata_dict = metadata.fill(
-            dirpath_main=dirpath_main,
-            dirpath_alts=dirpath_alts,
-            filepath_cache=filepath_cache,
+            path_root=".",
+            paths_ext=dirpath_alts,
+            filepath_cache=".local/metadata_api_cache.yaml",
             update_cache=force_update == "all",
             github_token=github_token,
         )
-        with open(filepath_full, "w") as f:
+        with open(".local/metadata.json", "w") as f:
             json.dump(metadata_dict, f)
     else:
-        with open(filepath_full) as f:
+        with open(".local/metadata.json") as f:
             metadata_dict = json.load(f)
 
+    with open("meta/.out/metadata.json") as f:
+        metadata_in_repo = json.load(f)
+
+    metadata_changed = metadata_dict != metadata_in_repo
+
     # Set output
-    output = {"json": metadata_dict}
+    output = {"meta": metadata_dict, "diff": {"metadata": metadata_changed}}
+
+    if mode == "sync" and metadata_changed:
+        with open("meta/.out/metadata.json", "w") as f:
+            json.dump(metadata_dict, f)
+        with open(".local/metadata_api_cache.yaml") as f:
+            metadata_cache = f.read()
+        with open("meta/.out/metadata_api_cache.yaml", "w") as f:
+            f.write(metadata_cache)
+
+    # if mode != "read":
+    #     from repodynamics.sync import sync
+
 
     # Generate summary
     force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
@@ -109,10 +128,12 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
 
     if alt_num != 0:
         extensions[f"alt{alt_num}"]["has_files"] = has_files
-        env_vars["RD_META_FILES__EXTENSIONS"] = extensions
+        env_vars["RD_META__EXTENSIONS"] = extensions
         return None, env_vars, None
 
-    outputs = {f"alt{i+1}": {"repo": "", "hash_pattern": ".local/meta_extensions/*.yaml"} for i in range(3)}
+    outputs = {"main": {"has_files": has_files}} | {
+        f"alt{i+1}": {"repo": "", "hash_pattern": ".local/meta_extensions/*.yaml"} for i in range(3)
+    }
     path_extension = path_meta / "extensions.json"
     if not path_extension.exists():
         if not has_files['data']:
@@ -173,4 +194,5 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
     print(SGR.format(f"4. Checkout Extension Repositories", "heading", "meta"))
     if not path_extension.exists():
         print(SGR.format(f"No 'extensions.json' was found; skipping.", "success"))
+    env_vars["RD_META__EXTENSIONS"] = outputs
     return outputs, env_vars, None

@@ -11,16 +11,16 @@ from repodynamics.metadata import _cache, project, package, urls
 class Metadata:
     def __init__(
         self,
-        dirpath_main: str | Path = "./meta",
-        dirpath_alts: Optional[Sequence[str | Path]] = None,
+        path_root: str | Path = ".",
+        paths_ext: Optional[Sequence[str | Path]] = None,
         filepath_cache: Optional[str | Path] = None,
         update_cache: bool = False,
         github_token: Optional[str] = None,
     ):
         self.github_token = github_token
-        metadata = self._read(dirpath_main)
-        if dirpath_alts:
-            alts = [self._read(dirpath_alt) for dirpath_alt in dirpath_alts]
+        metadata = self._read(Path(path_root) / "meta")
+        if paths_ext:
+            alts = [self._read(dirpath_alt) for dirpath_alt in paths_ext]
             metadata = self._merge(metadata, alts)
         self.metadata = metadata
         self.cache = _cache.Cache(
@@ -87,15 +87,15 @@ class Metadata:
 
 
 def fill(
-    dirpath_main: str | Path = "./meta",
-    dirpath_alts: Optional[Sequence[str | Path]] = None,
+    path_root: str | Path = ".",
+    paths_ext: Optional[Sequence[str | Path]] = None,
     filepath_cache: Optional[str | Path] = None,
     update_cache: bool = False,
     github_token: Optional[str] = None,
 ) -> dict:
     meta = Metadata(
-        dirpath_main=dirpath_main,
-        dirpath_alts=dirpath_alts,
+        path_root=path_root,
+        paths_ext=paths_ext,
         filepath_cache=filepath_cache,
         update_cache=update_cache,
         github_token=github_token,
