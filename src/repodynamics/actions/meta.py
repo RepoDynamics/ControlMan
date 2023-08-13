@@ -107,7 +107,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
         return True
 
     if alt_num != 0:
-        extension = extensions[f"alt{alt_num - 1}"]
+        extension = extensions[f"alt{alt_num}"]
         repo = extension["repo"]
         ref = extension["ref"]
         path = extension["path"]
@@ -131,7 +131,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
         env_vars["RD_META__EXTENSIONS"] = extensions
         return None, env_vars, None
 
-    outputs = {"main": {"has_files": has_files}} | {
+    outputs = {"has_extensions": "true", "main": {"has_files": has_files}} | {
         f"alt{i+1}": {"repo": "", "hash_pattern": ".local/meta_extensions/*.yaml"} for i in range(3)
     }
     path_extension = path_meta / "extensions.json"
@@ -146,6 +146,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
             sys.exit(1)
         msg = f"No extensions definition file found at '{fullpath}/extensions.json'."
         print(SGR.format(msg, "info"))
+        outputs["has_extensions"] = "false"
     else:
         print(SGR.format(f"Reading extensions definition file at '{fullpath}/extensions.json':", "info"))
         try:
@@ -191,8 +192,5 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
                 "path_dl": f".local/meta_extensions/{extensions[idx]['repo']}"
             }
 
-    print(SGR.format(f"4. Checkout Extension Repositories", "heading", "meta"))
-    if not path_extension.exists():
-        print(SGR.format(f"No 'extensions.json' was found; skipping.", "success"))
     env_vars["RD_META__EXTENSIONS"] = outputs
     return outputs, env_vars, None
