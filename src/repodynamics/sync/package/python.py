@@ -2,20 +2,30 @@
 import datetime
 from pathlib import Path
 from typing import Literal
+import re
 
 # Non-standard libraries
-import pypackit
 import tomlkit
 import tomlkit.items
 
 
 class PyProjectTOML:
 
-    def __init__(self, metadata: dict):
-        self.path = Path(metadata['path']['abs']['root']) / 'pyproject.toml'
-        with open(self.path) as f:
+    def __init__(self, metadata: dict, path_root: str | Path, path_meta: str | Path):
+        self._meta = metadata
+        self._path_root = Path(path_root).resolve()
+        self._path_meta = Path(path_meta).resolve()
+        self._path_pyproject = Path(path_root) / "pyproject.toml"
+        if not self._path_pyproject.exists():
+            raise FileNotFoundError(f"File {self._path_pyproject} does not exist.")
+        if not self._path_pyproject.is_file():
+            raise ValueError(f"Path {self._path_pyproject} is not a file.")
+        if self._path_pyproject.name != "pyproject.toml":
+            raise ValueError(f"File {self._path_pyproject} is not a 'pyproject.toml' file.")
+        with open(self._path_pyproject) as f:
             self._file: tomlkit.TOMLDocument = tomlkit.load(f)
-        self.meta: dict = metadata
+            self._file_raw: str = f.read()
+
         return
 
     def update(self):
@@ -25,12 +35,12 @@ class PyProjectTOML:
         # self.update_project_maintainers()
         # self.update_project_authors()
         self.update_versioningit_onbuild()
-        with open(self.path, "w") as f:
+        with open(self._path_pyproject, "w") as f:
             f.write(tomlkit.dumps(self._file))
 
     def update_header_comment(self):
         lines = [
-            f"{self.meta['project']['name']} pyproject.toml File.",
+            f"{self._meta['project']['name']} pyproject.toml File.",
             (
                 "Automatically generated on "
                 f"{datetime.datetime.utcnow().strftime('%Y.%m.%d at %H:%M:%S UTC')} "
@@ -46,25 +56,25 @@ class PyProjectTOML:
 
     def update_project_table(self):
         data_type = {
-            "name": ("str", self.meta["package"]["name"]),
-            "description": ("str", self.meta["project"]["tagline"]),
-            "readme": ("str", self.meta["path"]["pypi_readme"]),
-            "requires-python": ("str", f">= {self.meta['package']['python_version_min']}"),
+            "name": ("str", self._meta["package"]["name"]),
+            "description": ("str", self._meta["project"]["tagline"]),
+            "readme": ("str", self._meta["path"]["pypi_readme"]),
+            "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
             "license": ("inline_table", {"file": "LICENSE"}),
             # "authors": ("array_of_inline_tables", ),
             # "maintainers": ("array_of_inline_tables", ),
-            "keywords": ("array", self.meta["project"]["keywords"]),
-            "classifiers": ("array", self.meta["project"]["trove_classifiers"]),
+            "keywords": ("array", self._meta["project"]["keywords"]),
+            "classifiers": ("array", self._meta["project"]["trove_classifiers"]),
             "urls": (
                 "table",
                 {
-                    "Homepage": self.meta['url']['website']['home'],
-                    "Download": self.meta['url']['github']['releases']['home'],
-                    "News": self.meta['url']['website']['news'],
-                    "Documentation": self.meta['url']['website']['home'],
-                    "Bug Tracker": self.meta['url']['github']['issues']['home'],
+                    "Homepage": self._meta['url']['website']['home'],
+                    "Download": self._meta['url']['github']['releases']['home'],
+                    "News": self._meta['url']['website']['news'],
+                    "Documentation": self._meta['url']['website']['home'],
+                    "Bug Tracker": self._meta['url']['github']['issues']['home'],
                     # "Sponsor": "",
-                    "Source": self.meta['url']['github']['home'],
+                    "Source": self._meta['url']['github']['home'],
                 },
             ),
             # "scripts": "table",
@@ -73,8 +83,8 @@ class PyProjectTOML:
             "dependencies": (
                 "array",
                 (
-                    [dep["pip_spec"] for dep in self.meta["package"]["dependencies"]]
-                    if self.meta["package"]["dependencies"]
+                    [dep["pip_spec"] for dep in self._meta["package"]["dependencies"]]
+                    if self._meta["package"]["dependencies"]
                     else None
                 ),
             ),
@@ -83,11 +93,11 @@ class PyProjectTOML:
                 (
                     {
                         group_name: [dep["pip_spec"] for dep in deps]
-                        for group_name, deps in self.meta["package"][
+                        for group_name, deps in self._meta["package"][
                             "optional_dependencies"
                         ].items()
                     }
-                    if self.meta["package"]["optional_dependencies"]
+                    if self._meta["package"]["optional_dependencies"]
                     else None
                 ),
             ),
@@ -121,7 +131,7 @@ class PyProjectTOML:
 
     def _update_project_authors_maintainers(self, role: Literal["authors", "maintainers"]):
         people = tomlkit.array().multiline(True)
-        for person in self.meta["project"][role]:
+        for person in self._meta["project"][role]:
             person_dict = dict(name=person["name"])
             if person.get("email"):
                 person_dict["email"] = person["email"]
@@ -157,15 +167,56 @@ class PyProjectTOML:
         https://packaging.python.org/en/latest/specifications/declaring-project-metadata/#urls
         """
         urls = tomlkit.inline_table()
-        for url_key, url_val in self.meta["url"].items():
+        for url_key, url_val in self._meta["url"].items():
             urls[url_key] = url_val
         self._file["project"]["urls"] = urls
         return
 
     def update_versioningit_onbuild(self):
         tab = self._file["tool"]["versioningit"]["onbuild"]
-        tab["source-file"] = f"src/{self.meta['package']['name']}/__init__.py"
-        tab["build-file"] = f"{self.meta['package']['name']}/__init__.py"
+        tab["source-file"] = f"src/{self._meta['package']['name']}/__init__.py"
+        tab["build-file"] = f"{self._meta['package']['name']}/__init__.py"
         return
 
+    def update_package_init_docstring(self):
+            filename = self.metadata["project"]["license"]['id'].lower().rstrip("+")
+            with open(
+                    Path(self.metadata["path"]["abs"]["meta"]["template"]["license"])
+                    / f"{filename}_notice.txt"
+            ) as f:
+                text = f.read()
+            copyright_notice = text.format(metadata=self.metadata)
+            docstring = f"""{self.metadata['project']['name']}
+
+    {self.metadata['project']['tagline']}
+
+    {self.metadata['project']['description']}
+
+    {copyright_notice}"""
+            path_src = self._path_root / "src"
+            path_package = path_src / self.metadata["package"]["name"]
+            if not path_package.exists():
+                package_dirs = [
+                    sub
+                    for sub in [sub for sub in path_src.iterdir() if sub.is_dir()]
+                    if "__init__.py" in [subsub.name for subsub in sub.iterdir()]
+                ]
+                if len(package_dirs) > 1:
+                    raise ValueError(f"More than one package directory found in '{path_src}'.")
+                package_dirs[0].rename(path_package)
+            path_init = path_package / "__init__.py"
+            with open(path_init) as f:
+                text = f.read()
+            docstring_pattern = r"(\"\"\")(.*?)(\"\"\")"
+            match = re.search(docstring_pattern, text, re.DOTALL)
+            if match:
+                # Replace the existing docstring with the new one
+                new_text = re.sub(docstring_pattern, rf"\1{docstring}\3", text, flags=re.DOTALL)
+            else:
+                # If no docstring found, add the new docstring at the beginning of the file
+                new_text = f'"""\n{docstring}\n"""\n{text}'
+            # Write the modified content back to the file
+            with open(path_init, "w") as file:
+                file.write(new_text)
+            return
 

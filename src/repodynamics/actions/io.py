@@ -49,6 +49,16 @@ def input(module_name: str, function: Callable) -> dict:
                 sys.exit(1)
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
+        elif type is int:
+            try:
+                args[param] = int(val)
+            except ValueError:
+                error_msg = (
+                    "Invalid integer input: "
+                    f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
+                )
+                print(SGR.format(error_msg, "error"))
+                sys.exit(1)
         else:
             error_msg = (
                 "Unknown input type: "
@@ -56,17 +66,28 @@ def input(module_name: str, function: Callable) -> dict:
             )
             print(SGR.format(error_msg, "error"))
             sys.exit(1)
-        print(SGR.format(f"  {param.upper()}: {'☑️' if val is None else '✅'}", style="success"))
+        emoji = "❎" if val is None else "✅"
+        extra = f" (default: {default_args[param]})" if val is None else ""
+        print(SGR.format(f"  {emoji} {param.upper()}{extra}", style="success"))
     return args
 
 
-def output(**kwargs) -> None:
-    print(SGR.format("Writing outputs:", style="info"))
-    with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+def output(kwargs: dict, env: bool = False) -> None:
+    def format_value(val):
+        if isinstance(val, str):
+            return val
+        if isinstance(val, (dict, list, tuple, bool)):
+            return json.dumps(val)
+        raise ValueError(f"Invalid output value: {val} with type {type(val)}.")
+    msg = f"Setting {'environment variables' if env else 'step outputs'}:"
+    print(SGR.format(msg, style="info"))
+    with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
         for name, value in kwargs.items():
-            output_name = name.replace('_', '-')
-            print(f"{output_name}={value}", file=fh)
-            print(SGR.format(f"   {output_name}", style="success"), f"= {value}")
+            if not env:
+                name = name.replace('_', '-')
+            value_formatted = format_value(value)
+            print(f"{name}={value_formatted}", file=fh)
+            print(SGR.format(f"   {name}", style="success"), f"= {value_formatted}")
     return
 
 

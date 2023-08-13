@@ -1,6 +1,7 @@
 import argparse
 
-from . import pyproject, readme, templates
+from . import readme
+from repodynamics.sync.package import pyproject
 
 
 def update_readme(self):

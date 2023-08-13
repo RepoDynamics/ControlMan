@@ -17,14 +17,16 @@ def main():
         action.append(action[0])
     action = [arg.replace('-', '_') for arg in action]
     module_name, function_name = action
-    print(SGR.format(f"Executing `repodynamics.actions.{module_name}.{function_name}` ...", "info"))
+    print(SGR.format(f"Executing repodynamics.actions.{module_name}.{function_name}", "info"))
     try:
         action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
         action = getattr(action_module, function_name)
         inputs = io.input(module_name=module_name, function=action)
-        outputs, summary = action(**inputs)
+        outputs, env_vars, summary = action(**inputs)
         if outputs:
-            io.output(**outputs)
+            io.output(outputs)
+        if env_vars:
+            io.output(env_vars, env=True)
         if summary:
             io.summary(content=summary)
     except Exception as e:

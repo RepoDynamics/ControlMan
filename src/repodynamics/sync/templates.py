@@ -2,13 +2,11 @@
 import re
 from pathlib import Path
 from typing import Literal, Optional
-import argparse
 import sys
 import os
 
 # Non-standard libraries
 import ruamel.yaml
-from pypackit import metadata
 
 
 class Templates:
@@ -136,47 +134,7 @@ class Templates:
             f.write(text.format(metadata=self.metadata))
         return
 
-    def update_package_init_docstring(self):
-        filename = self.metadata["project"]["license"]['id'].lower().rstrip("+")
-        with open(
-            Path(self.metadata["path"]["abs"]["meta"]["template"]["license"])
-            / f"{filename}_notice.txt"
-        ) as f:
-            text = f.read()
-        copyright_notice = text.format(metadata=self.metadata)
-        docstring = f"""{self.metadata['project']['name']}
 
-{self.metadata['project']['tagline']}
-
-{self.metadata['project']['description']}
-
-{copyright_notice}"""
-        path_src = self._path_root / "src"
-        path_package = path_src / self.metadata["package"]["name"]
-        if not path_package.exists():
-            package_dirs = [
-                sub
-                for sub in [sub for sub in path_src.iterdir() if sub.is_dir()]
-                if "__init__.py" in [subsub.name for subsub in sub.iterdir()]
-            ]
-            if len(package_dirs) > 1:
-                raise ValueError(f"More than one package directory found in '{path_src}'.")
-            package_dirs[0].rename(path_package)
-        path_init = path_package / "__init__.py"
-        with open(path_init) as f:
-            text = f.read()
-        docstring_pattern = r"(\"\"\")(.*?)(\"\"\")"
-        match = re.search(docstring_pattern, text, re.DOTALL)
-        if match:
-            # Replace the existing docstring with the new one
-            new_text = re.sub(docstring_pattern, rf"\1{docstring}\3", text, flags=re.DOTALL)
-        else:
-            # If no docstring found, add the new docstring at the beginning of the file
-            new_text = f'"""\n{docstring}\n"""\n{text}'
-        # Write the modified content back to the file
-        with open(path_init, "w") as file:
-            file.write(new_text)
-        return
 
     def update_codeowners(self):
         """
