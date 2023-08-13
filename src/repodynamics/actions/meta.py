@@ -28,7 +28,7 @@ def meta(
 
         dirpath_alts = []
         for typ, data in extensions.items():
-            if typ == "main":
+            if typ.startswith("alt"):
                 continue
             if data["has_files"]["data"]:
                 dirpath_alt = data["path_dl"] / data["path"]
