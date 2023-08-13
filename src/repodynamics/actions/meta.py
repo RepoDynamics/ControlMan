@@ -28,9 +28,7 @@ def meta(
 
         dirpath_alts = []
         for typ, data in extensions.items():
-            if typ.startswith("alt"):
-                continue
-            if data["has_files"]["data"]:
+            if typ.startswith("alt") and data.get("has_files") and data['has_files']['data']:
                 dirpath_alt = data["path_dl"] / data["path"]
                 dirpath_alts.append(dirpath_alt)
 
@@ -131,7 +129,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
         env_vars["RD_META__EXTENSIONS"] = extensions
         return None, env_vars, None
 
-    outputs = {"has_extensions": "true", "main": {"has_files": has_files}} | {
+    outputs = {"has_extensions": True, "main": {"has_files": has_files}} | {
         f"alt{i+1}": {"repo": "", "hash_pattern": ".local/meta_extensions/*.yaml"} for i in range(3)
     }
     path_extension = path_meta / "extensions.json"
@@ -146,7 +144,7 @@ def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, e
             sys.exit(1)
         msg = f"No extensions definition file found at '{fullpath}/extensions.json'."
         print(SGR.format(msg, "info"))
-        outputs["has_extensions"] = "false"
+        outputs["has_extensions"] = False
     else:
         print(SGR.format(f"Reading extensions definition file at '{fullpath}/extensions.json':", "info"))
         try:
