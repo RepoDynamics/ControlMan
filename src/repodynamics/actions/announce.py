@@ -16,7 +16,7 @@ class Announcement:
             self.current_announcement = f.read()
         self.current_announcement_code_block = md.code_block(self.current_announcement, "html")
         self.new_announcement_code_block = md.code_block(self.announcement, "html")
-        self.output = {"commit_message": ""}
+        self.env_var = {"commit_message": ""}
         self.summary = html.ElementCollection()
         return
 
@@ -47,7 +47,7 @@ class Announcement:
                     md.code_block(last_commit_details),
                 ]
             )
-            return self.output, None, str(self.summary)
+            return None, self.env_var, str(self.summary)
 
         last_commit_epoch_time = int(
             subprocess.run(
@@ -64,7 +64,7 @@ class Announcement:
         elapsed_days = elapsed_seconds / (24 * 60 * 60)
         remaining_days = self.retention_days - elapsed_days
         if elapsed_seconds > retention_seconds:
-            self.output["commit_message"] = (
+            self.env_var["commit_message"] = (
                 "website(announcement): expire\n\n"
                 f"Expired announcement:\n{self.current_announcement}\n\n"
                 f"Retention period: {self.retention_days} days\n"
@@ -91,14 +91,14 @@ class Announcement:
                 )
             ]
         )
-        return self.output, None, str(self.summary)
+        return None, self.env_var, str(self.summary)
 
     def update(self):
         if self.announcement == "null":
             self.announcement = ""
         with open(self.filepath, "w") as f:
             f.write(self.announcement)
-        self.output["commit_message"] = (
+        self.env_var["commit_message"] = (
             "website(announcement): update\n\n"
             f"Updated announcement:\n{self.announcement}\n\n"
             f"{self.description}"
@@ -112,7 +112,7 @@ class Announcement:
                 self.description
             ]
         )
-        return self.output, None, str(self.summary)
+        return None, self.env_var, str(self.summary)
 
 
 def announce(
