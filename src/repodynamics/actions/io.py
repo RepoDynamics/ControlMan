@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import inspect
+import base64
 
 from repodynamics.ansi import SGR
 from repodynamics.logger import Logger
@@ -83,22 +84,25 @@ def input(module_name: str, function: Callable, logger: "Logger") -> dict:
 
 def output(kwargs: dict, logger, env: bool = False) -> None:
 
-    def format_value(val):
-        if isinstance(val, str):
-            return val
+    def format_output(name, val):
+        if isinstance(val, str) and '\n' in val:
+            with open("/dev/urandom", "rb") as f:
+                random_bytes = f.read(15)
+            random_delimeter = base64.b64encode(random_bytes).decode('utf-8')
+            return f"{name}<<{random_delimeter}\n{val}\n{random_delimeter}"
         if isinstance(val, (dict, list, tuple, bool, int)):
-            return json.dumps(val)
-        print(SGR.format(f"Invalid output value: {val} with type {type(val)}.", "error"))
-        sys.exit(1)
+            val = json.dumps(val)
+        else:
+            logger.error(f"Invalid output value: {val} with type {type(val)}.")
+        return f"{name}={val}"
 
     logger.section(f"Writing {'environment variables' if env else 'step outputs'}")
     with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
         for idx, (name, value) in enumerate(kwargs.items()):
-            if not env:
-                name = name.replace('_', '-')
+            name = name.replace('_', '-') if not env else name.upper()
             logger.debug(f"  {idx + 1}. Writing '{name}':")
-            value_formatted = format_value(value)
-            print(f"{name}={value_formatted}", file=fh)
+            value_formatted = format_output(name, value)
+            print(value_formatted, file=fh)
             logger.debug(f"   {name} = {value_formatted}")
     return
 
