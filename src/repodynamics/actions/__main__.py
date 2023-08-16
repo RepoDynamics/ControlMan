@@ -9,6 +9,7 @@ from repodynamics.ansi import SGR
 from repodynamics.logger import Logger
 from repodynamics.actions._db import action_color
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", type=str, nargs='+', help="Name of the action to run.")

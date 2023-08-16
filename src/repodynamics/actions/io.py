@@ -85,12 +85,13 @@ def input(module_name: str, function: Callable, logger: "Logger") -> dict:
 def output(kwargs: dict, logger, env: bool = False) -> None:
 
     def format_output(name, val):
-        if isinstance(val, str) and '\n' in val:
-            with open("/dev/urandom", "rb") as f:
-                random_bytes = f.read(15)
-            random_delimeter = base64.b64encode(random_bytes).decode('utf-8')
-            return f"{name}<<{random_delimeter}\n{val}\n{random_delimeter}"
-        if isinstance(val, (dict, list, tuple, bool, int)):
+        if isinstance(val, str):
+            if '\n' in val:
+                with open("/dev/urandom", "rb") as f:
+                    random_bytes = f.read(15)
+                random_delimeter = base64.b64encode(random_bytes).decode('utf-8')
+                return f"{name}<<{random_delimeter}\n{val}\n{random_delimeter}"
+        elif isinstance(val, (dict, list, tuple, bool, int)):
             val = json.dumps(val)
         else:
             logger.error(f"Invalid output value: {val} with type {type(val)}.")
