@@ -51,14 +51,29 @@ class Project:
                 raise ValueError("Author entries must have a `username` key.")
             self.add_user(author["username"])
 
+        maintainers = dict()
+
         for role in ["issues", "discussions"]:
-            for people in self.metadata["maintainers"][role].values():
+            for category, people in self.metadata["maintain"][role].items():
                 for person in people:
                     self.add_user(person)
+                    entry = maintainers.setdefault(person, {"issues": [], "pulls": [], "discussions": []})
+                    entry[role].append(category)
 
-        for codeowner_entry in self.metadata["maintainers"]["pulls"]:
+        for codeowner_entry in self.metadata["maintain"]["pulls"]:
             for person in codeowner_entry["reviewers"]:
                 self.add_user(person)
+                entry = maintainers.setdefault(person, {"issues": [], "pulls": [], "discussions": []})
+                entry["pulls"].append(codeowner_entry["pattern"])
+
+        def sort_key(val):
+            return len(val["issues"]) + len(val["pulls"]) + len(val["discussions"])
+
+        self.metadata["maintainers"] = [
+            {"username": username, "roles": roles} for username, roles in sorted(
+                maintainers.items(), key=sort_key, reverse=True
+            )
+        ]
         return
 
     def repo(self):

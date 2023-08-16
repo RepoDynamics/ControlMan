@@ -61,8 +61,8 @@ def meta(
         with open("meta/.out/metadata_api_cache.yaml", "w") as f:
             f.write(metadata_cache)
 
-    # if mode != "read":
-    #     from repodynamics.sync import sync
+    if mode != "read":
+        from repodynamics.files import sync
 
 
     # Generate summary

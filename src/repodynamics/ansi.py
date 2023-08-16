@@ -113,9 +113,11 @@ class SGR:
                 s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(150, 70, 0))
                 return f"{s1}WARNING! {SGR.reset}{s2}{text} {SGR.reset}"
             case "info":
-                style = SGR.style(text_styles="bold", text_color="b_blue")
+                style = SGR.style(text_color="b_blue")
             case "success":
-                style = SGR.style(text_styles="bold", text_color="green")
+                style = SGR.style(text_color="green")
+            case "debug":
+                style = SGR.style(text_color=(255, 255, 255))
             case "heading":
                 style = SGR.style(text_styles="bold", text_color="black", background_color=_db.action_color[action_name])
                 return f"{style} {text}  {SGR.reset}"

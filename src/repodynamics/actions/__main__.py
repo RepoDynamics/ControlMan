@@ -1,10 +1,13 @@
 import argparse
 import importlib
 import sys
+import traceback
+
 
 from repodynamics.actions import io
 from repodynamics.ansi import SGR
-
+from repodynamics.logger import Logger
+from repodynamics.actions._db import action_color
 
 def main():
     parser = argparse.ArgumentParser()
@@ -21,17 +24,18 @@ def main():
     try:
         action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
         action = getattr(action_module, function_name)
-        inputs = io.input(module_name=module_name, function=action)
-        outputs, env_vars, summary = action(**inputs)
+        logger = Logger("github", color=action_color[module_name])
+        inputs = io.input(module_name=module_name, function=action, logger=logger)
+        outputs, env_vars, summary = action(logger=logger, **inputs)
         if outputs:
-            io.output(outputs)
+            io.output(outputs, logger=logger)
         if env_vars:
-            io.output(env_vars, env=True)
+            io.output(env_vars, env=True, logger=logger)
         if summary:
-            io.summary(content=summary)
+            io.summary(content=summary, logger=logger)
     except Exception as e:
-        print(SGR.format("An unexpected error occurred:", "error"))
-        raise e
+        print(SGR.format(f"An unexpected error occurred: {e}", "error"))
+        print(traceback.format_exc())
     return
 
 

@@ -5,77 +5,84 @@ import json
 import inspect
 
 from repodynamics.ansi import SGR
+from repodynamics.logger import Logger
 
 
-def input(module_name: str, function: Callable) -> dict:
+def input(module_name: str, function: Callable, logger: "Logger") -> dict:
     """
     Parse inputs from environment variables.
     """
-    print(SGR.format(f"Reading inputs for `{module_name}.{function.__name__}`:", style="info"))
+    logger.section("Processing inputs")
+    logger.info(f"Reading inputs for {module_name}.{function.__name__}:")
     params = get_type_hints(function)
+    logger.debug(f"Action parameters: {params}")
     default_args = _default_args(function)
+    logger.debug(f"Default arguments: {default_args}\n")
     args = {}
     if not params:
-        print(SGR.format(f"Action requires no inputs.", "success"))
+        logger.success(f"Action requires no inputs.")
         return args
     params.pop("return", None)
-    for param, typ in params.items():
+    for idx, (param, typ) in enumerate(params.items()):
+        logger.debug(f"  {idx + 1}. Reading '{param}':")
         param_env_name = f"RD_{module_name.upper()}__{param.upper()}"
+        logger.debug(f"    Checking environment variable '{param_env_name}'")
         val = os.environ.get(param_env_name)
         if val is None:
+            logger.debug(f"    {param_env_name} was not set.")
             param_env_name = f"RD_{module_name.upper()}_{function.__name__.upper()}__{param.upper()}"
+            logger.debug(f"    Checking environment variable '{param_env_name}'")
             val = os.environ.get(param_env_name)
+        else:
+            logger.debug(f"    Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
         if val is None:
+            logger.debug(f"    {param_env_name} was not set.")
             if param not in default_args:
-                print(SGR.format(f"Missing input: {param_env_name}", "error"))
-                sys.exit(1)
-        elif typ is str:
+                logger.error(f"Missing input: {param_env_name}")
+            logger.debug(f"    Using default value: {default_args[param]}")
+            continue
+        else:
+            logger.debug(f"    Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
+
+        if typ is str:
             args[param] = val
         elif typ is bool:
             if isinstance(val, bool):
                 args[param] = val
             elif isinstance(val, str):
                 if val.lower() not in ("true", "false", ""):
-                    error_msg = (
+                    logger.error(
                         "Invalid boolean input: "
                         f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                     )
-                    print(SGR.format(error_msg, "error"))
-                    sys.exit(1)
                 args[param] = val.lower() == "true"
             else:
-                error_msg = (
+                logger.error(
                     "Invalid boolean input: "
                     f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                 )
-                print(SGR.format(error_msg, "error"))
-                sys.exit(1)
         elif typ is dict:
             args[param] = json.loads(val, strict=False)
         elif typ is int:
             try:
                 args[param] = int(val)
             except ValueError:
-                error_msg = (
+                logger.error(
                     "Invalid integer input: "
                     f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                 )
-                print(SGR.format(error_msg, "error"))
-                sys.exit(1)
         else:
-            error_msg = (
+            logger.error(
                 "Unknown input type: "
                 f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
             )
-            print(SGR.format(error_msg, "error"))
-            sys.exit(1)
         emoji = "❎" if val is None else "✅"
         extra = f" (default: {default_args[param]})" if val is None else ""
-        print(SGR.format(f"  {emoji} {param.upper()}{extra}", style="success"))
+        logger.debug(f"    {emoji} {param.upper()}{extra}")
     return args
 
 
-def output(kwargs: dict, env: bool = False) -> None:
+def output(kwargs: dict, logger, env: bool = False) -> None:
 
     def format_value(val):
         if isinstance(val, str):
@@ -85,22 +92,23 @@ def output(kwargs: dict, env: bool = False) -> None:
         print(SGR.format(f"Invalid output value: {val} with type {type(val)}.", "error"))
         sys.exit(1)
 
-    msg = f"Setting {'environment variables' if env else 'step outputs'}:"
-    print(SGR.format(msg, style="info"))
+    logger.section(f"Writing {'environment variables' if env else 'step outputs'}")
     with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
-        for name, value in kwargs.items():
+        for idx, (name, value) in enumerate(kwargs.items()):
             if not env:
                 name = name.replace('_', '-')
+            logger.debug(f"  {idx + 1}. Writing '{name}':")
             value_formatted = format_value(value)
             print(f"{name}={value_formatted}", file=fh)
-            print(SGR.format(f"   {name}", style="success"), f"= {value_formatted}")
+            logger.debug(f"   {name} = {value_formatted}")
     return
 
 
-def summary(content: str) -> None:
-    print(SGR.format("Writing job summary ...", style="info"))
+def summary(content: str, logger) -> None:
+    logger.section("Write job summary")
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as fh:
         print(content, file=fh)
+        logger.debug(content)
     return
 
 

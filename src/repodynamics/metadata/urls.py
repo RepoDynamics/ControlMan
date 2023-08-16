@@ -73,6 +73,7 @@ class URLs:
         url["contributing"] = f"{base}/contribute"
         url["license"] = f"{base}/license"
         url["security_measures"] = f"{base}/contribute/collaborate/maintain/security"
+        url["sponsor"] = f"{base}/contribute/collaborate/maintain/sponsor"
         return
 
     def distributions(self):
