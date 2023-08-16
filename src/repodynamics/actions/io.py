@@ -24,26 +24,25 @@ def input(module_name: str, function: Callable, logger: "Logger") -> dict:
         return args
     params.pop("return", None)
     for idx, (param, typ) in enumerate(params.items()):
-        logger.debug(f"  {idx + 1}. Reading '{param}':")
+        logger.debug(f"{idx + 1}. Reading '{param}':")
         param_env_name = f"RD_{module_name.upper()}__{param.upper()}"
-        logger.debug(f"    Checking environment variable '{param_env_name}'")
+        logger.debug(f"   Checking environment variable '{param_env_name}'")
         val = os.environ.get(param_env_name)
-        if val is None:
-            logger.debug(f"    {param_env_name} was not set.")
+        if val is not None:
+            logger.debug(f"   Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
+        else:
+            logger.debug(f"   {param_env_name} was not set.")
             param_env_name = f"RD_{module_name.upper()}_{function.__name__.upper()}__{param.upper()}"
-            logger.debug(f"    Checking environment variable '{param_env_name}'")
+            logger.debug(f"   Checking environment variable '{param_env_name}'")
             val = os.environ.get(param_env_name)
-        else:
-            logger.debug(f"    Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
-        if val is None:
-            logger.debug(f"    {param_env_name} was not set.")
-            if param not in default_args:
-                logger.error(f"Missing input: {param_env_name}")
-            logger.debug(f"    Using default value: {default_args[param]}")
-            continue
-        else:
-            logger.debug(f"    Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
-
+            if val is None:
+                logger.debug(f"   {param_env_name} was not set.")
+                if param not in default_args:
+                    logger.error(f"Missing input: {param_env_name}")
+                logger.debug(f"   Using default value: {default_args[param]}")
+                continue
+            else:
+                logger.debug(f"   Found input: '{val if 'token' not in param else '**REDACTED**'}'.")
         if typ is str:
             args[param] = val
         elif typ is bool:
