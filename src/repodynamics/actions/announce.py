@@ -119,5 +119,11 @@ def announce(
     retention_days: int = 30,
     announcement: str = "",
     description: str = "",
+    logger=None,
 ):
-    return Announcement(retention_days, announcement, description).run()
+    return Announcement(
+        retention_days=retention_days,
+        announcement=announcement,
+        description=description,
+        logger=logger
+    ).run()
