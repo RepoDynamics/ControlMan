@@ -36,6 +36,7 @@ def main():
     except Exception as e:
         print(SGR.format(f"An unexpected error occurred: {e}", "error"))
         print(traceback.format_exc())
+        sys.exit(1)
     return
 
 
