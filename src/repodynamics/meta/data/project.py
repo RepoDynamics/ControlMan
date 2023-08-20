@@ -45,7 +45,7 @@ class Project:
         return
 
     def people(self):
-        self.metadata["owner"] = self.get_user(self.metadata["owner"])
+        self.metadata["owner"] = self.get_user(self.metadata["owner"]["username"])
         for author in self.metadata["authors"]:
             if not author.get("username"):
                 raise ValueError("Author entries must have a `username` key.")
