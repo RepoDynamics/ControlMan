@@ -1,44 +1,62 @@
 # Standard libraries
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Callable
+import json
+from functools import partial
 
 # Non-standard libraries
 from ruamel.yaml import YAML
 
-from repodynamics.metadata import _cache, project, package, urls
+from repodynamics.meta.data import _cache, package, project, urls
+from repodynamics.meta.manager import MetaManager
 
 
 class Metadata:
     def __init__(
         self,
-        path_root: str | Path = ".",
-        paths_ext: Optional[Sequence[str | Path]] = None,
+        manager: MetaManager,
         filepath_cache: Optional[str | Path] = None,
         update_cache: bool = False,
         github_token: Optional[str] = None,
     ):
-        self.github_token = github_token
-        metadata = self._read(Path(path_root) / "meta")
-        if paths_ext:
-            alts = [self._read(dirpath_alt) for dirpath_alt in paths_ext]
+        self.manager = manager
+        self._github_token = github_token
+        metadata = self._read(self.manager.path_meta)
+        if self.manager.path_extensions:
+            alts = [self._read(dirpath_alt) for dirpath_alt in self.manager.path_extensions]
             metadata = self._merge(metadata, alts)
-        self.metadata = metadata
-        self.cache = _cache.Cache(
+        self._metadata = metadata
+        self._cache = _cache.Cache(
             filepath=filepath_cache,
-            expiration_days=self.metadata["config"]["meta"]["api_cache_expiration_days"],
+            expiration_days=self._metadata["config"]["meta"]["api_cache_expiration_days"],
             update=update_cache,
         )
+        self.path_out = self.manager.path_meta / ".out"
         return
 
-    def fill(self):
-        project.fill(metadata=self.metadata, cache=self.cache, github_token=self.github_token)
-        if self.metadata.get("package"):
-            package.fill(metadata=self.metadata, cache=self.cache)
-        urls.fill(metadata=self.metadata)
+    def update(self):
+        self.fill()
+        self.manager.update(
+            category="metadata",
+            name="metadata.json",
+            path=self.path_out/"metadata.json",
+            new_content=partial(json.dump, self.metadata),
+        )
+        self.manager.metadata = self.metadata
         return
 
-    @staticmethod
-    def _read(dirpath_meta: str | Path) -> dict:
+    @property
+    def metadata(self) -> dict:
+        return self._metadata
+
+    def fill(self) -> dict:
+        project.fill(metadata=self._metadata, cache=self._cache, github_token=self._github_token)
+        if self._metadata.get("package"):
+            package.fill(metadata=self._metadata, cache=self._cache)
+        urls.fill(metadata=self._metadata)
+        return self.metadata
+
+    def _read(self, dirpath_meta: str | Path) -> dict:
         """
         Read metadata from the 'meta' directory.
 
@@ -60,7 +78,7 @@ class Metadata:
         path = (Path(dirpath_meta) / "data").resolve()
         metadata_files = list(path.glob("*.yaml"))
         if not metadata_files:
-            raise ValueError(f"No metadata files found in '{path}'.")
+            self.manager.logger.attention(f"No metadata files found in '{path}'.")
         path_main = path / "main.yaml"
         if path_main in metadata_files:
             metadata_files.remove(path_main)
@@ -78,27 +96,9 @@ class Metadata:
         return metadata
 
     @staticmethod
-    def _merge(metadata: dict, alts: Sequence[dict]) -> dict:
+    def _merge(metadata: dict, alts: list[dict]) -> dict:
         base = alts.pop(-1)
         alts.insert(0, metadata)
         for alt in reversed(alts):
             base = base | alt
         return base
-
-
-def fill(
-    path_root: str | Path = ".",
-    paths_ext: Optional[Sequence[str | Path]] = None,
-    filepath_cache: Optional[str | Path] = None,
-    update_cache: bool = False,
-    github_token: Optional[str] = None,
-) -> dict:
-    meta = Metadata(
-        path_root=path_root,
-        paths_ext=paths_ext,
-        filepath_cache=filepath_cache,
-        update_cache=update_cache,
-        github_token=github_token,
-    )
-    meta.fill()
-    return meta.metadata
