@@ -115,6 +115,21 @@ class Project:
             self.metadata['keyword_slugs'].append(keyword_lower.replace(" ", "-"))
         return
 
+    def labels(self):
+        # repo labels: https://github.com/marketplace/actions/label-syncer
+        repo_labels = []
+        pr_labeler = {"version": "v1", "labels": []}
+        pr_labels = pr_labeler["labels"]
+        labels = self.metadata['maintain']['labels']
+        for label in labels:
+            repo_labels.append({attr: label[attr] for attr in ["name", "description", "color"]})
+            if label.get("pulls"):
+                pr_labels.append({"label": label["name"], **label["pulls"]})
+        self.metadata['maintain']['_label_syncer'] = repo_labels
+        self.metadata['maintain']['_pr_labeler'] = pr_labeler if pr_labels else None
+        return
+
+
     def publications(self):
         if not self.metadata['config']['meta']['get_owner_publications']:
             return

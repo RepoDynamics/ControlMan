@@ -24,6 +24,13 @@ class Logger:
             self.in_section = True
         return
 
+    def end_section(self):
+        if self.output == "github":
+            if self.in_section:
+                print("::endgroup::")
+            self.in_section = False
+        return
+
     def log(
         self,
         message: str,

@@ -56,6 +56,7 @@ def files(
     fullpath = Path(repo) / ref / path
     path_meta = Path("meta") if alt_num == 0 else Path(f".local/meta_extensions/{repo}/{path}")
     logger.section("Process extension files")
+
     has_files = {}
     for category, dirpath, pattern in [
         ("metadata files", "data", "*.yaml"),
@@ -131,8 +132,7 @@ def finalize(
     pull_number: str,
     pull_url: str,
     pull_head_sha: str,
-    changes_categories: dict,
-    changes_all: dict,
+    changes: dict,
     summary: dict = None,
     logger: Logger = None,
 ) -> tuple[dict, str]:
@@ -145,7 +145,7 @@ def finalize(
     and writes a job summary.
     """
     if detect:
-        all_groups, job_summary = _changed_files(changes_categories, changes_all)
+        all_groups, job_summary = _changed_files(changes)
     else:
         job_summary = html.ElementCollection()
 
@@ -187,7 +187,7 @@ def finalize(
     # return {"json": json.dumps(all_groups)}, str(log)
 
 
-def _changed_files(changes_categories: dict, changes_all: dict):
+def _changed_files(changes: dict):
     summary = html.ElementCollection(
         [
             html.h(2, "Changed Files"),
@@ -196,7 +196,7 @@ def _changed_files(changes_categories: dict, changes_all: dict):
 
     # Parse and clean outputs
     sep_groups = dict()
-    for item_name, val in changes_categories.items():
+    for item_name, val in changes.items():
         group_name, attr = item_name.split("_", 1)
         group = sep_groups.setdefault(group_name, dict())
         group[attr] = val
@@ -212,9 +212,7 @@ def _changed_files(changes_categories: dict, changes_all: dict):
         # group_summary_list.append(
         #     f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
         # )
-    changes_all = dict(sorted(changes_all.items()))
-    all_groups = {"all": changes_all} | sep_groups
-    file_list = "\n".join(sorted(changes_all["all_changed_and_modified_files"].split()))
+    file_list = "\n".join(sorted(sep_groups["all"]["all_changed_and_modified_files"].split()))
     # Write job summary
     summary.append(
         html.details(
@@ -229,4 +227,4 @@ def _changed_files(changes_categories: dict, changes_all: dict):
     # log = html.ElementCollection(
     #     [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
     # )
-    return all_groups, summary
+    return sep_groups, summary

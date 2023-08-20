@@ -36,6 +36,20 @@ class Metadata:
 
     def update(self):
         self.fill()
+        label_syncer = self.metadata["maintain"].pop("_label_syncer")
+        pr_labeler = self.metadata["maintain"].pop("_pr_labeler")
+        self.manager.update(
+            category="metadata",
+            name="labels.yaml",
+            path=self.path_out / "labels.yaml",
+            new_content=partial(YAML().dump, label_syncer),
+        )
+        self.manager.update(
+            category="metadata",
+            name="labels_pr.yaml",
+            path=self.path_out / "labels_pr.yaml",
+            new_content=partial(YAML().dump, pr_labeler),
+        )
         self.manager.update(
             category="metadata",
             name="metadata.json",
