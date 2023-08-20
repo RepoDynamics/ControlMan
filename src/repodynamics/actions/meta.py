@@ -12,7 +12,7 @@ def meta(
     github_token: str,
     extensions: dict,
     logger: Logger = None,
-) -> tuple[None, dict, None]:
+) -> tuple[dict, None, None]:
     from repodynamics import meta
     dirpath_alts = [
         Path(data["path_dl"]) / data["path"] for typ, data in extensions.items()
@@ -24,7 +24,7 @@ def meta(
         github_token=github_token,
         logger=logger
     )
-    return None, {"RD_META__SUMMARY": summary}, None
+    return {"summary": summary}, None, None
 
 
 def files(
