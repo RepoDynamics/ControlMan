@@ -75,7 +75,9 @@ class PackageFileSync:
             elif dtype == "array_of_inline_tables":
                 toml_val = tomlkit.array().multiline(True)
                 for table in val:
-                    toml_val.append(tomlkit.inline_table().update(table))
+                    tab = tomlkit.inline_table()
+                    tab.update(table)
+                    toml_val.append(tab)
             elif dtype == "table_of_arrays":
                 toml_val = {
                     tab_key: tomlkit.array(arr).multiline(True) for tab_key, arr in val.items()
