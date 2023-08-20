@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev33"
+version = "0.0.0.dev34"
 name = "RepoDynamics"
 dependencies = [
     "markitup",
@@ -32,7 +32,7 @@ requires-python = ">=3.9"
 
 [project.optional-dependencies]
 context = ["markitup"]
-meta = ["pylinks", "trove-classifiers", "ruamel.yaml >= 0.17.32, < 0.18"]
+meta = ["pylinks", "trove-classifiers", "ruamel.yaml >= 0.17.32, < 0.18", "tomlkit >= 0.11.8, < 0.12", "pycolorit"]
 
 [project.scripts]
 rd-print = "repodynamics.actions._print:main"
