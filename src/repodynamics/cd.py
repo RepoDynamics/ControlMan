@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 
-from . import metadata
+from repodynamics.meta import data
 
 
 class MergeLogger:
@@ -12,7 +12,7 @@ class MergeLogger:
     def __init__(self, path_event_payload_file: str, path_root: str = None):
         with open(path_event_payload_file) as f:
             self.event = json.load(f)
-        self.metadata = metadata(path_root=path_root)
+        self.metadata = data(path_root=path_root)
         return
 
     def run(self):
