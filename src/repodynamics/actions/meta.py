@@ -144,61 +144,89 @@ def finalize(
     creates a new output variable `json` that contains all the data,
     and writes a job summary.
     """
+    if detect:
+        all_groups, job_summary = _changed_files(changes_categories, changes_all)
+    else:
+        job_summary = html.ElementCollection()
+
+    job_summary.append(html.h(2, "Metadata"))
+
+    with open("meta/.out/metadata.json") as f:
+        metadata_dict = json.load(f)
+
+    job_summary.append(
+        html.details(
+            content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
+            summary=" 🖥  Metadata",
+            content_indent=""
+        )
+    )
+
+    return None, None, str(job_summary)
+
 
     # Generate summary
-    force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
-    cache_hit_emoji = "✅" if cache_hit else "❌"
-    if not cache_hit or force_update == "all":
-        result = "Updated all metadata"
-    elif force_update == "core":
-        result = "Updated core metadata but loaded API metadata from cache"
-    else:
-        result = "Loaded all metadata from cache"
+    # force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
+    # cache_hit_emoji = "✅" if cache_hit else "❌"
+    # if not cache_hit or force_update == "all":
+    #     result = "Updated all metadata"
+    # elif force_update == "core":
+    #     result = "Updated core metadata but loaded API metadata from cache"
+    # else:
+    #     result = "Loaded all metadata from cache"
 
-    metadata_details = html.details(
-        content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
-        summary=" 🖥  Metadata",
-        content_indent=""
-    )
-    results_list = html.ElementCollection(
-        [
-            html.li(f"{force_update_emoji}  Force update (input: {force_update})", content_indent=""),
-            html.li(f"{cache_hit_emoji}  Cache hit", content_indent=""),
-            html.li(f"➡️  {result}", content_indent=""),
-        ],
-    )
-    log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
+    # results_list = html.ElementCollection(
+    #     [
+    #         html.li(f"{force_update_emoji}  Force update (input: {force_update})", content_indent=""),
+    #         html.li(f"{cache_hit_emoji}  Cache hit", content_indent=""),
+    #         html.li(f"➡️  {result}", content_indent=""),
+    #     ],
+    # )
+    # log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
 
-
-    return {"json": json.dumps(all_groups)}, str(log)
+    # return {"json": json.dumps(all_groups)}, str(log)
 
 
 def _changed_files(changes_categories: dict, changes_all: dict):
+    summary = html.ElementCollection(
+        [
+            html.h(2, "Changed Files"),
+        ]
+    )
+
     # Parse and clean outputs
     sep_groups = dict()
     for item_name, val in changes_categories.items():
         group_name, attr = item_name.split("_", 1)
         group = sep_groups.setdefault(group_name, dict())
         group[attr] = val
-    group_summary_list = []
     for group_name, group_attrs in sep_groups.items():
         sep_groups[group_name] = dict(sorted(group_attrs.items()))
-        group_summary_list.append(
-            f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
-        )
+        if group_attrs["any_modified"] == "true":
+            summary.append(
+                html.details(
+                    content=md.code_block(json.dumps(sep_groups[group_name], indent=4), "json"),
+                    summary=group_name,
+                )
+            )
+        # group_summary_list.append(
+        #     f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
+        # )
     changes_all = dict(sorted(changes_all.items()))
     all_groups = {"all": changes_all} | sep_groups
     file_list = "\n".join(sorted(changes_all["all_changed_and_modified_files"].split()))
     # Write job summary
-    changed_files = html.details(
-        content=md.code_block(file_list, "bash"),
-        summary="🖥 Changed Files",
+    summary.append(
+        html.details(
+            content=md.code_block(file_list, "bash"),
+            summary="🖥 Changed Files",
+        )
     )
-    details = html.details(
-        content=md.code_block(json.dumps(all_groups, indent=4), "json"),
-        summary="🖥 Details",
-    )
-    log = html.ElementCollection(
-        [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
-    )
-    return all_groups, log
+    # details = html.details(
+    #     content=md.code_block(json.dumps(all_groups, indent=4), "json"),
+    #     summary="🖥 Details",
+    # )
+    # log = html.ElementCollection(
+    #     [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
+    # )
+    return all_groups, summary
