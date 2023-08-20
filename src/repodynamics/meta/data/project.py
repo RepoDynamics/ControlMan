@@ -45,24 +45,22 @@ class Project:
         return
 
     def people(self):
-        self.add_user(self.metadata["owner"])
+        self.metadata["owner"] = self.get_user(self.metadata["owner"])
         for author in self.metadata["authors"]:
             if not author.get("username"):
                 raise ValueError("Author entries must have a `username` key.")
-            self.add_user(author["username"])
+            author |= self.get_user(author["username"])
 
         maintainers = dict()
 
         for role in ["issues", "discussions"]:
             for category, people in self.metadata["maintain"][role].items():
                 for person in people:
-                    self.add_user(person)
                     entry = maintainers.setdefault(person, {"issues": [], "pulls": [], "discussions": []})
                     entry[role].append(category)
 
         for codeowner_entry in self.metadata["maintain"]["pulls"]:
             for person in codeowner_entry["reviewers"]:
-                self.add_user(person)
                 entry = maintainers.setdefault(person, {"issues": [], "pulls": [], "discussions": []})
                 entry["pulls"].append(codeowner_entry["pattern"])
 
@@ -70,7 +68,7 @@ class Project:
             return len(val[1]["issues"]) + len(val[1]["pulls"]) + len(val[1]["discussions"])
 
         self.metadata["maintainers"] = [
-            {"username": username, "roles": roles} for username, roles in sorted(
+            {**self.get_user(username), "roles": roles} for username, roles in sorted(
                 maintainers.items(), key=sort_key, reverse=True
             )
         ]
@@ -120,7 +118,7 @@ class Project:
     def publications(self):
         if not self.metadata['config']['meta']['get_owner_publications']:
             return
-        orcid_id = self.metadata["user"][self.metadata["owner"]]["external_urls"].get("orcid")
+        orcid_id = self.metadata["owner"]["url"].get("orcid")
         if not orcid_id:
             raise ValueError(
                 "The `get_owner_publications` config is enabled, "
@@ -142,24 +140,23 @@ class Project:
         )
         return
 
-    def add_user(self, username: str) -> None:
-        users = self.metadata.setdefault("user", dict())
-        if users.get(username):
-            return
+    def get_user(self, username: str) -> dict:
         user_info = self.cache[f"user__{username}"]
         if user_info:
-            users[username] = user_info
-            return
+            return user_info
+        output = {"username": username}
         user = pylinks.api.github.user(username=username)
         user_info = user.info
         # Get website and social accounts
-        user_info["external_urls"] = {"website": user_info["blog"]}
+        for key in ['name', 'company', 'location', 'email', 'bio', 'id', 'node_id', 'avatar_url']:
+            output[key] = user_info[key]
+        output["url"] = {"website": user_info["blog"], "github": user_info["html_url"]}
         social_accounts = user.social_accounts
         for account in social_accounts:
             if account["provider"] == "twitter":
-                user_info["external_urls"]["twitter"] = account["url"]
+                output["url"]["twitter"] = account["url"]
             elif account["provider"] == "linkedin":
-                user_info["external_urls"]["linkedin"] = account["url"]
+                output["url"]["linkedin"] = account["url"]
             else:
                 for url, key in [
                     (r"orcid\.org", "orcid"),
@@ -169,14 +166,13 @@ class Project:
                         r"(?:https?://)?(?:www\.)?({}/[\w\-]+)".format(url)
                     ).fullmatch(account["url"])
                     if match:
-                        user_info["external_urls"][key] = f"https://{match.group(1)}"
+                        output["url"][key] = f"https://{match.group(1)}"
                         break
                 else:
-                    other_urls = user_info["external_urls"].setdefault("others", list())
+                    other_urls = output["url"].setdefault("others", list())
                     other_urls.append(account["url"])
         self.cache[f"user__{username}"] = user_info
-        users[username] = user_info
-        return
+        return user_info
 
 
 def fill(metadata: dict, cache: Cache, github_token: Optional[str] = None):

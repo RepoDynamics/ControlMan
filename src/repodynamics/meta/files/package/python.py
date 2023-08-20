@@ -99,9 +99,8 @@ class PackageFileSync:
         """
         people = []
         for person in self._meta[role]:
-            username = person["username"]
-            user = {"name": self._meta["user"][username]["name"]}
-            email = self._meta["user"][username]["email"]
+            user = {"name": person["name"]}
+            email = person.get("email")
             if email:
                 user["email"] = email
             people.append(user)

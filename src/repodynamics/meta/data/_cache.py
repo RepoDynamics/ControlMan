@@ -31,11 +31,11 @@ class Cache:
         return item["data"]
 
     def __setitem__(self, key, value):
+        self.cache[key] = {
+            "timestamp": self._now,
+            "data": value,
+        }
         if self.update:
-            self.cache[key] = {
-                "timestamp": self._now,
-                "data": value,
-            }
             with open(self.path, "w") as f:
                 YAML(typ="safe").dump(self.cache, f)
         return
