@@ -58,10 +58,10 @@ class URLs:
         base = self.metadata['website']['custom_base_url']
         if base:
             url['base'] = base
-        elif self.metadata['repo']['name'] == f"{self.metadata['owner']}.github.io":
-            base = url['base'] = f"https://{self.metadata['owner']}.github.io"
+        elif self.metadata['repo']['name'] == f"{self.metadata['owner']['username']}.github.io":
+            base = url['base'] = f"https://{self.metadata['owner']['username']}.github.io"
         else:
-            base = url['base'] = f"https://{self.metadata['owner']}.github.io/{self.metadata['repo']['name']}"
+            base = url['base'] = f"https://{self.metadata['owner']['username']}.github.io/{self.metadata['repo']['name']}"
 
         url["home"] = base
         url["news"] = f"{base}/news"
