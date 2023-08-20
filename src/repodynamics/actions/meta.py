@@ -5,65 +5,145 @@ from typing import Literal
 
 from markitup import html, md
 
-from repodynamics.ansi import SGR
+from repodynamics.logger import Logger
 
 
 def meta(
-    mode: str,
-    cache_hit: bool,
-    force_update: str,
     github_token: str,
     extensions: dict,
-) -> tuple[dict, None, str]:
+    logger: Logger = None,
+) -> tuple[None, dict, None]:
+    from repodynamics import meta
+    dirpath_alts = [
+        data["path_dl"] / data["path"] for typ, data in extensions.items()
+        if typ.startswith("alt") and data.get("has_files")
+    ]
+    summary = meta.update(
+        path_root=".",
+        path_extensions=dirpath_alts,
+        github_token=github_token,
+        logger=logger
+    )
+    return None, {"RD_META__SUMMARY": summary}, None
 
-    if force_update not in ["all", "core", "none"]:
-        print(SGR.format(f"Invalid input for 'force_update': '{force_update}'.", "error"))
-        sys.exit(1)
-    if mode not in ["read", "sync", "diff"]:
-        print(SGR.format(f"Invalid input for 'mode': '{mode}'.", "error"))
-        sys.exit(1)
 
-    if force_update != "none" or not cache_hit:
-        from repodynamics.metadata import metadata
+def files(
+    repo: str = "",
+    ref: str = "",
+    path: str = "meta",
+    alt_num: int = 0,
+    extensions: dict = None,
+    logger: Logger = None
+):
 
-        dirpath_alts = []
-        for typ, data in extensions.items():
-            if typ.startswith("alt") and data.get("has_files") and data['has_files']['data']:
-                dirpath_alt = data["path_dl"] / data["path"]
-                dirpath_alts.append(dirpath_alt)
+    def report_files(category: str, dirpath: str, pattern: str):
+        filepaths = list((path_meta / dirpath).glob(pattern))
+        sympath = f"'{fullpath}/{dirpath}'"
+        if not filepaths:
+            logger.info(f"No {category} found in {sympath}.")
+            return False
+        logger.info(f"Following {category} were downloaded from {sympath}:")
+        for path_file in filepaths:
+            logger.debug(f"  ✅ {path_file.name}")
+        return True
 
-        metadata_dict = metadata.fill(
-            path_root=".",
-            paths_ext=dirpath_alts,
-            filepath_cache=".local/metadata_api_cache.yaml",
-            update_cache=force_update == "all",
-            github_token=github_token,
-        )
-        with open(".local/metadata.json", "w") as f:
-            json.dump(metadata_dict, f)
+    if alt_num != 0:
+        extension = extensions[f"alt{alt_num}"]
+        repo = extension["repo"]
+        ref = extension["ref"]
+        path = extension["path"]
+
+    fullpath = Path(repo) / ref / path
+    path_meta = Path("meta") if alt_num == 0 else Path(f".local/meta_extensions/{repo}/{path}")
+
+    has_files = {}
+    for category, dirpath, pattern in [
+        ("metadata files", "data", "*.yaml"),
+        ("health file templates", "template/health_file", "*.md"),
+        ("license templates", "template/license", "*.txt"),
+        ("issue forms", "template/issue_form", "*.yaml"),
+        ("discussion forms", "template/discussion_form", "*.yaml"),
+        ("media files", "media", "**/*"),
+    ]:
+        has_files[dirpath] = report_files(category, dirpath, pattern)
+
+    env_vars = {"RD_META_FILES__ALT_NUM": alt_num + 1}
+
+    if alt_num != 0:
+        extensions[f"alt{alt_num}"]["has_files"] = has_files
+        env_vars["RD_META__EXTENSIONS"] = extensions
+        return None, env_vars, None
+
+    outputs = {"main": {"has_files": has_files}} | {f"alt{i+1}": {"repo": ""} for i in range(3)}
+    path_extension = path_meta / "extensions.json"
+    if not path_extension.exists():
+        if not has_files['data']:
+            logger.error(
+                f"Neither metadata files nor extensions file found in the current repository at '{fullpath}'. "
+                f"The repository must contain a './meta' directory with an 'extensions.json' file "
+                "and/or a 'data' subdirectory containing metadata files in '.yaml' format."
+            )
+        logger.info(f"No extensions definition file found at '{fullpath}/extensions.json'.")
     else:
-        with open(".local/metadata.json") as f:
-            metadata_dict = json.load(f)
+        logger.info(f"Reading extensions definition file at '{fullpath}/extensions.json':")
+        try:
+            with open(path_extension) as f:
+                extensions = json.load(f)
+        except json.JSONDecodeError as e:
+            logger.error(f"There was a problem reading 'extensions.json': {e}")
+        if not isinstance(extensions, list) or len(extensions) == 0:
+            logger.error(f"Invalid 'extensions.json': {extensions}")
+        if len(extensions) > 3:
+            logger.error(f"Too many extensions in 'extensions.json': {extensions}")
+        idx_emoji = {0: "1️⃣", 1: "2️⃣", 2: "3️⃣"}
+        for idx, ext in enumerate(extensions):
+            logger.success(f"  Extension {idx_emoji[idx]}:")
+            if not isinstance(ext, dict):
+                logger.error(f"Invalid element in 'extensions.json': '{ext}'")
+            if "repo" not in ext:
+                logger.error(f"Missing 'repo' key in element {idx} of 'extensions.json': {ext}.")
+            for subkey, subval in ext.items():
+                if subkey not in ("repo", "ref", "path"):
+                    logger.error(f"Invalid key in 'extensions.json': '{subkey}'")
+                if not isinstance(subval, str):
+                    logger.error(f"Invalid value for '{subkey}' in 'extensions.json': '{subval}'")
+                if subkey in ("repo", "path") and subval == "":
+                    logger.error(f"Empty value for '{subkey}' in 'extensions.json'.")
+                logger.debug(f"    ✅ {subkey}: '{subval}'")
+            if "ref" not in ext:
+                extensions[idx]["ref"] = ""
+                logger.attention(f"    ❎ ref: '' (default)", "attention")
+            if "path" not in ext:
+                extensions[idx]["path"] = "meta"
+                logger.attention(f"    ❎ path: 'meta' (default)")
+            outputs[f"alt{idx+1}"] = extensions[idx] | {
+                "path_dl": f".local/meta_extensions/{extensions[idx]['repo']}"
+            }
+    env_vars["RD_META__EXTENSIONS"] = outputs
+    return outputs, env_vars, None
 
-    with open("meta/.out/metadata.json") as f:
-        metadata_in_repo = json.load(f)
 
-    metadata_changed = metadata_dict != metadata_in_repo
+def finalize(
+    detect: bool,
+    sync: str,
+    push_changes: bool,
+    push_sha: str,
+    pull_number: str,
+    pull_url: str,
+    pull_head_sha: str,
+    changes_categories: dict,
+    changes_all: dict,
+    summary: dict,
+    logger: Logger = None,
+) -> tuple[dict, str]:
+    """
+    Parse outputs from `actions/changed-files` action.
 
-    # Set output
-    output = {"meta": metadata_dict, "diff": {"metadata": metadata_changed}}
-
-    if mode == "sync" and metadata_changed:
-        with open("meta/.out/metadata.json", "w") as f:
-            json.dump(metadata_dict, f)
-        with open(".local/metadata_api_cache.yaml") as f:
-            metadata_cache = f.read()
-        with open("meta/.out/metadata_api_cache.yaml", "w") as f:
-            f.write(metadata_cache)
-
-    if mode != "read":
-        from repodynamics.files import sync
-
+    This is used in the `repo_changed_files.yaml` workflow.
+    It parses the outputs from the `actions/changed-files` action and
+    creates a new output variable `json` that contains all the data,
+    and writes a job summary.
+    """
 
     # Generate summary
     force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
@@ -88,107 +168,37 @@ def meta(
         ],
     )
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
-    return output, None, log
 
 
-def files(repo: str = "", ref: str = "", path: str = "meta", alt_num: int = 0, extensions: dict = None):
+    return {"json": json.dumps(all_groups)}, str(log)
 
-    def report_files(category: str, dirpath: str, pattern: str):
-        filepaths = list((path_meta / dirpath).glob(pattern))
-        sympath = f"'{fullpath}/{dirpath}'"
-        if not filepaths:
-            print(SGR.format(f"No {category} found in {sympath}.", "info"))
-            return False
-        print(SGR.format(f"Following {category} were downloaded from {sympath}:", "success"))
-        for path_file in filepaths:
-            print(f"  ✅ {path_file.name}")
-        return True
 
-    if alt_num != 0:
-        extension = extensions[f"alt{alt_num}"]
-        repo = extension["repo"]
-        ref = extension["ref"]
-        path = extension["path"]
-
-    fullpath = Path(repo) / ref / path
-    path_meta = Path("meta") if alt_num == 0 else Path(f".local/meta_extensions/{repo}/{path}")
-
-    has_files = {}
-    for category, dirpath, pattern in [
-        ("metadata files", "data", "*.yaml"),
-        ("health file templates", "template/health_file", "*.md"),
-        ("license templates", "template/license", "*.txt"),
-        ("issue forms", "template/issue_form", "*.yaml"),
-    ]:
-        has_files[dirpath] = report_files(category, dirpath, pattern)
-
-    env_vars = {"RD_META_FILES__ALT_NUM": alt_num + 1}
-
-    if alt_num != 0:
-        extensions[f"alt{alt_num}"]["has_files"] = has_files
-        env_vars["RD_META__EXTENSIONS"] = extensions
-        return None, env_vars, None
-
-    outputs = {"has_extensions": True, "main": {"has_files": has_files}} | {
-        f"alt{i+1}": {"repo": "", "hash_pattern": ".local/meta_extensions/*.yaml"} for i in range(3)
-    }
-    path_extension = path_meta / "extensions.json"
-    if not path_extension.exists():
-        if not has_files['data']:
-            error_msg = (
-                f"Neither metadata files nor extensions file found in the current repository at '{fullpath}'. "
-                f"The repository must contain a './meta' directory with an 'extensions.json' file "
-                "and/or a 'data' subdirectory containing metadata files in '.yaml' format."
-            )
-            print(SGR.format(error_msg, "error"))
-            sys.exit(1)
-        msg = f"No extensions definition file found at '{fullpath}/extensions.json'."
-        print(SGR.format(msg, "info"))
-        outputs["has_extensions"] = False
-    else:
-        print(SGR.format(f"Reading extensions definition file at '{fullpath}/extensions.json':", "info"))
-        try:
-            with open(path_extension) as f:
-                extensions = json.load(f)
-        except json.JSONDecodeError as e:
-            print(SGR.format(f"There was a problem reading 'extensions.json': {e}", "error"))
-            sys.exit(1)
-        if not isinstance(extensions, list) or len(extensions) == 0:
-            print(SGR.format(f"Invalid 'extensions.json': {extensions}", "error"))
-            sys.exit(1)
-        if len(extensions) > 3:
-            print(SGR.format(f"Too many extensions in 'extensions.json': {extensions}", "error"))
-            sys.exit(1)
-        idx_emoji = {0: "1️⃣", 1: "2️⃣", 2: "3️⃣"}
-        for idx, ext in enumerate(extensions):
-            print(SGR.format(f"  Extension {idx_emoji[idx]}:", "success"))
-            if not isinstance(ext, dict):
-                print(SGR.format(f"Invalid element in 'extensions.json': '{ext}'", "error"))
-                sys.exit(1)
-            if "repo" not in ext:
-                print(SGR.format(f"Missing 'repo' key in element {idx} of 'extensions.json': {ext}.", "error"))
-                sys.exit(1)
-            for subkey, subval in ext.items():
-                if subkey not in ("repo", "ref", "path"):
-                    print(SGR.format(f"Invalid key in 'extensions.json': '{subkey}'", "error"))
-                    sys.exit(1)
-                if not isinstance(subval, str):
-                    print(SGR.format(f"Invalid value for '{subkey}' in 'extensions.json': '{subval}'", "error"))
-                    sys.exit(1)
-                if subkey in ("repo", "path") and subval == "":
-                    print(SGR.format(f"Empty value for '{subkey}' in 'extensions.json'.", "error"))
-                    sys.exit(1)
-                print(f"    ✅ {subkey}: '{subval}'")
-            if "ref" not in ext:
-                extensions[idx]["ref"] = ""
-                print(SGR.format(f"    ❎ ref: '' (default)", "attention"))
-            if "path" not in ext:
-                extensions[idx]["path"] = "meta"
-                print(SGR.format(f"    ❎ path: 'meta' (default)", "attention"))
-            outputs[f"alt{idx+1}"] = extensions[idx] | {
-                "hash_pattern": f".local/meta_extensions/{extensions[idx]['repo']}/{extensions[idx]['path']}/data/*.yaml",
-                "path_dl": f".local/meta_extensions/{extensions[idx]['repo']}"
-            }
-
-    env_vars["RD_META__EXTENSIONS"] = outputs
-    return outputs, env_vars, None
+def _changed_files(changes_categories: dict, changes_all: dict):
+    # Parse and clean outputs
+    sep_groups = dict()
+    for item_name, val in changes_categories.items():
+        group_name, attr = item_name.split("_", 1)
+        group = sep_groups.setdefault(group_name, dict())
+        group[attr] = val
+    group_summary_list = []
+    for group_name, group_attrs in sep_groups.items():
+        sep_groups[group_name] = dict(sorted(group_attrs.items()))
+        group_summary_list.append(
+            f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
+        )
+    changes_all = dict(sorted(changes_all.items()))
+    all_groups = {"all": changes_all} | sep_groups
+    file_list = "\n".join(sorted(changes_all["all_changed_and_modified_files"].split()))
+    # Write job summary
+    changed_files = html.details(
+        content=md.code_block(file_list, "bash"),
+        summary="🖥 Changed Files",
+    )
+    details = html.details(
+        content=md.code_block(json.dumps(all_groups, indent=4), "json"),
+        summary="🖥 Details",
+    )
+    log = html.ElementCollection(
+        [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
+    )
+    return all_groups, log
