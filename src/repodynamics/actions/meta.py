@@ -12,7 +12,7 @@ def meta(
     github_token: str,
     extensions: dict,
     logger: Logger = None,
-) -> tuple[dict, None, None]:
+) -> tuple[None, None, None]:
     from repodynamics import meta
     dirpath_alts = [
         Path(data["path_dl"]) / data["path"] for typ, data in extensions.items()
@@ -24,7 +24,9 @@ def meta(
         github_token=github_token,
         logger=logger
     )
-    return {"summary": summary}, None, None
+    with open(".local/repodynamics/meta/summary.json", "w") as f:
+        json.dump(summary, f)
+    return None, None, None
 
 
 def files(
@@ -54,7 +56,7 @@ def files(
         path = extension["path"]
 
     fullpath = Path(repo) / ref / path
-    path_meta = Path("meta") if alt_num == 0 else Path(f".local/meta_extensions/{repo}/{path}")
+    path_meta = Path("meta") if alt_num == 0 else Path(f".local/repodynamics/meta/extensions/{repo}/{path}")
     logger.section("Process extension files")
 
     has_files = {}
@@ -118,7 +120,7 @@ def files(
                 extensions[idx]["path"] = "meta"
                 logger.attention(f"    ❎ path: 'meta' (default)")
             outputs[f"alt{idx+1}"] = extensions[idx] | {
-                "path_dl": f".local/meta_extensions/{extensions[idx]['repo']}"
+                "path_dl": f".local/repodynamics/meta/extensions/{extensions[idx]['repo']}"
             }
     env_vars["RD_META__EXTENSIONS"] = outputs
     return outputs, env_vars, None
@@ -158,10 +160,18 @@ def finalize(
         html.details(
             content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
             summary=" 🖥  Metadata",
-            content_indent=""
         )
     )
 
+    with open(".local/repodynamics/meta/summary.json") as f:
+        summary_dict = json.load(f)
+
+    job_summary.append(
+        html.details(
+            content=md.code_block(json.dumps(summary_dict, indent=4), "json"),
+            summary=" 🖥  Summary",
+        )
+    )
     return None, None, str(job_summary)
 
 
