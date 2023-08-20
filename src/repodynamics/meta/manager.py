@@ -69,6 +69,8 @@ class MetaManager:
         if exists:
             with open(path) as f:
                 output['before'] = f.read()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
         alts_removed = 0
         if alt_paths:
             for alt_path in alt_paths:
