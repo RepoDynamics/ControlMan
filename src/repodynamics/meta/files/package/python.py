@@ -8,12 +8,12 @@ import re
 import tomlkit
 import tomlkit.items
 
-from repodynamics.files.manager import FileSyncManager
+from repodynamics.meta.manager import MetaManager
 
 
 class PackageFileSync:
 
-    def __init__(self, sync_manager: FileSyncManager):
+    def __init__(self, sync_manager: MetaManager):
         self._manager = sync_manager
         self._meta = self._manager.metadata
         self._root = self._manager.path_root
@@ -34,8 +34,13 @@ class PackageFileSync:
     def update_pyproject_toml(self):
         self.update_project_table()
         self.update_versioningit_onbuild()
-        with open(self._path_pyproject, "w") as f:
-            f.write(tomlkit.dumps(self._file))
+        self._manager.update(
+            category="package",
+            name="pyproject.toml",
+            path=self._path_pyproject,
+            new_content=tomlkit.dumps(self._file)
+        )
+        return
 
     def update_project_table(self):
         data_type = {
@@ -48,8 +53,6 @@ class PackageFileSync:
             "maintainers": ("array_of_inline_tables", self.maintainers),
             "keywords": ("array", self._meta["keywords"]),
             "classifiers": ("array", self._meta["package"]["trove_classifiers"]),
-            # For list of URL keys, see:
-            # https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62
             "urls": ("table", self.urls),
             "scripts": ("table", self.scripts),
             "gui-scripts": ("table", self.gui_scripts),
@@ -104,6 +107,8 @@ class PackageFileSync:
 
     @property
     def urls(self):
+        # For list of URL keys, see:
+        # https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62
         return {
             "Homepage": self._meta['url']['website']['base'],
             "Download": self._meta['url']['github']['releases']['home'],
@@ -204,8 +209,7 @@ class PackageFileSync:
             # If no docstring found, add the new docstring at the beginning of the file
             new_text = f'"""\n{docstring}\n"""\n{text}'
         # Write the modified content back to the file
-        with open(path_init, "w") as file:
-            file.write(new_text)
+        self._manager.update(category="package", name="__init__.py", path=path_init, new_content=new_text)
         return
 
     def update_header_comment(self):
