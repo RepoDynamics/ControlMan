@@ -61,7 +61,7 @@ class FileSync:
             )
             return
         if not isinstance(funding, dict):
-            logger.error(f"Funding must be a dictionary, but got {funding}.")
+            self._manager.logger.error(f"Funding must be a dictionary, but got {funding}.")
         funding = dict()
         for funding_platform, users in funding.items():
             if funding_platform not in [
@@ -76,11 +76,11 @@ class FileSync:
                 "tidelift",
                 "custom",
             ]:
-                logger.error(f"Funding platform '{funding_platform}' is not recognized.")
+                self._manager.logger.error(f"Funding platform '{funding_platform}' is not recognized.")
             if funding_platform in ["github", "custom"]:
                 if isinstance(users, list):
                     if len(users) > 4:
-                        logger.error("The maximum number of allowed users is 4.")
+                        self._manager.logger.error("The maximum number of allowed users is 4.")
                     flow_list = ruamel.yaml.comments.CommentedSeq()
                     flow_list.fa.set_flow_style()
                     flow_list.extend(users)
@@ -88,13 +88,13 @@ class FileSync:
                 elif isinstance(users, str):
                     funding[funding_platform] = users
                 else:
-                    self._logger.error(
+                    self._manager.logger.error(
                         f"Users of the '{funding_platform}' funding platform must be either "
                         f"a string or a list of strings, but got {users}."
                     )
             else:
                 if not isinstance(users, str):
-                    self._logger.error(
+                    self._manager.logger.error(
                         f"User of the '{funding_platform}' funding platform must be a single string, "
                         f"but got {users}."
                     )

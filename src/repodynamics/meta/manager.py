@@ -119,7 +119,7 @@ class MetaManager:
             path_template = (path / category / name).with_suffix(ext[category])
             if path_template.exists():
                 with open(path_template) as f:
-                    return f.read().format(metadata=self._metadata)
+                    return f.read().format(**self._metadata)
         raise FileNotFoundError(
             f"Template '{name}' not found in any of template sources."
         )
