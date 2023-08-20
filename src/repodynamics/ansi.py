@@ -112,6 +112,8 @@ class SGR:
                 s1 = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(200, 140, 0))
                 s2 = SGR.style(text_styles="faint", text_color=(250, 250, 250), background_color=(150, 70, 0))
                 return f"{s1}WARNING! {SGR.reset}{s2}{text} {SGR.reset}"
+            case "attention":
+                style = SGR.style(text_styles="bold", text_color=(250, 250, 250), background_color=(0, 162, 255))
             case "info":
                 style = SGR.style(text_color="b_blue")
             case "success":
