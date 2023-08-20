@@ -11,21 +11,25 @@ class Logger:
         output: Literal["console", "github"] = "console",
         color: tuple[int, int, int] = (0, 162, 255)
     ):
-        self._output = output
-        self._color = color
-        self._in_section: bool = False
+        self.output = output
+        self.color = color
+        self.in_section: bool = False
         return
 
     def section(self, title: str):
-        if self._output == "github":
-            if self._in_section:
+        if self.output == "github":
+            if self.in_section:
                 print("::endgroup::")
-            print(f"::group::{SGR.style('bold', self._color)}{title}")
-            self._in_section = True
+            print(f"::group::{SGR.style('bold', self.color)}{title}")
+            self.in_section = True
         return
 
-    def log(self, message: str, level: Literal["success", "debug", "info", "warning", "error"] = "info"):
-        if self._output in ("console", "github"):
+    def log(
+        self,
+        message: str,
+        level: Literal["success", "debug", "info", "attention", "warning", "error"] = "info"
+    ):
+        if self.output in ("console", "github"):
             print(SGR.format(message, level))
         return
 
@@ -45,4 +49,10 @@ class Logger:
         self.log(message, level="error")
         sys.exit(1)
 
+    def warning(self, message: str):
+        self.log(message, level="warning")
+        return
 
+    def attention(self, message: str):
+        self.log(message, level="attention")
+        return
