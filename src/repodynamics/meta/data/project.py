@@ -172,7 +172,7 @@ class Project:
                     other_urls = output["url"].setdefault("others", list())
                     other_urls.append(account["url"])
         self.cache[f"user__{username}"] = user_info
-        return user_info
+        return output
 
 
 def fill(metadata: dict, cache: Cache, github_token: Optional[str] = None):
