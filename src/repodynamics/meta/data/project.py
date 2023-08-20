@@ -5,8 +5,8 @@ from typing import Optional
 
 import pylinks
 
-from repodynamics.metadata import db
-from repodynamics.metadata._cache import Cache
+from repodynamics.meta import db
+from repodynamics.meta.data._cache import Cache
 
 
 class Project:
@@ -67,7 +67,7 @@ class Project:
                 entry["pulls"].append(codeowner_entry["pattern"])
 
         def sort_key(val):
-            return len(val["issues"]) + len(val["pulls"]) + len(val["discussions"])
+            return len(val[1]["issues"]) + len(val[1]["pulls"]) + len(val[1]["discussions"])
 
         self.metadata["maintainers"] = [
             {"username": username, "roles": roles} for username, roles in sorted(

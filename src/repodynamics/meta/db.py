@@ -1,5 +1,4 @@
 
-
 license = {
     "gnu_agpl_v3+": {
         "name": "GNU AGPL v3.0+",

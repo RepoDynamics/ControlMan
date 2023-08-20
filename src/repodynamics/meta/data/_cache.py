@@ -3,16 +3,22 @@
 """
 import datetime
 from pathlib import Path
+from typing import Optional
 
 from ruamel.yaml import YAML
 
 
 class Cache:
-    def __init__(self, filepath: str | Path, expiration_days: int, update: bool = False):
+    def __init__(self, filepath: str | Path, expiration_days: int = 7, update: bool = False):
         self._exp_days = expiration_days
-        self.path = Path(filepath).with_suffix(".yaml")
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.cache = dict() if (update or not self.path.exists()) else YAML(typ="safe").load(self.path)
+        if filepath:
+            self.path = Path(filepath).with_suffix(".yaml")
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.cache = dict() if (update or not self.path.exists()) else YAML(typ="safe").load(self.path)
+            self.update = True
+        else:
+            self.cache = dict()
+            self.update = False
         return
 
     def __getitem__(self, item):
@@ -25,12 +31,13 @@ class Cache:
         return item["data"]
 
     def __setitem__(self, key, value):
-        self.cache[key] = {
-            "timestamp": self._now,
-            "data": value,
-        }
-        with open(self.path, "w") as f:
-            YAML(typ="safe").dump(self.cache, f)
+        if self.update:
+            self.cache[key] = {
+                "timestamp": self._now,
+                "data": value,
+            }
+            with open(self.path, "w") as f:
+                YAML(typ="safe").dump(self.cache, f)
         return
 
     @property

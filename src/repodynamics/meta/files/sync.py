@@ -1,17 +1,18 @@
 # Standard libraries
 from pathlib import Path
 from typing import Literal, Optional, Sequence
+from functools import partial
 
 # Non-standard libraries
 import ruamel.yaml
 
-from repodynamics.files.manager import FileSyncManager
-from repodynamics.files.health_files import HealthFileSync
-from repodynamics.files import package
+from repodynamics.meta.manager import MetaManager
+from repodynamics.meta.files.health_files import HealthFileSync
+from repodynamics.meta.files import package
 
 
 class FileSync:
-    def __init__(self, manager: FileSyncManager):
+    def __init__(self, manager: MetaManager):
         self._manager = manager
         self._root = self._manager.path_root
         self._meta = self._manager.metadata
@@ -27,45 +28,17 @@ class FileSync:
         return
 
     def update_license(self):
-        license = self._meta["copyright"]["license"]
         path = self._root / "LICENSE"
-        license_exists = path.exists()
-        if license_exists:
-            with open(path) as f:
-                text_old = f.read()
-        else:
-            text_old = ""
-
-        if not license:
-            path.unlink(missing_ok=True)
-            self._manager.add_summary(
-                category="license", name="LICENSE", status="removed" if license_exists else "disabled"
-            )
-            return
-
-        license_id = license['id'].lower().removesuffix("+")
-        text_new = self._manager.template(category="license", name=license_id)
-
-        if not license_exists:
-            # File is being created
-            status = "created"
-        elif text_old == text_new:
-            # File exists and is unchanged
-            status = "unchanged"
-        else:
-            # File is being modified
-            status = "modified"
-        self._manager.add_summary(
+        license = self._meta["copyright"]["license"]
+        new_content = self._manager.template(
+            category="license", name=license['id'].lower().removesuffix("+")
+        ) if license else None
+        self._manager.update(
             category="license",
             name="LICENSE",
-            status=status,
-            before=text_old,
-            after=text_new,
+            path=path,
+            new_content=new_content
         )
-        if status != "unchanged":
-            # Write the new content to the file
-            with open(self._root / "LICENSE", "w") as f:
-                f.write(text_new)
         return
 
     def update_funding(self):
@@ -78,28 +51,17 @@ class FileSync:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
-        funding = self._meta["funding"]
         path = self._root / ".github" / "FUNDING.yml"
-        file_exists = path.exists()
-
-        if file_exists:
-            with open(path) as f:
-                text_old = f.read()
-        else:
-            text_old = ""
-
+        funding = self._meta["funding"]
         if not funding:
-            path.unlink(missing_ok=True)
-            self._manager.add_summary(
-                category="funding", name="FUNDING", status="removed" if file_exists else "disabled"
+            self._manager.update(
+                category="config",
+                name="FUNDING",
+                path=path,
             )
             return
-
         if not isinstance(funding, dict):
-            raise ValueError(
-                f"Funding must be a dictionary, but got {funding}."
-            )
-
+            logger.error(f"Funding must be a dictionary, but got {funding}.")
         funding = dict()
         for funding_platform, users in funding.items():
             if funding_platform not in [
@@ -114,11 +76,11 @@ class FileSync:
                 "tidelift",
                 "custom",
             ]:
-                raise ValueError(f"Funding platform '{funding_platform}' is not recognized.")
+                logger.error(f"Funding platform '{funding_platform}' is not recognized.")
             if funding_platform in ["github", "custom"]:
                 if isinstance(users, list):
                     if len(users) > 4:
-                        raise ValueError("The maximum number of allowed users is 4.")
+                        logger.error("The maximum number of allowed users is 4.")
                     flow_list = ruamel.yaml.comments.CommentedSeq()
                     flow_list.fa.set_flow_style()
                     flow_list.extend(users)
@@ -126,39 +88,22 @@ class FileSync:
                 elif isinstance(users, str):
                     funding[funding_platform] = users
                 else:
-                    raise ValueError(
+                    self._logger.error(
                         f"Users of the '{funding_platform}' funding platform must be either "
                         f"a string or a list of strings, but got {users}."
                     )
             else:
                 if not isinstance(users, str):
-                    raise ValueError(
+                    self._logger.error(
                         f"User of the '{funding_platform}' funding platform must be a single string, "
                         f"but got {users}."
                     )
                 funding[funding_platform] = users
-
-        with open(path, "w") as f:
-            ruamel.yaml.YAML().dump(funding, f)
-
-        with open(path) as f:
-            text_new = f.read()
-
-        if not file_exists:
-            # File is being created
-            status = "created"
-        elif text_old == text_new:
-            # File exists and is unchanged
-            status = "unchanged"
-        else:
-            # File is being modified
-            status = "modified"
-        self._manager.add_summary(
-            category="funding",
+        self._manager.update(
+            category="config",
             name="FUNDING",
-            status=status,
-            before=text_old,
-            after=text_new,
+            path=path,
+            new_content=partial(ruamel.yaml.YAML().dump, funding)
         )
         return
 
@@ -194,7 +139,7 @@ def sync(
     metadata: Optional[dict] = None,
     logger: Optional[Literal["github"]] = None
 ):
-    manager = FileSyncManager(
+    manager = MetaManager(
         path_root=path_root,
         paths_ext=paths_ext,
         metadata=metadata,

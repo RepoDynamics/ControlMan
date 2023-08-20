@@ -3,7 +3,7 @@ import re
 import pylinks
 import trove_classifiers
 
-from repodynamics.metadata import db
+from repodynamics.meta import db
 
 
 class Python:

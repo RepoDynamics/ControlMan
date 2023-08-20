@@ -1,7 +1,7 @@
 import argparse
 
 from . import readme
-from repodynamics.files.package import pyproject
+from repodynamics.meta.files.package import pyproject
 
 
 def update_readme(self):

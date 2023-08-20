@@ -1,11 +1,11 @@
 from typing import Literal
 
-from repodynamics.files.manager import FileSyncManager
+from repodynamics.meta.manager import MetaManager
 
 
 class HealthFileSync:
 
-    def __init__(self, sync_manager: "FileSyncManager"):
+    def __init__(self, sync_manager: "MetaManager"):
         self._manager = sync_manager
         self._meta = self._manager.metadata
         self._root = self._manager.path_root
@@ -21,83 +21,27 @@ class HealthFileSync:
 
     def update(self):
         for name in self._file:
-            self.update_file(name)
-        return
-
-    def update_file(
-            self,
-            name: Literal[
-                "CODE_OF_CONDUCT", "CODEOWNERS", "CONTRIBUTING", "GOVERNANCE", "SECURITY", "SUPPORT"
-            ]
-    ):
-        allowed_paths = self.allowed_paths(name)
-        target_path = self.target_path(name)
-
-        if not target_path:
-            # Health file is disabled; delete it if it exists
-            removed = False
-            for path in allowed_paths:
-                if path.exists():
-                    with open(path) as f:
-                        text_old = f.read()
-                    path.unlink()
-                    removed = True
-            self._manager.add_summary(
+            allowed_paths = self.allowed_paths(name)
+            target_path = self.target_path(name)
+            if not target_path:
+                target_path = allowed_paths.pop(0)
+                new_content = ""
+            elif target_path not in allowed_paths:
+                self._logger.error(
+                    f"The path '{target_path.relative_to(self._root)}' set in 'config.yaml' metadata file "
+                    f"is not an allowed path for {name} file. "
+                    "Allowed paths for health files are the root ('.'), docs, and .github directories."
+                )
+            else:
+                new_content = self.text(name)
+                allowed_paths.remove(target_path)
+            self._manager.update(
                 category="health_file",
                 name=name,
-                status="removed" if removed else "disabled",
-                before=text_old if removed else "",
+                path=target_path,
+                new_content=new_content,
+                alt_paths=allowed_paths,
             )
-            return
-
-        if target_path not in allowed_paths:
-            raise ValueError(
-                f"The path '{target_path.relative_to(self._root)}' set in 'config.yaml' metadata file "
-                f"is not an allowed path for {name} file. "
-                "Allowed paths for health files are the root ('.'), docs, and .github directories."
-            )
-
-        # Get the current content of the file if it exists
-        text_old = ""
-        file_exists = False
-        if target_path.exists():
-            with open(target_path) as f:
-                text_old = f.read()
-            file_exists = True
-
-        # Make sure no duplicates exist in other allowed paths
-        allowed_paths.remove(target_path)
-        for allowed_path in allowed_paths:
-            if allowed_path.exists():
-                self._manager.log(f"Removing duplicate health file at '{allowed_path.relative_to(self._root)}'.")
-                allowed_path.unlink()
-
-        # Generate the new content from template
-        text_new = self.text(name)
-
-        if not file_exists:
-            # File is being created
-            status = "created"
-        elif text_old == text_new:
-            # File exists and is unchanged
-            status = "unchanged"
-        else:
-            # File is being modified
-            status = "modified"
-
-        self._manager.add_summary(
-            category="health_file",
-            name=name,
-            status=status,
-            before=text_old,
-            after=text_new,
-        )
-
-        if status != "unchanged":
-            # Write the new content to the file
-            with open(target_path, "w") as f:
-                f.write(text_new)
-
         return
 
     def allowed_paths(self, name: str):

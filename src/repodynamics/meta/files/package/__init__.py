@@ -1,4 +1,4 @@
-from repodynamics.files.package import python
+from repodynamics.meta.files.package import python
 
 
 def sync(sync_manager):
