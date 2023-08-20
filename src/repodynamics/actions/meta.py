@@ -15,7 +15,7 @@ def meta(
 ) -> tuple[None, dict, None]:
     from repodynamics import meta
     dirpath_alts = [
-        data["path_dl"] / data["path"] for typ, data in extensions.items()
+        Path(data["path_dl"]) / data["path"] for typ, data in extensions.items()
         if typ.startswith("alt") and data.get("has_files")
     ]
     summary = meta.update(
