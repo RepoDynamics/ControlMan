@@ -22,6 +22,7 @@ class Project:
         self.people()
         self.repo()
         self.keywords()
+        self.labels()
         self.publications()
         return
 
