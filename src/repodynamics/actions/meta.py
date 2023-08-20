@@ -133,7 +133,7 @@ def finalize(
     pull_head_sha: str,
     changes_categories: dict,
     changes_all: dict,
-    summary: dict,
+    summary: dict = None,
     logger: Logger = None,
 ) -> tuple[dict, str]:
     """
