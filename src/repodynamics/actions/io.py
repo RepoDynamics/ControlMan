@@ -13,7 +13,7 @@ def input(module_name: str, function: Callable, logger: "Logger") -> dict:
     """
     Parse inputs from environment variables.
     """
-    logger.section("Processing inputs")
+    logger.section("Read inputs")
     logger.info(f"Reading inputs for {module_name}.{function.__name__}:")
     params = get_type_hints(function)
     logger.debug(f"Action parameters: {params}")
@@ -97,7 +97,7 @@ def output(kwargs: dict, logger, env: bool = False) -> None:
             logger.error(f"Invalid output value: {val} with type {type(val)}.")
         return f"{name}={val}"
 
-    logger.section(f"Writing {'environment variables' if env else 'step outputs'}")
+    logger.section(f"Write {'environment variables' if env else 'step outputs'}")
     with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
         for idx, (name, value) in enumerate(kwargs.items()):
             name = name.replace('_', '-') if not env else name.upper()

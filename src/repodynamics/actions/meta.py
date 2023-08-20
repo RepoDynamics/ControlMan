@@ -55,7 +55,7 @@ def files(
 
     fullpath = Path(repo) / ref / path
     path_meta = Path("meta") if alt_num == 0 else Path(f".local/meta_extensions/{repo}/{path}")
-
+    logger.section("Process extension files")
     has_files = {}
     for category, dirpath, pattern in [
         ("metadata files", "data", "*.yaml"),
