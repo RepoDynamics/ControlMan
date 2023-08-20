@@ -87,7 +87,7 @@ class Project:
         if repo_info:
             self.metadata["repo"] = repo_info
             return
-        repo_api = pylinks.api.github.repo(self.metadata['owner'], repo_name)
+        repo_api = pylinks.api.github.repo(self.metadata['owner']["username"], repo_name)
         repo_info = repo_api.info
         repo_info.pop("owner")
         if self.github_token:
