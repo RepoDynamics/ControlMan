@@ -18,15 +18,14 @@ def context(
 ) -> tuple[None, None, str]:
     github["token"] = "***REDACTED***"
     payload_data = github.pop("event")
-    summary = html.ElementCollection(
-        [
-            html.h(2, "Workflow Context"),
+    summary = html.ElementCollection([html.h(2, "Workflow Context")])
+    if inputs['event-payload'] == 'true':
+        summary.append(
             html.details(
                 content=md.code_block(json.dumps(dict(sorted(payload_data.items())), indent=4), "json"),
                 summary="📥 Event payload",
-            ),
-        ]
-    )
+            )
+        )
     for name, data in (
         ("github", github),
         ("env", env),
@@ -40,7 +39,7 @@ def context(
         ("needs", needs),
         ("inputs", inputs),
     ):
-        if data:
+        if data and inputs[data] == 'true':
             summary.append(
                 html.details(
                     content=md.code_block(json.dumps(dict(sorted(data.items())), indent=4), "json"),
