@@ -2,6 +2,8 @@ import json
 
 from markitup import html, md
 
+from repodynamics.logger import Logger
+
 
 def context(
     github: dict,
@@ -12,6 +14,7 @@ def context(
     strategy: dict,
     matrix: dict,
     inputs: dict,
+    logger: Logger = None,
 ) -> tuple[None, None, str]:
     github["token"] = "***REDACTED***"
     payload_data = github.pop("event")
