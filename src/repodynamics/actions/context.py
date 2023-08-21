@@ -6,14 +6,11 @@ from markitup import html, md
 def context(
     github: dict,
     env: dict,
-    vars: dict,
     job: dict,
-    jobs: dict,
     steps: dict,
     runner: dict,
     strategy: dict,
     matrix: dict,
-    needs: dict,
     inputs: dict,
 ) -> tuple[None, None, str]:
     github["token"] = "***REDACTED***"
@@ -29,15 +26,11 @@ def context(
     for name, data in (
         ("github", github),
         ("env", env),
-        ("vars", vars),
         ("job", job),
-        ("jobs", jobs),
         ("steps", steps),
         ("runner", runner),
         ("strategy", strategy),
         ("matrix", matrix),
-        ("needs", needs),
-        ("inputs", inputs),
     ):
         if data and inputs[data] == 'true':
             summary.append(
