@@ -76,7 +76,7 @@ class Project:
             warnings.warn("GitHub token not provided. Cannot get discussions categories.")
         self.metadata["repo"] = self.cache["repo"] = repo
         self.metadata["owner"] = self.get_user(repo_info["owner"]["login"])
-        self.metadata["copyright"]["year_start"] = datetime.strptime(
+        self.metadata["copyright"]["year_start"] = datetime.datetime.strptime(
             repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
         ).year
         return

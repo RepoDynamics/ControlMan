@@ -35,7 +35,7 @@ def context(
         ("strategy", strategy),
         ("matrix", matrix),
     ):
-        if data and inputs[data] == 'true':
+        if data and inputs[name] == 'true':
             summary.append(
                 html.details(
                     content=md.code_block(json.dumps(dict(sorted(data.items())), indent=4), "json"),
