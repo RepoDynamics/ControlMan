@@ -15,6 +15,7 @@ class Metadata:
     def __init__(
         self,
         manager: MetaManager,
+        repo_fullname: str,
         filepath_cache: Optional[str | Path] = None,
         update_cache: bool = False,
         github_token: Optional[str] = None,
@@ -26,6 +27,7 @@ class Metadata:
             alts = [self._read(dirpath_alt) for dirpath_alt in self.manager.path_extensions]
             metadata = self._merge(metadata, alts)
         self._metadata = metadata
+        self._metadata["repo"] = repo_fullname
         self._cache = _cache.Cache(
             filepath=filepath_cache,
             expiration_days=self._metadata["config"]["meta"]["api_cache_expiration_days"],

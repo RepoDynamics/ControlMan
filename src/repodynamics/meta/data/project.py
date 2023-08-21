@@ -18,9 +18,10 @@ class Project:
         return
 
     def fill(self):
-        self.copyright()
-        self.people()
         self.repo()
+        self.copyright()
+        self.name()
+        self.people()
         self.keywords()
         self.labels()
         self.publications()
@@ -29,14 +30,9 @@ class Project:
     def copyright(self):
         start_year = int(self.metadata["copyright"]["year_start"])
         current_year = datetime.date.today().year
-        if start_year < 1970 or start_year > current_year:
-            raise ValueError(
-                f"Project's start year must be between 1970 and {datetime.date.today().year}, "
-                f"but got {start_year}."
-            )
         year_range = f"{start_year}{'' if start_year == current_year else f'–{current_year}'}"
         self.metadata["copyright"]["year_range"] = year_range
-
+        # Set license info
         license_id = self.metadata["copyright"]["license"]["id"].lower()
         license_data = db.license.get(license_id)
         if not license_data:
@@ -45,8 +41,52 @@ class Project:
         self.metadata["copyright"]["license"]["fullname"] = license_data['fullname']
         return
 
+    def repo(self):
+        fullname = self.metadata["repo"].split("/")
+        if len(fullname) != 2:
+            raise ValueError(
+                "Repository name must be in the format `owner/repo`, "
+                f"but got {self.metadata['repo']}."
+            )
+        owner_username, repo_name = fullname
+        if not re.match(r"^[A-Za-z0-9_.-]+$", repo_name):
+            raise ValueError(
+                "Repository names can only contain alphanumeric characters, hyphens (-), underscores (_), "
+                f"and periods (.), but got {repo_name}."
+            )
+        target_repo = self.metadata["config"]["target_repo"]
+        if target_repo not in ["source", "parent", "self"]:
+            raise ValueError(
+                f"Target repository must be one of 'source', 'fork', or 'self', "
+                f"but got {target_repo}."
+            )
+        repo_info = self.cache[f"repo__{owner_username}_{repo_name}_{target_repo}"]
+        if repo_info:
+            self.metadata["repo"] = repo_info
+            return
+        repo_api = pylinks.api.github.repo(owner_username, repo_name)
+        repo_info = repo_api.info
+        if target_repo != "self" and repo_info["fork"]:
+            repo_info = repo_info[target_repo]
+            repo_api = pylinks.api.github.repo(repo_info["owner"]["login"], repo_info["name"])
+        repo = {attr: repo_info[attr] for attr in ['id', 'node_id', 'name', 'full_name', 'html_url']}
+        if self.github_token:
+            repo["discussions"] = repo_api.discussion_categories(self.github_token)
+        else:
+            warnings.warn("GitHub token not provided. Cannot get discussions categories.")
+        self.metadata["repo"] = self.cache["repo"] = repo
+        self.metadata["owner"] = self.get_user(repo_info["owner"]["login"])
+        self.metadata["copyright"]["year_start"] = datetime.strptime(
+            repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
+        ).year
+        return
+
+    def name(self):
+        if not self.metadata.get("name"):
+            self.metadata["name"] = self.metadata["repo"]["name"]
+        return
+
     def people(self):
-        self.metadata["owner"] = self.get_user(self.metadata["owner"]["username"])
         for author in self.metadata["authors"]:
             if not author.get("username"):
                 raise ValueError("Author entries must have a `username` key.")
@@ -73,29 +113,6 @@ class Project:
                 maintainers.items(), key=sort_key, reverse=True
             )
         ]
-        return
-
-    def repo(self):
-        repo_name = self.metadata["repo"]["name"]
-        if not re.match(r"^[A-Za-z0-9_.-]+$", repo_name):
-            raise ValueError(
-                "Repository names can only contain alphanumeric characters, hyphens (-), underscores (_), "
-                f"and periods (.), but got {repo_name}."
-            )
-        if not self.metadata.get("name"):
-            self.metadata["name"] = repo_name
-        repo_info = self.cache["repo"]
-        if repo_info:
-            self.metadata["repo"] = repo_info
-            return
-        repo_api = pylinks.api.github.repo(self.metadata['owner']["username"], repo_name)
-        repo_info = repo_api.info
-        repo_info.pop("owner")
-        if self.github_token:
-            repo_info["discussions"] = repo_api.discussion_categories(self.github_token)
-        else:
-            warnings.warn("GitHub token not provided. Cannot get discussions categories.")
-        self.metadata["repo"] = self.cache["repo"] = repo_info
         return
 
     def keywords(self):

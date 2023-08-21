@@ -9,6 +9,7 @@ from repodynamics.logger import Logger
 
 
 def meta(
+    repo_fullname: str,
     github_token: str,
     extensions: dict,
     logger: Logger = None,
@@ -19,6 +20,7 @@ def meta(
         if typ.startswith("alt") and data.get("has_files")
     ]
     summary = meta.update(
+        repo_fullname=repo_fullname,
         path_root=".",
         path_extensions=dirpath_alts,
         github_token=github_token,
