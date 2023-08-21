@@ -69,7 +69,7 @@ class Project:
         if target_repo != "self" and repo_info["fork"]:
             repo_info = repo_info[target_repo]
             repo_api = pylinks.api.github.repo(repo_info["owner"]["login"], repo_info["name"])
-        repo = {attr: repo_info[attr] for attr in ['id', 'node_id', 'name', 'full_name', 'html_url']}
+        repo = {attr: repo_info[attr] for attr in ['id', 'node_id', 'name', 'full_name', 'html_url', 'default_branch']}
         if self.github_token:
             repo["discussions"] = repo_api.discussion_categories(self.github_token)
         else:
