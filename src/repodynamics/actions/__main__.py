@@ -35,7 +35,7 @@ def main():
             io.summary(content=summary, logger=logger)
     except Exception as e:
         logger.debug(traceback.format_exc())
-        logger.error(f"An unexpected error occurred: {e}", "error")
+        logger.error(f"An unexpected error occurred: {e}")
     logger.end_section()
     return
 

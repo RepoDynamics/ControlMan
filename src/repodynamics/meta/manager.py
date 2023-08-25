@@ -210,7 +210,7 @@ class MetaManager:
             "unchanged": "⚪️",
             "disabled": "⚫",
         }
-        summary = f"{emoji[dic['status']]}{' ⚠️' if dic['alts_removed'] else ''}  {name}"
+        summary = f"{emoji[dic['status']]}{' ⚠️' if dic.get('alts_removed') else ''}  {name}"
         details = html.ElementCollection()
         if dic["status"] == "disabled":
             details.append("Disabled")
@@ -222,7 +222,7 @@ class MetaManager:
         else:
             details.append(f"Old path: {dic['path_before']}")
             details.append(f"New path: {dic['path']}")
-        if dic["alts_removed"]:
+        if dic.get("alts_removed"):
             details.append(html.h(4, "Removed from alternate locations:"))
             for alt in dic["alts_removed"]:
                 details.append(
