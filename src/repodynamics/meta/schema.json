@@ -729,6 +729,7 @@
                   "required": ["name", "pip_spec"],
                   "properties": {
                      "name": {"type": "string"},
+                     "usage": {"type": "string"},
                      "pip_spec": {"type": "string"},
                      "conda_spec": {"type": "string"},
                      "conda_channel": {"type": "string"},
@@ -758,6 +759,7 @@
                            "required": ["name", "pip_spec"],
                            "properties": {
                               "name": {"type": "string"},
+                              "usage": {"type": "string"},
                               "pip_spec": {"type": "string"},
                               "conda_spec": {"type": "string"},
                               "conda_channel": {"type": "string"},
