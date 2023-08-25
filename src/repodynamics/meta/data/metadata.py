@@ -47,8 +47,8 @@ class Metadata:
 
     def update(self):
         self.fill()
-        label_syncer = self.metadata["maintain"].pop("_label_syncer")
-        pr_labeler = self.metadata["maintain"].pop("_pr_labeler")
+        label_syncer = self.metadata.pop("_label_syncer")
+        pr_labeler = self.metadata.pop("_pr_labeler")
         self.manager.update(
             category="metadata",
             name="labels.yaml",
