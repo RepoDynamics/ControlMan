@@ -38,7 +38,7 @@ class Metadata:
         self._metadata["repo"] = repo_fullname
         self._cache = _cache.Cache(
             filepath=filepath_cache,
-            expiration_days=self._metadata["config"]["meta"]["api_cache_expiration_days"],
+            expiration_days=self._metadata.get("api_cache_expiration_days") or 10,
             update=update_cache,
             logger=self.logger,
         )

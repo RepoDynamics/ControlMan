@@ -480,7 +480,7 @@
          "description": "Number of days to keep API cache",
          "type": "integer",
          "minimum": 0,
-         "default": 30
+         "default": 10
       },
 
 
