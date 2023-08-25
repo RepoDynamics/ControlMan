@@ -2,6 +2,7 @@ from typing import Literal, Optional, Sequence, Callable
 from pathlib import Path
 import json
 import difflib
+from importlib_resources import files
 
 from markitup import html, md
 
@@ -32,7 +33,8 @@ class MetaManager:
             'health_file': "Health Files",
             'package': "Package Files"
         }
-        with open(Path(__file__).parent / "schema.json") as f:
+        path_schema = files('repodynamics.meta').joinpath('schema.json')
+        with open(path_schema) as f:
             self.schema = json.load(f)
         return
 
