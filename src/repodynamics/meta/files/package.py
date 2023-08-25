@@ -223,7 +223,9 @@ class PackageFileSync:
                 name=f"package directory",
                 result={
                     "status": "unchanged",
-                    "before": f"src/{self._meta['package']['name']}"
+                    "path": f"src/{self._meta['package']['name']}",
+                    "before": "",
+                    "after": ""
                 }
             )
         return
