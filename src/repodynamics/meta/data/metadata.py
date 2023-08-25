@@ -131,6 +131,6 @@ class Metadata:
         try:
             jsonschema.validate(instance=base, schema=self.manager.schema)
         except jsonschema.exceptions.ValidationError as e:
-            self.logger.error(f"Invalid metadata schema: {e.message}.")
             self.logger.debug(traceback.format_exc())
+            self.logger.error(f"Invalid metadata schema: {e.message}.")
         return base
