@@ -2,7 +2,7 @@ from typing import Literal, Optional, Sequence, Callable
 from pathlib import Path
 import json
 import difflib
-from importlib_resources import files
+from importlib.resources import files
 
 from markitup import html, md
 
