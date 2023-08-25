@@ -16,6 +16,7 @@ class FileSync:
         self._manager = manager
         self._root = self._manager.path_root
         self._meta = self._manager.metadata
+        self.logger = self._manager.logger
         return
 
     def update(self):
@@ -28,15 +29,20 @@ class FileSync:
         return
 
     def update_license(self):
-        path = self._root / "LICENSE"
-        license = self._meta["copyright"]["license"]
-        new_content = self._manager.template(
-            category="license", name=license['id'].lower().removesuffix("+")
-        ) if license else None
+        self.logger.section("Update file: LICENSE")
+        license_id = self._meta.get("license_id")
+        if license_id:
+            self.logger.debug(f"license_id: {license_id}")
+            new_content = self._manager.template(
+                category="license", name=license_id.lower().removesuffix("+")
+            )
+        else:
+            self.logger.attention("No license_id found in metadata.")
+            new_content = None
         self._manager.update(
             category="license",
             name="LICENSE",
-            path=path,
+            path=self._root / "LICENSE",
             new_content=new_content
         )
         return
@@ -51,8 +57,9 @@ class FileSync:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
+        self.logger.section("Update file: FUNDING.yml")
         path = self._root / ".github" / "FUNDING.yml"
-        funding = self._meta["funding"]
+        funding = self._meta.get("funding")
         if not funding:
             self._manager.update(
                 category="config",
@@ -60,33 +67,16 @@ class FileSync:
                 path=path,
             )
             return
-        if not isinstance(funding, dict):
-            self._manager.logger.error(f"Funding must be a dictionary, but got {funding}.")
-        funding = dict()
+        yaml_output = dict()
         for funding_platform, users in funding.items():
-            if funding_platform not in [
-                "community_bridge",
-                "github",
-                "issuehunt",
-                "ko_fi",
-                "liberapay",
-                "open_collective",
-                "otechie",
-                "patreon",
-                "tidelift",
-                "custom",
-            ]:
-                self._manager.logger.error(f"Funding platform '{funding_platform}' is not recognized.")
             if funding_platform in ["github", "custom"]:
                 if isinstance(users, list):
-                    if len(users) > 4:
-                        self._manager.logger.error("The maximum number of allowed users is 4.")
                     flow_list = ruamel.yaml.comments.CommentedSeq()
                     flow_list.fa.set_flow_style()
                     flow_list.extend(users)
-                    funding[funding_platform] = flow_list
+                    yaml_output[funding_platform] = flow_list
                 elif isinstance(users, str):
-                    funding[funding_platform] = users
+                    yaml_output[funding_platform] = users
                 else:
                     self._manager.logger.error(
                         f"Users of the '{funding_platform}' funding platform must be either "
@@ -98,12 +88,12 @@ class FileSync:
                         f"User of the '{funding_platform}' funding platform must be a single string, "
                         f"but got {users}."
                     )
-                funding[funding_platform] = users
+                yaml_output[funding_platform] = users
         self._manager.update(
             category="config",
             name="FUNDING",
             path=path,
-            new_content=partial(ruamel.yaml.YAML().dump, funding)
+            new_content=partial(ruamel.yaml.YAML().dump, yaml_output)
         )
         return
 
@@ -112,7 +102,7 @@ class FileSync:
         return
 
     def update_package(self):
-        package.sync(self._manager)
+        package.PackageFileSync(sync_manager=self._manager).update()
         return
 
     def update_issue_templates(self):
@@ -131,20 +121,3 @@ class FileSync:
             return new_dic
 
         return recursive(self.metadata["path"], dict())
-
-
-def sync(
-    path_root: str | Path = ".",
-    paths_ext: Optional[Sequence[str | Path]] = None,
-    metadata: Optional[dict] = None,
-    logger: Optional[Literal["github"]] = None
-):
-    manager = MetaManager(
-        path_root=path_root,
-        paths_ext=paths_ext,
-        metadata=metadata,
-        logger=logger
-    )
-    syncer = FileSync(manager=manager)
-    syncer.update()
-    return

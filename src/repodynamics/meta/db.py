@@ -20,7 +20,7 @@ license = {
         "fullname": "GNU General Public License v3.0",
         "trove_classifier": "GNU General Public License v3 (GPLv3)",
     },
-    "mozilla_v2": {
+    "mpl_v2": {
         "name": "MPL v2.0",
         "fullname": "Mozilla Public License 2.0",
         "trove_classifier": "Mozilla Public License 2.0 (MPL 2.0)",

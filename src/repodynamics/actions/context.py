@@ -20,12 +20,14 @@ def context(
     payload_data = github.pop("event")
     summary = html.ElementCollection([html.h(2, "Workflow Context")])
     if inputs['event-payload'] == 'true':
+        summary.append(html.h(3, "📥 Event Payload"))
         summary.append(
             html.details(
                 content=md.code_block(json.dumps(dict(sorted(payload_data.items())), indent=4), "json"),
-                summary="📥 Event payload",
+                summary=f"<code>{github['event_name']}</code>",
             )
         )
+    added_header = False
     for name, data in (
         ("github", github),
         ("env", env),
@@ -36,10 +38,13 @@ def context(
         ("matrix", matrix),
     ):
         if data and inputs[name] == 'true':
+            if not added_header:
+                summary.append(html.h(3, "🎬 Contexts"))
+                added_header = True
             summary.append(
                 html.details(
                     content=md.code_block(json.dumps(dict(sorted(data.items())), indent=4), "json"),
-                    summary=f"🖥 <code>{name}</code> context",
+                    summary=f"<code>{name}</code> context",
                 )
             )
     return None, None, str(summary)

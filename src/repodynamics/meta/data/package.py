@@ -4,45 +4,46 @@ import pylinks
 import trove_classifiers
 
 from repodynamics.meta import db
+from repodynamics.logger import Logger
 
 
 class Python:
 
-    def __init__(self, metadata, cache):
+    def __init__(self, metadata, cache, logger: Logger = None):
         self.metadata = metadata
         self.package = metadata["package"]
         self.cache = cache
+        self.logger = logger or Logger("console")
         return
 
     def fill(self):
         self.name()
+        self.platform_urls()
         self.development_status()
+        self.license()
         self.python_versions()
         self.operating_systems()
         for classifier in self.package["trove_classifiers"]:
             if classifier not in trove_classifiers.classifiers:
-                raise ValueError(f"Trove classifier '{classifier}' is not supported anymore.")
+                self.logger.error(f"Trove classifier '{classifier}' is not supported.")
         return
 
     def name(self):
-        repo_name = self.metadata["repo"]["name"]
-        if not re.match(
-            r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$",
-            repo_name,
-            flags=re.IGNORECASE,
-        ):
-            raise ValueError(
-                "Repository name must only consist of alphanumeric characters, period (.), "
-                "underscore (_) and hyphen (-), and can only start and end with an alphanumeric character, "
-                f"but got {repo_name}. "
-                "See https://packaging.python.org/en/latest/specifications/name-normalization/ for more details."
-            )
-        self.package["name"] = re.sub(
-            r"[._-]+", "-", repo_name.lower()
-        )
+        self.logger.section("Process metadata: package.name")
+        name = self.metadata["name"]
+        self.package["name"] = re.sub(r"[ ._-]+", "-", name.lower())
+        self.logger.success(f"package.name: {self.package['name']}")
+        return
+
+    def platform_urls(self):
+        url = self.metadata.setdefault("url", {})
+        package_name = self.metadata["package"]["name"]
+        url["conda"] = f"https://anaconda.org/conda-forge/{package_name}/"
+        url["pypi"] = f"https://pypi.org/project/{package_name}/"
         return
 
     def development_status(self):
+        self.logger.section("Process metadata: package.development_status")
         phase = {
             1: "Planning",
             2: "Pre-Alpha",
@@ -53,27 +54,28 @@ class Python:
             7: "Inactive",
         }
         status_code = self.package["development_status"]
-        if isinstance(status_code, str):
-            status_code = int(status_code)
-        if status_code not in range(1, 8):
-            raise ValueError("Project development status must be an integer between 1 and 7.")
         self.package["development_status"] = phase[status_code]
-        self.package["trove_classifiers"].append(
-            f"Development Status :: {status_code} - {phase[status_code]}"
-        )
+        trove_classifier = f"Development Status :: {status_code} - {phase[status_code]}"
+        self.package["trove_classifiers"].append(trove_classifier)
+        self.logger.success(f"Development status: {phase[status_code]}")
+        self.logger.success(f"Set trove classifier: {trove_classifier}")
         return
 
     def license(self):
-        license_id = self.metadata["copyright"]["license"]["id"].lower()
-        license_data = db.license.get(license_id)
-        if not license_data:
-            raise ValueError(f"License ID '{license_id}' is not supported.")
+        self.logger.section("Process metadata: license_id (trove classifier)")
+        license_id = self.metadata.get("license_id")
+        if not license_id:
+            self.logger.attention("No license ID provided; skipping.")
+            return
+        license_data = db.license[license_id]
         self.package["trove_classifiers"].append(
             f"License :: OSI Approved :: {license_data['trove_classifier']}"
         )
+        self.logger.success(f"Set trove classifier: {license_data['trove_classifier']}")
         return
 
     def python_versions(self):
+        self.logger.section("Process metadata: package.python_version_min")
         min_ver = self.package["python_version_min"]
         ver = tuple(map(int, min_ver.split(".")))
         if ver[0] != 3:
@@ -87,18 +89,23 @@ class Python:
             )
         ]
         if len(vers) == 0:
-            raise ValueError(f"Minimum Python version is higher than latest release version.")
+            self.logger.error(
+                f"python_version_min '{min_ver}' is higher than "
+                f"latest release version '{'.'.join(current_python_versions[-1])}'."
+            )
         self.package["python_versions"] = vers
-        self.package["python_versions_cibuild"] = [ver.replace(".", "") for ver in vers]
+        self.logger.success(f"Set package.python_versions: {vers}")
         # Add trove classifiers
         classifiers = [
             "Programming Language :: Python :: {}".format(postfix)
             for postfix in ["3 :: Only"] + vers
         ]
         self.package["trove_classifiers"].extend(classifiers)
+        self.logger.success(f"Set trove classifiers: {classifiers}")
         return
 
     def operating_systems(self):
+        self.logger.section("Process metadata: package.operating_systems")
         trove_classifiers_postfix = {
             "windows": "Microsoft :: Windows",
             "macos": "MacOS",
@@ -106,31 +113,42 @@ class Python:
             "independent": "OS Independent",
         }
         trove_classifier_template = "Operating System :: {}"
-        github_os_matrix = []
-        build_matrix = []
-        for os in self.package["operating_systems"]:
-            os_id = os["id"].lower()
-            if os_id not in ["linux", "macos", "windows"]:
-                raise ValueError(
-                    f"Operating system ID '{os_id}' is not supported. "
-                    "Supported operating system IDs are 'linux', 'macos', and 'windows'."
-                )
-            self.package["trove_classifiers"].append(
-                trove_classifier_template.format(trove_classifiers_postfix[os_id])
-            )
-            github_runner = f"{os_id if os_id != 'linux' else 'ubuntu'}-latest"
-            github_os_matrix.append(github_runner)
-            if os["cibuilds"]:
-                for cibuild in os["cibuilds"]:
-                    build_matrix.append((github_runner, cibuild))
-        self.package["github_runners"] = github_os_matrix
-        self.package["build_matrix"] = build_matrix
-        is_pure_python = not build_matrix
-        self.package["is_pure_python"] = is_pure_python
-        if is_pure_python:
+        if not self.package.get("operating_systems"):
+            self.logger.attention("No operating systems provided.")
+            self.package["os_independent"] = True
+            self.package["pure_python"] = True
+            self.package["github_runners"] = ["ubuntu-latest", "macos-latest", "windows-latest"]
             self.package["trove_classifiers"].append(
                 trove_classifier_template.format(trove_classifiers_postfix["independent"])
             )
+            return
+
+        self.package["os_independent"] = False
+        self.package["github_runners"] = []
+        cibw_platforms = []
+        for os_name, specs in self.package["operating_systems"].items():
+            self.package["trove_classifiers"].append(
+                trove_classifier_template.format(trove_classifiers_postfix[os_name])
+            )
+            default_runner = f"{os_name if os_name != 'linux' else 'ubuntu'}-latest"
+            if not specs:
+                self.logger.attention(f"No specifications provided for operating system '{os_name}'.")
+                self.package["github_runners"].append(default_runner)
+                continue
+            runner = default_runner if not specs.get("runner") else specs["runner"]
+            self.package["github_runners"].append(runner)
+            if specs.get("cibw_build"):
+                for cibw_platform in specs["cibw_build"]:
+                    cibw_platforms.append({"runner": runner, "cibw_platform": cibw_platform})
+
+        if cibw_platforms:
+            self.package["pure_python"] = False
+            self.package["cibw_matrix_platform"] = cibw_platforms
+            self.package["cibw_matrix_python"] = [
+                f"cp{ver.replace('.', '')}" for ver in self.package["python_versions"]
+            ]
+        else:
+            self.package["pure_python"] = True
         return
 
     def released_python_versions(self):
@@ -143,13 +161,3 @@ class Python:
         release_versions = sorted(set([v[:2] for v in vers if v[0] >= 3]))
         self.cache["python_versions"] = release_versions
         return release_versions
-
-
-def fill(metadata, cache):
-    language = metadata["package"]["language"].lower()
-    match language:
-        case "python":
-            Python(metadata, cache).fill()
-        case _:
-            raise ValueError(f"Package language '{language}' is not supported.")
-    return

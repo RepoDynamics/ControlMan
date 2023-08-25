@@ -26,9 +26,8 @@ def meta(
         github_token=github_token,
         logger=logger
     )
-    with open(".local/repodynamics/meta/summary.json", "w") as f:
-        json.dump(summary, f)
-    return None, None, None
+    job_summary = summary.pop("summary")
+    return summary, None, job_summary
 
 
 def files(
@@ -137,7 +136,6 @@ def finalize(
     pull_url: str,
     pull_head_sha: str,
     changes: dict,
-    summary: dict = None,
     logger: Logger = None,
 ) -> tuple[dict, str]:
     """
@@ -148,33 +146,54 @@ def finalize(
     creates a new output variable `json` that contains all the data,
     and writes a job summary.
     """
-    if detect:
-        all_groups, job_summary = _changed_files(changes)
+    output = {"meta": False, "metadata": False, "package": False, "docs": False}
+    if not detect:
+        meta_summary, meta_changes = _meta_summary()
+        output["meta"] = meta_changes["any"]
+        output["metadata"] = meta_changes["metadata"]
+        output["package"] = meta_changes["package"]
+        output["docs"] = meta_changes["package"] or meta_changes["metadata"]
     else:
-        job_summary = html.ElementCollection()
-
-    job_summary.append(html.h(2, "Metadata"))
-
-    with open("meta/.out/metadata.json") as f:
-        metadata_dict = json.load(f)
-
-    job_summary.append(
-        html.details(
-            content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
-            summary=" 🖥  Metadata",
+        all_groups, job_summary = _changed_files(changes)
+        output["package"] = any(
+            [
+                all_groups[group]["any_modified"] == "true" for group in [
+                    "src", "tests", "setup-files", "github-workflows"
+                ]
+            ]
         )
-    )
-
-    with open(".local/repodynamics/meta/summary.json") as f:
-        summary_dict = json.load(f)
-
-    job_summary.append(
-        html.details(
-            content=md.code_block(json.dumps(summary_dict, indent=4), "json"),
-            summary=" 🖥  Summary",
+        output["docs"] = any(
+            [
+                all_groups[group]["any_modified"] == "true" for group in [
+                    "src", "meta-out", "docs-website", "github-workflows"
+                ]
+            ]
         )
-    )
-    return None, None, str(job_summary)
+        if all_groups["meta"]["any_modified"] == "true":
+            meta_summary, meta_changes = _meta_summary()
+
+    # else:
+    #     job_summary = html.ElementCollection()
+    #
+    # job_summary.append(html.h(2, "Metadata"))
+    #
+    # with open("meta/.out/metadata.json") as f:
+    #     metadata_dict = json.load(f)
+    #
+    # job_summary.append(
+    #     html.details(
+    #         content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
+    #         summary=" 🖥  Metadata",
+    #     )
+    # )
+    #
+    # job_summary.append(
+    #     html.details(
+    #         content=md.code_block(json.dumps(summary_dict, indent=4), "json"),
+    #         summary=" 🖥  Summary",
+    #     )
+    # )
+    # return None, None, str(job_summary)
 
 
     # Generate summary
@@ -197,6 +216,14 @@ def finalize(
     # log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
 
     # return {"json": json.dumps(all_groups)}, str(log)
+
+
+def _meta_summary():
+    with open(".local/repodynamics/meta/summary.json") as f:
+        summary_dict = json.load(f)
+    summary = summary_dict["summary"]
+    changes = summary_dict["changes"]
+    return summary, changes
 
 
 def _changed_files(changes: dict):

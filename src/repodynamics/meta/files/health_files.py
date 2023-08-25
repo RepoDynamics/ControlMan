@@ -17,6 +17,7 @@ class HealthFileSync:
             "SECURITY": {"filename": "SECURITY.md"},
             "SUPPORT": {"filename": "SUPPORT.md"},
         }
+        self._logger = self._manager.logger
         return
 
     def update(self):
@@ -52,11 +53,14 @@ class HealthFileSync:
         ]
 
     def target_path(self, name: str):
-        rel_path = self._meta["config"]["health_file_path"].get(name.casefold())
-        return self._root / rel_path / self._file[name]["filename"] if rel_path else None
+        if "health_file" not in self._meta or name.casefold() not in self._meta["health_file"]:
+            return
+        return self._root / self._meta["health_file"][name.casefold()] / self._file[name]["filename"]
 
     def text(self, name: str) -> str:
-        return self.generate_codeowners() if name == "CODEOWNERS" else self._manager.template("health_file", name)
+        if name == "CODEOWNERS":
+            return self.generate_codeowners()
+        return self._manager.template("health_file", name)
 
     def generate_codeowners(self) -> str:
         """
@@ -68,32 +72,10 @@ class HealthFileSync:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        if not self._meta.get("maintain"):
-            raise ValueError("Metadata is missing the 'maintain' section.")
-        if not self._meta["maintain"].get("pulls"):
-            raise ValueError("Metadata is missing the 'maintain.pulls' section.")
-        if not isinstance(self._meta["maintain"]["pulls"], list):
-            raise ValueError("Metadata 'maintain.pulls' section must be a list.")
-        max_len = 0
-        for entry in self._meta["maintain"]["pulls"]:
-            if not isinstance(entry, dict):
-                raise ValueError("Metadata 'maintain.pulls' section must be a list of dicts.")
-            if not entry.get("pattern"):
-                raise ValueError("Metadata 'maintain.pulls' section must contain 'pattern' key.")
-            if not isinstance(entry["pattern"], str):
-                raise ValueError("Metadata 'maintain.pulls' section 'pattern' key must be a string.")
-            if not entry.get("reviewers"):
-                raise ValueError("Metadata 'maintain.pulls' section must contain 'reviewers' key.")
-            if not isinstance(entry["reviewers"], list):
-                raise ValueError("Metadata 'maintain.pulls' section 'reviewers' key must be a list.")
-            if not all([isinstance(reviewer, str) for reviewer in entry["reviewers"]]):
-                raise ValueError(
-                    "Metadata 'maintain.pulls' section 'reviewers' key must be a list of strings."
-                )
-            # Get the maximum length of patterns to align the columns when writing the file
-            max_len = max(max_len, len(entry["pattern"]))
+        # Get the maximum length of patterns to align the columns when writing the file
+        max_len = max([len(entry["pattern"]) for entry in self._meta["pulls"]])
         text = ""
-        for entry in self._meta["maintain"]["pulls"]:
+        for entry in self._meta["pulls"]:
             reviewers = " ".join([f"@{reviewer.removeprefix('@')}" for reviewer in entry["reviewers"]])
             text += f'{entry["pattern"]: <{max_len}}   {reviewers}\n'
         return text

@@ -3,7 +3,6 @@ import importlib
 import sys
 import traceback
 
-
 from repodynamics.actions import io
 from repodynamics.ansi import SGR
 from repodynamics.logger import Logger
@@ -35,9 +34,8 @@ def main():
         if summary:
             io.summary(content=summary, logger=logger)
     except Exception as e:
-        print(SGR.format(f"An unexpected error occurred: {e}", "error"))
-        print(traceback.format_exc())
-        sys.exit(1)
+        logger.debug(traceback.format_exc())
+        logger.error(f"An unexpected error occurred: {e}", "error")
     logger.end_section()
     return
 
