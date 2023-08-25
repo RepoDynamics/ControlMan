@@ -31,4 +31,4 @@ def update(
     metadata.update()
     file_sync = FileSync(manager=manager)
     file_sync.update()
-    return manager._summary
+    return manager.summary()
