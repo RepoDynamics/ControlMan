@@ -34,10 +34,12 @@ class Logger:
     def log(
         self,
         message: str,
-        level: Literal["success", "debug", "info", "attention", "warning", "error"] = "info"
+        level: Literal["success", "debug", "info", "attention", "warning", "error"] = None
     ):
         if self.output in ("console", "github"):
-            print(SGR.format(message, level))
+            if level:
+                message = SGR.format(message, level)
+            print(message)
         return
 
     def info(self, message: str):
@@ -52,8 +54,10 @@ class Logger:
         self.log(message, level="success")
         return
 
-    def error(self, message: str):
+    def error(self, message: str, details: str = None):
         self.log(message, level="error")
+        if details:
+            self.log(details, level="debug")
         sys.exit(1)
 
     def warning(self, message: str):

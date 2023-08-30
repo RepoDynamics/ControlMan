@@ -11,7 +11,9 @@ from repodynamics.logger import Logger
 def meta(
     repo_fullname: str,
     github_token: str,
+    commit: bool,
     extensions: dict,
+    summary_path: str = None,
     logger: Logger = None,
 ) -> tuple[None, None, None]:
     from repodynamics import meta
@@ -19,15 +21,21 @@ def meta(
         Path(data["path_dl"]) / data["path"] for typ, data in extensions.items()
         if typ.startswith("alt") and data.get("has_files")
     ]
-    summary = meta.update(
+    output, summary = meta.update(
         repo_fullname=repo_fullname,
         path_root=".",
         path_extensions=dirpath_alts,
+        commit=commit,
         github_token=github_token,
         logger=logger
     )
-    job_summary = summary.pop("summary")
-    return summary, None, job_summary
+    if summary_path:
+        summary_path = Path(summary_path)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(summary_path, "w") as f:
+            f.write(summary)
+        return output, None, None
+    return output, None, summary
 
 
 def files(
@@ -127,143 +135,3 @@ def files(
     return outputs, env_vars, None
 
 
-def finalize(
-    detect: bool,
-    sync: str,
-    push_changes: bool,
-    push_sha: str,
-    pull_number: str,
-    pull_url: str,
-    pull_head_sha: str,
-    changes: dict,
-    logger: Logger = None,
-) -> tuple[dict, str]:
-    """
-    Parse outputs from `actions/changed-files` action.
-
-    This is used in the `repo_changed_files.yaml` workflow.
-    It parses the outputs from the `actions/changed-files` action and
-    creates a new output variable `json` that contains all the data,
-    and writes a job summary.
-    """
-    output = {"meta": False, "metadata": False, "package": False, "docs": False}
-    if not detect:
-        meta_summary, meta_changes = _meta_summary()
-        output["meta"] = meta_changes["any"]
-        output["metadata"] = meta_changes["metadata"]
-        output["package"] = meta_changes["package"]
-        output["docs"] = meta_changes["package"] or meta_changes["metadata"]
-    else:
-        all_groups, job_summary = _changed_files(changes)
-        output["package"] = any(
-            [
-                all_groups[group]["any_modified"] == "true" for group in [
-                    "src", "tests", "setup-files", "github-workflows"
-                ]
-            ]
-        )
-        output["docs"] = any(
-            [
-                all_groups[group]["any_modified"] == "true" for group in [
-                    "src", "meta-out", "docs-website", "github-workflows"
-                ]
-            ]
-        )
-        if all_groups["meta"]["any_modified"] == "true":
-            meta_summary, meta_changes = _meta_summary()
-
-    # else:
-    #     job_summary = html.ElementCollection()
-    #
-    # job_summary.append(html.h(2, "Metadata"))
-    #
-    # with open("meta/.out/metadata.json") as f:
-    #     metadata_dict = json.load(f)
-    #
-    # job_summary.append(
-    #     html.details(
-    #         content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
-    #         summary=" 🖥  Metadata",
-    #     )
-    # )
-    #
-    # job_summary.append(
-    #     html.details(
-    #         content=md.code_block(json.dumps(summary_dict, indent=4), "json"),
-    #         summary=" 🖥  Summary",
-    #     )
-    # )
-    # return None, None, str(job_summary)
-
-
-    # Generate summary
-    # force_update_emoji = "✅" if force_update == "all" else ("❌" if force_update == "none" else "☑️")
-    # cache_hit_emoji = "✅" if cache_hit else "❌"
-    # if not cache_hit or force_update == "all":
-    #     result = "Updated all metadata"
-    # elif force_update == "core":
-    #     result = "Updated core metadata but loaded API metadata from cache"
-    # else:
-    #     result = "Loaded all metadata from cache"
-
-    # results_list = html.ElementCollection(
-    #     [
-    #         html.li(f"{force_update_emoji}  Force update (input: {force_update})", content_indent=""),
-    #         html.li(f"{cache_hit_emoji}  Cache hit", content_indent=""),
-    #         html.li(f"➡️  {result}", content_indent=""),
-    #     ],
-    # )
-    # log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
-
-    # return {"json": json.dumps(all_groups)}, str(log)
-
-
-def _meta_summary():
-    with open(".local/repodynamics/meta/summary.json") as f:
-        summary_dict = json.load(f)
-    summary = summary_dict["summary"]
-    changes = summary_dict["changes"]
-    return summary, changes
-
-
-def _changed_files(changes: dict):
-    summary = html.ElementCollection(
-        [
-            html.h(2, "Changed Files"),
-        ]
-    )
-
-    # Parse and clean outputs
-    sep_groups = dict()
-    for item_name, val in changes.items():
-        group_name, attr = item_name.split("_", 1)
-        group = sep_groups.setdefault(group_name, dict())
-        group[attr] = val
-    for group_name, group_attrs in sep_groups.items():
-        sep_groups[group_name] = dict(sorted(group_attrs.items()))
-        if group_attrs["any_modified"] == "true":
-            summary.append(
-                html.details(
-                    content=md.code_block(json.dumps(sep_groups[group_name], indent=4), "json"),
-                    summary=group_name,
-                )
-            )
-        # group_summary_list.append(
-        #     f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
-        # )
-    file_list = "\n".join(sorted(sep_groups["all"]["all_changed_and_modified_files"].split()))
-    # Write job summary
-    summary.append(
-        html.details(
-            content=md.code_block(file_list, "bash"),
-            summary="🖥 Changed Files",
-        )
-    )
-    # details = html.details(
-    #     content=md.code_block(json.dumps(all_groups, indent=4), "json"),
-    #     summary="🖥 Details",
-    # )
-    # log = html.ElementCollection(
-    #     [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
-    # )
-    return sep_groups, summary

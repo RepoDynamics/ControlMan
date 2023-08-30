@@ -7,15 +7,16 @@ from importlib.resources import files
 from markitup import html, md
 
 from repodynamics.logger import Logger
-
+from repodynamics import git
 
 class MetaManager:
 
     def __init__(
-            self,
-            path_root: str | Path = ".",
-            paths_ext: Optional[Sequence[str | Path]] = None,
-            logger: Logger = None
+        self,
+        path_root: str | Path = ".",
+        paths_ext: Optional[Sequence[str | Path]] = None,
+        commit: bool = False,
+        logger: Logger = None
     ):
         self.path_root = Path(path_root).resolve()
         self.path_meta = self.path_root / "meta"
@@ -23,6 +24,7 @@ class MetaManager:
         self.path_templates = [self.path_root / "meta" / "template"] + [
             path_ext / "template" for path_ext in self.path_extensions
         ]
+        self.commit = commit
         self.logger = logger or Logger("console")
         self._metadata = {}
         self._summary = {}
@@ -154,33 +156,7 @@ class MetaManager:
         return
 
     def summary(self):
-        summary = html.ElementCollection()
         details = html.ElementCollection()
-        details.append(
-            html.details(
-                content=html.ul(
-                    [
-                        "🔴  Removed from alternate location",
-                        "🟠  Removed"
-                        "🟢  Created",
-                        "🟣  Modified",
-                        "🟡  Renamed"
-                        "⚪️  Unchanged",
-                        "⚫  Disabled",
-                    ]
-                ),
-                summary="Color legend",
-            )
-        )
-        job_summary = html.ElementCollection(
-            [
-                html.h(2, "Meta"),
-                html.h(3, "Summary"),
-                summary,
-                html.h(3, "Details"),
-                details,
-            ]
-        )
         changes = {"any": False} | {category: False for category in self._categories}
         for category, category_dict in self._summary.items():
             details.append(html.h(4, self._categories[category]))
@@ -191,14 +167,66 @@ class MetaManager:
                 ):
                     changes["any"] = True
                     changes[category] = True
+
+        output = {"changes": changes, "commit_hash": ""}
+        results = html.ElementCollection()
         if not changes["any"]:
-            summary.append("No changes detected; all dynamic files and metadata are in sync with source files.")
+            results.append(
+                html.ul(["✅ All dynamic files are in sync with source files."])
+            )
+            commit = html.ul(["❎ Nothing to commit."])
         else:
-            summary.append("Following groups were out of sync with the source files (see below for details):")
-            summary.append(
+            results.append(
+                "🔄 Following groups were out of sync with source files (see below for details):"
+            )
+            results.append(
                 html.ul([self._categories[category] for category in self._categories if changes[category]])
             )
-        return {"summary": str(job_summary), "changes": changes}
+            if self.commit:
+                commit_hash = git.commit(
+                    message="meta: sync dynamic files after metadata modification",
+                    stage="all",
+                    logger=self.logger,
+                )
+                output["commit_hash"] = commit_hash
+                commit = html.ul([f"✅ Updates were committed with commit hash '{commit_hash}'."])
+            else:
+                self.logger.info("Commit mode is disabled.")
+                commit = html.ul([f"❌ Commit mode was not selected; updates were not committed."])
+        summary = self.job_summary(results, commit, details)
+        return output, summary
+
+    @staticmethod
+    def job_summary(results, commit, details):
+        color_legend = html.details(
+            content=html.ul(
+                [
+                    "⚠️  Removed from alternate location",
+                    "🔴  Removed",
+                    "🟢  Created",
+                    "🟣  Modified",
+                    "🟡  Moved",
+                    "⚪️  Unchanged",
+                    "⚫  Disabled",
+                ]
+            ),
+            summary="Color legend",
+            align="right",
+        )
+        job_summary = html.ElementCollection(
+            [
+                html.h(2, "Meta"),
+                html.h(3, "Summary"),
+                html.h(4, "Results"),
+                results,
+                html.h(4, "Commit"),
+                commit,
+                html.h(3, "Details"),
+                color_legend,
+                details,
+            ]
+        )
+        return str(job_summary)
 
     @staticmethod
     def _item_summary(name, dic):

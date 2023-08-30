@@ -62,7 +62,7 @@ def input(module_name: str, function: Callable, logger: "Logger") -> dict:
                     f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
                 )
         elif typ is dict:
-            args[param] = json.loads(val, strict=False)
+            args[param] = json.loads(val, strict=False) if val else {}
         elif typ is int:
             try:
                 args[param] = int(val)

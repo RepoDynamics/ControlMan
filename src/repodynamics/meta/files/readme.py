@@ -13,6 +13,18 @@ import markitup as html
 import pylinks
 import pypackit
 
+from readme_renderer.markdown import render
+
+
+def render_pypi_readme(markdown_str: str):
+    html_str = render(markdown_str)
+    if not html_str:
+        raise ValueError("Renderer encountered an error.")
+    return html_str
+
+
+
+
 
 class ReadMe:
     def __init__(self, metadata: dict):

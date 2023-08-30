@@ -13,12 +13,14 @@ def update(
     path_extensions: Optional[Sequence[str | Path]] = None,
     filepath_cache: Optional[str | Path] = None,
     update_cache: bool = False,
+    commit: bool = False,
     github_token: Optional[str] = None,
     logger: Logger = None
 ):
     manager = MetaManager(
         path_root=path_root,
         paths_ext=path_extensions,
+        commit=commit,
         logger=logger
     )
     metadata = Metadata(
@@ -31,4 +33,5 @@ def update(
     metadata.update()
     file_sync = FileSync(manager=manager)
     file_sync.update()
-    return manager.summary()
+    output, summary = manager.summary()
+    return output, summary

@@ -101,18 +101,6 @@ This document tracks all changes to the {self.metadata['project']['name']} API.
                         release[segment] = True
         return release, docs
 
-    @staticmethod
-    def latest_tag() -> list[int] | None:
-        git_describe = subprocess.run(
-            args=["git", "describe", "--match", "v[0-9]*.[0-9]*.[0-9]*", "--abbrev=0"],
-            capture_output=True,
-        )
-        return (
-            list(map(int, git_describe.stdout.decode().strip().removeprefix("v").split(".")))
-            if git_describe.returncode == 0
-            else None
-        )
-
 
 def __main__():
     parser = argparse.ArgumentParser()

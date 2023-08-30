@@ -6,6 +6,8 @@ References
 """
 
 from typing import Optional
+import re
+
 from repodynamics.actions import _db
 
 
@@ -124,3 +126,32 @@ class SGR:
                 style = SGR.style(text_styles="bold", text_color="black", background_color=_db.action_color[action_name])
                 return f"{style} {text}  {SGR.reset}"
         return f"{style}{text}{SGR.reset}"
+
+
+def remove_formatting(text: str):
+    """
+    Remove ANSI escape sequences from a string.
+
+    Parameters
+    ----------
+    text
+
+    Notes
+    -----
+    ANSI escape codes start with the \033 (\x1b) escape character,
+    followed by '[', then zero or more numbers separated by ';', and ending with a letter.
+
+    Regex Details:
+    - [0-?]*: This part matches zero or more characters in the range between 0 and ?.
+    This covers all the numbers and semicolons that might be present in the escape sequence.
+    For example, in the code \x1b[31;42m, 31 and 42 are matched by this part.
+    - [ -/]*: This is a sequence of characters that might appear in some of the ANSI sequences.
+    It's more of a catch-all for certain sequences and may not be strictly necessary for many common sequences.
+    But it ensures we catch even those rare ANSI codes.
+    - [@-~]: Finally, ANSI escape sequences end with a character from @ to ~:
+    @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+    [ \ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z {.
+    This part matches that ending character. This character typically indicates what action
+    should be taken (e.g., change color, move cursor, clear screen, etc.).
+    """
+    return re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]').sub('', text)
