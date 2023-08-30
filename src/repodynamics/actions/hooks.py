@@ -161,14 +161,18 @@ class PreCommitHooks:
             ],
             capture_output=True
         )
-        error_intro = "An unexpected error occurred while running pre-commit hooks:"
-        if process.stderr:
-            self.logger.error(error_intro, details=process.stderr.decode())
         out = process.stdout.decode()
+        self.logger.log(out)
+        error_intro = "An unexpected error occurred while running pre-commit hooks;"
+        if process.stderr:
+            self.logger.error(
+                f"{error_intro} pre-commit exited with an error message:",
+                details=process.stderr.decode()
+            )
         out_plain = ansi.remove_formatting(out)
         for prefix in ("An error has occurred", "An unexpected error has occurred", "[ERROR]"):
             if out_plain.startswith(prefix):
-                self.logger.error(error_intro, out)
+                self.logger.error(f"{error_intro} pre-commit outputted an error message.")
         pattern = re.compile(
             r"""
                 ^(?P<description>[^\n]+?)
@@ -184,8 +188,9 @@ class PreCommitHooks:
             re.VERBOSE | re.MULTILINE
         )
         matches = list(pattern.finditer(out_plain))
-        if out_plain != "".join([match.group(0) for match in matches]):
-            self.logger.error(error_intro, out)
+        reconst = "".join([match.group(0) for match in matches])
+        if out_plain != reconst:
+            self.logger.error(f"{error_intro} could not parse the output:", f"before:\n{out_plain}\nafter:\n{reconst}")
         self.logger.success("Successfully ran pre-commit hooks with following output:")
         self.logger.log(out)
         results = {}

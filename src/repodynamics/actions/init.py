@@ -198,6 +198,31 @@ def _meta_summary():
 
 
 def _changed_files(changes: dict):
+
+    # Get all files that have been modified due to an event (e.g. push, pull request).
+    #
+    # This is a callable-only workflow, which uses the `tj-actions/changed-files` action
+    # to detect all files that have been modified during an event (e.g. push, pull request),
+    # and outputs them as a JSON string.
+    #
+    # The keys of the JSON dictionary are the groups that the files belong to,
+    # defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
+    # (i.e. without being defined in the config file), which contains details on changes in the entire repository.
+    # Each value is then a dictionary itself, as defined in the action's documentation.
+    #
+    # Notes
+    # -----
+    # The boolean values in the output are given as strings, i.e. `true` and `false`.
+    #
+    # References
+    # ----------
+    # - https://github.com/marketplace/actions/changed-files
+    #
+    # See Also
+    # --------
+    # - Local Python script at `.github/scripts/changed_files.py` generating the output of this workflow.
+    # - Configuration file at `.github/config/changed_files.yaml` defining the groups of files to be considered.
+
     summary = html.ElementCollection(
         [
             html.h(2, "Changed Files"),
