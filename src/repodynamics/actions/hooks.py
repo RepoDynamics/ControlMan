@@ -170,9 +170,10 @@ class PreCommitHooks:
                 details=process.stderr.decode()
             )
         out_plain = ansi.remove_formatting(out)
-        for prefix in ("An error has occurred", "An unexpected error has occurred", "[ERROR]"):
-            if out_plain.startswith(prefix):
-                self.logger.error(f"{error_intro} pre-commit outputted an error message.")
+        for line in out_plain.splitlines():
+            for prefix in ("An error has occurred", "An unexpected error has occurred", "[ERROR]"):
+                if line.startswith(prefix):
+                    self.logger.error(f"{error_intro} pre-commit outputted an error message.")
         pattern = re.compile(
             r"""
                 ^(?P<description>[^\n]+?)
@@ -188,11 +189,6 @@ class PreCommitHooks:
             re.VERBOSE | re.MULTILINE
         )
         matches = list(pattern.finditer(out_plain))
-        reconst = "".join([match.group(0) for match in matches])
-        if out_plain != reconst:
-            self.logger.error(f"{error_intro} could not parse the output:", f"before:\n{out_plain}\nafter:\n{reconst}")
-        self.logger.success("Successfully ran pre-commit hooks with following output:")
-        self.logger.log(out)
         results = {}
         for match in matches:
             data = match.groupdict()
