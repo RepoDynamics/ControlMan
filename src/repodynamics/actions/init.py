@@ -133,7 +133,7 @@ class Init:
 
     @property
     def package_test_needed(self):
-        if self.meta["changes"]["package"]:
+        if self.meta.get("changes", {}).get("package"):
             return True
         for group in ["src", "tests", "setup-files", "workflow"]:
             if self.changes[group]["any_modified"] == "true":
