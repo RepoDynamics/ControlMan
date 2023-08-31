@@ -127,6 +127,15 @@ class Init:
         }
         return output
 
+    def case_schedule(self):
+        return
+
+    def case_pull(self):
+        return
+
+    def case_push_main(self):
+        return
+
     @property
     def latest_commit_hash(self):
         return self.hooks.get("commit-hash") or self.meta.get("commit-hash") or self.context["event"]["after"]
