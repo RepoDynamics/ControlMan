@@ -56,43 +56,203 @@ def _create_pull_body():
     return
 
 
-
-
-
 def finalize(
     context: dict,
     changes: dict,
     meta: dict,
     hooks: dict,
     pull: dict,
+    logger: Logger = None,
 ):
+    return Init(context=context, changes=changes, meta=meta, hooks=hooks, pull=pull, logger=logger).run()
 
 
+class Init:
 
-    meta_changes = meta["changes"]
-    meta_commit_hash = meta["commit_hash"]
+    def __init__(
+        self,
+        context: dict,
+        changes: dict,
+        meta: dict,
+        hooks: dict,
+        pull: dict,
+        logger: Logger = None,
+    ):
+        self.context = context
+        self.changes = self.process_changes_output(changes) if changes else {}
+        self.meta = meta or {}
+        self.hooks = hooks or {}
+        self.pull = pull or {}
+        self.logger = logger
 
-    hooks_passed = hooks["passed"]
-    hooks_fixed = hooks["fixed"]
-    hooks_commit_hash = hooks["commit-hash"]
+        self.summary = ""
+        return
 
-    pr_nr = pull["pull-request-number"]
-    pr_url = pull["pull-request-url"]
-    pr_head_sha = pull["pull-request-head-sha"]
+    def run(self):
+        event = self.context["event_name"]
+        ref = self.context["ref_name"]
+        if event == "push":
+            if ref == "main" or ref.startswith("release/"):
+                output = self.case_push_main()
+            else:
+                output = self.case_push_dev()
+        elif event == "pull_request":
+            output = self.case_pull()
+        elif event in ["schedule", "workflow_dispatch"]:
+            output = self.case_schedule()
+        else:
+            self.logger.error(f"Unsupported event: '{event}'.")
+        summary = str(self.assemble_summary())
+        return output, None, summary
 
+        # meta_changes = meta["changes"]
+        # meta_commit_hash = meta["commit_hash"]
+        #
+        # hooks_passed = hooks["passed"]
+        # hooks_fixed = hooks["fixed"]
+        # hooks_commit_hash = hooks["commit-hash"]
+        #
+        # pr_nr = pull["pull-request-number"]
+        # pr_url = pull["pull-request-url"]
+        # pr_head_sha = pull["pull-request-head-sha"]
+        #
+        # return output, None, summary
 
-def check_git_attributes(logger: Logger):
-    command = ["sh", "-c", "git ls-files | git check-attr -a --stdin | grep 'text: auto'"]
-    logger.info(f"Running command: {' '.join(command)}")
-    process = subprocess.run(command, capture_output=True, text=True)
-    if process.returncode != 0:
-        logger.error(f"Failed to check git attributes:", process.stderr)
-    output = process.stdout
-    if output:
+    def case_push_dev(self):
+        output = {
+            "hash": self.latest_commit_hash,
+            "package_test": self.package_test_needed,
+            "package_lint": self.package_lint_needed,
+            "docs": self.docs_test_needed,
+        }
+        return output
+
+    @property
+    def latest_commit_hash(self):
+        return self.hooks.get("commit-hash") or self.meta.get("commit-hash") or self.context["event"]["after"]
+
+    @property
+    def package_test_needed(self):
+        if self.meta["changes"]["package"]:
+            return True
+        for group in ["src", "tests", "setup-files", "workflow"]:
+            if self.changes[group]["any_modified"] == "true":
+                return True
         return False
-    return True
 
+    @property
+    def package_lint_needed(self):
+        if self.meta["changes"]["package"]:
+            return True
+        for group in ["src", "setup-files", "workflow"]:
+            if self.changes[group]["any_modified"] == "true":
+                return True
+        return False
 
+    @property
+    def docs_test_needed(self):
+        if self.meta["changes"]["metadata"] or self.meta["changes"]["package"]:
+            return True
+        for group in ["src", "docs-website", "workflow"]:
+            if self.changes[group]["any_modified"] == "true":
+                return True
+        return False
+
+    def create_summary(self):
+        return
+
+    def assemble_summary(self):
+        sections = [
+            html.h(2, "Summary"),
+            self.summary,
+        ]
+        if self.changes:
+            sections.append(self.changed_files())
+        for job, summary_filepath in zip(
+            (self.meta, self.hooks),
+            (".local/reports/repodynamics/meta.md", ".local/reports/repodynamics/hooks.md")
+        ):
+            if job:
+                with open(summary_filepath) as f:
+                    sections.append(f.read())
+        return html.ElementCollection(sections)
+
+    @staticmethod
+    def process_changes_output(changes):
+        """
+
+        Parameters
+        ----------
+        changes
+
+        Returns
+        -------
+        The keys of the JSON dictionary are the groups that the files belong to,
+        defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
+        (i.e. without being defined in the config file), which contains details on changes in the entire repository.
+        Each value is then a dictionary itself, as defined in the action's documentation.
+
+        Notes
+        -----
+        The boolean values in the output are given as strings, i.e. `true` and `false`.
+
+        References
+        ----------
+        - https://github.com/marketplace/actions/changed-files
+        """
+        sep_groups = dict()
+        for item_name, val in changes.items():
+            group_name, attr = item_name.split("_", 1)
+            group = sep_groups.setdefault(group_name, dict())
+            group[attr] = val
+        for group_name, group_attrs in sep_groups.items():
+            sep_groups[group_name] = dict(sorted(group_attrs.items()))
+        return sep_groups
+
+    def changed_files(self):
+        summary = html.ElementCollection(
+            [
+                html.h(2, "Changed Files"),
+            ]
+        )
+        for group_name, group_attrs in self.changes.items():
+            if group_attrs["any_modified"] == "true":
+                summary.append(
+                    html.details(
+                        content=md.code_block(json.dumps(group_attrs, indent=4), "json"),
+                        summary=group_name,
+                    )
+                )
+            # group_summary_list.append(
+            #     f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
+            # )
+        file_list = "\n".join(sorted(self.changes["all"]["all_changed_and_modified_files"].split()))
+        # Write job summary
+        summary.append(
+            html.details(
+                content=md.code_block(file_list, "bash"),
+                summary="🖥 Changed Files",
+            )
+        )
+        # details = html.details(
+        #     content=md.code_block(json.dumps(all_groups, indent=4), "json"),
+        #     summary="🖥 Details",
+        # )
+        # log = html.ElementCollection(
+        #     [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
+        # )
+        return summary
+
+    def check_git_attributes(self):
+        command = ["sh", "-c", "git ls-files | git check-attr -a --stdin | grep 'text: auto'"]
+        self.logger.info(f"Running command: {' '.join(command)}")
+        process = subprocess.run(command, capture_output=True, text=True)
+        if process.returncode != 0:
+            self.logger.error(f"Failed to check git attributes:", process.stderr)
+        output = process.stdout
+        if output:
+            return False
+        return True
 
 
 def _finalize(
@@ -187,79 +347,3 @@ def _finalize(
     # log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
 
     # return {"json": json.dumps(all_groups)}, str(log)
-
-
-def _meta_summary():
-    with open(".local/repodynamics/meta/summary.json") as f:
-        summary_dict = json.load(f)
-    summary = summary_dict["summary"]
-    changes = summary_dict["changes"]
-    return summary, changes
-
-
-def _changed_files(changes: dict):
-
-    # Get all files that have been modified due to an event (e.g. push, pull request).
-    #
-    # This is a callable-only workflow, which uses the `tj-actions/changed-files` action
-    # to detect all files that have been modified during an event (e.g. push, pull request),
-    # and outputs them as a JSON string.
-    #
-    # The keys of the JSON dictionary are the groups that the files belong to,
-    # defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
-    # (i.e. without being defined in the config file), which contains details on changes in the entire repository.
-    # Each value is then a dictionary itself, as defined in the action's documentation.
-    #
-    # Notes
-    # -----
-    # The boolean values in the output are given as strings, i.e. `true` and `false`.
-    #
-    # References
-    # ----------
-    # - https://github.com/marketplace/actions/changed-files
-    #
-    # See Also
-    # --------
-    # - Local Python script at `.github/scripts/changed_files.py` generating the output of this workflow.
-    # - Configuration file at `.github/config/changed_files.yaml` defining the groups of files to be considered.
-
-    summary = html.ElementCollection(
-        [
-            html.h(2, "Changed Files"),
-        ]
-    )
-
-    # Parse and clean outputs
-    sep_groups = dict()
-    for item_name, val in changes.items():
-        group_name, attr = item_name.split("_", 1)
-        group = sep_groups.setdefault(group_name, dict())
-        group[attr] = val
-    for group_name, group_attrs in sep_groups.items():
-        sep_groups[group_name] = dict(sorted(group_attrs.items()))
-        if group_attrs["any_modified"] == "true":
-            summary.append(
-                html.details(
-                    content=md.code_block(json.dumps(sep_groups[group_name], indent=4), "json"),
-                    summary=group_name,
-                )
-            )
-        # group_summary_list.append(
-        #     f"{'✅' if group_attrs['any_modified'] == 'true' else '❌'}  {group_name}"
-        # )
-    file_list = "\n".join(sorted(sep_groups["all"]["all_changed_and_modified_files"].split()))
-    # Write job summary
-    summary.append(
-        html.details(
-            content=md.code_block(file_list, "bash"),
-            summary="🖥 Changed Files",
-        )
-    )
-    # details = html.details(
-    #     content=md.code_block(json.dumps(all_groups, indent=4), "json"),
-    #     summary="🖥 Details",
-    # )
-    # log = html.ElementCollection(
-    #     [html.h(4, "Modified Categories"), html.ul(group_summary_list), changed_files, details]
-    # )
-    return sep_groups, summary
