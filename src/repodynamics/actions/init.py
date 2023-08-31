@@ -5,6 +5,7 @@ import subprocess
 from markitup import html, md
 
 from repodynamics.logger import Logger
+from repodynamics import git
 
 
 def update_meta(context: dict, meta_modified: bool, logger: Logger = None):
@@ -127,6 +128,7 @@ class Init:
             "package_lint": self.package_lint_needed,
             "docs": self.docs_test_needed,
         }
+        git.push()
         return output
 
     def case_schedule(self):
