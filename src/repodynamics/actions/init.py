@@ -142,7 +142,7 @@ class Init:
 
     @property
     def package_lint_needed(self):
-        if self.meta["changes"]["package"]:
+        if self.meta.get("changes", {}).get("package"):
             return True
         for group in ["src", "setup-files", "workflow"]:
             if self.changes[group]["any_modified"] == "true":
@@ -151,7 +151,7 @@ class Init:
 
     @property
     def docs_test_needed(self):
-        if self.meta["changes"]["metadata"] or self.meta["changes"]["package"]:
+        if self.meta.get("changes", {}).get("metadata") or self.meta.get("changes", {}).get("package"):
             return True
         for group in ["src", "docs-website", "workflow"]:
             if self.changes[group]["any_modified"] == "true":
