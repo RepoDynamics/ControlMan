@@ -81,6 +81,8 @@ class Init:
         self.context = context
         self.changes = self.process_changes_output(changes) if changes else {}
         self.meta = meta or {}
+        if self.meta:
+            self.meta["changes"] = json.loads(self.meta["changes"], strict=False)
         self.hooks = hooks or {}
         self.pull = pull or {}
         self.logger = logger
