@@ -183,13 +183,32 @@ class Dispatch(EventHandler):
 
     def __init__(self, context: dict):
         super().__init__(context)
+        self._output = {"pull": True}
         return
+
+    def run(self):
+        summary = html.ElementCollection()
+        self._output_meta = meta.update(
+            action="commit",
+            github_token=self._context["token"],
+            logger=self._logger,
+        )
+        summary.append(self._output_meta["summary"])
+        if self._metadata.get("workflow_hooks_config_path"):
+            self._output_hooks = hooks.run(
+                action="commit",
+                path_config=self._metadata["workflow_hooks_config_path"],
+                logger=self._logger,
+            )
+            summary.append(self._output_hooks["summary"])
+        self._create_pull_body()
+        return self._output, None, str(summary)
 
     def _create_pull_body(self):
         path = Path(".local/temp/repodynamics/init/pr_body.md")
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
-            f.write("")
+            f.write("Automatically update all metadata and dynamic files.\nRun hooks.")
         return
 
 

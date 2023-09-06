@@ -197,7 +197,7 @@ class MetaWriter:
                 html.details(self._logger.file_log, "Log"),
             ]
         )
-        return str(summary)
+        return summary
 
     def _summary_section_details(self):
         details = html.ElementCollection()
