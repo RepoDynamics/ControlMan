@@ -23,9 +23,6 @@ def render_pypi_readme(markdown_str: str):
     return html_str
 
 
-
-
-
 class ReadMe:
     def __init__(self, metadata: dict):
         self._metadata = metadata

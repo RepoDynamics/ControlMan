@@ -1,0 +1,16 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: local_config
+
+type: object
+properties:
+  meta_cache_retention_days:
+    type: object
+    additionalProperties: false
+    properties:
+      extensions:
+        type: integer
+        minimum: 0
+      api:
+        type: integer
+        minimum: 0

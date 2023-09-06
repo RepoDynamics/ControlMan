@@ -5,70 +5,239 @@ import subprocess
 from markitup import html, md
 
 from repodynamics.logger import Logger
-from repodynamics import git
+from repodynamics.git import Git
+from repodynamics import meta
+from repodynamics import hooks
 
 
-def update_meta(context: dict, meta_modified: bool, logger: Logger = None):
-    event_name = context["event_name"]
-    ref_name = context["ref_name"]
-    output = {"update": True, "commit": True}
-    if event_name in ["schedule", "workflow_dispatch"]:
-        return output, None, None
-    if event_name == "pull_request" or (
-        event_name == "push" and (ref_name == "main" or ref_name.startswith("release/"))
-    ):
-        output["commit"] = False
-        return output, None, None
-    if event_name != "push":
-        logger.error(f"Unsupported event: '{event_name}'.")
-    if not meta_modified:
-        output["update"] = False
-        output['commit'] = False
-    return output, None, None
+def init(context: dict, changes: dict, logger=None):
+    event = context["event_name"]
+    if event in ["schedule", "workflow_dispatch"]:
+        return Dispatch(context=context).run()
+    if event == "issue":
+        pass
+    if event == "pull_request":
+        pass
+    if event == "push":
+        ref = context["ref_name"]
+        if ref == "main" or ref.startswith("release/"):
+            return PushRelease(context=context, changes=changes).run()
+        else:
+            return PushDev(context=context, changes=changes).run()
+    return None, None, None
 
 
-def run_hooks(context: dict, meta_commit_hash: str, logger: Logger = None):
-    event_name = context["event_name"]
-    output = {"commit": True, "from_ref": "", "to_ref": "", "pull": False}
-    if event_name in ["schedule", "workflow_dispatch"]:
-        output["pull"] = True
-        _create_pull_body()
-        return output, None, None
-    if event_name == "pull_request":
-        output["commit"] = False
-        output["from_ref"] = context["event"]["pull_request"]["base"]["sha"]
-        output["to_ref"] = context["event"]["pull_request"]["head"]["sha"]
-        return output, None, None
-    if event_name != "push":
-        logger.error(f"Unsupported event: '{event_name}'.")
-    output["from_ref"] = context["event"]["before"]
-    output["to_ref"] = meta_commit_hash or context["event"]["after"]
-    ref_name = context["ref_name"]
-    if ref_name == "main" or ref_name.startswith("release/"):
-        output["commit"] = False
-    return output, None, None
+class EventHandler:
+
+    def __init__(self, context: dict):
+        self._context = context
+        self._event = context["event_name"]
+        self._payload = context["event"]
+        self._ref = context["ref_name"]
+        self._logger = Logger("github")
+
+        self._output_meta = None
+        self._output_hooks = None
+        self._metadata = self._load_metadata()
+        return
+
+    @staticmethod
+    def _process_changes(changes):
+        """
+
+        Parameters
+        ----------
+        changes
+
+        Returns
+        -------
+        The keys of the JSON dictionary are the groups that the files belong to,
+        defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
+        (i.e. without being defined in the config file), which contains details on changes in the entire repository.
+        Each value is then a dictionary itself, as defined in the action's documentation.
+
+        Notes
+        -----
+        The boolean values in the output are given as strings, i.e. `true` and `false`.
+
+        References
+        ----------
+        - https://github.com/marketplace/actions/changed-files
+        """
+        sep_groups = dict()
+        for item_name, val in changes.items():
+            group_name, attr = item_name.split("_", 1)
+            group = sep_groups.setdefault(group_name, dict())
+            group[attr] = val
+        for group_name, group_attrs in sep_groups.items():
+            sep_groups[group_name] = dict(sorted(group_attrs.items()))
+        return sep_groups
+
+    @staticmethod
+    def _load_metadata() -> dict:
+        path_metadata = Path("meta/.out/metadata.json")
+        metadata = {}
+        if path_metadata.is_file():
+            with open(path_metadata) as f:
+                metadata = json.load(f)
+        return metadata
 
 
-def _create_pull_body():
-    path = Path(".local/temp/repodynamics/init/pr_body.md")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        f.write("")
-    return
+class PushRelease(EventHandler):
+
+    def __init__(self, context: dict, changes: dict):
+        super().__init__(context)
+        self._changes = self._process_changes(changes)
+        self._output = {
+            "config-repo": False,
+
+        }
+        return
+
+    def run(self):
+        return
 
 
-def finalize(
-    context: dict,
-    changes: dict,
-    meta: dict,
-    hooks: dict,
-    pull: dict,
-    logger: Logger = None,
-):
-    return Init(context=context, changes=changes, meta=meta, hooks=hooks, pull=pull, logger=logger).run()
+class InitialRelease(EventHandler):
+
+    def __init__(self, context: dict):
+        super().__init__(context)
+        return
+
+    def run(self):
+        return
+
+
+class PushDev(EventHandler):
+
+    def __init__(self, context: dict, changes: dict):
+        super().__init__(context)
+        self._changes = self._process_changes(changes)
+        return
+
+    def run(self):
+        summary = html.ElementCollection()
+        output = {
+            "package_test": self.package_test_needed,
+            "package_lint": self.package_lint_needed,
+            "docs": self.docs_test_needed,
+        }
+        hash_before = self._payload["before"]
+        hash_after = self._payload["after"]
+        if self._changes["meta"]["any_modified"] == "true":
+            self._output_meta = meta.update(
+                action="commit",
+                github_token=self._context["token"],
+                logger=self._logger,
+            )
+            summary.append(self._output_meta["summary"])
+            if self._output_meta["changes"].get("package"):
+                output["package_test"] = True
+                output["package_lint"] = True
+                output["docs"] = True
+            if self._output_meta["changes"].get("metadata"):
+                output["docs"] = True
+            self._metadata = self._output_meta["metadata"]
+            hash_after = self._output_meta["commit_hash"] or hash_after
+        if self._metadata.get("workflow_hooks_config_path"):
+            self._output_hooks = hooks.run(
+                action="commit",
+                ref_range=(hash_before, hash_after),
+                path_config=self._metadata["workflow_hooks_config_path"],
+                logger=self._logger,
+            )
+            summary.append(self._output_hooks["summary"])
+            hash_after = self._output_hooks["commit_hash"] or hash_after
+        output["hash"] = hash_after
+        return output, None, str(summary)
+
+    @property
+    def package_test_needed(self):
+        for group in ["src", "tests", "setup-files", "workflow"]:
+            if self._changes[group]["any_modified"] == "true":
+                return True
+        return False
+
+    @property
+    def package_lint_needed(self):
+        for group in ["src", "setup-files", "workflow"]:
+            if self._changes[group]["any_modified"] == "true":
+                return True
+        return False
+
+    @property
+    def docs_test_needed(self):
+        for group in ["src", "docs-website", "workflow"]:
+            if self._changes[group]["any_modified"] == "true":
+                return True
+        return False
+
+
+class Dispatch(EventHandler):
+
+    def __init__(self, context: dict):
+        super().__init__(context)
+        return
+
+    def _create_pull_body(self):
+        path = Path(".local/temp/repodynamics/init/pr_body.md")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            f.write("")
+        return
 
 
 class Init:
+    def __init__(self, context: dict, changes: dict):
+
+        self._changes = self._process_changes(changes)
+
+
+        self._metadata = self._load_metadata()
+        self._output_meta = None
+        self._output_hooks = None
+        return
+
+    def push_main(self):
+        self._output_meta = meta.update(
+            action="report",
+            github_token=self._context["token"],
+            logger=self._logger,
+        )
+        return
+
+    def pull(self):
+        hash_before = self._payload['pull_request']['base']['sha']
+        hash_after = self._payload['pull_request']['head']['sha']
+        self._output_meta = meta.update(
+            action="report",
+            github_token=self._context["token"],
+            logger=self._logger,
+        )
+        self._output_hooks = hooks.run(
+            action="report",
+            ref_range=(hash_before, hash_after),
+            path_config=self._metadata["workflow_hooks_config_path"],
+            logger=self._logger,
+        )
+        return
+
+    def dispatch(self):
+        changes, summary, commit_hash = meta.update(
+            action="commit",
+            github_token=self._context["token"],
+            logger=self._logger,
+        )
+        return
+
+    def issue(self):
+        return
+
+
+
+
+
+class _Init:
 
     def __init__(
         self,
@@ -80,7 +249,7 @@ class Init:
         logger: Logger = None,
     ):
         self.context = context
-        self.changes = self.process_changes_output(changes) if changes else {}
+        self.changes = self._process_changes(changes) if changes else {}
         self.meta = meta or {}
         if self.meta:
             self.meta["changes"] = json.loads(self.meta["changes"], strict=False)
@@ -92,20 +261,7 @@ class Init:
         return
 
     def run(self):
-        event = self.context["event_name"]
-        ref = self.context["ref_name"]
-        if event == "push":
-            if ref == "main" or ref.startswith("release/"):
-                output = self.case_push_main()
-            else:
-                output = self.case_push_dev()
-        elif event == "pull_request":
-            output = self.case_pull()
-        elif event in ["schedule", "workflow_dispatch"]:
-            output = self.case_schedule()
-        else:
-            self.logger.error(f"Unsupported event: '{event}'.")
-        summary = str(self.assemble_summary())
+
         return output, None, summary
 
         # meta_changes = meta["changes"]
@@ -144,33 +300,6 @@ class Init:
     def latest_commit_hash(self):
         return self.hooks.get("commit-hash") or self.meta.get("commit-hash") or self.context["event"]["after"]
 
-    @property
-    def package_test_needed(self):
-        if self.meta.get("changes", {}).get("package"):
-            return True
-        for group in ["src", "tests", "setup-files", "workflow"]:
-            if self.changes[group]["any_modified"] == "true":
-                return True
-        return False
-
-    @property
-    def package_lint_needed(self):
-        if self.meta.get("changes", {}).get("package"):
-            return True
-        for group in ["src", "setup-files", "workflow"]:
-            if self.changes[group]["any_modified"] == "true":
-                return True
-        return False
-
-    @property
-    def docs_test_needed(self):
-        if self.meta.get("changes", {}).get("metadata") or self.meta.get("changes", {}).get("package"):
-            return True
-        for group in ["src", "docs-website", "workflow"]:
-            if self.changes[group]["any_modified"] == "true":
-                return True
-        return False
-
     def create_summary(self):
         return
 
@@ -190,37 +319,7 @@ class Init:
                     sections.append(f.read())
         return html.ElementCollection(sections)
 
-    @staticmethod
-    def process_changes_output(changes):
-        """
 
-        Parameters
-        ----------
-        changes
-
-        Returns
-        -------
-        The keys of the JSON dictionary are the groups that the files belong to,
-        defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
-        (i.e. without being defined in the config file), which contains details on changes in the entire repository.
-        Each value is then a dictionary itself, as defined in the action's documentation.
-
-        Notes
-        -----
-        The boolean values in the output are given as strings, i.e. `true` and `false`.
-
-        References
-        ----------
-        - https://github.com/marketplace/actions/changed-files
-        """
-        sep_groups = dict()
-        for item_name, val in changes.items():
-            group_name, attr = item_name.split("_", 1)
-            group = sep_groups.setdefault(group_name, dict())
-            group[attr] = val
-        for group_name, group_attrs in sep_groups.items():
-            sep_groups[group_name] = dict(sorted(group_attrs.items()))
-        return sep_groups
 
     def changed_files(self):
         summary = html.ElementCollection(
@@ -256,16 +355,7 @@ class Init:
         # )
         return summary
 
-    def check_git_attributes(self):
-        command = ["sh", "-c", "git ls-files | git check-attr -a --stdin | grep 'text: auto'"]
-        self.logger.info(f"Running command: {' '.join(command)}")
-        process = subprocess.run(command, capture_output=True, text=True)
-        if process.returncode != 0:
-            self.logger.error(f"Failed to check git attributes:", process.stderr)
-        output = process.stdout
-        if output:
-            return False
-        return True
+
 
 
 def _finalize(

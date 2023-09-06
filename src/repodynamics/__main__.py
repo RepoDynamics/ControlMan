@@ -1,4 +1,4 @@
-from repodynamics.ansi import SGR
+from markitup import sgr
 
 logo = """
 ╭━━━╮        ╭━━━╮                     
@@ -11,4 +11,4 @@ logo = """
        ╰╯        ╰━━╯
 """
 
-print(SGR.format(logo, style=SGR.style("bold", "blue")))
+print(sgr.format(logo, sgr.style("bold", "blue")))

@@ -1,37 +1,36 @@
 from typing import Literal, Optional, Sequence, Callable
 from pathlib import Path
+import json
+
+from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
-from repodynamics.meta.manager import MetaManager
-from repodynamics.meta.data.metadata import Metadata
-from repodynamics.meta.files.sync import FileSync
+from repodynamics.meta.metadata import MetadataGenerator
+from repodynamics.meta.reader import MetaReader
+from repodynamics.meta import files
+from repodynamics.meta.writer import MetaWriter
 
 
 def update(
-    repo_fullname: str,
     path_root: str | Path = ".",
-    path_extensions: Optional[Sequence[str | Path]] = None,
-    filepath_cache: Optional[str | Path] = None,
-    update_cache: bool = False,
-    commit: bool = False,
+    path_meta: str = "meta",
+    action: Literal["report", "apply", "commit"] = "report",
     github_token: Optional[str] = None,
     logger: Logger = None
-):
-    manager = MetaManager(
+) -> dict:
+    logger = logger or Logger()
+    reader = MetaReader(
         path_root=path_root,
-        paths_ext=path_extensions,
-        commit=commit,
+        path_meta=path_meta,
+        github_token=github_token,
         logger=logger
     )
-    metadata = Metadata(
-        manager=manager,
-        repo_fullname=repo_fullname,
-        filepath_cache=filepath_cache,
-        update_cache=update_cache,
-        github_token=github_token
+    metadata_gen = MetadataGenerator(
+        reader=reader,
     )
-    metadata.update()
-    file_sync = FileSync(manager=manager)
-    file_sync.update()
-    output, summary = manager.summary()
-    return output, summary
+    metadata = metadata_gen.generate()
+    generated_files = files.generate(metadata=metadata, reader=reader, logger=logger)
+    writer = MetaWriter(path_root=path_root, logger=logger)
+    output = writer.write(generated_files, action=action)
+    output['metadata'] = metadata
+    return output

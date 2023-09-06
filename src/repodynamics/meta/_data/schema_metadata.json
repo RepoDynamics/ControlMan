@@ -615,6 +615,10 @@
          "required": ["development_status", "python_version_min"],
          "properties": {
 
+            "init": {
+               "type": "string"
+            },
+
             "development_status": {
                "description": "Development status of the project",
                "type": "integer",
@@ -850,6 +854,49 @@
       "custom": {
          "description": "Custom metadata for the project",
          "type": "object"
+      },
+
+
+      "workflow_hooks_config_path": {
+         "description": "Path to the workflow hooks config file",
+         "type": "string"
+      },
+
+
+      "extensions": {
+         "description": "Meta extension declarations",
+         "type": "array",
+         "uniqueItems": true,
+         "minItems": 1,
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "repo"],
+            "properties": {
+               "type": {
+                  "type": "string",
+                  "enum": [
+                     "meta",
+                     "config",
+                     "data",
+                     "template",
+                     "health_file",
+                     "license",
+                     "issue",
+                     "discussion",
+                     "pull",
+                     "media",
+                     "logo"
+                  ]
+               },
+               "repo": {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$"},
+               "ref": {"type": "string"},
+               "path": {"type": "string"},
+               "append_list": {"type": "boolean"},
+               "append_dict": {"type": "boolean"},
+               "raise_duplicate": {"type": "boolean"}
+            }
+         }
       }
    }
 }
