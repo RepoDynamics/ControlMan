@@ -21,10 +21,13 @@ def init(context: dict, changes: dict, logger=None):
     if event == "push":
         ref = context["ref_name"]
         if ref == "main" or ref.startswith("release/"):
+            logger.success("Detected Event: Push to release branch")
             return PushRelease(context=context, changes=changes).run()
         else:
+            logger.success("Detected Event: Push to non-release branch")
             return PushDev(context=context, changes=changes).run()
-    return None, None, None
+    logger.error(f"Event '{event}' is not supported.")
+    return
 
 
 class EventHandler:
@@ -35,7 +38,6 @@ class EventHandler:
         self._payload = context["event"]
         self._ref = context["ref_name"]
         self._logger = Logger("github")
-
         self._output_meta = None
         self._output_hooks = None
         self._metadata = self._load_metadata()
@@ -73,13 +75,15 @@ class EventHandler:
             sep_groups[group_name] = dict(sorted(group_attrs.items()))
         return sep_groups
 
-    @staticmethod
-    def _load_metadata() -> dict:
+    def _load_metadata(self) -> dict:
         path_metadata = Path("meta/.out/metadata.json")
         metadata = {}
         if path_metadata.is_file():
             with open(path_metadata) as f:
                 metadata = json.load(f)
+            self._logger.success(f"Loaded metadata from {path_metadata}.", json.dumps(metadata, indent=3))
+        else:
+            self._logger.attention(f"No metadata found in {path_metadata}.")
         return metadata
 
 
@@ -148,6 +152,8 @@ class PushDev(EventHandler):
             )
             summary.append(self._output_hooks["summary"])
             hash_after = self._output_hooks["commit_hash"] or hash_after
+        else:
+            self._logger.attention("No workflow hooks config path set in metadata.")
         output["hash"] = hash_after
         return output, None, str(summary)
 

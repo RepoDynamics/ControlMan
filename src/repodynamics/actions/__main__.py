@@ -19,20 +19,19 @@ def main():
         action.append(action[0])
     action = [arg.replace('-', '_') for arg in action]
     module_name, function_name = action
-    logger.info(f"Execute repodynamics.actions.{module_name}.{function_name}")
+    action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
+    action = getattr(action_module, function_name)
+    inputs = io.input(module_name=module_name, function=action, logger=logger)
     try:
-        action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
-        action = getattr(action_module, function_name)
-        inputs = io.input(module_name=module_name, function=action, logger=logger)
         outputs, env_vars, summary = action(logger=logger, **inputs)
-        if outputs:
-            io.output(outputs, logger=logger)
-        if env_vars:
-            io.output(env_vars, env=True, logger=logger)
-        if summary:
-            io.summary(content=summary, logger=logger)
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", traceback.format_exc())
+    if outputs:
+        io.output(outputs, logger=logger)
+    if env_vars:
+        io.output(env_vars, env=True, logger=logger)
+    if summary:
+        io.summary(content=summary, logger=logger)
     return
 
 

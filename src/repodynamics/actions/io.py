@@ -23,7 +23,7 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
     default_args = _default_args(function)
     log_title = "Read inputs"
     logs = [
-        f"- Function: {module_name}.{function.__name__}",
+        f"- Function: repodynamics.actions.{module_name}.{function.__name__}",
         f"- Action Parameters: {params}",
         f"- Default Arguments: {default_args}"
     ]
@@ -86,7 +86,7 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
                 "   ⛔ ERROR: Unknown input type: "
                 f"'{param_env_name}' has value '{val}' with type '{type(val)}'."
             )
-        logger.success(log_title, logs)
+    logger.success(log_title, logs)
     return args
 
 
