@@ -1,1 +1,1 @@
-include src/repodynamics/meta/schema.json
+graft src/repodynamics

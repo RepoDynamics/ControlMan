@@ -38,6 +38,7 @@ class EventHandler:
         self._payload = context["event"]
         self._ref = context["ref_name"]
         self._logger = Logger("github")
+        self._git = Git(logger=self._logger)
         self._output_meta = None
         self._output_hooks = None
         self._metadata = self._load_metadata()
@@ -99,6 +100,11 @@ class PushRelease(EventHandler):
         return
 
     def run(self):
+        self._output_meta = meta.update(
+            action="report",
+            github_token=self._context["token"],
+            logger=self._logger,
+        )
         return
 
 
@@ -151,10 +157,9 @@ class PushDev(EventHandler):
                 logger=self._logger,
             )
             summary.append(self._output_hooks["summary"])
-            hash_after = self._output_hooks["commit_hash"] or hash_after
         else:
             self._logger.attention("No workflow hooks config path set in metadata.")
-        output["hash"] = hash_after
+        output["hash"] = self._git.push()
         return output, None, str(summary)
 
     @property
@@ -223,13 +228,6 @@ class Init:
         self._output_hooks = None
         return
 
-    def push_main(self):
-        self._output_meta = meta.update(
-            action="report",
-            github_token=self._context["token"],
-            logger=self._logger,
-        )
-        return
 
     def pull(self):
         hash_before = self._payload['pull_request']['base']['sha']
@@ -301,32 +299,6 @@ class _Init:
         # pr_head_sha = pull["pull-request-head-sha"]
         #
         # return output, None, summary
-
-    def case_push_dev(self):
-        output = {
-            "hash": self.latest_commit_hash,
-            "package_test": self.package_test_needed,
-            "package_lint": self.package_lint_needed,
-            "docs": self.docs_test_needed,
-        }
-        git.push()
-        return output
-
-    def case_schedule(self):
-        return
-
-    def case_pull(self):
-        return
-
-    def case_push_main(self):
-        return
-
-    @property
-    def latest_commit_hash(self):
-        return self.hooks.get("commit-hash") or self.meta.get("commit-hash") or self.context["event"]["after"]
-
-    def create_summary(self):
-        return
 
     def assemble_summary(self):
         sections = [
