@@ -20,7 +20,7 @@ def init(context: dict, changes: dict, logger=None):
         pass
     if event == "push":
         if context["event"]["created"]:
-            logger.success("Creation Event: Skipping.")
+            logger.error("Creation Event: Skipping.")
             return None, None, None
         ref = context["ref_name"]
         if ref == "main" or ref.startswith("release/"):
@@ -124,7 +124,15 @@ class PushRelease(EventHandler):
             release = "patch"
             self._tag = f"v{semver_tag[0]}.{semver_tag[1]}.{semver_tag[2] + 1}"
 
-        return
+        output = {
+            "hash": self._tag,
+            "publish": True,
+            "docs": True,
+            "website_url": self._metadata['url']['website']['base'],
+            "name": self._metadata['name']
+        }
+
+        return output, None, None
 
     def _run_initial_release(self):
         self._tag = "v0.0.0"
