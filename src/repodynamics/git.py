@@ -7,7 +7,14 @@ from repodynamics._util.shell import run_command as _run
 
 
 class Git:
-    def __init__(self, path_repo: str | Path = ".", initialize: bool = False, logger: Logger = None):
+    def __init__(
+        self,
+        path_repo: str | Path = ".",
+        initialize: bool = False,
+        username: str = "RepoDynamics[bot]",
+        email: str = "repodynamics@users.noreply.github.com",
+        logger: Logger = None
+    ):
         self._logger = logger or Logger("console")
         git_available = _run(["git", "--version"], raise_command=False, logger=self._logger)
         if not git_available:
@@ -24,6 +31,7 @@ class Git:
                 self._logger.error(f"No git repository found at '{path_repo}'.")
         else:
             self._path_root = Path(path_root).resolve()
+        self.set_user(username=username, email=email)
         return
 
     def push(self, target: str = None, ref: str = None):
@@ -130,7 +138,7 @@ class Git:
 
     def set_user(
         self,
-        username: str = "RepoDynamics",
+        username: str = "RepoDynamics[bot]",
         email: str = "repodynamics@users.noreply.github.com",
     ):
         """
