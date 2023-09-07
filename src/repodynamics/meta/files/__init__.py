@@ -5,7 +5,7 @@ from repodynamics.meta.reader import MetaReader
 from repodynamics.meta.files.config import ConfigFileGenerator
 from repodynamics.meta.files.health import HealthFileGenerator
 from repodynamics.meta.files.package import PackageFileGenerator
-
+from repodynamics.meta.files.readme import ReadmeFileGenerator
 
 def generate(metadata: dict, reader: MetaReader, logger: Logger = None) -> list[dict]:
     if not isinstance(reader, MetaReader):
@@ -16,6 +16,7 @@ def generate(metadata: dict, reader: MetaReader, logger: Logger = None) -> list[
         dict(category="metadata", name="metadata", content=json.dumps(metadata)),
         dict(category="license", name="license", content=metadata.get("license_txt", "")),
     ]
+    updates += ReadmeFileGenerator(metadata=metadata, logger=logger, path_root=reader.path_root).generate()
     updates += ConfigFileGenerator(metadata=metadata, logger=logger).generate()
     updates += HealthFileGenerator(metadata=metadata, reader=reader, logger=logger).generate()
     updates += PackageFileGenerator(metadata=metadata, reader=reader, logger=logger).generate()

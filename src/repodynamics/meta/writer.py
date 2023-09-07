@@ -27,7 +27,8 @@ class MetaWriter:
             'license': "License Files",
             'config': "Configuration Files",
             'health_file': "Health Files",
-            'package': "Package Files"
+            'package': "Package Files",
+            'readme': 'ReadMe Files'
         }
         self._path = {
             ('metadata', 'metadata'): self.path_meta / ".out" / "metadata.json",
@@ -36,6 +37,7 @@ class MetaWriter:
             ('config', 'labels'): self.path_root / ".github" / "labels.yaml",
             ('config', 'labels_pr'): self.path_root / ".github" / "labels_pr.yaml",
             ('package', 'pyproject'): self.path_root / "pyproject.toml",
+            ("readme", 'readme_main'): self.path_root / "README.md",
         }
         self._filename = {
             'metadata': 'metadata.json',
@@ -52,6 +54,7 @@ class MetaWriter:
             'pyproject': 'pyproject.toml',
             'docstring': '__init__.py',
             'dir': 'Package Directory',
+            'readme_main': 'README.md',
         }
         self._results = {}
         self._applied: bool = False

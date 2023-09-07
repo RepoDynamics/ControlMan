@@ -19,6 +19,9 @@ def init(context: dict, changes: dict, logger=None):
     if event == "pull_request":
         pass
     if event == "push":
+        if context["event"]["created"]:
+            logger.success("Creation Event: Skipping.")
+            return None, None, None
         ref = context["ref_name"]
         if ref == "main" or ref.startswith("release/"):
             logger.success("Detected Event: Push to release branch")
@@ -161,8 +164,10 @@ class PushDev(EventHandler):
             "package_lint": self.package_lint_needed,
             "docs": self.docs_test_needed,
         }
+
         hash_before = self._payload["before"]
         hash_after = self._payload["after"]
+
         if self._changes["meta"]["any_modified"] == "true":
             self._output_meta = meta.update(
                 action="commit",
@@ -178,6 +183,7 @@ class PushDev(EventHandler):
                 output["docs"] = True
             self._metadata = self._output_meta["metadata"]
             hash_after = self._output_meta["commit_hash"] or hash_after
+
         if self._metadata.get("workflow_hooks_config_path"):
             self._output_hooks = hooks.run(
                 action="commit",

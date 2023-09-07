@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Literal, Optional, Sequence
 
 # Non-standard libraries
-import pybadgeit as bdg
+import pybadger as bdg
 import pycolorit as pcit
-import markitup as html
-import pylinks
-import pypackit
+from markitup import html
+import repodynamics
 
 from readme_renderer.markdown import render
 
@@ -23,9 +22,10 @@ def render_pypi_readme(markdown_str: str):
     return html_str
 
 
-class ReadMe:
-    def __init__(self, metadata: dict):
+class ReadmeFileGenerator:
+    def __init__(self, metadata: dict, path_root: str | Path = ".", logger=None):
         self._metadata = metadata
+        self._path_root = Path(path_root).resolve()
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
         # )
@@ -36,40 +36,41 @@ class ReadMe:
         # )
         return
 
-    def generate(self) -> html.element.ElementCollection:
-        file_content = html.element.ElementCollection(
-            elements=[
-                html.element.Comment(f"{self._metadata['project']['name']} ReadMe File"),
-                html.element.Comment(
-                    f"Document automatically generated on "
-                    f"{datetime.datetime.utcnow().strftime('%Y.%m.%d at %H:%M:%S UTC')} "
-                    f"by PyPackIT {pypackit.__version__}"
-                ),
-                "\n",
-                marker(start="Header", main=True),
-                self.header(),
-                "\n",
-                marker(end="Header", main=True),
-                "\n",
-                marker(start="Body", main=True),
-                "\n",
-                self.body(),
-                "\n",
-                marker(end="Body", main=True),
-                "\n",
-                marker(start="Footer", main=True),
-                "\n",
-                self.footer(),
-                "\n",
-                marker(end="Footer", main=True),
-                "\n",
-            ]
-        )
-        return file_content
+    def generate(self) -> html.ElementCollection:
+        # file_content = html.ElementCollection(
+        #     elements=[
+        #         html.Comment(f"{self._metadata['name']} ReadMe File"),
+        #         # html.Comment(
+        #         #     f"Document automatically generated on "
+        #         #     f"{datetime.datetime.utcnow().strftime('%Y.%m.%d at %H:%M:%S UTC')} "
+        #         #     f"by PyPackIT {pypackit.__version__}"
+        #         # ),
+        #         "\n",
+        #         marker(start="Header", main=True),
+        #         self.header(),
+        #         "\n",
+        #         marker(end="Header", main=True),
+        #         "\n",
+        #         marker(start="Body", main=True),
+        #         "\n",
+        #         self.body(),
+        #         "\n",
+        #         marker(end="Body", main=True),
+        #         "\n",
+        #         marker(start="Footer", main=True),
+        #         "\n",
+        #         self.footer(),
+        #         "\n",
+        #         marker(end="Footer", main=True),
+        #         "\n",
+        #     ]
+        # )
+        file_content = self.header()
+        return [{"category": "readme", "name": "readme_main", "content": str(file_content)}]
 
     def header(self):
         top_menu, bottom_menu = self.menu()
-        return html.element.DIV(
+        return html.DIV(
             align="center",
             content=[
                 marker(start="Logo"),
@@ -88,8 +89,8 @@ class ReadMe:
         )
 
     def body(self):
-        data = self._metadata["body"]
-        return html.element.DIV(
+        data = self._metadata["readme"]["body"]
+        return html.DIV(
             content=[getattr(self, f'{section["id"]}')(section) for section in data]
         )
 
@@ -103,9 +104,9 @@ class ReadMe:
         license_badge.align = "right"
         pypackit_badge_ = pypackit_badge()
         pypackit_badge_.align = "right"
-        elements = html.element.DIV(
+        elements = html.DIV(
             content=[
-                html.element.HR(),
+                html.HR(),
                 marker(start="Left Side"),
                 project_badge,
                 copyright_badge,
@@ -118,36 +119,36 @@ class ReadMe:
         )
         return elements
 
-    def logo(self) -> html.element.A:
+    def logo(self) -> html.A:
         style = self._metadata["readme"]["header"]["style"]
         url = f"{self._metadata['url']['website']['base']}" + "/_static/logo/full_{}.svg"
-        picture_tag = html.element.PICTURE(
-            img=html.element.IMG(
+        picture_tag = html.PICTURE(
+            img=html.IMG(
                 src=url.format("light"),
-                alt=f"{self._metadata['project']['name']}: {self._metadata['project']['tagline']}",
-                title=f"Welcome to {self._metadata['project']['name']}! Click to visit our website and learn more.",
+                alt=f"{self._metadata['name']}: {self._metadata['tagline']}",
+                title=f"Welcome to {self._metadata['name']}! Click to visit our website and learn more.",
                 width="80%" if style == "vertical" else "auto",
                 height="300px" if style == "horizontal" else "auto",
                 align="center" if style == "vertical" else "left",
             ),
             sources=[
-                html.element.SOURCE(
+                html.SOURCE(
                     media=f"(prefers-color-scheme: {theme})", srcset=url.format(theme)
                 )
                 for theme in ("dark", "light")
             ],
         )
-        logo = html.element.A(href=self._metadata["url"]["website"]["home"], content=[picture_tag])
+        logo = html.A(href=self._metadata["url"]["website"]["home"], content=[picture_tag])
         if self._metadata["readme"]["header"]["style"] == "horizontal":
             logo.content.elements.append(self.spacer(width="10px", height="300px", align="left"))
         return logo
 
     def header_body(self):
-        description = html.element.P(
-            align="justify", content=[self._metadata["project"]["description"]]
+        description = html.P(
+            align="justify", content=[self._metadata["description"]]
         ).style(
             {
-                self._metadata["project"]["name"]: {
+                self._metadata["name"]: {
                     "bold": True,
                     "italic": True,
                     "link": self._metadata["url"]["website"]["home"],
@@ -155,13 +156,13 @@ class ReadMe:
             }
         )
         content = [description]
-        for key_point in self._metadata["project"]["key_points"]:
+        for key_point in self._metadata["keynotes"]:
             content.extend(
                 [
                     # self.spacer(width="10%", align="left"),
                     # self.spacer(width="10%", align="right"),
                     self.button(text=key_point["title"], color="primary"),
-                    html.element.P(align="justify", content=[key_point["description"]]),
+                    html.P(align="justify", content=[key_point["description"]]),
                 ]
             )
         return content
@@ -187,21 +188,21 @@ class ReadMe:
         def get_bottom_data():
             return [
                 {"text": item["title"], "link": item["path"]}
-                for group in self._metadata["website"]["quicklinks"]
+                for group in self._metadata["quicklinks"]
                 for item in group
                 if item.get("include_in_readme")
             ]
 
-        path_docs = Path(self._metadata["path"]["abs"]["docs"]["website"]["source"])
+        path_docs = self._path_root / "docs/website/source"
         top_data = get_top_data()
         bottom_data = get_bottom_data()
         colors = [
             pcit.gradient.interpolate_rgb(
-                color_start=pcit.color.hexa(self._metadata["theme"]["color"]["primary"][theme]),
-                color_end=pcit.color.hexa(self._metadata["theme"]["color"]["secondary"][theme]),
+                color_start=pcit.color.hexa(self._metadata["color"]["primary"][theme]),
+                color_end=pcit.color.hexa(self._metadata["color"]["secondary"][theme]),
                 count=len(top_data) + len(bottom_data),
             ).hex()
-            for theme in ("light", "dark")
+            for theme in (0, 1)
         ]
         buttons = [
             self.button(
@@ -212,7 +213,7 @@ class ReadMe:
             for data, color_light, color_dark in zip(top_data + bottom_data, colors[0], colors[1])
         ]
         menu_top, menu_bottom = [
-            html.element.DIV(
+            html.DIV(
                 align="center",
                 content=[
                     ("&nbsp;" * 2).join(
@@ -225,11 +226,11 @@ class ReadMe:
             )
             for badges in (buttons[: len(top_data)], buttons[len(top_data) :])
         ]
-        menu_bottom.content.elements.insert(0, html.element.HR(width="100%"))
-        menu_bottom.content.elements.append(html.element.HR(width="80%"))
+        menu_bottom.content.elements.insert(0, html.HR(width="100%"))
+        menu_bottom.content.elements.append(html.HR(width="80%"))
         if self._metadata["readme"]["header"]["style"] == "vertical":
-            menu_top.content.elements.insert(0, html.element.HR(width="80%"))
-            menu_top.content.elements.append(html.element.HR(width="100%"))
+            menu_top.content.elements.insert(0, html.HR(width="80%"))
+            menu_top.content.elements.append(html.HR(width="100%"))
         else:
             menu_top.content.elements.append("<br><br>")
         return menu_top, menu_bottom
@@ -262,7 +263,7 @@ class ReadMe:
                 test = style | test
             badges.append(func_map[func](**test))
 
-        div = html.element.DIV(
+        div = html.DIV(
             align=data.get("align") or "center",
             content=[
                 marker(start="Continuous Integration"),
@@ -282,26 +283,26 @@ class ReadMe:
             prs.append(self._github_badges.pr_issue(label=label, raw=True, logo=None))
             issues.append(self._github_badges.pr_issue(label=label, raw=True, pr=False, logo=None))
 
-        prs_div = html.element.DIV(
-            align="right", content=html.element.ElementCollection(prs, "\n<br>\n")
+        prs_div = html.DIV(
+            align="right", content=html.ElementCollection(prs, "\n<br>\n")
         )
-        iss_div = html.element.DIV(
-            align="right", content=html.element.ElementCollection(issues, "\n<br>\n")
+        iss_div = html.DIV(
+            align="right", content=html.ElementCollection(issues, "\n<br>\n")
         )
 
-        table = html.element.TABLE(
+        table = html.TABLE(
             content=[
-                html.element.TR(
+                html.TR(
                     content=[
-                        html.element.TD(
-                            content=html.element.ElementCollection(
+                        html.TD(
+                            content=html.ElementCollection(
                                 [pr_button, *prs], seperator="<br>"
                             ),
                             align="center",
                             valign="top",
                         ),
-                        html.element.TD(
-                            content=html.element.ElementCollection(
+                        html.TD(
+                            content=html.ElementCollection(
                                 [
                                     bdg.shields.static(
                                         text="Milestones",
@@ -329,8 +330,8 @@ class ReadMe:
                             align="center",
                             valign="top",
                         ),
-                        html.element.TD(
-                            content=html.element.ElementCollection(
+                        html.TD(
+                            content=html.ElementCollection(
                                 [
                                     bdg.shields.static(
                                         text="Issues",
@@ -350,7 +351,7 @@ class ReadMe:
             ]
         )
 
-        div = html.element.DIV(
+        div = html.DIV(
             align=data.get("align") or "center",
             content=[
                 marker(start="Activity"),
@@ -366,7 +367,7 @@ class ReadMe:
         badge = self._github_badges.release_version(
             display_name="release",
             include_pre_release=True,
-            text=self._metadata["project"]["name"],
+            text=self._metadata["name"],
             style="for-the-badge",
             link=data["link"],
             logo=data["logo"],
@@ -410,7 +411,7 @@ class ReadMe:
             style="for-the-badge",
             color={
                 theme: (
-                    self._metadata["theme"]["color"][color][theme]
+                    self._metadata["color"][color][idx]
                     if isinstance(color, str)
                     else color[idx]
                 )
@@ -437,7 +438,7 @@ class ReadMe:
         return self.github_link_gen(branch=True).file(link, raw=raw)
 
     def spacer(self, **args):
-        spacer = html.element.IMG(
+        spacer = html.IMG(
             src="docs/source/_static/img/spacer.svg",
             **args,
         )
@@ -452,7 +453,7 @@ def marker(start=None, end=None, main: bool = False):
     tag = "START" if start else "END"
     section = start if start else end
     delim = "-" * (40 if main else 25)
-    return html.element.Comment(f"{delim} {tag} : {section} {delim}")
+    return html.Comment(f"{delim} {tag} : {section} {delim}")
 
 
 """Components for creating a GitHub README file in HTML."""
@@ -499,7 +500,7 @@ def connect(
 
 def pypackit_badge():
     return bdg.shields.static(
-        text={"left": "Template", "right": f"PyPackIT {pypackit.__version__}"},
+        text={"left": "Template", "right": f"PyPackIT {repodynamics.__version__}"},
         style="for-the-badge",
         color={"right": "rgb(0, 100, 0)"},
         logo=(
@@ -521,6 +522,6 @@ def pypackit_badge():
             "Ts351lL94a+SuupQqY46bdHFSwf+/ympCgD8BxQORGJUan2aAAAAAElFTkSuQmCC"
         ),
         alt="Template by PyPackIT",
-        title=f"Project template created by PyPackIT version {pypackit.__version__}.",
+        title=f"Project template created by PyPackIT version {repodynamics.__version__}.",
         link="https://pypackit.readthedocs.io",
     )
