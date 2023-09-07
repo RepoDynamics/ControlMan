@@ -54,7 +54,9 @@ class Git:
             self._run(["git", "add", flag])
         commit_hash = None
         if self.has_changes(check_type="staged"):
-            self._run(["git", "commit", "-m", message])
+            out, err, code = self._run(["git", "commit", "-m", message], raise_=False)
+            if code != 0:
+                self._run(["git", "commit", "-m", message])
             commit_hash = self.commit_hash_normal()
             self._logger.success(f"Committed changes. Commit hash: {commit_hash}")
         else:
@@ -117,8 +119,7 @@ class Git:
         Returns:
         - str: The commit hash.
         """
-        out, err, code = self._run(["git", "rev-parse", f"HEAD~{parent}"])
-        return out
+        return self._run(["git", "rev-parse", f"HEAD~{parent}"])
 
     def latest_semver_tag(self) -> tuple[int, int, int] | None:
         out, err, code = self._run(

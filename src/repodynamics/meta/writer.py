@@ -144,8 +144,10 @@ class MetaWriter:
                 if result['status'] == "moved":
                     result['path_before'].rename(result['path'])
                     continue
-                result['path'].mkdir(parents=True, exist_ok=True)
-                if result['type'] == 'file':
+                if result['type'] == "dir":
+                    result['path'].mkdir(parents=True, exist_ok=True)
+                else:
+                    result['path'].parent.mkdir(parents=True, exist_ok=True)
                     if result['status'] == "moved/modified":
                         result['path_before'].unlink()
                     with open(result['path'], "w") as f:
@@ -354,7 +356,10 @@ class MetaWriter:
         ]
         if dic['type'] == 'file':
             if name == "metadata":
-                before, after = [json.dumps(json.loads(dic[i]), indent=3) for i in ['before', 'after']]
+                before, after = [
+                    json.dumps(json.loads(dic[i]), indent=3) if dic[i] else ""
+                    for i in ['before', 'after']
+                ]
             else:
                 before, after = dic['before'], dic['after']
             diff_lines = list(difflib.ndiff(before.splitlines(), after.splitlines()))
