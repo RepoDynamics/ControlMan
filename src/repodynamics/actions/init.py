@@ -150,6 +150,7 @@ class PushRelease(EventHandler):
             "website_url": self._metadata['url']['website']['base'],
             "name": self._metadata['name']
         }
+        self._create_release_notes()
         return output, None, None
 
     def _create_changelog(self):
