@@ -33,8 +33,8 @@ class MetaWriter:
             ('metadata', 'metadata'): self.path_meta / ".out" / "metadata.json",
             ('license', 'license'): self.path_root / "LICENSE",
             ('config', 'funding'): self.path_root / ".github" / "FUNDING.yml",
-            ('config', 'labels'): self.path_root / ".github" / "workflows" / "labels.yaml",
-            ('config', 'labels_pr'): self.path_root / ".github" / "workflows" / "labels_pr.yaml",
+            ('config', 'labels'): self.path_root / ".github" / "workflows" / "config" / "labels.yaml",
+            ('config', 'labels_pr'): self.path_root / ".github" / "workflows" / "config" / "labels_pr.yaml",
             ('package', 'pyproject'): self.path_root / "pyproject.toml",
         }
         self._filename = {
