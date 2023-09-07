@@ -127,6 +127,7 @@ class PushRelease(EventHandler):
         return
 
     def _run_initial_release(self):
+        self._tag = "v0.0.0"
         self._create_changelog()
         self._git.commit(
             stage='all',
@@ -135,13 +136,12 @@ class PushRelease(EventHandler):
         self._git.push(force_with_lease=True)
         self._git.create_tag(tag="v0.0.0", message="Initial Release")
         output = {
-            "hash": "v0.0.0",
+            "hash": self._tag,
             "publish": True,
             "docs": True,
             "website_url": self._metadata['url']['website']['base'],
             "name": self._metadata['name']
         }
-        self._tag = "v0.0.0"
         return output, None, None
 
     def _create_changelog(self):
