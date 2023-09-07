@@ -174,11 +174,13 @@ class PreCommitHooks:
         return outputs, result_line, details
 
     def _run_hooks(self) -> dict[str, dict]:
-        scope = f"--from-ref {self._from_ref} --to-ref {self._to_ref}" if self._from_ref else "--all-files"
+        scope = [
+            "--from-ref", self._from_ref, "--to-ref", "self._to_ref"
+        ] if self._from_ref else ["--all-files"]
         command = [
             "pre-commit",
             "run",
-            scope,
+            *scope,
             "--show-diff-on-failure",
             "--color=always",
             "--verbose",
