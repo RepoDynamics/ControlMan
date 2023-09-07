@@ -109,11 +109,21 @@ class PushRelease(EventHandler):
         semver_tag = self._git.latest_semver_tag()
         if not semver_tag:
             return self._run_initial_release()
+
         self._output_meta = meta.update(
             action="report",
             github_token=self._context["token"],
             logger=self._logger,
         )
+
+        commit_msg = self._payload["head_commit"]["message"]
+        if commit_msg.startswith("feat"):
+            release = True
+            self._tag = f"v{semver_tag[0]}.{semver_tag[1] + 1}.0"
+        elif commit_msg.startswith("fix"):
+            release = "patch"
+            self._tag = f"v{semver_tag[0]}.{semver_tag[1]}.{semver_tag[2] + 1}"
+
         return
 
     def _run_initial_release(self):
@@ -124,17 +134,32 @@ class PushRelease(EventHandler):
         )
         self._git.push(force_with_lease=True)
         self._git.create_tag(tag="v0.0.0", message="Initial Release")
-        return
+        output = {
+            "hash": "v0.0.0",
+            "publish": True,
+            "docs": True,
+            "website_url": self._metadata['url']['website']['base'],
+            "name": self._metadata['name']
+        }
+        self._tag = "v0.0.0"
+        return output, None, None
 
     def _create_changelog(self):
         changelog = f"""# Changelog
 This document tracks all changes to the {self._metadata['name']} public API.
 
-## [{self._metadata['project']['name']} 0.0.0]({self._metadata['url']['github']['releases']['home']}/tag/v0.0.0)
+## [{self._metadata['name']} {self._tag.removesuffix('v')}]({self._metadata['url']['github']['releases']['home']}/tag/{self._tag})
 This is the initial release of the project. Infrastructure is now in place to support future releases.
 """
         with open("CHANGELOG.md", "w") as f:
             f.write(changelog)
+        return
+
+    def _create_release_notes(self):
+        path = Path(".local/temp/repodynamics/release_notes.md")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            f.write(f"[{self._metadata['name']} {self._tag.removesuffix('v')}]({self._metadata['url']['github']['releases']['home']}/tag/{self._tag})")
         return
 
 

@@ -3,9 +3,10 @@ from pathlib import Path
 
 from markitup import html, md
 
+from repodynamics.logger import Logger
 
 
-def package_build_sdist() -> tuple[dict, str]:
+def build(path_dist: str, logger=None) -> tuple[dict, str]:
     filename = list((Path.cwd() / "dist").glob("*.tar.gz"))[0]
     dist_name = filename.stem.removesuffix(".tar.gz")
     package_name, version = dist_name.rsplit("-", 1)
@@ -17,12 +18,15 @@ def package_build_sdist() -> tuple[dict, str]:
             f"📦 Filename: `{filename.name}`",
         ]
     )
-    return output, str(log)
+    return output, None, str(log)
 
 
-def package_publish_pypi(
-        package_name: str, package_version: str, platform_name: str, dist_path: str = "dist"
+def publish(
+        platform: str, path_dist: str = "dist", logger=None,
 ) -> tuple[dict, str]:
+
+    package_name, package_version = _get_package_name_ver(path_dist)
+
     download_url = {
         "PyPI": "https://pypi.org/project",
         "TestPyPI": "https://test.pypi.org/project",
@@ -32,11 +36,11 @@ def package_publish_pypi(
         "TestPyPI": "https://test.pypi.org/legacy/",
     }
     outputs = {
-        "download_url": f"{download_url[platform_name]}/{package_name}/{package_version}",
-        "upload_url": upload_url[platform_name],
+        "download_url": f"{download_url[platform]}/{package_name}/{package_version}",
+        "upload_url": upload_url[platform],
     }
 
-    dists = "\n".join([path.name for path in list(Path(dist_path).glob("*.*"))])
+    dists = "\n".join([path.name for path in list(Path(path_dist).glob("*.*"))])
     dist_files = html.details(
         content=md.code_block(dists, "bash"),
         summary="🖥 Distribution Files",
@@ -45,9 +49,16 @@ def package_publish_pypi(
         [
             f"📦 Package Name: `{package_name}`",
             f"📦 Package Version: `{package_version}`",
-            f"📦 Platform: `{platform_name}`",
+            f"📦 Platform: `{platform}`",
             f"📦 Download URL: `{outputs['download_url']}`",
         ]
     )
     log = html.ElementCollection([log_list, dist_files])
-    return outputs, str(log)
+    return outputs, None, str(log)
+
+
+def _get_package_name_ver(path_dist):
+    filename = list(Path(path_dist).glob("*.tar.gz"))[0]
+    dist_name = filename.stem.removesuffix(".tar.gz")
+    package_name, version = dist_name.rsplit("-", 1)
+    return package_name, version
