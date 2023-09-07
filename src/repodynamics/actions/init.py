@@ -82,7 +82,10 @@ class EventHandler:
         if path_metadata.is_file():
             with open(path_metadata) as f:
                 metadata = json.load(f)
-            self._logger.success(f"Loaded metadata from {path_metadata}.", json.dumps(metadata, indent=3))
+            self._logger.success(
+                f"Loaded metadata from {path_metadata}.",
+                json.dumps(metadata, indent=3)
+            )
         else:
             self._logger.attention(f"No metadata found in {path_metadata}.")
         return metadata
@@ -100,12 +103,38 @@ class PushRelease(EventHandler):
         return
 
     def run(self):
+        semver_tag = self._git.latest_semver_tag()
+        if not semver_tag:
+            return self._run_initial_release()
         self._output_meta = meta.update(
             action="report",
             github_token=self._context["token"],
             logger=self._logger,
         )
         return
+
+    def _run_initial_release(self):
+        self._create_changelog()
+        self._git.commit(
+            stage='all',
+            amend=True,
+        )
+        self._git.push(force_with_lease=True)
+        self._git.create_tag(tag="v0.0.0", message="Initial Release")
+        return
+
+    def _create_changelog(self):
+        changelog = f"""# Changelog
+This document tracks all changes to the {self._metadata['name']} public API.
+
+## [{self._metadata['project']['name']} 0.0.0]({self._metadata['url']['github']['releases']['home']}/tag/v0.0.0)
+This is the initial release of the project. Infrastructure is now in place to support future releases.
+"""
+        with open("CHANGELOG.md", "w") as f:
+            f.write(changelog)
+        return
+
+
 
 
 class InitialRelease(EventHandler):

@@ -34,19 +34,22 @@ class Git:
         self.set_user(username=username, email=email)
         return
 
-    def push(self, target: str = None, ref: str = None):
+    def push(self, target: str = None, ref: str = None, force_with_lease: bool = False):
         command = ["git", "push"]
         if target:
             command.append(target)
         if ref:
             command.append(ref)
+        if force_with_lease:
+            command.append("--force-with-lease")
         self._run(command)
         return self.commit_hash_normal()
 
     def commit(
         self,
-        message: str,
+        message: str = "",
         stage: Literal['all', 'tracked', 'none'] = 'tracked',
+        amend: bool = False,
     ):
         """
         Commit changes to git.
@@ -57,14 +60,24 @@ class Git:
         - email (str): The git email.
         - add (bool): Whether to add all changes before committing.
         """
+        if not amend and not message:
+            self._logger.error("No commit message provided.")
+        commit_cmd = ["git", "commit"]
+        if amend:
+            commit_cmd.append("--amend")
+            if not message:
+                commit_cmd.append("--no-edit")
+        for msg_line in message.splitlines():
+            commit_cmd.extend(["-m", msg_line])
+
         if stage != 'none':
             flag = "-A" if stage == 'all' else "-u"
             self._run(["git", "add", flag])
         commit_hash = None
         if self.has_changes(check_type="staged"):
-            out, err, code = self._run(["git", "commit", "-m", message], raise_=False)
+            out, err, code = self._run(commit_cmd, raise_=False)
             if code != 0:
-                self._run(["git", "commit", "-m", message])
+                self._run(commit_cmd)
             commit_hash = self.commit_hash_normal()
             self._logger.success(f"Committed changes. Commit hash: {commit_hash}")
         else:
@@ -81,10 +94,10 @@ class Git:
             self._run(["git", "tag", tag])
         else:
             self._run(["git", "tag", "-a", tag, "-m", message])
-        process = self._run(["git", "show", tag])
+        out = self._run(["git", "show", tag])
         if push_target:
             self.push(target=push_target, ref=tag)
-        return process[0]
+        return out
 
     def has_changes(self, check_type: Literal['staged', 'unstaged', 'all'] = 'all') -> bool:
         """Checks for git changes.

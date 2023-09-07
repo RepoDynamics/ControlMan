@@ -30,19 +30,9 @@ class MergeLogger:
         return
 
     def initial_release(self):
-        log = f"""
-## [{self.metadata['project']['name']} 0.0.0]({self.metadata['url']['github']['releases']['home']}/tag/v0.0.0)
-This is the initial release of the project. Infrastructure is now in place to support future releases.
-        """
-        changelog = f"""
-# Changelog
-This document tracks all changes to the {self.metadata['project']['name']} API.
 
-{log}
 
-"""
-        with open("CHANGELOG.md", "w") as f:
-            f.write(changelog)
+
         with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
             print(f"release=true", file=fh)
             print(f"docs=true", file=fh)

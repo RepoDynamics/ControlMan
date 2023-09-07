@@ -175,7 +175,7 @@ class PreCommitHooks:
 
     def _run_hooks(self) -> dict[str, dict]:
         scope = [
-            "--from-ref", self._from_ref, "--to-ref", "self._to_ref"
+            "--from-ref", self._from_ref, "--to-ref", self._to_ref
         ] if self._from_ref else ["--all-files"]
         command = [
             "pre-commit",
