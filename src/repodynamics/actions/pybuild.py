@@ -8,8 +8,11 @@ from repodynamics.logger import Logger
 
 def build(path_dist: str, logger=None) -> tuple[dict, str]:
     filename = list((Path.cwd() / "dist").glob("*.tar.gz"))[0]
-    dist_name = filename.stem.removesuffix(".tar.gz")
+    print(filename)
+    dist_name = filename.name.removesuffix(".tar.gz")
+    print(dist_name)
     package_name, version = dist_name.rsplit("-", 1)
+    print(package_name, version)
     output = {"package-name": package_name, "package-version": version}
     log = html.ul(
         [
@@ -59,6 +62,6 @@ def publish(
 
 def _get_package_name_ver(path_dist):
     filename = list(Path(path_dist).glob("*.tar.gz"))[0]
-    dist_name = filename.stem.removesuffix(".tar.gz")
+    dist_name = filename.name.removesuffix(".tar.gz")
     package_name, version = dist_name.rsplit("-", 1)
     return package_name, version
