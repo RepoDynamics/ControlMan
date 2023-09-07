@@ -239,12 +239,12 @@ class Git:
     def path_root(self) -> Path:
         return self._path_root
 
-    def _run(self, command: list[str], raise_: bool = True, **kwargs):
+    def _run(self, command: list[str], raise_: bool = True, raise_stderr: bool = False, **kwargs):
         out, err, code = _run(
             command,
             cwd=self._path_root,
             raise_returncode=raise_,
-            raise_stderr=raise_,
+            raise_stderr=raise_stderr,
             logger=self._logger,
             **kwargs
         )
