@@ -92,6 +92,7 @@ class PackageFileGenerator:
     def pyproject_project(self) -> dict:
         data_type = {
             "name": ("str", self._meta["package"]["name"]),
+            "dynamic": ("array", ["version"]),
             "description": ("str", self._meta["tagline"]),
             "readme": ("str", ".local/README_PYPI.md"),
             "requires-python": (
