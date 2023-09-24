@@ -16,6 +16,7 @@ from readme_renderer.markdown import render
 
 
 def render_pypi_readme(markdown_str: str):
+    # https://github.com/pypa/readme_renderer/blob/main/readme_renderer/markdown.py
     html_str = render(markdown_str)
     if not html_str:
         raise ValueError("Renderer encountered an error.")
