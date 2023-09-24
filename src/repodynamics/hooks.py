@@ -26,19 +26,22 @@ class PreCommitHooks:
         if not path_config.exists():
             self._logger.error(f"Config file '{path_config}' not found.")
         self._config_path = path_config
+
+        self._git = git.Git(path_repo=self._path_root, logger=self._logger)
+
         self._emoji = {"Passed": "✅", "Failed": "❌", "Skipped": "⏭️", "Modified": "✏️️"}
 
-        self._action: Literal['report', 'apply', 'commit'] = 'report'
+        self._action: Literal['report', 'apply', 'amend', 'commit'] = 'report'
         self._from_ref: str = None
         self._to_ref: str = None
         return
 
     def run(
         self,
-        action: Literal['report', 'apply', 'commit'] = "report",
+        action: Literal['report', 'apply', 'amend', 'commit'] = "report",
         ref_range: tuple[str, str] = None
     ) -> dict:
-        if action not in ("report", "apply", "commit"):
+        if action not in ("report", "apply", "amend", "commit"):
             self._logger.error(
                 f"Argument 'action' must be one of 'report', 'apply', or 'commit', but got {action}."
             )
@@ -55,13 +58,14 @@ class PreCommitHooks:
             self._from_ref, self._to_ref = ref_range
         else:
             self._from_ref = self._to_ref = None
-        output, summary = self._run_check() if action == "report" else self._run_fix(commit=action == "commit")
+        output, summary = self._run_check() if action == "report" else self._run_fix(action=action)
         output['summary'] = summary
         output.setdefault('commit_hash', '')
         return output
 
     def _run_check(self):
         self._logger.h3("Validation Run")
+        self._git.stash(include='all')
         results = self._run_hooks()
         output, result_line, details = self._process_results(results, validation_run=True)
         summary = self._create_summary(
@@ -69,6 +73,8 @@ class PreCommitHooks:
             run_summary=[result_line],
             details=details,
         )
+        self._git.discard_changes()
+        self._git.stash_pop()
         return output, summary
 
     def _create_summary(
@@ -85,8 +91,8 @@ class PreCommitHooks:
         summary_result = f"{result_emoji} {result_keyword}"
         if modified:
             summary_result += " (modified files)"
-        action_emoji = {"report": "📝", "apply": "🔧️", "commit": "💾"}[self._action]
-        action_title = {"report": "Validate", "apply": "Fix", "commit": "Fix & Commit"}[self._action]
+        action_emoji = {"report": "📝", "apply": "🔧️", "commit": "💾", "amend": "📌"}[self._action]
+        action_title = {"report": "Validate", "apply": "Fix", "commit": "Fix & Commit", "amend": "Fix & Amend"}[self._action]
         scope = f"From ref. '{self._from_ref}' to ref. '{self._to_ref}'" if self._from_ref else "All files"
         summary_list = [
                 f"Result: {summary_result}",
@@ -110,7 +116,7 @@ class PreCommitHooks:
         )
         return html_summary
 
-    def _run_fix(self, commit: bool):
+    def _run_fix(self, action: Literal['apply', 'amend', 'commit'] = "apply"):
         self._logger.h3("Fix Run")
         results_fix = self._run_hooks()
         outputs_fix, summary_line_fix, details_fix = self._process_results(results_fix, validation_run=False)
@@ -130,10 +136,11 @@ class PreCommitHooks:
         outputs_validate['modified'] = outputs_validate['modified'] or outputs_fix['modified']
         run_summary = [summary_line_fix, summary_line_validate]
         details = html.ElementCollection([details_fix, details_validate])
-        if commit:
+        if action in ['amend', 'commit']:
             self._logger.h4("Commit changes")
             commit_hash = git.Git(path_repo=self._path_root, logger=self._logger).commit(
-                message="maint: run pre-commit hooks"
+                message="" if action == "amend" else "style: fix files with pre-commit hooks",
+                amend=action == "amend"
             )
             outputs_validate["commit_hash"] = commit_hash
         summary = self._create_summary(outputs_validate, run_summary, details)
@@ -232,7 +239,7 @@ class PreCommitHooks:
 
 
 def run(
-    action: Literal['report', 'apply', 'commit'] = "report",
+    action: Literal['report', 'apply', 'amend', 'commit'] = "report",
     ref_range: tuple[str, str] = None,
     path_root: str = ".",
     path_config: str = ".pre-commit-config.yaml",
