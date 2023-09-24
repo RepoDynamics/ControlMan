@@ -304,8 +304,8 @@ class MetaReader:
     def _read_package_config(self):
         self.logger.h3("Read Package Config")
 
-        def read_path(path: Path, extension_nr: int = 0):
-            dirpath_config = Path(path) / "config"
+        def read_path(path: Path):
+            dirpath_config = Path(path) / "config" / "pyproject"
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
@@ -325,7 +325,7 @@ class MetaReader:
         for idx, extension in enumerate(self._extensions):
             if extension["type"] not in ["meta", "config"]:
                 continue
-            extension_config = read_path(self._path_extensions / f"{idx + 1 :03}", extension_nr=idx + 1)
+            extension_config = read_path(self._path_extensions / f"{idx + 1 :03}")
             self._recursive_update(
                 final_config,
                 extension_config,
@@ -335,13 +335,11 @@ class MetaReader:
             )
         return final_config
 
-
-        return package_config
-
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
         dest_path = {
             "meta": ".",
             "config": "config",
+            "pyproject": "config/pyproject",
             "data": "data",
             "template": "template",
             "health_file": "template/health_file",
