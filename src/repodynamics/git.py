@@ -248,6 +248,24 @@ class Git:
     def file_at_hash(self, commit_hash: str, path: str):
         return self._run(["git", "show", f"{commit_hash}:{path}"])
 
+    def discard_changes(self, path: str | Path = "."):
+        return self._run(["git", "checkout", "--", str(path)])
+
+    def stash(
+        self,
+        name: str = "Stashed by RepoDynamics",
+        include: Literal['tracked', 'untracked', 'all'] = 'all'
+    ):
+        command = ["git", "stash"]
+        if include in ['untracked', 'all']:
+            command.extend(["save", "--include-untracked" if include == 'untracked' else "--all"])
+        if name:
+            command.append(str(name))
+        return self._run(command)
+
+    def stash_pop(self):
+        return self._run(["git", "stash", "pop"])
+
     @property
     def path_root(self) -> Path:
         return self._path_root
