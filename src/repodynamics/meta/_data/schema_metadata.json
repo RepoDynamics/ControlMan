@@ -723,7 +723,7 @@
                }
             },
 
-            "dependencies": {
+            "core_dependencies": {
                "description": "Dependencies for the project",
                "type": "array",
                "uniqueItems": true,
@@ -777,7 +777,7 @@
                }
             },
 
-            "scripts": {
+            "cli_scripts": {
                "description": "Scripts for the project",
                "type": "array",
                "uniqueItems": true,
@@ -896,6 +896,49 @@
                "append_dict": {"type": "boolean"},
                "raise_duplicate": {"type": "boolean"}
             }
+         }
+      },
+
+
+      "conventional_commits_types": {
+         "description": "Conventional commits types",
+         "type": "array",
+         "uniqueItems": true,
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "description"],
+            "properties": {
+               "type": {"type": "string"},
+               "description": {"type": "string"}
+            }
+         }
+      },
+
+      "meta_check_action_type": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+            "release_branch": {
+               "type": "string",
+               "enum": ["fail", "amend", "commit"],
+               "default": "fail"
+            },
+            "dev_branch": {
+               "type": "string",
+               "enum": ["fail", "amend", "commit"],
+               "default": "commit"
+            }
+         }
+      },
+
+      "path": {
+         "description": "Path to main directories",
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+            "source": {"type": "string"},
+            "tests": {"type": "string"}
          }
       }
    }
