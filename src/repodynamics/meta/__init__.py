@@ -14,7 +14,7 @@ from repodynamics.meta.writer import MetaWriter
 def update(
     path_root: str | Path = ".",
     path_meta: str = "meta",
-    action: Literal["report", "apply", "commit"] = "report",
+    action: Literal["report", "apply", "amend", "commit"] = "report",
     github_token: Optional[str] = None,
     logger: Logger = None
 ) -> dict:
