@@ -15,7 +15,8 @@ import tomlkit.items
 
 from repodynamics.logger import Logger
 from repodynamics.meta.reader import MetaReader
-
+from repodynamics import _templated_dict
+from repodynamics import _util
 
 class PackageFileGenerator:
     def __init__(self, metadata: dict, reader: MetaReader, logger: Logger = None):
@@ -84,9 +85,11 @@ class PackageFileGenerator:
         return content
 
     def pyproject(self):
-        pyproject = self._reader.package_config
-        pyproject["project"] = self.pyproject_project()
-        self.pyproject_tool_versioningit_onbuild(pyproject)
+        pyproject = _templated_dict.fill(self._reader.package_config, metadata=self._meta)
+        project = pyproject.setdefault("project", {})
+        for key, val in self.pyproject_project().items():
+            if key not in project:
+                project[key] = val
         return tomlkit.dumps(pyproject)
 
     def pyproject_project(self) -> dict:
@@ -94,17 +97,11 @@ class PackageFileGenerator:
             "name": ("str", self._meta["package"]["name"]),
             "dynamic": ("array", ["version"]),
             "description": ("str", self._meta["tagline"]),
-            "readme": ("str", ".local/README_PYPI.md"),
-            "requires-python": (
-                "str",
-                f">= {self._meta['package']['python_version_min']}",
-            ),
+            "readme": ("str", f"{self._meta['path']['source']}/readme_pypi.md"),
+            "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
             "license": ("inline_table", {"file": "LICENSE"}),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
-            "maintainers": (
-                "array_of_inline_tables",
-                self.pyproject_project_maintainers,
-            ),
+            "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
             "keywords": ("array", self._meta["keywords"]),
             "classifiers": ("array", self._meta["package"]["trove_classifiers"]),
             "urls": ("table", self.pyproject_project_urls),
@@ -112,40 +109,12 @@ class PackageFileGenerator:
             "gui-scripts": ("table", self.pyproject_project_gui_scripts),
             "entry-points": ("table_of_tables", self.pyproject_project_entry_points),
             "dependencies": ("array", self.pyproject_project_dependencies),
-            "optional-dependencies": (
-                "table_of_arrays",
-                self.pyproject_project_optional_dependencies,
-            ),
+            "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),
         }
         project = {}
         for key, (dtype, val) in data_type.items():
-            if not val:
-                continue
-            if dtype == "str":
-                toml_val = val
-            elif dtype == "array":
-                toml_val = tomlkit.array(val).multiline(True)
-            elif dtype == "table":
-                toml_val = val
-            elif dtype == "inline_table":
-                toml_val = tomlkit.inline_table()
-                toml_val.update(val)
-            elif dtype == "array_of_inline_tables":
-                toml_val = tomlkit.array().multiline(True)
-                for table in val:
-                    tab = tomlkit.inline_table()
-                    tab.update(table)
-                    toml_val.append(tab)
-            elif dtype == "table_of_arrays":
-                toml_val = {
-                    tab_key: tomlkit.array(arr).multiline(True)
-                    for tab_key, arr in val.items()
-                }
-            elif dtype == "table_of_tables":
-                toml_val = tomlkit.table(is_super_table=True).update(val)
-            else:
-                raise ValueError(f"Unknown data type {dtype} for key {key}.")
-            project[key] = toml_val
+            if val:
+                project[key] = _util.toml.format_object(obj=val, toml_type=dtype)
         return project
 
     @property
@@ -208,14 +177,6 @@ class PackageFileGenerator:
             if self._meta["package"].get("entry_points")
             else None
         )
-
-    def pyproject_tool_versioningit_onbuild(self, config: dict):
-        tab = config.get("tool", {}).get("versioningit", {}).get("onbuild")
-        if tab:
-            from_src = f"{self._meta['package']['name']}/__init__.py"
-            tab["build-file"] = from_src
-            tab["source-file"] = f"src/{from_src}"
-        return
 
     def _get_authors_maintainers(self, role: Literal["authors", "maintainers"]):
         """
