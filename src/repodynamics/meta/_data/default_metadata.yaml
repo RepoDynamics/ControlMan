@@ -1,3 +1,13 @@
 
 repo_target: source
 get_owner_publications: false
+
+conventional_commits_types: []
+
+meta_check_action_type:
+  release_branch: fail
+  dev_branch: commit
+
+path:
+  source = "src"
+  tests = "tests"
