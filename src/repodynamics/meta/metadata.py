@@ -1,12 +1,13 @@
 # Standard libraries
 import datetime
+from typing import Literal
 import json
 import re
 import copy
 
 # Non-standard libraries
 import pylinks
-import trove_classifiers
+import trove_classifiers as _trove_classifiers
 
 from repodynamics.meta.reader import MetaReader
 from repodynamics import git
@@ -66,7 +67,9 @@ class MetadataGenerator:
         if self._metadata.get("package"):
             package = self._metadata["package"]
             package["name"] = self._package_name()
-            package["trove_classifiers"].append(license_info["trove_classifier"])
+
+            trove_classifiers = package.setdefault("trove_classifiers", [])
+            trove_classifiers.append(license_info["trove_classifier"])
 
             package_urls = self._package_platform_urls()
             self._metadata["url"] |= {
@@ -79,11 +82,14 @@ class MetadataGenerator:
                 "development_phase": dev_info["dev_phase"],
                 "major_ready": dev_info["major_ready"],
             }
-            package["trove_classifiers"].append(dev_info["trove_classifier"])
+            trove_classifiers.append(dev_info["trove_classifier"])
 
             python_ver_info = self._package_python_versions()
             package["python_versions"] = python_ver_info["python_versions"]
-            package["trove_classifiers"].extend(python_ver_info["trove_classifiers"])
+            package["python_version_max"] = python_ver_info["python_version_max"]
+            package["python_versions_int"] = python_ver_info["python_versions_int"]
+            package["python_versions_py3x"] = python_ver_info["python_versions_py3x"]
+            trove_classifiers.extend(python_ver_info["trove_classifiers"])
 
             os_info = self._package_operating_systems()
             package |= {
@@ -94,11 +100,13 @@ class MetadataGenerator:
             if not os_info["pure_python"]:
                 package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
                 package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
-            package["trove_classifiers"].extend(os_info["trove_classifiers"])
+            trove_classifiers.extend(os_info["trove_classifiers"])
 
-            for classifier in package["trove_classifiers"]:
-                if classifier not in trove_classifiers.classifiers:
+            for classifier in trove_classifiers:
+                if classifier not in _trove_classifiers.classifiers:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
+            package["trove_classifiers"] = sorted(trove_classifiers)
+
         self._reader.cache_save()
         return self._metadata
 
@@ -400,19 +408,21 @@ class MetadataGenerator:
             self._logger.error(f"Minimum Python version must be 3.x, but got {min_ver}.")
         # Get a list of all Python versions that have been released to date.
         current_python_versions = self._get_released_python_versions()
-        vers = [
-            ".".join(map(str, v))
-            for v in sorted(
-                set([tuple(v[:2]) for v in current_python_versions if v[0] == 3 and v[1] >= ver[1]])
-            )
-        ]
+        compatible_versions = sorted(
+            set([tuple(v[:2]) for v in current_python_versions if v[0] == 3 and v[1] >= ver[1]])
+        )
+        vers = [".".join(map(str, v)) for v in compatible_versions]
         if len(vers) == 0:
             self._logger.error(
                 f"python_version_min '{min_ver}' is higher than "
                 f"latest release version '{'.'.join(current_python_versions[-1])}'."
             )
+        py3x_format = [f"py{''.join(map(str, v))}" for v in compatible_versions]
         output = {
+            "python_version_max": vers[-1],
             "python_versions": vers,
+            "python_versions_py3x": py3x_format,
+            "python_versions_int": compatible_versions,
             "trove_classifiers": [
                 "Programming Language :: Python :: {}".format(postfix)
                 for postfix in ["3 :: Only"] + vers
