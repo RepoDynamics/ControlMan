@@ -64,9 +64,9 @@ class MetaWriter:
     def write(
         self,
         updates: list[dict],
-        action: Literal['report', 'apply', 'commit']
+        action: Literal['report', 'apply', 'amend', 'commit']
     ):
-        if action not in ['report', 'apply', 'commit']:
+        if action not in ['report', 'apply', 'amend', 'commit']:
             self._logger.error(f"Action '{action}' not recognized.")
         self._results = {}
         self._applied = False
@@ -77,10 +77,11 @@ class MetaWriter:
             if action != 'report':
                 self._apply()
                 self._applied = True
-            if action == 'commit':
+            if action in ['amend', 'commit']:
                 self._commit_hash = git.Git(path_repo=self.path_root).commit(
-                    message="Update dynamic files",
-                    stage="all"
+                    message="" if action == "amend" else "meta: sync dynamic files",
+                    stage="all",
+                    amend=action == "amend"
                 )
         output = {
             "passed": not changes["any"],
