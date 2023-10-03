@@ -402,19 +402,21 @@ class MetadataGenerator:
 
     def _package_python_versions(self) -> dict:
         self._logger.h3("Process metadata: package.python_version_min")
-        min_ver = self._metadata["package"]["python_version_min"]
-        ver = tuple(map(int, min_ver.split(".")))
-        if ver[0] != 3:
-            self._logger.error(f"Minimum Python version must be 3.x, but got {min_ver}.")
+        min_ver_str = self._metadata["package"]["python_version_min"]
+        min_ver = list(map(int, min_ver_str.split(".")))
+        if min_ver[0] != 3:
+            self._logger.error(f"Minimum Python version must be a Python-3 version, but got {min_ver_str}.")
+        if len(min_ver) < 3:
+            min_ver.extend([0] * (3 - len(min_ver)))
+        min_ver = tuple(min_ver)
         # Get a list of all Python versions that have been released to date.
-        current_python_versions = self._get_released_python_versions()
-        compatible_versions = sorted(
-            set([tuple(v[:2]) for v in current_python_versions if v[0] == 3 and v[1] >= ver[1]])
-        )
+        current_python_versions = self._get_released_python3_versions()
+        compatible_versions_full = [v for v in current_python_versions if v >= min_ver]
+        compatible_versions = [v[:2] for v in compatible_versions_full]
         vers = [".".join(map(str, v)) for v in compatible_versions]
         if len(vers) == 0:
             self._logger.error(
-                f"python_version_min '{min_ver}' is higher than "
+                f"python_version_min '{min_ver_str}' is higher than "
                 f"latest release version '{'.'.join(current_python_versions[-1])}'."
             )
         py3x_format = [f"py{''.join(map(str, v))}" for v in compatible_versions]
@@ -515,11 +517,11 @@ class MetadataGenerator:
         self._reader.cache_set(f"user__{username}", output)
         return output
 
-    def _get_released_python_versions(self):
+    def _get_released_python3_versions(self) -> list[tuple[int, int, int]]:
         release_versions = self._reader.cache_get('python_versions')
         if release_versions:
             return release_versions
         vers = self._reader.github.user("python").repo("cpython").semantic_versions(tag_prefix="v")
-        release_versions = sorted(set([v[:2] for v in vers if v[0] >= 3]))
+        release_versions = sorted(set([v for v in vers if v[0] >= 3]))
         self._reader.cache_set("python_versions", release_versions)
         return release_versions
