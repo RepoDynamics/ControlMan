@@ -1,21 +1,24 @@
-from typing import Literal
+from typing import Literal, Optional
 from pathlib import Path
 import re
+from contextlib import contextmanager
 
 from repodynamics.logger import Logger
 from repodynamics._util.shell import run_command as _run
 
 
 class Git:
+
+    _COMMITTER_USERNAME = "RepoDynamicsBot"
+    _COMMITTER_EMAIL = "146771514+RepoDynamicsBot@users.noreply.github.com"
+
     def __init__(
         self,
         path_repo: str | Path = ".",
         initialize: bool = False,
-        username: str = "RepoDynamics[bot]",
-        email: str = "repodynamics@users.noreply.github.com",
         logger: Logger = None
     ):
-        self._logger = logger or Logger("console")
+        self._logger = logger or Logger()
         git_available = _run(["git", "--version"], raise_command=False, logger=self._logger)
         if not git_available:
             self._logger.error(f"'git' is not installed. Please install 'git' and try again.")
@@ -31,7 +34,6 @@ class Git:
                 self._logger.error(f"No git repository found at '{path_repo}'.")
         else:
             self._path_root = Path(path_root).resolve()
-        self.set_user(username=username, email=email)
         return
 
     def push(self, target: str = None, ref: str = None, force_with_lease: bool = False):
@@ -42,7 +44,8 @@ class Git:
             command.append(ref)
         if force_with_lease:
             command.append("--force-with-lease")
-        self._run(command)
+        with self._temp_committer():
+            self._run(command)
         return self.commit_hash_normal()
 
     def commit(
@@ -72,12 +75,15 @@ class Git:
 
         if stage != 'none':
             flag = "-A" if stage == 'all' else "-u"
-            self._run(["git", "add", flag])
+            with self._temp_committer():
+                self._run(["git", "add", flag])
         commit_hash = None
         if self.has_changes(check_type="staged"):
-            out, err, code = self._run(commit_cmd, raise_=False)
+            with self._temp_committer():
+                out, err, code = self._run(commit_cmd, raise_=False)
             if code != 0:
-                self._run(commit_cmd)
+                with self._temp_committer():
+                    self._run(commit_cmd)
             commit_hash = self.commit_hash_normal()
             self._logger.success(f"Committed changes. Commit hash: {commit_hash}")
         else:
@@ -90,10 +96,13 @@ class Git:
         message: str = None,
         push_target: str = "origin",
     ):
+        cmd = ["git", "tag"]
         if not message:
-            self._run(["git", "tag", tag])
+            cmd.append(tag)
         else:
-            self._run(["git", "tag", "-a", tag, "-m", message])
+            cmd.extend(["-a", tag, "-m", message])
+        with self._temp_committer():
+            self._run(cmd)
         out = self._run(["git", "show", tag])
         if push_target:
             self.push(target=push_target, ref=tag)
@@ -142,24 +151,86 @@ class Git:
         """
         return self._run(["git", "rev-parse", f"HEAD~{parent}"])
 
-    def latest_semver_tag(self) -> tuple[int, int, int] | None:
-        out, err, code = self._run(
-            ["git", "describe", "--match", "v[0-9]*.[0-9]*.[0-9]*", "--abbrev=0"],
-            raise_=False
-        )
-        return tuple(map(int, out.removeprefix("v").split("."))) if code == 0 else None
+    def describe(
+        self,
+        abbrev: int | None = None,
+        first_parent: bool = True,
+        match: str | None = None
+    ) -> str | None:
+        cmd = ["git", "describe"]
+        if abbrev is not None:
+            cmd.append(f"--abbrev={abbrev}")
+        if first_parent:
+            cmd.append("--first-parent")
+        if match:
+            cmd.extend(["--match", match])
+        out, err, code = self._run(command=cmd, raise_=False)
+        return out if code == 0 else None
+
+    def log(
+        self,
+        simplify_by_decoration: bool = True,
+        tags: bool | str = True,
+        pretty: str | None = "format:%d",
+        revision_range: str | None = None,
+    ):
+        cmd = ["git", "log"]
+        if simplify_by_decoration:
+            cmd.append("--simplify-by-decoration")
+        if tags:
+            cmd.append(f"--tags={tags}" if isinstance(tags, str) else "--tags")
+        if pretty:
+            cmd.append(f"--pretty={pretty}")
+        if revision_range:
+            cmd.append(revision_range)
+        return self._run(cmd)
 
     def set_user(
         self,
-        username: str = "RepoDynamics[bot]",
-        email: str = "repodynamics@users.noreply.github.com",
+        username: str | None,
+        email: str | None,
+        user_type: Literal['user', 'author', 'committer'] = 'user',
+        scope: Optional[Literal['system', 'global', 'local', 'worktree']] = 'global'
     ):
         """
         Set the git username and email.
         """
-        self._run(["git", "config", "--global", "user.name", username])
-        self._run(["git", "config", "--global", "user.email", email])
+        cmd = ["git", "config"]
+        if scope:
+            cmd.append(f"--{scope}")
+        if not (
+            (username is None or isinstance(username, str))
+            and (email is None or isinstance(email, str))
+        ):
+            raise ValueError("username and email must be either a string or None.")
+        for key, val in [("name", username), ("email", email)]:
+            if val is None:
+                self._run([*cmd, "--unset", f"{user_type}.{key}"])
+            else:
+                self._run([*cmd, f"{user_type}.{key}", val])
         return
+
+    def get_user(
+        self,
+        user_type: Literal['user', 'author', 'committer'] = 'user',
+        scope: Optional[Literal['system', 'global', 'local', 'worktree']] = None
+    ) -> tuple[str | None, str | None]:
+        """
+        Get the git username and email.
+        """
+        cmd = ["git", "config"]
+        if scope:
+            cmd.append(f"--{scope}")
+        user = []
+        for key in ["name", "email"]:
+            out, err, code = self._run([*cmd, f"{user_type}.{key}"], raise_=False)
+            if code == 0:
+                user.append(out)
+            elif code == 1 and not out:
+                user.append(None)
+            else:
+                self._logger.error(f"Failed to get {user_type}.{key}.", details=err, exit_code=code)
+        return tuple(user)
 
     @property
     def remotes(self) -> dict:
@@ -270,7 +341,9 @@ class Git:
     def path_root(self) -> Path:
         return self._path_root
 
-    def _run(self, command: list[str], raise_: bool = True, raise_stderr: bool = False, **kwargs):
+    def _run(
+        self, command: list[str], raise_: bool = True, raise_stderr: bool = False, **kwargs
+    ) -> str | tuple[str, str, int]:
         out, err, code = _run(
             command,
             cwd=self._path_root,
@@ -280,5 +353,47 @@ class Git:
             **kwargs
         )
         return out if raise_ else (out, err, code)
+
+    @contextmanager
+    def _temp_committer(self):
+        committer_username, committer_email = self.get_user(user_type="committer", scope="local")
+        if committer_username != self._COMMITTER_USERNAME or committer_email != self._COMMITTER_EMAIL:
+            self.set_user(
+                username=self._COMMITTER_USERNAME,
+                email=self._COMMITTER_EMAIL,
+                user_type="committer",
+                scope="local"
+            )
+        yield
+        if committer_username != self._COMMITTER_USERNAME or committer_email != self._COMMITTER_EMAIL:
+            self.set_user(
+                username=committer_username,
+                email=committer_email,
+                user_type="committer",
+                scope="local"
+            )
+        return
+
+    @contextmanager
+    def temp_author(self, username: str = None, email: str = None):
+        author_username, author_email = self.get_user(user_type="author", scope="local")
+        username = username or self._COMMITTER_USERNAME
+        email = email or self._COMMITTER_EMAIL
+        if author_username != username or author_email != email:
+            self.set_user(
+                username=username,
+                email=email,
+                user_type="author",
+                scope="local"
+            )
+        yield
+        if author_username != username or author_email != email:
+            self.set_user(
+                username=author_username,
+                email=author_email,
+                user_type="author",
+                scope="local"
+            )
+        return
 
 
