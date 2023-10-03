@@ -730,16 +730,25 @@
                "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["name", "pip_spec"],
+                  "required": ["pip_spec"],
                   "properties": {
-                     "name": {"type": "string"},
                      "usage": {"type": "string"},
                      "pip_spec": {"type": "string"},
                      "conda_spec": {"type": "string"},
                      "conda_channel": {"type": "string"},
                      "url_homepage": {"type": "string", "format": "uri"},
                      "url_docs": {"type": "string", "format": "uri"},
-                     "url_source": {"type": "string", "format": "uri"}
+                     "url_source": {"type": "string", "format": "uri"},
+                     "intersphinx_mapping": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                           "key": {"type": "string"},
+                           "target": {"type": "string", "format": "uri"},
+                           "inventory": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+                        },
+                        "required": ["target"]
+                     }
                   }
                }
             },
@@ -762,14 +771,23 @@
                            "type": "object",
                            "required": ["name", "pip_spec"],
                            "properties": {
-                              "name": {"type": "string"},
                               "usage": {"type": "string"},
                               "pip_spec": {"type": "string"},
                               "conda_spec": {"type": "string"},
                               "conda_channel": {"type": "string"},
                               "url_homepage": {"type": "string", "format": "uri"},
                               "url_docs": {"type": "string", "format": "uri"},
-                              "url_source": {"type": "string", "format": "uri"}
+                              "url_source": {"type": "string", "format": "uri"},
+                              "intersphinx_mapping": {
+                                 "type": "object",
+                                 "additionalProperties": false,
+                                 "properties": {
+                                    "key": {"type": "string"},
+                                    "target": {"type": "string", "format": "uri"},
+                                    "inventory": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+                                 },
+                                 "required": ["target"]
+                              }
                            }
                         }
                      }
@@ -900,20 +918,51 @@
       },
 
 
-      "conventional_commits_types": {
-         "description": "Conventional commits types",
-         "type": "array",
-         "uniqueItems": true,
-         "items": {
+      "commit_types_primary": {
+         "description": "Primary commit types",
+         "type": "object",
+         "required": [
+            "package_release_major",
+            "package_release_minor",
+            "package_release_patch",
+            "package_release_post",
+            "website_deploy"
+         ],
+         "additionalProperties": {
             "type": "object",
-            "additionalProperties": false,
-            "required": ["type", "description"],
             "properties": {
                "type": {"type": "string"},
-               "description": {"type": "string"}
-            }
+               "description": {"type": "string"},
+               "label_suffix": {"type": "string"},
+               "allow_unconventional_commits": {"type": "boolean", "default": true},
+               "allowed_sub_types": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "minItems": 1,
+                  "uniqueItems": true
+               }
+            },
+            "additionalProperties": false,
+            "required": ["type", "description", "label_suffix"]
          }
       },
+
+
+      "commit_types_secondary": {
+         "description": "Secondary commit types",
+         "type": "object",
+         "additionalProperties": {
+            "type": "object",
+            "properties": {
+               "description": {"type": "string"},
+               "changelog_id": {"type": "string"},
+               "changelog_section_id": {"type": "string"}
+            },
+            "additionalProperties": false,
+            "required": ["description", "changelog_id", "changelog_section_id"]
+         }
+      },
+
 
       "meta_check_action_type": {
          "type": "object",
