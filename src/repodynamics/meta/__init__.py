@@ -9,11 +9,12 @@ from repodynamics.meta.metadata import MetadataGenerator
 from repodynamics.meta.reader import MetaReader
 from repodynamics.meta import files
 from repodynamics.meta.writer import MetaWriter
+from repodynamics import _util
 
 
 def update(
     path_root: str | Path = ".",
-    path_meta: str = "meta",
+    path_meta: str = ".meta",
     action: Literal["report", "apply", "amend", "commit"] = "report",
     github_token: Optional[str] = None,
     logger: Logger = None
@@ -34,3 +35,24 @@ def update(
     output = writer.write(generated_files, action=action)
     output['metadata'] = metadata
     return output
+
+
+def load(
+    path_root: str | Path = ".",
+    path_meta: str = ".meta",
+    logger: Logger = None
+) -> dict:
+    logger = logger or Logger()
+    path_metadata = Path(path_root) / path_meta / ".metadata.json"
+    metadata = _util.dict.read(path_metadata, logger=logger) or {}
+    if metadata:
+        logger.success(
+            f"Loaded metadata from {path_metadata}.",
+            json.dumps(metadata, indent=3)
+        )
+    else:
+        logger.attention(f"No metadata found in {path_metadata}.")
+    defaults = _util.dict.read(_util.file.datafile("default_metadata.yaml"))
+    _util.dict.update_recursive(source=metadata, add=defaults, append_list=False, logger=logger)
+    logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
+    return metadata
