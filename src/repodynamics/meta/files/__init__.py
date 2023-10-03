@@ -7,6 +7,7 @@ from repodynamics.meta.files.health import HealthFileGenerator
 from repodynamics.meta.files.package import PackageFileGenerator
 from repodynamics.meta.files.readme import ReadmeFileGenerator
 
+
 def generate(metadata: dict, reader: MetaReader, logger: Logger = None) -> list[dict]:
     if not isinstance(reader, MetaReader):
         raise TypeError(f"reader must be of type MetaReader, not {type(reader)}")
