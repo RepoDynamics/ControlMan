@@ -15,8 +15,8 @@ import tomlkit.items
 
 from repodynamics.logger import Logger
 from repodynamics.meta.reader import MetaReader
-from repodynamics import _templated_dict
 from repodynamics import _util
+
 
 class PackageFileGenerator:
     def __init__(self, metadata: dict, reader: MetaReader, logger: Logger = None):
@@ -33,6 +33,7 @@ class PackageFileGenerator:
                 ("pyproject", self.pyproject()),
                 ("dir", self._package_dir()),
                 ("docstring", self.init_docstring()),
+                ("requirements", self._requirements()),
             ]
         ]
         return updates
@@ -85,7 +86,7 @@ class PackageFileGenerator:
         return content
 
     def pyproject(self):
-        pyproject = _templated_dict.fill(self._reader.package_config, metadata=self._meta)
+        pyproject = _util.dict.fill_template(self._reader.package_config, metadata=self._meta)
         project = pyproject.setdefault("project", {})
         for key, val in self.pyproject_project().items():
             if key not in project:
@@ -177,6 +178,18 @@ class PackageFileGenerator:
             if self._meta["package"].get("entry_points")
             else None
         )
+
+    def _requirements(self) -> str:
+        self._logger.h3("Generate File Content: requirements.txt")
+        requirements = ""
+        if self._meta["package"].get("dependencies"):
+            for dep in self._meta["package"]["dependencies"]:
+                requirements += f"{dep['pip_spec']}\n"
+        if self._meta["package"].get("optional_dependencies"):
+            for dep_group in self._meta["package"]["optional_dependencies"]:
+                for dep in dep_group["packages"]:
+                    requirements += f"{dep['pip_spec']}\n"
+        return requirements
 
     def _get_authors_maintainers(self, role: Literal["authors", "maintainers"]):
         """
