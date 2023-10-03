@@ -37,6 +37,7 @@ class MetaWriter:
             ('config', 'labels'): self.path_root / ".github" / "labels.yaml",
             ('config', 'labels_pr'): self.path_root / ".github" / "labels_pr.yaml",
             ('package', 'pyproject'): self.path_root / "pyproject.toml",
+            ('package', 'requirements'): self.path_root / "requirements.txt",
             ("readme", 'readme_main'): self.path_root / "README.md",
         }
         self._filename = {
@@ -52,6 +53,7 @@ class MetaWriter:
             'security': "SECURITY.md",
             'support': "SUPPORT.md",
             'pyproject': 'pyproject.toml',
+            'requirements': 'requirements.txt',
             'docstring': '__init__.py',
             'dir': 'Package Directory',
             'readme_main': 'README.md',
