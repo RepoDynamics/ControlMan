@@ -2,12 +2,35 @@
 repo_target: source
 get_owner_publications: false
 
-conventional_commits_types: []
-
 meta_check_action_type:
-  release_branch: fail
+  release_branch: amend
   dev_branch: commit
 
 path:
-  source = "src"
-  tests = "tests"
+  source: src
+  tests: tests
+
+
+# --- Commits ---
+commit_types_primary:
+  package_release_major:
+    description: 'Release a major version'
+    type: major
+    label_suffix: 'major-release'
+    allow_unconventional_commits: true
+  package_release_minor:
+    type: minor
+    label_suffix: 'minor-release'
+    allow_unconventional_commits: true
+  package_release_patch:
+    type: patch
+    label_suffix: 'patch-release'
+    allow_unconventional_commits: true
+  package_release_post:
+    type: post
+    label_suffix: 'post-release'
+    allow_unconventional_commits: true
+  website_deploy:
+    type: web
+    label_suffix: 'website'
+    allow_unconventional_commits: true
