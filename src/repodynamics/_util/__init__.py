@@ -1,1 +1,1 @@
-from repodynamics._util import file, shell, toml
+from repodynamics._util import file, shell, toml, dict
