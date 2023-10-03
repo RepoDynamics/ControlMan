@@ -19,7 +19,7 @@ class MetaReader:
     def __init__(
         self,
         path_root: str | Path = ".",
-        path_meta: str | Path = "meta",
+        path_meta: str | Path = ".meta",
         github_token: Optional[str] = None,
         logger: Logger = None
     ):
@@ -254,12 +254,7 @@ class MetaReader:
     def _add_metadata_default_values(self):
         self.logger.h3("Set Metadata Missing Values")
         defaults = self._read_yaml(_util.file.datafile("default_metadata.yaml"))
-        for key, value in defaults.items():
-            if key not in self._metadata:
-                self._metadata[key] = value
-                self.logger.success(f"Set default value for '{key}'", str(value))
-            else:
-                self.logger.skip(f"'{key}' already set", str(value))
+        self._recursive_update(source=self._metadata, add=defaults, append_list=False)
         self.logger.success("Full metadata file assembled.", json.dumps(self._metadata, indent=3))
         return
 
@@ -309,8 +304,7 @@ class MetaReader:
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
-                with open(path_file) as f:
-                    config_section: tomlkit.TOMLDocument = tomlkit.load(f)
+                config_section: tomlkit.TOMLDocument = _util.dict.read(path=path_file)
                 self._recursive_update(
                     config,
                     config_section,
@@ -377,25 +371,7 @@ class MetaReader:
         return
 
     def _read_yaml(self, source: Path, schema: Path = None):
-        self.logger.info(f"Read YAML from '{source}'.")
-        try:
-            content = YAML(typ="safe").load(source)
-        except YAMLError as e:
-            self.logger.error(f"Invalid YAML at '{source}': {e}.", traceback.format_exc())
-        self.logger.success(
-            f"YAML file successfully read from '{source}'", json.dumps(content, indent=3)
-        )
-        if not schema:
-            return content
-        schema = self._read_yaml(source=schema)
-        try:
-            jsonschema.validate(instance=content, schema=schema)
-        except jsonschema.exceptions.ValidationError as e:
-            self.logger.error(
-                f"Schema validation failed for YAML file '{source}': {e.message}.", traceback.format_exc()
-            )
-        self.logger.success(f"Schema validation successful.")
-        return content
+        return _util.dict.read(path=source, schema=schema, logger=self.logger)
 
     def _is_expired(self, timestamp: str, typ: Literal['api', 'extensions'] = 'api') -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
@@ -417,57 +393,12 @@ class MetaReader:
         append_dict: bool = True,
         raise_on_duplicated: bool = False,
     ):
-        def recursive(source, add, path=".", result=None, logger=None):
-            for key, value in add.items():
-                fullpath = f"{path}{key}"
-                if key not in source:
-                    result.append(f"{logger.emoji['success']} Added new key '{fullpath}'")
-                    source[key] = value
-                    continue
-                if type(source[key]) != type(value):
-                    result.append(
-                        f"{logger.emoji['error']} Type mismatch: "
-                        f"Key '{fullpath}' has type '{type(source[key])}' in 'source' "
-                        f"but '{type(value)}' in 'add'."
-                    )
-                    logger.error(log_title, result)
-                if not isinstance(value, (list, dict)):
-                    if raise_on_duplicated:
-                        result.append(
-                            f"{logger.emoji['error']} Duplicated: "
-                            f"Key '{fullpath}' with type '{type(value)}' already exists in 'source'."
-                        )
-                        logger.error(log_title, result)
-                    result.append(f"{logger.emoji['skip']} Ignored key '{key}' with type '{type(value)}'")
-                elif isinstance(value, list):
-                    if append_list:
-                        for elem in value:
-                            if elem not in source[key]:
-                                source[key].append(elem)
-                                result.append(f"{logger.emoji['success']} Appended to list '{fullpath}'")
-                            else:
-                                result.append(f"{logger.emoji['skip']} Ignored duplicate in list '{fullpath}'")
-                    elif raise_on_duplicated:
-                        result.append(
-                            f"{logger.emoji['error']} Duplicated: "
-                            f"Key '{fullpath}' with type 'list' already exists in 'source'."
-                        )
-                        logger.error(log_title, result)
-                    else:
-                        result.append(f"{logger.emoji['skip']} Ignored key '{fullpath}' with type 'list'")
-                else:
-                    if append_dict:
-                        recursive(source[key], value, f"{fullpath}.", result=result, logger=logger)
-                    elif raise_on_duplicated:
-                        result.append(
-                            f"{logger.emoji['error']} Duplicated: "
-                            f"Key '{fullpath}' with type 'dict' already exists in 'source'."
-                        )
-                        logger.error(log_title, result)
-                    else:
-                        result.append(f"{logger.emoji['skip']} Ignored key '{fullpath}' with type 'dict'")
-            return result
-        log_title = "Update dictionary recursively"
-        result = recursive(source, add, result=[], logger=self.logger)
-        self.logger.success(log_title, result)
+        _util.dict.update_recursive(
+            source=source,
+            add=add,
+            append_list=append_list,
+            append_dict=append_dict,
+            raise_on_duplicated=raise_on_duplicated,
+            logger=self.logger
+        )
         return
