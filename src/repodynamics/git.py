@@ -232,6 +232,53 @@ class Git:
                 self._logger.error(f"Failed to get {user_type}.{key}.", details=err, exit_code=code)
         return tuple(user)
 
+    def get_commits(
+        self,
+        revision_range: str | None = None
+    ):
+        """
+        Get a list of commits.
+
+        Parameters:
+        - revision_range (str): The revision range to get commits from.
+
+        Returns:
+        - list[str]: A list of commit hashes.
+        """
+        marker_start = "<start new commit>"
+        hash = "%H"
+        author = "%an"
+        date = "%ad"
+        commit = "%B"
+        marker_commit_end = "<end of commit message>"
+
+        format = f"{marker_start}%n{hash}%n{author}%n{date}%n{commit}%n{marker_commit_end}"
+        cmd = ['git', 'log', f'--pretty=format:{format}', "--name-only"]
+
+        if revision_range:
+            cmd.append(revision_range)
+        out = self._run(cmd)
+
+        pattern = re.compile(
+            rf"{re.escape(marker_start)}\n(.*?)\n(.*?)\n(.*?)\n(.*?){re.escape(marker_commit_end)}\n(.*?)\n\n",
+            re.DOTALL
+        )
+
+        matches = pattern.findall(out)
+
+        commits = []
+        for match in matches:
+            commit_info = {
+                'hash': match[0].strip(),
+                'author': match[1].strip(),
+                'date': match[2].strip(),
+                'message': match[3].strip(),
+                'files': list(filter(None, match[4].strip().split('\n')))
+            }
+            commits.append(commit_info)
+
+        return commits
+
     @property
     def remotes(self) -> dict:
         """
