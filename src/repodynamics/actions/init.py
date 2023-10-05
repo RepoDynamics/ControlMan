@@ -182,39 +182,7 @@ class Push(EventHandler):
         self._head_commit_msg: str = self._payload["head_commit"]["message"]
         return
 
-    def _parse_commit_msg(self, msg) -> dict:
-        types = set(
-            ["major", "minor", "patch", "docs", "test", "meta", "build", "ci", "refactor", "style"]
-            + [additional_type['type'] for additional_type in self._metadata["conventional_commits_types"]]
-        )
-        types_pattern = "|".join(types)
-        pattern = rf"""
-            ^(?P<type>{types_pattern})    # type
-            (?:\((?P<scope>[^\)\n]+)\))?  # optional scope within parentheses
-            :[ ](?P<description>[^\n]+)   # commit description after ": "
-            (?:\n(?P<body>.+?))?          # optional commit body after newline
-            (?:\n-{{3,}}\n(?P<footer>.*))?  # optional footers after horizontal line
-            $
-        """
-        match = re.match(pattern, msg, flags=re.VERBOSE | re.DOTALL)
-        if not match:
-            return {}
-        commit_parts = match.groupdict()
-        commit_parts["body"] = commit_parts["body"].strip() if commit_parts["body"] else None
-        if not commit_parts["footer"]:
-            return commit_parts
-        parsed_footers = {}
-        footers = commit_parts["footer"].strip().splitlines()
-        for footer in footers:
-            match = re.match(r"^(?P<key>\w+)(: | )(?P<value>.+)$", footer)
-            if match:
-                footer_list = parsed_footers.setdefault(match.group("key"), [])
-                footer_list.append(match.group("value"))
-                continue
-            if footer and not re.fullmatch("-{3,}", footer):
-                self._logger.error(f"Invalid footer: {footer}")
-        commit_parts["footer"] = parsed_footers
-        return commit_parts
+
 
 
 class PushRelease(Push):
@@ -250,9 +218,6 @@ class PushRelease(Push):
         semver_tag: tuple[int, int, int] | None = self._git.describe()
         if not semver_tag:
             return self._run_initial_release()
-
-
-
 
         if commit_msg.startswith("feat"):
             release = True
@@ -664,3 +629,63 @@ def _finalize(
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
 
     return {"json": json.dumps(all_groups)}, str(log)
+
+
+def find_command(comment: str) -> tuple[str, dict] | None:
+    """
+    Find and parse a RepoDynamicsBot command in a comment.
+
+    The comment must only contain one command.
+    The command must start with '@RepoDynamicsBot ' at the beginning of a line,
+    followed by the command. If the command requires input arguments, they must
+    be given in the next line(s).
+
+    Parameters
+    ----------
+    comment : str
+
+    Returns
+    -------
+    command, kwargs : tuple[str, dict]
+
+    Examples
+    --------
+    A sample comment:
+
+    @RepoDynamicsBot test
+    operating-systems: `['ubuntu-latest', 'windows-latest']`
+    python-versions: `['3.11', '3.10']`
+    run:
+    ```python
+    import package
+    print(package.__version__)
+    ```
+
+    """
+    pattern_general = r"""
+    ^@RepoDynamicsBot[ ]     # Matches the string at the start of a line with a space after "Bot"
+    (?P<command>[^\n]+)      # Captures the command until a new line
+    \n                       # Matches the newline character after the command
+    (?P<arguments>.*)        # Captures everything that comes after the newline in a group called "arguments"
+    """
+    command_match = re.search(pattern_general, comment, re.MULTILINE | re.DOTALL | re.VERBOSE)
+    if not command_match:
+        return
+    pattern_arguments = r"""
+        (?P<key>[a-zA-Z][a-zA-Z0-9_-]*)  # Captures the key
+        :[ \t]*                          # Colon separator, possibly followed by spaces/tabs
+        (?:
+            `(?P<value1>[^`]+)`          # Value enclosed in backticks, capturing at least one character
+            |                            # OR
+            \n```[\w-]*\s*                 # Captures the optional language specifier
+            (?P<value2>.+?)              # Captures the content of the multiline code block non-greedily
+            \n```                          # Ending delimiter of the multiline code block
+        )
+        """
+    kv_matches = re.finditer(
+        pattern_arguments, command_match.group("arguments"), re.MULTILINE | re.DOTALL | re.VERBOSE
+    )
+    kv_dict = {}
+    for match in kv_matches:
+        kv_dict[match.group("key")] = match.group("value1") or match.group("value2")
+    return command_match.group("command"), kv_dict
