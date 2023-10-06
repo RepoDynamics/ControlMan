@@ -136,8 +136,30 @@ class Git:
         Returns:
         - list[str]: A list of changed files.
         """
-        out = self._run(["git", "diff", "--name-only", ref_start, ref_end])
-        return out.splitlines()
+        key_def = {
+            "A": "added",
+            "D": "deleted",
+            "M": "modified",
+            "U": "unmerged",
+            "X": "unknown",
+            "B": "broken",
+            "C": "copied",
+            "R": "renamed",
+        }
+        out = {}
+        changes = self._run(["git", "diff", "--name-status", ref_start, ref_end]).splitlines()
+        for change in changes:
+            key, *paths = change.split("\t")
+            if key in key_def:
+                out.setdefault(key_def[key], []).extend(paths)
+                continue
+            key, similarity = key[0], int(key[1:])
+            out_key = key_def[key]
+            if similarity != 100:
+                out_key += "_modified"
+            out.setdefault(f"{out_key}_from", []).append(paths[0])
+            out.setdefault(f"{out_key}_to", []).append(paths[1])
+        return out
 
     def commit_hash_normal(self, parent: int = 0):
         """
@@ -235,7 +257,7 @@ class Git:
     def get_commits(
         self,
         revision_range: str | None = None
-    ):
+    ) -> list[dict[str, str | list[str]]]:
         """
         Get a list of commits.
 
@@ -278,6 +300,8 @@ class Git:
             commits.append(commit_info)
 
         return commits
+
+
 
     def get_tags(self) -> list[list[str]]:
         """Get a list of tags reachable from the current commit
