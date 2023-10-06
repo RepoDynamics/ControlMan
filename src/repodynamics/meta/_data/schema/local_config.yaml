@@ -1,0 +1,20 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: local_config
+description: Local configuration for the project
+
+type: object
+properties:
+
+  meta_cache_retention_days:
+    type: object
+    properties:
+      api:
+        type: integer
+        minimum: 0
+        default: 1
+      extensions:
+        type: integer
+        minimum: 0
+        default: 1
+
