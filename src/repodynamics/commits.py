@@ -8,7 +8,7 @@ def parse(
     msg: str,
     types: list[str],
     logger: Logger = None,
-) -> dict:
+) -> dict | None:
     pattern = rf"""
         ^(?P<type>{"|".join(types)})    # type
         (?:\((?P<scope>[^\)\n]+)\))?  # optional scope within parentheses
@@ -19,7 +19,7 @@ def parse(
     """
     match = re.match(pattern, msg, flags=re.VERBOSE | re.DOTALL)
     if not match:
-        return {}
+        return
     commit_parts = match.groupdict()
     commit_parts["body"] = commit_parts["body"].strip() if commit_parts["body"] else None
     if not commit_parts["footer"]:
