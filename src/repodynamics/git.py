@@ -171,7 +171,7 @@ class Git:
         self,
         simplify_by_decoration: bool = True,
         tags: bool | str = True,
-        pretty: str | None = "format:%d",
+        pretty: str | None = "format:%D",
         revision_range: str | None = None,
     ):
         cmd = ["git", "log"]
@@ -279,6 +279,26 @@ class Git:
 
         return commits
 
+    def get_tags(self) -> list[list[str]]:
+        """Get a list of tags reachable from the current commit
+
+        This returns a list of tags ordered by the commit date (newest first).
+        Each element is a list itself, containing all tags that point to the same commit.
+        """
+        output = self.log(simplify_by_decoration=True, tags=True, pretty="format:%D")
+        tags = []
+        for line in output.splitlines():
+            potential_tags = line.split(", ")
+            sub_list_added = False
+            for potential_tag in potential_tags:
+                if potential_tag.startswith("tag: "):
+                    tag = potential_tag.removeprefix("tag: ")
+                    if not sub_list_added:
+                        tags.append([])
+                        sub_list_added = True
+                    tags[-1].append(tag)
+        return tags
+
     @property
     def remotes(self) -> dict:
         """
@@ -367,6 +387,7 @@ class Git:
         return self._run(["git", "show", f"{commit_hash}:{path}"])
 
     def discard_changes(self, path: str | Path = "."):
+        """Revert all uncommitted changes in the specified path, back to the state of the last commit."""
         return self._run(["git", "checkout", "--", str(path)])
 
     def stash(
@@ -374,6 +395,22 @@ class Git:
         name: str = "Stashed by RepoDynamics",
         include: Literal['tracked', 'untracked', 'all'] = 'all'
     ):
+        """Stash changes in the working directory.
+
+        This takes the modified files, stages them and saves them on a stack of unfinished changes
+        that can be reapplied at any time.
+
+        Parameters
+        ----------
+        name : str, default: "Stashed by RepoDynamics"
+            The name of the stash.
+        include : {'tracked', 'untracked', 'all'}, default: 'all'
+            Which files to include in the stash.
+
+            - 'tracked': Stash tracked files only.
+            - 'untracked': Stash tracked and untracked files.
+            - 'all': Stash all files, including ignored files.
+        """
         command = ["git", "stash"]
         if include in ['untracked', 'all']:
             command.extend(["save", "--include-untracked" if include == 'untracked' else "--all"])
@@ -382,6 +419,11 @@ class Git:
         return self._run(command)
 
     def stash_pop(self):
+        """Reapply the most recently stashed changes and remove the stash from the stack.
+
+        This will take the changes stored in the stash and apply them back to the working directory,
+        removing the stash from the stack.
+        """
         return self._run(["git", "stash", "pop"])
 
     @property
