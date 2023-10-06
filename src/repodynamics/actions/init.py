@@ -6,20 +6,22 @@ import re
 from markitup import html, md
 import pylinks
 
+import repodynamics as rd
 from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics import meta
 from repodynamics import hooks, _util
+import repodynamics.commits
 
 
-def init(context: dict, changes: dict, logger=None):
+def init(context: dict, logger=None):
     match context["event_name"]:
         case "schedule", "workflow_dispatch":
             return Dispatch(context=context).run()
         case "issue":
             return Issue(context=context).run()
         case "pull_request":
-            return Pull(context=context, changes=changes).run()
+            return Pull(context=context).run()
         case "push":
             if context["event"]["created"]:
                 logger.error("Creation Event: Skipping.")
@@ -27,10 +29,10 @@ def init(context: dict, changes: dict, logger=None):
             ref = context["ref_name"]
             if ref == "main" or ref.startswith("release/"):
                 logger.success("Detected Event: Push to release branch")
-                return PushRelease(context=context, changes=changes).run()
+                return PushRelease(context=context).run()
             elif ref.startswith("dev/"):
                 logger.success("Detected Event: Push to development branch")
-                return PushDev(context=context, changes=changes).run()
+                return PushDev(context=context).run()
         case _:
             logger.error(f"Event '{context['event_name']}' is not supported.")
     return
@@ -46,21 +48,56 @@ class EventHandler:
 
     def __init__(self, context: dict):
         self._context: dict = context
-        self._payload: dict = context["event"]
-        self._event_name: str = context["event_name"]
-        self._ref_name: str = context["ref_name"]
-        self._repo_owner: str = context["repository_owner"]
-        self._repo_name: str = context["repository"].removeprefix(f"{self._repo_owner}/")
-
         self._logger: Logger = Logger("github")
         self._git: Git = Git(logger=self._logger)
-        self._api = pylinks.api.github(token=context["token"]).user(self._repo_owner).repo(self._repo_name)
+        self._api = pylinks.api.github(token=context["token"]).user(self.repo_owner).repo(self.repo_name)
         self._metadata: dict = meta.load(logger=self._logger)
         self._latest_version = self._git.describe()
 
         self._output_meta: dict = {}
         self._output_hooks: dict = {}
         return
+
+    @property
+    def context(self) -> dict:
+        """The 'github' context of the triggering event.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context)
+        """
+        return self._context
+
+    @property
+    def payload(self) -> dict:
+        """The full webhook payload of the triggering event.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+        """
+        return self.context["event"]
+
+    @property
+    def event_name(self) -> str:
+        """The name of the triggering event, e.g. 'push', 'pull_request' etc."""
+        return self.context["event_name"]
+
+    @property
+    def ref_name(self) -> str:
+        """The short ref name of the branch or tag that triggered the event, e.g. 'main', 'dev/1' etc."""
+        return self.context["ref_name"]
+
+    @property
+    def repo_owner(self) -> str:
+        """GitHub username of the repository owner."""
+        return self.context["repository_owner"]
+
+    @property
+    def repo_name(self) -> str:
+        """Name of the repository."""
+        return self.context["repository"].removeprefix(f"{self.repo_owner}/")
+
 
     def _update_meta(self, action: Literal['fail', 'amend', 'commit']):
         self._output_meta = meta.update(
@@ -174,13 +211,51 @@ class Push(EventHandler):
     - [GitHub Docs: Webhook events & payloads](https://docs.github.com/en/webhooks/webhook-events-and-payloads#push)
     """
 
-    def __init__(self, context: dict, changes: dict):
+    def __init__(self, context: dict):
         super().__init__(context)
-        self._changes = self._process_changes(changes)
-        self._hash_before = self._payload["before"]
-        self._hash_after = self._payload["after"]
-        self._head_commit_msg: str = self._payload["head_commit"]["message"]
+        self._changes = self._get_changed_files()
+        self._commits = self._get_commits()
+        self._head_commit_msg: str = self.payload["head_commit"]["message"]
         return
+
+    @property
+    def hash_before(self) -> str:
+        """The SHA hash of the most recent commit on the branch before the push."""
+        return self.payload["before"]
+
+    @property
+    def hash_after(self) -> str:
+        """The SHA hash of the most recent commit on the branch after the push."""
+        return self.payload["after"]
+
+    @property
+    def changed_files(self) -> list[str]:
+        """List of changed files."""
+        return self._changes
+
+    def _get_commits(self) -> list[dict]:
+        commits = self._git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        for commit in commits:
+            conventional_commit = rd.commits.parse(msg=commit["message"], types=types, logger=self._logger)
+
+    def _get_tags(self):
+
+
+    def _get_changed_files(self) -> list[str]:
+        filepaths = []
+        changes = self._git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
+        for change_type, changed_paths in changes.items():
+            if change_type in ["unknown", "broken"]:
+                self._logger.warning(
+                    f"Found {change_type} files",
+                    f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
+                    "These files will be ignored."
+                )
+                continue
+            if change_type.startswith("copied") and change_type.endswith("from"):
+                continue
+            filepaths.extend(changed_paths)
+        return filepaths
 
 
 
@@ -282,9 +357,9 @@ class PushDev(Push):
 
     def __init__(self, context: dict, changes: dict):
         super().__init__(context, changes)
-        issue_nr = self._ref_name.removeprefix("dev/")
+        issue_nr = self.ref_name.removeprefix("dev/")
         if not issue_nr.isdigit():
-            self._logger.error(f"Invalid branch name: {self._ref_name}")
+            self._logger.error(f"Invalid branch name: {self.ref_name}")
         self._issue_nr = int(issue_nr)
         try:
             self._issue = self._api.issue(self._issue_nr)
@@ -382,15 +457,15 @@ class Pull(EventHandler):
         return
 
     def run(self):
-        hash_before = self._payload['pull_request']['base']['sha']
-        hash_after = self._payload['pull_request']['head']['sha']
+        hash_before = self.payload['pull_request']['base']['sha']
+        hash_after = self.payload['pull_request']['head']['sha']
         self._update_meta(action="report")
         self._update_hooks(action="report", ref_range=(hash_before, hash_after))
         return
 
     @property
     def info(self) -> dict:
-        return self._payload["pull_request"]
+        return self.payload["pull_request"]
 
     @property
     def label_names(self):
@@ -399,12 +474,12 @@ class Pull(EventHandler):
     @property
     def triggering_action(self) -> str:
         """Pull-request action type that triggered the event, e.g. 'opened', 'closed', 'reopened' etc."""
-        return self._payload["action"]
+        return self.payload["action"]
 
     @property
     def number(self) -> int:
         """Pull-request number."""
-        return self._payload["number"]
+        return self.payload["number"]
 
     @property
     def head(self) -> dict:
@@ -511,12 +586,12 @@ class IssueComment(EventHandler):
     @property
     def triggering_action(self) -> str:
         """Comment action type that triggered the event; one of 'created', 'deleted', 'edited'."""
-        return self._payload["action"]
+        return self.payload["action"]
 
     @property
     def comment(self) -> dict:
         """Comment data."""
-        return self._payload["comment"]
+        return self.payload["comment"]
 
     @property
     def comment_body(self) -> str:
@@ -536,7 +611,7 @@ class IssueComment(EventHandler):
     @property
     def issue(self) -> dict:
         """Issue data."""
-        return self._payload["issue"]
+        return self.payload["issue"]
 
 
 class Dispatch(EventHandler):
