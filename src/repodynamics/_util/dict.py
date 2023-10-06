@@ -2,8 +2,11 @@ import re
 import json
 from pathlib import Path
 from typing import Optional
+import traceback
 
+import tomlkit
 from ruamel.yaml import YAML, YAMLError
+import jsonschema
 
 from repodynamics.logger import Logger
 
@@ -33,7 +36,7 @@ def read(
         case "yaml", "yml":
             content = _read_yaml(path=path, logger=logger)
         case "toml":
-            content = read_toml(path=path, logger=logger)
+            content = _read_toml(path=path, logger=logger)
         case _:
             logger.error(f"Unsupported file extension '{extension}'.")
     logger.success(
@@ -47,10 +50,10 @@ def read(
     try:
         jsonschema.validate(instance=content, schema=schema)
     except jsonschema.exceptions.ValidationError as e:
-        self.logger.error(
+        logger.error(
             f"Schema validation failed for YAML file '{path}': {e.message}.", traceback.format_exc()
         )
-    self.logger.success(f"Schema validation successful.")
+    logger.success(f"Schema validation successful.")
     return content
 
 
