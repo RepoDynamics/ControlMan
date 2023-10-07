@@ -44,17 +44,25 @@ def read(
     )
     if not schema:
         return content
+    validate_schema(source=content, schema=schema, logger=logger)
+    return content
+
+
+def validate_schema(source: dict | list, schema: str | Path | dict, logger: Optional[Logger] = None):
+    logger = logger or Logger()
     if not isinstance(schema, dict):
-        logger.info(f"Read schema from '{schema}'")
-        schema = read(path=schema, logger=logger)
+        path_schema = Path(schema).resolve()
+        logger.info(f"Read schema from '{path_schema}'")
+        schema = read(path=path_schema, logger=logger)
+
     try:
-        jsonschema.validate(instance=content, schema=schema)
+        _JSONSCHEMA_VALIDATOR(schema).validate(source)
     except jsonschema.exceptions.ValidationError as e:
         logger.error(
-            f"Schema validation failed for YAML file '{path}': {e.message}.", traceback.format_exc()
+            f"Schema validation failed: {e.message}.", traceback.format_exc()
         )
     logger.success(f"Schema validation successful.")
-    return content
+    return
 
 
 def _read_yaml(path: str | Path, logger: Optional[Logger] = None):
@@ -208,3 +216,26 @@ class _DictFiller:
                     parsed_ind.append(slice(*slice_))
             parsed_address.extend(parsed_ind)
         return recursive_retrieve(self._data, address=parsed_address)
+
+
+def extend_with_default(validator_class):
+    # https://python-jsonschema.readthedocs.io/en/stable/faq/#why-doesn-t-my-schema-s-default-property-set-the-default-on-my-instance
+
+    validate_properties = validator_class.VALIDATORS["properties"]
+
+    def set_defaults(validator, properties, instance, schema):
+        for property, subschema in properties.items():
+            if "default" in subschema:
+                instance.setdefault(property, subschema["default"])
+
+        for error in validate_properties(
+            validator, properties, instance, schema,
+        ):
+            yield error
+
+    return jsonschema.validators.extend(
+        validator_class, {"properties" : set_defaults},
+    )
+
+
+_JSONSCHEMA_VALIDATOR = extend_with_default(jsonschema.Draft202012Validator)
