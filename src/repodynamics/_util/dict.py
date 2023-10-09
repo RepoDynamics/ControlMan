@@ -1,7 +1,7 @@
 import re
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 import traceback
 
 import tomlkit
@@ -15,36 +15,42 @@ def read(
     path: str | Path,
     schema: Optional[str | Path | dict] = None,
     raise_missing: bool = False,
-    raise_empty: bool = False,
+    raise_empty: bool = True,
+    extension: Optional[Literal["json", "yaml", "toml"]] = None,
     logger: Optional[Logger] = None
-) -> dict | list | None:
+) -> dict:
     logger = logger or Logger()
     path = Path(path).resolve()
     logger.info(f"Read data file from '{path}'")
     if not path.is_file():
         if raise_missing:
             logger.error(f"No file exists at '{path}'.")
-        return
-    if path.read_text().strip() == "":
+        content = {}
+    elif path.read_text().strip() == "":
         if raise_empty:
             logger.error(f"File at '{path}' is empty.")
-        return
-    extension = path.suffix.removeprefix(".")
-    match extension:
-        case "json":
-            content = _read_json(path=path, logger=logger)
-        case "yaml", "yml":
-            content = _read_yaml(path=path, logger=logger)
-        case "toml":
-            content = _read_toml(path=path, logger=logger)
-        case _:
-            logger.error(f"Unsupported file extension '{extension}'.")
+        content = {}
+    else:
+        extension = extension or path.suffix.removeprefix(".")
+        match extension:
+            case "json":
+                content = _read_json(path=path, logger=logger)
+            case "yaml" | "yml":
+                content = _read_yaml(path=path, logger=logger)
+            case "toml":
+                content = _read_toml(path=path, logger=logger)
+            case _:
+                logger.error(f"Unsupported file extension '{extension}'.")
+        if not isinstance(content, dict):
+            logger.error(
+                f"Invalid datafile.",
+                f"Expected a dict, but '{path}' had:\n{json.dumps(content, indent=3)}"
+            )
+    if schema:
+        validate_schema(source=content, schema=schema, logger=logger)
     logger.success(
         f"Data file successfully read from '{path}'", json.dumps(content, indent=3)
     )
-    if not schema:
-        return content
-    validate_schema(source=content, schema=schema, logger=logger)
     return content
 
 
@@ -75,7 +81,7 @@ def _read_yaml(path: str | Path, logger: Optional[Logger] = None):
 
 def _read_json(path: str | Path, logger: Optional[Logger] = None):
     try:
-        content = json.load(Path(path))
+        content = json.loads(Path(path).read_text())
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON at '{path}': {e}.", traceback.format_exc())
     return content
