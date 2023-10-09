@@ -14,7 +14,6 @@ from repodynamics import _util
 
 def update(
     path_root: str | Path = ".",
-    path_meta: str = ".meta",
     action: Literal["report", "apply", "amend", "commit"] = "report",
     github_token: Optional[str] = None,
     logger: Logger = None
@@ -22,7 +21,6 @@ def update(
     logger = logger or Logger()
     reader = MetaReader(
         path_root=path_root,
-        path_meta=path_meta,
         github_token=github_token,
         logger=logger
     )
