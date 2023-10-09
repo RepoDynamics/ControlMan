@@ -9,19 +9,52 @@ properties:
   license:
     type: object
     default: {}
+    oneOf:
+      - required: [ id ]
+        additionalProperties: false
+        properties:
+          id:
+            description: ID of the project's license
+            enum:
+              - gnu_agpl_v3+
+              - gnu_agpl_v3
+              - gnu_gpl_v3+
+              - gnu_gpl_v3
+              - mozilla_v2
+              - apache_v2
+              - mit
+              - bsd_2_clause
+              - bsd_3_clause
+              - bsl_v1
+              - unlicense
+      - required: [ shortname, fullname, trove_classifier, fulltext, shorttext ]
+        additionalProperties: false
+        properties:
+            shortname:
+                description: Short name of the project's license
+                type: string
+            fullname:
+                description: Full name of the project's license
+                type: string
+            trove_classifier:
+                description: Trove classifier of the project's license
+                type: string
+            fulltext:
+                description: Full text of the project's license
+                type: string
+            shorttext:
+                description: Short text of the project's license
+                type: string
+  copyright:
+    type: object
+    default: {}
     additionalProperties: false
     properties:
-      id:
-        description: ID of the project's license
-        enum:
-          - gnu_agpl_v3+
-          - gnu_agpl_v3
-          - gnu_gpl_v3+
-          - gnu_gpl_v3
-          - mozilla_v2
-          - apache_v2
-          - mit
-          - bsd_2_clause
-          - bsd_3_clause
-          - bsl_v1
-          - unlicense
+      year_start:
+        description: Year of the first publication of the project
+        type: integer
+        minimum: 1980
+        maximum: 2040
+      notice:
+        description: Notice of the project
+        type: string
