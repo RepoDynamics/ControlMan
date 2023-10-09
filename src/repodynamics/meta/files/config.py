@@ -11,31 +11,56 @@ class ConfigFileGenerator:
         return
 
     def generate(self) -> list[dict]:
-        label_syncer, pr_labeler = self._labels()
+        # label_syncer, pr_labeler = self._labels()
         updates = [
             dict(category="config", name="funding", content=self._funding()),
-            dict(category="config", name="labels", content=label_syncer),
-            dict(category="config", name="labels_pr", content=pr_labeler),
+            dict(category="config", name="labels", content=self._labels()),
+            # dict(category="config", name="labels_pr", content=pr_labeler),
         ]
         return updates
 
-    def _labels(self) -> tuple[str, str]:
+    # def _labels(self) -> tuple[str, str]:
+    #     self._logger.h3("Process metadata: labels")
+    #     # repo labels: https://github.com/marketplace/actions/label-syncer
+    #     repo_labels = []
+    #     pr_labels = []
+    #     labels = self._meta.get('labels', [])
+    #     for label in labels:
+    #         repo_labels.append({attr: label[attr] for attr in ["name", "description", "color"]})
+    #         if label.get("pulls"):
+    #             pr_labels.append({"label": label["name"], **label["pulls"]})
+    #     label_syncer = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(
+    #         repo_labels, add_final_eol=True
+    #     ) if repo_labels else ""
+    #     pr_labeler = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(
+    #         {"version": "v1", "labels": pr_labels}, add_final_eol=True
+    #     ) if pr_labels else ""
+    #     return label_syncer, pr_labeler
+
+    def _labels(self) -> str:
         self._logger.h3("Process metadata: labels")
         # repo labels: https://github.com/marketplace/actions/label-syncer
-        repo_labels = []
-        pr_labels = []
-        labels = self._meta.get('labels', [])
-        for label in labels:
-            repo_labels.append({attr: label[attr] for attr in ["name", "description", "color"]})
-            if label.get("pulls"):
-                pr_labels.append({"label": label["name"], **label["pulls"]})
-        label_syncer = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(
-            repo_labels, add_final_eol=True
-        ) if repo_labels else ""
-        pr_labeler = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(
-            {"version": "v1", "labels": pr_labels}, add_final_eol=True
-        ) if pr_labels else ""
-        return label_syncer, pr_labeler
+        out = []
+        prefixes = []
+        for group_name, group in self._meta["label"]["group"]:
+            prefix = group["prefix"]
+            if prefix in prefixes:
+                self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
+            prefixes.append(prefix)
+            suffixes = []
+            for label in group['labels'].values():
+                suffix = label['suffix']
+                if suffix in suffixes:
+                    self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
+                suffixes.append(suffix)
+                out.append(
+                    {
+                        "name": f"{prefix}{suffix}",
+                        "description": label["description"],
+                        "color": group["color"]
+                    }
+                )
+        return ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
 
     def _funding(self) -> str:
         """
