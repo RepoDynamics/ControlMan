@@ -12,8 +12,6 @@ properties:
     required:
       - python_version_min
     properties:
-      init:
-        type: string
       python_version_min:
         description: Minimum Python version for the project
         type: string
