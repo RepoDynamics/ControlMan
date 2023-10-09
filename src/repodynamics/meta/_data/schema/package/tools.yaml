@@ -1,0 +1,13 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_package_metadata
+description: Package metadata
+
+type: object
+properties:
+  tool:
+    description: Build system definitions
+    type: object
+    additionalProperties:
+      type: object
+required: [ tool ]
+additionalProperties: false
