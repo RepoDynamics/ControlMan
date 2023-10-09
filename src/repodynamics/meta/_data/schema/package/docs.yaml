@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_package_docs
+description: Package documentation settings
+
+type: object
+additionalProperties: false
+properties:
+  package:
+    description: Package metadata
+    type: object
+    additionalProperties: false
+    required: [ docs ]
+    properties:
+      main_init:
+        type: string
