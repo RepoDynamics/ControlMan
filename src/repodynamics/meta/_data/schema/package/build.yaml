@@ -1,0 +1,26 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_package_metadata
+description: Package metadata
+
+type: object
+properties:
+  build-system:
+    description: Build system definitions
+    type: object
+    required: [ requires ]
+    properties:
+
+      requires:
+        description: Build system requirements
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+
+      build-backend:
+        description: Build backend
+        type: string
+required: [ build-system ]
+additionalProperties:
+  type: object
