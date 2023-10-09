@@ -269,12 +269,13 @@ class MetaReader:
                         raise_on_duplicated=extension['raise_duplicate']
                     )
             self._validate_datafile(source=section, schema=entry)
-            shared_keys = set(metadata.keys()) & set(section.keys())
-            if shared_keys:
-                self.logger.error(
-                    f"Found duplicate metadata key(s) '{shared_keys}' in {entry}.yaml."
-                )
-            metadata |= section
+            self._recursive_update(
+                source=metadata,
+                add=section,
+                append_list=False,
+                append_dict=True,
+                raise_on_duplicated=True
+            )
         self.logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
         return metadata
 
