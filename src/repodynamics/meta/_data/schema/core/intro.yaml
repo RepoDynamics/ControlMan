@@ -4,6 +4,7 @@ description: Descriptions for the project
 
 type: object
 additionalProperties: false
+required: [ tagline, description ]
 properties:
 
   name:
