@@ -1,0 +1,27 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_core_license
+description: License information for the project
+
+type: object
+additionalProperties: false
+properties:
+
+  license:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      id:
+        description: ID of the project's license
+        enum:
+          - gnu_agpl_v3+
+          - gnu_agpl_v3
+          - gnu_gpl_v3+
+          - gnu_gpl_v3
+          - mozilla_v2
+          - apache_v2
+          - mit
+          - bsd_2_clause
+          - bsd_3_clause
+          - bsl_v1
+          - unlicense
