@@ -1,0 +1,55 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_core_extensions
+description: Meta extension declarations
+
+type: object
+additionalProperties: false
+properties:
+  extensions:
+    type: array
+    default: []
+    uniqueItems: true
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - repo
+      properties:
+        type:
+          oneOf:
+            - type: string
+              enum:
+                - core/credits
+                - core/intro
+                - core/license
+                - devops/commits
+                - devops/labels
+                - license
+                - issue
+                - discussion
+                - pull
+                - media
+                - logo
+            - type: string
+              pattern: "^[A-Za-z0-9]+$"
+            - type: string
+              pattern: "^\\d{3}-\\d{2}-\\d{4}$"
+        repo:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$
+        ref:
+          type: string
+        path:
+          type: string
+        append_list:
+          type: boolean
+          default: true
+        append_dict:
+          type: boolean
+          default: true
+        raise_duplicate:
+          type: boolean
+          default: false
+required: [extensions]
