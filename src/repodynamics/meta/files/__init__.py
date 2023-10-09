@@ -17,7 +17,7 @@ def generate(metadata: dict, reader: MetaReader, logger: Logger = None) -> list[
         dict(category="metadata", name="metadata", content=json.dumps(metadata)),
         dict(category="license", name="license", content=metadata.get("license_txt", "")),
     ]
-    updates += ReadmeFileGenerator(metadata=metadata, logger=logger, path_root=reader.path_root).generate()
+    updates += ReadmeFileGenerator(metadata=metadata, logger=logger, path_root=reader.path.root).generate()
     updates += ConfigFileGenerator(metadata=metadata, logger=logger).generate()
     updates += HealthFileGenerator(metadata=metadata, reader=reader, logger=logger).generate()
     updates += PackageFileGenerator(metadata=metadata, reader=reader, logger=logger).generate()
