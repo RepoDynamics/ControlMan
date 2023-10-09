@@ -240,6 +240,7 @@ class MetaReader:
             "dev/branches",
             "dev/changelogs",
             "dev/commits",
+            "dev/discussions",
             "dev/issues",
             "dev/labels",
             "dev/maintainers",
