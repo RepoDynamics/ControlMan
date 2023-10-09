@@ -1,0 +1,88 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_ui_health_files
+description: Paths and content of repository health files
+
+type: object
+properties:
+
+  health_file:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+
+      code_of_conduct:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+          text:
+            type: string
+            default: ""
+        required: [path, text]
+
+      codeowners:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+        required: [path]
+
+      contributing:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+          text:
+            type: string
+            default: ""
+        required: [path, text]
+
+      governance:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+          text:
+            type: string
+            default: ""
+        required: [path, text]
+
+      security:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+          text:
+            type: string
+            default: ""
+        required: [path, text]
+
+      support:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            enum: [., .github, docs]
+            default: .
+          text:
+            type: string
+            default: ""
+        required: [path, text]
