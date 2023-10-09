@@ -32,7 +32,7 @@ class MetaReader:
         self._metadata: dict = self._read_raw_metadata()
 
         if self._metadata.get("package"):
-            self._package_config = self._read_package_config()
+            self._package_config = self._read_pyproject_metadata()
         else:
             self._package_config = None
 
@@ -172,20 +172,6 @@ class MetaReader:
         return new_path, False
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
-        dest_path = {
-            "meta": ".",
-            "config": "config",
-            "pyproject": "config/pyproject",
-            "data": "data",
-            "template": "template",
-            "health_file": "template/health_file",
-            "license": "template/license",
-            "issue": "template/issue",
-            "discussion": "template/discussion",
-            "pull": "template/pull",
-            "media": "media",
-            "logo": "media/logo",
-        }
         self.logger.h3("Download Meta Extensions")
         _util.file.delete_dir_content(self.path.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
@@ -193,22 +179,29 @@ class MetaReader:
             self.logger.info(f"Input: {extension}")
             repo_owner, repo_name = extension['repo'].split("/")
             dir_path = download_path / f"{idx + 1 :03}"
+            rel_dl_path = Path(extension["type"])
+            if extension["type"] == "package/build":
+                rel_dl_path = rel_dl_path.with_suffix(".toml")
+            elif extension["type"] == "package/tools":
+                filename = Path(extension["path"]).with_suffix(".toml").name
+                rel_dl_path = rel_dl_path / filename
+            else:
+                rel_dl_path = rel_dl_path.with_suffix(".yaml")
+            full_dl_path = dir_path / rel_dl_path
             try:
-                extension_filepaths = self.github.user(repo_owner).repo(repo_name).download_content(
-                    path=extension.get('path', ''),
+                extension_filepath = self.github.user(repo_owner).repo(repo_name).download_file(
+                    path=extension['path'],
                     ref=extension.get('ref'),
-                    download_path=dir_path / dest_path[extension['type']],
-                    recursive=True,
-                    keep_full_path=False,
+                    download_path=full_dl_path.parent,
+                    download_filename=full_dl_path.name,
                 )
             except WebAPIPersistentStatusCodeError as e:
                 self.logger.error(f"Error downloading extension data:", str(e))
-            if not extension_filepaths:
+            if not extension_filepath:
                 self.logger.error(f"No files found in extension.")
             else:
                 self.logger.success(
-                    f"Downloaded extension files",
-                    "\n".join([str(path.relative_to(dir_path)) for path in extension_filepaths])
+                    f"Downloaded extension file '{extension_filepath}' from '{extension['repo']}'",
                 )
         return
 
@@ -247,7 +240,10 @@ class MetaReader:
             "dev/repo",
             "dev/tags",
             "dev/workflows",
+            "package/docs",
+            "package/entry_points",
             "package/metadata",
+            "package/requirements",
             "ui/health_files",
             "ui/readme",
             "ui/theme",
@@ -279,15 +275,39 @@ class MetaReader:
         self.logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
         return metadata
 
+    def _read_pyproject_metadata(self):
+        build = self._read_package_build()
+        tool = self._read_package_config()
+        self._recursive_update(build, tool, raise_on_duplicated=True)
+        return build
+
+    def _read_package_build(self):
+        path = "package/build"
+        section = self._read_datafile(self.path.dir_meta / f"{path}.toml")
+        for idx, extension in enumerate(self._extensions["extensions"]):
+            if extension["type"] == "package/build":
+                self.logger.h4(f"Read Extension Metadata {idx + 1}")
+                extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{path}.toml"
+                section_extension = self._read_datafile(extionsion_path, raise_missing=True)
+                self._recursive_update(
+                    source=section,
+                    add=section_extension,
+                    append_list=extension['append_list'],
+                    append_dict=extension['append_dict'],
+                    raise_on_duplicated=extension['raise_duplicate']
+                )
+        self._validate_datafile(source=section, schema=path)
+        return section
+
     def _read_package_config(self):
         self.logger.h3("Read Package Config")
 
-        def read_path(path: Path):
-            dirpath_config = Path(path) / "config" / "pyproject"
+        def read_package_toml(path: Path):
+            dirpath_config = Path(path) / "package" / "tools"
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
-                config_section: tomlkit.TOMLDocument = _util.dict.read(path=path_file)
+                config_section = self._read_datafile(path_file)
                 self._recursive_update(
                     config,
                     config_section,
@@ -296,21 +316,19 @@ class MetaReader:
                     raise_on_duplicated=True
                 )
             return config
-        final_config = read_path(self._path_meta)
-        if not self._extensions:
-            return final_config
-        for idx, extension in enumerate(self._extensions):
-            if extension["type"] not in ["meta", "config"]:
-                continue
-            extension_config = read_path(self._path_extensions / f"{idx + 1 :03}")
-            self._recursive_update(
-                final_config,
-                extension_config,
-                append_list=extension.get('append_list', True),
-                append_dict=extension.get('append_dict', True),
-                raise_on_duplicated=extension.get('raise_duplicate', False),
-            )
-        return final_config
+        toml_dict = read_package_toml(self.path.dir_meta)
+        for idx, extension in enumerate(self._extensions["extensions"]):
+            if extension["type"] == "package/tools":
+                extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
+                self._recursive_update(
+                    toml_dict,
+                    extension_config,
+                    append_list=extension['append_list'],
+                    append_dict=extension['append_dict'],
+                    raise_on_duplicated=extension['raise_duplicate'],
+                )
+        self._validate_datafile(source=toml_dict, schema="package/tools")
+        return toml_dict
 
     def _read_datafile(self, source: Path, schema: Path = None, **kwargs):
         return _util.dict.read(path=source, schema=schema, logger=self.logger, **kwargs)
