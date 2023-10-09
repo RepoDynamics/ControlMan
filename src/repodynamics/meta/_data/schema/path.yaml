@@ -1,0 +1,44 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: repo_paths
+description: Paths to files and directories in the repository
+
+type: object
+properties:
+
+  dir:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+
+      meta:
+        type: string
+        default: .meta
+
+      source:
+        type: string
+        default: src
+
+      local:
+        type: string
+        default: .local
+
+      tests:
+        type: string
+        default: tests
+
+  file:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+
+      meta:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          config_local:
+            type: string
+            default: ${{path.dir.local}}/config.yaml
