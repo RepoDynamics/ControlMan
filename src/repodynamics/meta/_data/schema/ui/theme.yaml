@@ -1,0 +1,31 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_issues
+description: GitHub issues settings for the project
+
+type: object
+additionalProperties: false
+properties:
+  color:
+    description: Colors for the project
+    type: object
+    default: {}
+    properties:
+      primary:
+        description: Primary colors of the project
+        items: false
+        default: [ 135400, 459B24 ]
+        prefixItems:
+          - type: string
+            pattern: ^[0-9a-fA-F]{6}$
+          - type: string
+            pattern: ^[0-9a-fA-F]{6}$
+      secondary:
+        description: Secondary colors of the project
+        items: false
+        default: [ 055005, 9CCC00 ]
+        prefixItems:
+          - type: string
+            pattern: ^[0-9a-fA-F]{6}$
+          - type: string
+            pattern: ^[0-9a-fA-F]{6}$
+    required: [ primary, secondary ]
