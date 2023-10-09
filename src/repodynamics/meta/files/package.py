@@ -21,9 +21,9 @@ from repodynamics import _util
 class PackageFileGenerator:
     def __init__(self, metadata: dict, reader: MetaReader, logger: Logger = None):
         self._reader = reader
-        self._logger = self._reader.logger
+        self._logger = logger or self._reader.logger
         self._meta = metadata
-        self._root = self._reader.path_root
+        self._root = self._reader.path.root
         return
 
     def generate(self):
@@ -40,7 +40,7 @@ class PackageFileGenerator:
 
     def _package_dir(self):
         self._logger.h4("Update path: package")
-        path_src = self._reader.path_root / "src"
+        path_src = self._reader.path.dir_source
         package_name = self._meta["package"]["name"]
         path_package = path_src / package_name
         if path_package.exists():
