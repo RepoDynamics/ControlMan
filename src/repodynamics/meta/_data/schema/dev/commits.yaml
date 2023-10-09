@@ -1,0 +1,100 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_commits
+description: Commit settings for the project
+
+type: object
+additionalProperties: false
+properties:
+
+  commit:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      primary:
+        description: Primary commit types
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+            description:
+              type: string
+            sub_types:
+              type: object
+              properties:
+                any:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  uniqueItems: true
+                all:
+                  type: array
+                  items:
+                      type: string
+                  minItems: 1
+                  uniqueItems: true
+                include:
+                  type: array
+                  items:
+                      type: string
+                  minItems: 1
+                  uniqueItems: true
+                exclude:
+                  type: array
+                  items:
+                      type: string
+                  minItems: 1
+                  uniqueItems: true
+              allOf:
+                - anyOf:
+                    - required: [ any ]
+                    - required: [ all ]
+                - not:
+                    anyOf:
+                      - required: [ include, exclude ]
+          required: [ type, description, sub_types ]
+        required:
+          - package_release_major
+          - package_release_minor
+          - package_release_patch
+          - package_release_post
+          - website_deploy
+
+      secondary:
+        description: Secondary commit types
+        type: object
+        default: {}
+        minProperties: 1
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            description:
+              type: string
+            changelog_id:
+              type: string
+            changelog_section_id:
+              type: string
+          required: [ description, changelog_id ]
+
+      action:
+        description: Action commit types
+        type: object
+        default: {}
+        properties:
+          meta-update:
+            type: string
+            default: meta-update
+          revert:
+            type: string
+            default: revert
+          auto-refactor:
+            type: string
+            default: auto-refactor
+        required: [ meta-update, revert, auto-refactor ]
+    required: [ primary, secondary, action ]
