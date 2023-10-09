@@ -1,0 +1,730 @@
+{
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "title": "Metadata",
+   "description": "Core metadata for a repository",
+   "type": "object",
+   "additionalProperties": false,
+
+   "if": {
+      "properties": {
+         "health_file": {
+            "required": ["codeowners"]
+         }
+      },
+      "required": ["health_file"]
+   },
+   "then": {
+      "required": ["pulls"]
+   },
+
+   "properties": {
+
+      "labels": {
+         "description": "Labels for the repository",
+         "type": "array",
+         "uniqueItems": true,
+         "items": {
+            "type": "object",
+            "required": ["name", "description", "color"],
+            "additionalProperties": false,
+            "properties": {
+               "name": {
+                  "description": "Name of the label",
+                  "type": "string"
+               },
+               "description": {
+                  "description": "Description of the label",
+                  "type": "string"
+               },
+               "color": {
+                  "description": "Color of the label",
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{6}$"
+               },
+               "issues": {
+                  "type": "array",
+                  "items": {
+                     "type": "string"
+                  }
+               },
+               "pulls": {
+                  "description": "Pull request settings",
+                  "type": "object",
+                  "required": ["matcher"],
+                  "additionalProperties": false,
+                  "properties": {
+                     "sync": {
+                        "description": "Whether the label is enabled for pull requests",
+                        "type": "boolean"
+                     },
+                     "matcher": {
+                        "description": "Whether the label is required for pull requests",
+                        "type": "object",
+                        "additionalProperties": false,
+                        "minProperties": 1,
+                        "properties": {
+                           "title": {
+                              "description": "RegEx pattern to match the title of the pull request",
+                              "type": "string"
+                           },
+                           "body": {
+                              "description": "RegEx pattern to match the body of the pull request",
+                              "type": "string"
+                           },
+                           "comment": {
+                              "description": "RegEx pattern to match the comment of the pull request",
+                              "type": "string"
+                           },
+                           "branch": {
+                              "description": "RegEx pattern to match the branch of the pull request",
+                              "type": "string"
+                           },
+                           "baseBranch": {
+                              "description": "RegEx pattern to match the base branch of the pull request",
+                              "type": "string"
+                           },
+                           "commits":
+                           {
+                              "description": "RegEx pattern to match the commits of the pull request",
+                              "type": "string"
+                           },
+                           "author": {
+                              "description": "List of authors of the pull request to match",
+                              "type": "array",
+                              "minItems": 1,
+                              "items": {
+                                 "type": "string"
+                              }
+                           },
+                           "files": {
+                              "description": "List of files of the pull request to match",
+                              "oneOf": [
+                                 {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "uniqueItems": true,
+                                    "items": {
+                                       "type": "string"
+                                    }
+                                 },
+                                 {
+                                    "type": "object",
+                                    "properties": {
+                                       "count": {
+                                          "description": "Number of files to match",
+                                          "type": "object",
+                                          "properties": {
+                                             "lte": {
+                                                "description": "Maximum number of files that still match",
+                                                "type": "integer",
+                                                "minimum": 0
+                                             },
+                                             "gte": {
+                                                "description": "Minimum number of files that still match",
+                                                "type": "integer",
+                                                "minimum": 0
+                                             }
+                                          }
+                                       },
+                                       "any": {
+                                          "type": "array",
+                                          "minItems": 1,
+                                          "items": {
+                                             "type": "string"
+                                          }
+                                       },
+                                       "all": {
+                                          "type": "array",
+                                          "minItems": 1,
+                                          "items": {
+                                             "type": "string"
+                                          }
+                                       }
+                                    }
+                                 }
+                              ]
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+
+
+      "discussions": {
+         "description": "Discussion templates for the repository and their assignees",
+         "type": "array",
+         "uniqueItems": true,
+         "items": {
+            "type": "object",
+            "required": ["slug"],
+            "properties": {
+               "slug": {"type": "string"},
+               "assignees": {
+                  "type": "array",
+                  "items": {
+                     "type": "string"
+                  }
+               }
+            }
+         }
+      },
+
+
+      "issues": {
+         "description": "Issue templates for the repository and their assignees",
+         "type": "array",
+         "uniqueItems": true,
+         "items": {
+            "type": "object",
+            "required": ["slug"],
+            "properties": {
+               "slug": {"type": "string"},
+               "assignees": {
+                  "type": "array",
+                  "items": {
+                     "type": "string"
+                  }
+               }
+            }
+         }
+      },
+
+
+      "issues_contact_links": {
+         "description": "External links to be shown on the issue template chooser",
+         "type": "array",
+         "uniqueItems": true,
+         "items": {
+            "type": "object",
+            "required": ["name", "url", "about"],
+            "properties": {
+               "name": {"type": "string"},
+               "url": {"type": "string", "format": "uri"},
+               "about": {"type": "string"}
+            }
+         }
+      },
+
+
+      "issues_blank_enabled": {
+         "description": "Whether to allow submission of free-form issues",
+         "type": "boolean",
+         "default": false
+      },
+
+
+      "pulls": {
+         "description": "Pull request reviewers of the repository",
+         "type": "array",
+         "uniqueItems": true,
+         "minItems": 1,
+         "items": {
+            "type": "object",
+            "required": ["pattern", "reviewers"],
+            "properties": {
+               "pattern": {"type": "string"},
+               "reviewers": {
+                  "type": "array",
+                  "items": {
+                     "type": "string"
+                  },
+                  "minItems": 1
+               }
+            }
+         }
+      },
+
+
+      "repo_config": {
+         "description": "Configuration for the repository",
+         "type": "object",
+         "properties": {
+            "has_issues": {
+               "type": "boolean",
+               "default": true
+            },
+            "has_projects": {
+               "type": "boolean",
+               "default": false
+            },
+            "has_wiki": {
+               "type": "boolean",
+               "default": false
+            },
+            "default_branch": {
+               "type": "string",
+               "default": "main"
+            },
+            "allow_merge_commit": {
+               "type": "boolean",
+               "default": true
+            },
+            "allow_squash_merge": {
+               "type": "boolean",
+               "default": true
+            },
+            "allow_rebase_merge": {
+               "type": "boolean",
+               "default": true
+            },
+            "merge_commit_title": {
+               "enum": ["PR_TITLE", "MERGE_MESSAGE"]
+            },
+            "squash_merge_commit_title": {
+               "enum": ["PR_TITLE", "COMMIT_OR_PR_TITLE"]
+            },
+            "merge_commit_message": {
+               "enum": ["PR_TITLE", "PR_BODY", "BLANK"]
+            },
+            "squash_merge_commit_message": {
+               "enum": ["PR_BODY", "COMMIT_MESSAGES", "BLANK"]
+            },
+            "allow_auto_merge": {
+               "type": "boolean",
+               "default": false
+            },
+            "delete_branch_on_merge": {
+               "type": "boolean",
+               "default": true
+            },
+            "allow_update_branch": {
+               "type": "boolean",
+               "default": true
+            }
+         }
+      },
+
+
+      "repo_target": {
+         "description": "Target repository for development",
+         "enum": ["source", "parent", "self"],
+         "default": "source"
+      },
+
+
+      "api_cache_expiration_days": {
+         "description": "Number of days to keep API cache",
+         "type": "integer",
+         "minimum": 0,
+         "default": 10
+      },
+
+
+      "get_owner_publications": {
+         "description": "Whether to get owner publications",
+         "type": "boolean",
+         "default": false
+      },
+
+
+      "color": {
+         "description": "Colors for the project",
+         "type": "object",
+         "required": ["primary", "secondary"],
+         "properties": {
+            "primary": {
+               "description": "Primary colors of the project",
+               "items": false,
+               "prefixItems": [
+                  {"type": "string", "pattern": "^[0-9a-fA-F]{6}$"},
+                  {"type": "string", "pattern": "^[0-9a-fA-F]{6}$"}
+               ]
+            },
+            "secondary": {
+               "description": "Secondary colors of the project",
+               "items": false,
+               "prefixItems": [
+                  {"type": "string", "pattern": "^[0-9a-fA-F]{6}$"},
+                  {"type": "string", "pattern": "^[0-9a-fA-F]{6}$"}
+               ]
+            }
+         }
+      },
+
+      "package": {
+         "description": "Package for the project",
+         "type": "object",
+         "additionalProperties": false,
+         "required": ["development_status", "python_version_min"],
+         "properties": {
+
+            "init": {
+               "type": "string"
+            },
+
+            "development_status": {
+               "description": "Development status of the project",
+               "type": "integer",
+               "minimum": 1,
+               "maximum": 7,
+               "default": 1
+            },
+
+            "python_version_min": {
+               "description": "Minimum Python version for the project",
+               "type": "string",
+               "pattern": "^3\\.[1-9][0-9]*(\\.[1-9][0-9]*)?$"
+            },
+
+            "operating_systems": {
+               "description": "Operating systems for the project",
+               "type": "object",
+               "additionalProperties": false,
+               "minProperties": 1,
+               "properties": {
+                  "linux": {
+                     "anyOf": [
+                        {"type": "null"},
+                        {
+                           "type": "object",
+                           "additionalProperties": false,
+                           "properties": {
+                              "runner": {
+                                 "enum": ["ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04"],
+                                 "default": "ubuntu-latest"
+                              },
+                              "cibw_build": {
+                                 "type": "array",
+                                 "minItems": 1,
+                                 "uniqueItems": true,
+                                 "items": {"type": "string"}
+                              }
+                           }
+                        }
+                     ]
+                  },
+                  "macos": {
+                     "anyOf": [
+                        {"type": "null"},
+                        {
+                           "type": "object",
+                           "additionalProperties": false,
+                           "properties": {
+                              "runner": {
+                                 "enum": [
+                                    "macos-latest",
+                                    "macos-latest-xl",
+                                    "macos-13",
+                                    "macos-13-xl",
+                                    "macos-12",
+                                    "macos-12-xl",
+                                    "macos-11"
+                                 ],
+                                 "default": "macos-latest"
+                              },
+                              "cibw_build": {
+                                 "type": "array",
+                                 "minItems": 1,
+                                 "uniqueItems": true,
+                                 "items": {"type": "string"}
+                              }
+                           }
+                        }
+                     ]
+                  },
+                  "windows": {
+                     "anyOf": [
+                        {"type": "null"},
+                        {
+                           "type": "object",
+                           "additionalProperties": false,
+                           "properties": {
+                              "runner": {
+                                 "enum": ["windows-latest", "windows-2022", "windows-2019"],
+                                 "default": "windows-latest"
+                              },
+                              "cibw_build": {
+                                 "type": "array",
+                                 "minItems": 1,
+                                 "uniqueItems": true,
+                                 "items": {"type": "string"}
+                              }
+                           }
+                        }
+                     ]
+                  }
+               }
+            },
+
+            "trove_classifiers": {
+               "description": "Trove classifiers for the project",
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "string",
+                  "pattern": "^[\\w\\s\\-]+( :: [\\w\\s\\-]+)+$"
+               }
+            },
+
+            "core_dependencies": {
+               "description": "Dependencies for the project",
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["pip_spec"],
+                  "properties": {
+                     "usage": {"type": "string"},
+                     "pip_spec": {"type": "string"},
+                     "conda_spec": {"type": "string"},
+                     "conda_channel": {"type": "string"},
+                     "url_homepage": {"type": "string", "format": "uri"},
+                     "url_docs": {"type": "string", "format": "uri"},
+                     "url_source": {"type": "string", "format": "uri"},
+                     "intersphinx_mapping": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                           "key": {"type": "string"},
+                           "target": {"type": "string", "format": "uri"},
+                           "inventory": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+                        },
+                        "required": ["target"]
+                     }
+                  }
+               }
+            },
+
+            "optional_dependencies": {
+               "description": "Optional dependencies for the project",
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "packages"],
+                  "properties": {
+                     "name": {"type": "string"},
+                     "packages": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                           "type": "object",
+                           "required": ["name", "pip_spec"],
+                           "properties": {
+                              "usage": {"type": "string"},
+                              "pip_spec": {"type": "string"},
+                              "conda_spec": {"type": "string"},
+                              "conda_channel": {"type": "string"},
+                              "url_homepage": {"type": "string", "format": "uri"},
+                              "url_docs": {"type": "string", "format": "uri"},
+                              "url_source": {"type": "string", "format": "uri"},
+                              "intersphinx_mapping": {
+                                 "type": "object",
+                                 "additionalProperties": false,
+                                 "properties": {
+                                    "key": {"type": "string"},
+                                    "target": {"type": "string", "format": "uri"},
+                                    "inventory": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+                                 },
+                                 "required": ["target"]
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+
+            "cli_scripts": {
+               "description": "Scripts for the project",
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "ref", "description"],
+                  "properties": {
+                     "name": {"type": "string"},
+                     "ref": {"type": "string"},
+                     "description": {"type": "string"}
+                  }
+               }
+            },
+
+            "gui_scripts": {
+               "description": "GUI Scripts for the project",
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "ref", "description"],
+                  "properties": {
+                     "name": {"type": "string"},
+                     "ref": {"type": "string"},
+                     "description": {"type": "string"}
+                  }
+               }
+            },
+
+            "entry_points": {
+               "type": "array",
+               "uniqueItems": true,
+               "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["group_name", "description", "entry_points"],
+                  "properties": {
+                     "group_name": {"type": "string"},
+                     "description": {"type": "string"},
+                     "entry_points": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                           "type": "object",
+                           "additionalProperties": false,
+                           "required": ["name", "ref", "description"],
+                           "properties": {
+                              "name": {"type": "string"},
+                              "ref": {"type": "string"},
+                              "description": {"type": "string"}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+
+
+      "readme": {
+         "description": "Readme for the project",
+         "type": "object",
+         "properties": {
+            "header": {"type": "object"},
+            "body": {"type": "object"}
+         }
+      },
+
+
+      "custom": {
+         "description": "Custom metadata for the project",
+         "type": "object"
+      },
+
+
+      "workflow_hooks_config_path": {
+         "description": "Path to the workflow hooks config file",
+         "type": "string"
+      },
+
+
+      "extensions": {
+         "description": "Meta extension declarations",
+         "type": "array",
+         "uniqueItems": true,
+         "minItems": 1,
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "repo"],
+            "properties": {
+               "type": {
+                  "type": "string",
+                  "enum": [
+                     "meta",
+                     "config",
+                     "data",
+                     "template",
+                     "health_file",
+                     "license",
+                     "issue",
+                     "discussion",
+                     "pull",
+                     "media",
+                     "logo"
+                  ]
+               },
+               "repo": {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$"},
+               "ref": {"type": "string"},
+               "path": {"type": "string"},
+               "append_list": {"type": "boolean"},
+               "append_dict": {"type": "boolean"},
+               "raise_duplicate": {"type": "boolean"}
+            }
+         }
+      },
+
+
+      "commit_types_primary": {
+         "description": "Primary commit types",
+         "type": "object",
+         "required": [
+            "package_release_major",
+            "package_release_minor",
+            "package_release_patch",
+            "package_release_post",
+            "website_deploy"
+         ],
+         "additionalProperties": {
+            "type": "object",
+            "properties": {
+               "type": {"type": "string"},
+               "description": {"type": "string"},
+               "label_suffix": {"type": "string"},
+               "allow_unconventional_commits": {"type": "boolean", "default": true},
+               "allowed_sub_types": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "minItems": 1,
+                  "uniqueItems": true
+               }
+            },
+            "additionalProperties": false,
+            "required": ["type", "description", "label_suffix"]
+         }
+      },
+
+
+      "commit_types_secondary": {
+         "description": "Secondary commit types",
+         "type": "object",
+         "additionalProperties": {
+            "type": "object",
+            "properties": {
+               "description": {"type": "string"},
+               "changelog_id": {"type": "string"},
+               "changelog_section_id": {"type": "string"}
+            },
+            "additionalProperties": false,
+            "required": ["description", "changelog_id", "changelog_section_id"]
+         }
+      },
+
+
+      "meta_check_action_type": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+            "release_branch": {
+               "type": "string",
+               "enum": ["fail", "amend", "commit"],
+               "default": "fail"
+            },
+            "dev_branch": {
+               "type": "string",
+               "enum": ["fail", "amend", "commit"],
+               "default": "commit"
+            }
+         }
+      },
+
+      "path": {
+         "description": "Path to main directories",
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+            "source": {"type": "string"},
+            "tests": {"type": "string"}
+         }
+      }
+   }
+}
