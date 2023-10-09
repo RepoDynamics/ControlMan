@@ -1,0 +1,29 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_branches
+description: Repository branches settings
+
+type: object
+additionalProperties: false
+properties:
+  branch:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      group:
+        type: object
+        description: Branch groups
+        default: {}
+        properties:
+          dev:
+            type: object
+            description: Development branch
+            default: {}
+            properties:
+              prefix:
+                description: Prefix for the branch name
+                type: string
+                default: dev/
+            required: [ prefix ]
+        required: [ dev ]
+    required: [ group ]
