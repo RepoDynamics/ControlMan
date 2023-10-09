@@ -1,0 +1,118 @@
+
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_web
+description: Website metadata and config
+
+type: object
+additionalProperties: false
+properties:
+  web:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      base_url:
+        description: Base URL for the project
+        type: string
+        format: uri
+
+      readthedocs:
+        description: Configuration for ReadTheDocs website
+        type: object
+        required: [ name, version ]
+        properties:
+          name:
+            description: Name of the project on ReadTheDocs, i.e. the project slug
+            type: string
+          version:
+            type: integer
+            enum: [2]
+          format:
+            description: Additional formats of the documentation to be built, apart from the default HTML.
+            oneOf:
+              - type: string
+                enum: [all]
+              - type: array
+                uniqueItems: true
+                minItems: 1
+                items:
+                  type: string
+                  enum: [ htmlzip, pdf, epub ]
+
+      announcement_retention_days:
+        description: Number of days to keep announcements
+        type: integer
+        minimum: 0
+        default: 30
+
+      navbar_icons:
+        description: Icons for the navbar
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            icon:
+              type: string
+            url:
+              type: string
+              format: uri
+            type:
+              enum:
+                - fontawesome
+                - url
+                - local
+            attributes:
+              type: object
+
+      quicklinks:
+        description: Quicklinks for the navbar
+        type: array
+        uniqueItems: true
+        items:
+          type: array
+          uniqueItems: true
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - title
+              - path
+            properties:
+              title:
+                type: string
+              path:
+                type: string
+              include_in_readme:
+                type: boolean
+                default: false
+
+      analytics:
+        description: Web analytics for the project
+        type: object
+        additionalProperties: false
+        properties:
+          google_id:
+            description: Google Analytics ID
+            type: string
+          plausible:
+            description: Plausible Analytics data
+            type: object
+            additionalProperties: false
+            required:
+              - domain
+              - url
+            properties:
+              domain:
+                description: Domain for Plausible Analytics
+                type: string
+              url:
+                description: URL for Plausible Analytics
+                type: string
+                format: uri
