@@ -15,7 +15,7 @@ def generate(metadata: dict, reader: MetaReader, logger: Logger = None) -> list[
     logger.h2("Generate Files")
     updates = [
         dict(category="metadata", name="metadata", content=json.dumps(metadata)),
-        dict(category="license", name="license", content=metadata.get("license_txt", "")),
+        dict(category="license", name="license", content=metadata["license"].get("fulltext", "")),
     ]
     updates += ReadmeFileGenerator(metadata=metadata, logger=logger, path_root=reader.path.root).generate()
     updates += ConfigFileGenerator(metadata=metadata, logger=logger).generate()
