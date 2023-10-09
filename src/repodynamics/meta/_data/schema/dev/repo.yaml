@@ -1,0 +1,73 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_issues
+description: GitHub issues settings for the project
+
+type: object
+additionalProperties: false
+properties:
+  repo:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      config:
+        description: Configuration for the repository
+        type: object
+        properties:
+          has_issues:
+            type: boolean
+            default: true
+          has_projects:
+            type: boolean
+            default: false
+          has_wiki:
+            type: boolean
+            default: false
+          default_branch:
+            type: string
+            default: main
+          allow_merge_commit:
+            type: boolean
+            default: true
+          allow_squash_merge:
+            type: boolean
+            default: true
+          allow_rebase_merge:
+            type: boolean
+            default: true
+          merge_commit_title:
+            enum:
+              - PR_TITLE
+              - MERGE_MESSAGE
+          squash_merge_commit_title:
+            enum:
+              - PR_TITLE
+              - COMMIT_OR_PR_TITLE
+          merge_commit_message:
+            enum:
+              - PR_TITLE
+              - PR_BODY
+              - BLANK
+          squash_merge_commit_message:
+            enum:
+              - PR_BODY
+              - COMMIT_MESSAGES
+              - BLANK
+          allow_auto_merge:
+            type: boolean
+            default: false
+          delete_branch_on_merge:
+            type: boolean
+            default: true
+          allow_update_branch:
+            type: boolean
+            default: true
+
+      target:
+        description: Target repository for development
+        default: source
+        enum:
+          - source
+          - parent
+          - self
+
