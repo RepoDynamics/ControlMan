@@ -39,11 +39,11 @@ def update(
 
 def load(
     path_root: str | Path = ".",
-    path_meta: str = ".meta",
+    path_metadata: str = ".meta/.metadata.json",
     logger: Logger = None
 ) -> dict:
     logger = logger or Logger()
-    path_metadata = Path(path_root) / path_meta / ".metadata.json"
+    path_metadata = Path(path_root) / path_metadata
     metadata = _util.dict.read(path_metadata, logger=logger) or {}
     if metadata:
         logger.success(
