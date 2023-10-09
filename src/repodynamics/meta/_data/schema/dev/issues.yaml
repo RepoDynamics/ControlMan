@@ -73,6 +73,5 @@ properties:
                     type: object
                     additionalProperties: true
                 required: [type, attributes]
-
           required: [ id, primary_commit_id, name, description, body]
 
