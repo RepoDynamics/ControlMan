@@ -36,29 +36,23 @@ properties:
             type: boolean
             default: true
           merge_commit_title:
-            enum:
-              - PR_TITLE
-              - MERGE_MESSAGE
+            enum: [ PR_TITLE, MERGE_MESSAGE ]
+            default: PR_TITLE
           squash_merge_commit_title:
-            enum:
-              - PR_TITLE
-              - COMMIT_OR_PR_TITLE
+            enum: [ PR_TITLE, COMMIT_OR_PR_TITLE ]
+            default: PR_TITLE
           merge_commit_message:
-            enum:
-              - PR_TITLE
-              - PR_BODY
-              - BLANK
+            enum: [ PR_TITLE, PR_BODY, BLANK ]
+            default: PR_BODY
           squash_merge_commit_message:
-            enum:
-              - PR_BODY
-              - COMMIT_MESSAGES
-              - BLANK
+            enum: [ PR_BODY, COMMIT_MESSAGES, BLANK ]
+            default: PR_BODY
           allow_auto_merge:
             type: boolean
             default: false
           delete_branch_on_merge:
             type: boolean
-            default: true
+            default: false
           allow_update_branch:
             type: boolean
             default: true
@@ -66,8 +60,5 @@ properties:
       target:
         description: Target repository for development
         default: source
-        enum:
-          - source
-          - parent
-          - self
-
+        enum: [ source, parent, self ]
+    required: [ target ]
