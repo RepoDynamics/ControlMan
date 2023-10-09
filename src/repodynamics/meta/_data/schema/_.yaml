@@ -1,0 +1,31 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Metadata
+description: Core metadata for a repository
+type: object
+additionalProperties: false
+
+if:
+  properties:
+    health_file:
+      required:
+      - codeowners
+  required:
+  - health_file
+then:
+  required:
+  - pulls
+
+properties:
+  custom:
+    description: Custom metadata for the project
+    type: object
+
+  path:
+    description: Path to main directories
+    type: object
+    additionalProperties: false
+    properties:
+      source:
+        type: string
+      tests:
+        type: string
