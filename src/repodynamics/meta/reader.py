@@ -40,54 +40,6 @@ class MetaReader:
         self._db = self._read_datafile(_util.file.datafile("db.yaml"))
         return
 
-    def template(
-            self,
-            category: Literal["health_file", "license", "issue", "discussion", "pull", "config"],
-            name: str
-    ):
-        ext = {
-            'health_file': '.md',
-            'license': '.txt',
-            'issue': '.yaml',
-            'discussion': '.yaml',
-            'pull': '.md',
-            'config': '.toml'
-        }
-
-        def read_path(path: Path, extension_nr: int = 0):
-            path = (path / "template" / category / name).with_suffix(ext[category])
-            if not path.is_file():
-                return
-            self.logger.success(
-                "Found template in "
-                f"{f'extension repository {extension_nr}' if extension_nr else 'main repository'}."
-            )
-            if category in ["issue", "discussion"]:
-                return self._read_datafile(path)
-            with open(path) as f:
-                content = f.read()
-            self.logger.success("File successfully loaded.", str(content))
-            return content
-        self.logger.h4(f"Read Template '{category}/{Path(name).with_suffix(ext[category])}'")
-        if category not in ["health_file", "license", "issue", "discussion", "pull"]:
-            self.logger.error(f"Category '{category}' not recognized.")
-        content = read_path(self._path_meta)
-        if content:
-            return content
-        if not self._extensions:
-            self.logger.error(f"Template '{name}' not found in any of template sources.")
-            return
-        for idx, extension in enumerate(self._extensions):
-            if extension["type"] not in [
-                "meta", "template", "health_file", "license", "issue", "discussion", "pull"
-            ]:
-                continue
-            content = read_path(self._path_extensions / f"{idx + 1 :03}", extension_nr=idx + 1)
-            if content:
-                return content
-        self.logger.error(f"Template '{name}' not found in any of template sources.")
-        return
-
     @property
     def metadata(self) -> dict:
         return self._metadata
