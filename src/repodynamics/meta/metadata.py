@@ -29,47 +29,40 @@ class MetadataGenerator:
         self._logger.h3("Detect Git Repository")
         self._git = git.Git(path_repo=reader.path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
-        self._metadata["repo"] = self._repo()
+        self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
         return
 
     def generate(self) -> dict:
         self._metadata["name"] = self._name()
         self._metadata["authors"] = self._authors()
-        self._metadata["maintainers"] = self._maintainers()
-        self._metadata["discussions"] = self._discussions()
+        self._metadata["maintainer"]["list"] = self._maintainers()
+        self._metadata["discussion"]["categories"] = self._discussions()
+        self._metadata["license"] |= self._license()
         self._metadata['keyword_slugs'] = self._keywords()
         self._metadata["url"] = {
             "github": self._urls_github(),
             "website": self._urls_website()
         }
+        self._metadata["copyright"] |= self._copyright()
 
-        copyright_info = self._copyright()
-        self._metadata |= {
-            "year_start": copyright_info["year_start"],
-            "year_range": copyright_info["year_range"],
-            "copyright_notice": copyright_info["copyright_notice"],
-        }
+        # if license_info:
+        #     self._metadata |= {
+        #         "license_name_short": license_info['name'],
+        #         "license_name_full": license_info['fullname'],
+        #     }
+        # self._metadata["license_txt"] = license_info["license_txt"].format(**self._metadata)
+        # self._metadata["license_notice"] = license_info["license_notice"].format(**self._metadata)
 
-        license_info = self._license()
-        if license_info:
-            self._metadata |= {
-                "license_name_short": license_info['name'],
-                "license_name_full": license_info['fullname'],
-            }
-        self._metadata["license_txt"] = license_info["license_txt"].format(**self._metadata)
-        self._metadata["license_notice"] = license_info["license_notice"].format(**self._metadata)
-
-        owner_publications = self._publications()
-        if owner_publications:
-            self._metadata['owner_publications'] = owner_publications
+        self._metadata["owner"]["publications"] = self._publications()
 
         if self._metadata.get("package"):
             package = self._metadata["package"]
             package["name"] = self._package_name()
 
             trove_classifiers = package.setdefault("trove_classifiers", [])
-            trove_classifiers.append(license_info["trove_classifier"])
+            if self._metadata["license"]:
+                trove_classifiers.append(self._metadata["license"]["trove_classifier"])
 
             package_urls = self._package_platform_urls()
             self._metadata["url"] |= {
@@ -77,21 +70,22 @@ class MetadataGenerator:
                 "conda": package_urls["conda"]
             }
 
-            dev_info = self._package_development_status()
-            package |= {
-                "development_phase": dev_info["dev_phase"],
-                "major_ready": dev_info["major_ready"],
-            }
-            trove_classifiers.append(dev_info["trove_classifier"])
+            # dev_info = self._package_development_status()
+            # package |= {
+            #     "development_phase": dev_info["dev_phase"],
+            #     "major_ready": dev_info["major_ready"],
+            # }
+            # trove_classifiers.append(dev_info["trove_classifier"])
 
             python_ver_info = self._package_python_versions()
-            package["python_versions"] = python_ver_info["python_versions"]
             package["python_version_max"] = python_ver_info["python_version_max"]
-            package["python_versions_int"] = python_ver_info["python_versions_int"]
+            package["python_versions"] = python_ver_info["python_versions"]
             package["python_versions_py3x"] = python_ver_info["python_versions_py3x"]
+            package["python_versions_int"] = python_ver_info["python_versions_int"]
             trove_classifiers.extend(python_ver_info["trove_classifiers"])
 
             os_info = self._package_operating_systems()
+            trove_classifiers.extend(os_info["trove_classifiers"])
             package |= {
                 "os_independent": os_info["os_independent"],
                 "pure_python": os_info["pure_python"],
@@ -100,13 +94,12 @@ class MetadataGenerator:
             if not os_info["pure_python"]:
                 package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
                 package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
-            trove_classifiers.extend(os_info["trove_classifiers"])
 
             for classifier in trove_classifiers:
                 if classifier not in _trove_classifiers.classifiers:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
-
+        self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
         self._reader.cache_save()
         return self._metadata
 
@@ -124,7 +117,7 @@ class MetadataGenerator:
             "Extract remote GitHub repository address",
             f"Owner Username: {owner_username}\nRepository Mame: {repo_name}"
         )
-        target_repo = self._metadata["repo_target"]
+        target_repo = self._metadata["repo"]["target"]
         self._logger.input(f"Target repository", target_repo)
         repo_info = self._reader.cache_get(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}")
         if repo_info:
@@ -178,29 +171,23 @@ class MetadataGenerator:
 
     def _maintainers(self) -> list[dict]:
         def sort_key(val):
-            return len(val[1]["issues"]) + len(val[1]["pulls"]) + len(val[1]["discussions"])
+            return val[1]["issue"] + val[1]["pull"] + val[1]["discussion"]
 
         self._logger.h3("Generate 'maintainers' metadata")
         maintainers = dict()
-        for role in ["issues", "discussions"]:
-            if not self._metadata.get(role):
+        for role in ["issue", "discussion"]:
+            if not self._metadata["maintainer"].get(role):
                 continue
-            for item in self._metadata[role]:
-                assignees = item.get("assignees")
-                if assignees is None:
-                    entry = maintainers.setdefault(
-                        self._metadata["owner"]["username"], {"issues": [], "pulls": [], "discussions": []}
-                    )
-                    entry[role].append(item["slug"])
-                    continue
+            for assignees in self._metadata["maintainer"][role].values():
                 for assignee in assignees:
-                    entry = maintainers.setdefault(assignee, {"issues": [], "pulls": [], "discussions": []})
-                    entry[role].append(item["slug"])
-        if self._metadata.get("pulls"):
-            for codeowner_entry in self._metadata["pulls"]:
-                for reviewer in codeowner_entry["reviewers"]:
-                    entry = maintainers.setdefault(reviewer, {"issues": [], "pulls": [], "discussions": []})
-                    entry["pulls"].append(codeowner_entry["pattern"])
+                    entry = maintainers.setdefault(assignee, {"issue": 0, "pull": 0, "discussion": 0})
+                    entry[role] += 1
+        codeowners_entries = self._metadata["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
+        if codeowners_entries:
+            for codeowners_entry in codeowners_entries:
+                for reviewer in codeowners_entry[list(codeowners_entry.keys())[0]]:
+                    entry = maintainers.setdefault(reviewer, {"issue": 0, "pull": 0, "discussion": 0})
+                    entry["pull"] += 1
         maintainers_list = [
             {**self._get_user(username.lower()), "roles": roles} for username, roles in sorted(
                 maintainers.items(), key=sort_key, reverse=True
@@ -216,7 +203,7 @@ class MetadataGenerator:
             self._logger.debug(f"Set from cache: {discussions_info}")
         elif not self._reader.github.authenticated:
             self._logger.attention("GitHub token not provided. Cannot get discussions categories.")
-            return
+            return []
         else:
             self._logger.debug("Get repository discussions from GitHub API")
             repo_api = self._reader.github.user(self._metadata["repo"]["owner"]).repo(
@@ -225,22 +212,14 @@ class MetadataGenerator:
             discussions_info = repo_api.discussion_categories()
             self._logger.debug(f"Set from API: {discussions_info}")
             self._reader.cache_set(f"discussions__{self._metadata['repo']['full_name']}", discussions_info)
-        discussions = copy.deepcopy(self._metadata["discussions"]) if self._metadata.get("discussions") else []
-        for discussion_info in discussions_info:
-            for discussion in discussions:
-                if discussion_info["slug"] == discussion["slug"]:
-                    discussion |= discussion_info
-                    break
-            else:
-                discussions.append(discussion_info)
-        return discussions
+        return discussions_info
 
-    def _license(self) -> dict | None:
+    def _license(self) -> dict:
         self._logger.h3("Set 'license' metadata")
-        license_id = self._metadata.get("license_id")
+        license_id = self._metadata["license"].get("id")
         if not license_id:
             self._logger.attention("No license ID specified; skip.")
-            return
+            return {}
         license_info = self._reader.db['license_id'].get(license_id.lower())
         if not license_info:
             self._logger.error(f"License ID '{license_id}' not found in database.")
@@ -248,28 +227,30 @@ class MetadataGenerator:
             license_info = copy.deepcopy(license_info)
             license_info["trove_classifier"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
             filename = license_id.lower().removesuffix('+')
-            license_info["license_txt"] = _util.file.datafile(f"license/{filename}.txt").read_text()
-            license_info["license_notice"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
+            license_info["fulltext"] = _util.file.datafile(f"license/{filename}.txt").read_text()
+            license_info["shorttext"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
         self._logger.success(f"License metadata set.", license_info)
         return license_info
 
     def _copyright(self) -> dict:
         self._logger.h3("Generate 'copyright' metadata")
         output = {}
-        if "year_start" not in self._metadata:
+        data = self._metadata["copyright"]
+        if not data.get("year_start"):
             output["year_start"] = year_start = datetime.datetime.strptime(
                 self._metadata["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
             ).year
             self._logger.success(f"'year_start' set from repository creation date: {year_start}")
         else:
-            output["year_start"] = year_start = self._metadata["year_start"]
+            output["year_start"] = year_start = data["year_start"]
             self._logger.info(f"'year_start' already set: {year_start}")
         current_year = datetime.date.today().year
         year_range = f"{year_start}{'' if year_start == current_year else f'–{current_year}'}"
         output["year_range"] = year_range
         self._logger.success(f"'year_range' set: {year_range}")
-        output["copyright_notice"] = f"{year_range} {self._metadata['owner']['name']}"
-        self._logger.success(f"'copyright_notice' set: {output['copyright_notice']}")
+        output["owner"] = data.get("owner") or self._metadata["owner"]["name"]
+        output["notice"] = f"{year_range} {output['owner']}"
+        self._logger.success(f"'copyright_notice' set: {output['notice']}")
         return output
 
     def _keywords(self) -> list:
@@ -324,7 +305,7 @@ class MetadataGenerator:
 
     def _urls_website(self) -> dict:
         url = {}
-        base = self._metadata.get('base_url')
+        base = self._metadata["web"].get('base_url')
         if not base:
             base = f"https://{self._metadata['owner']['username']}.github.io"
             if self._metadata['repo']['name'] != f"{self._metadata['owner']['username']}.github.io":
@@ -343,9 +324,9 @@ class MetadataGenerator:
         url["sponsor"] = f"{base}/contribute/collaborate/maintain/sponsor"
         return url
 
-    def _publications(self) -> list[dict] | None:
-        if not self._metadata['get_owner_publications']:
-            return
+    def _publications(self) -> list[dict]:
+        if not self._metadata["workflow"]["init"].get('get_owner_publications'):
+            return []
         orcid_id = self._metadata["owner"]["url"].get("orcid")
         if not orcid_id:
             self._logger.error(
@@ -404,21 +385,21 @@ class MetadataGenerator:
         self._logger.h3("Process metadata: package.python_version_min")
         min_ver_str = self._metadata["package"]["python_version_min"]
         min_ver = list(map(int, min_ver_str.split(".")))
-        if min_ver[0] != 3:
-            self._logger.error(f"Minimum Python version must be a Python-3 version, but got {min_ver_str}.")
         if len(min_ver) < 3:
             min_ver.extend([0] * (3 - len(min_ver)))
+        if min_ver < [3, 8, 0]:
+            self._logger.error(f"'package.python_version_min' cannot be less than 3.8.0, but got {min_ver_str}.")
         min_ver = tuple(min_ver)
         # Get a list of all Python versions that have been released to date.
         current_python_versions = self._get_released_python3_versions()
         compatible_versions_full = [v for v in current_python_versions if v >= min_ver]
-        compatible_versions = [v[:2] for v in compatible_versions_full]
-        vers = [".".join(map(str, v)) for v in compatible_versions]
-        if len(vers) == 0:
+        if len(compatible_versions_full) == 0:
             self._logger.error(
                 f"python_version_min '{min_ver_str}' is higher than "
                 f"latest release version '{'.'.join(current_python_versions[-1])}'."
             )
+        compatible_versions = [v[:2] for v in compatible_versions_full]
+        vers = [".".join(map(str, v)) for v in compatible_versions]
         py3x_format = [f"py{''.join(map(str, v))}" for v in compatible_versions]
         output = {
             "python_version_max": vers[-1],
