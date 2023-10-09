@@ -27,7 +27,7 @@ class MetadataGenerator:
         self._logger = logger or reader.logger
         self._logger.h2("Generate Metadata")
         self._logger.h3("Detect Git Repository")
-        self._git = git.Git(path_repo=reader.path_root, logger=self._logger)
+        self._git = git.Git(path_repo=reader.path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
         self._metadata["repo"] = self._repo()
         self._metadata["owner"] = self._owner()
