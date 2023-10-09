@@ -105,7 +105,7 @@ class PackageFileGenerator:
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
             "keywords": ("array", self._meta["keywords"]),
             "classifiers": ("array", self._meta["package"]["trove_classifiers"]),
-            "urls": ("table", self.pyproject_project_urls),
+            "urls": ("table", self._meta["package"].get("urls")),
             "scripts": ("table", self.pyproject_project_scripts),
             "gui-scripts": ("table", self.pyproject_project_gui_scripts),
             "entry-points": ("table_of_tables", self.pyproject_project_entry_points),
@@ -117,20 +117,6 @@ class PackageFileGenerator:
             if val:
                 project[key] = _util.toml.format_object(obj=val, toml_type=dtype)
         return project
-
-    @property
-    def pyproject_project_urls(self):
-        # For list of URL keys, see:
-        # https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62
-        return {
-            "Homepage": self._meta["url"]["website"]["base"],
-            "Download": self._meta["url"]["github"]["releases"]["home"],
-            "News": self._meta["url"]["website"]["news"],
-            "Documentation": self._meta["url"]["website"]["base"],
-            "Bug Tracker": self._meta["url"]["github"]["issues"]["home"],
-            "Sponsor": self._meta["url"]["website"]["sponsor"],
-            "Source": self._meta["url"]["github"]["home"],
-        }
 
     @property
     def pyproject_project_authors(self):
