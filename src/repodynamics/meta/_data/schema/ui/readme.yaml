@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_issues
+description: GitHub issues settings for the project
+
+type: object
+additionalProperties: false
+properties:
+  readme:
+    description: Readme for the project
+    type: object
+    properties:
+      header:
+        type: object
+      body:
+        type: object
