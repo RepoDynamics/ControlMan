@@ -13,29 +13,34 @@ properties:
     items:
       type: object
       additionalProperties: false
-      required:
-        - type
-        - repo
+      required: [ type, repo, path ]
       properties:
         type:
-          oneOf:
-            - type: string
-              enum:
-                - core/credits
-                - core/intro
-                - core/license
-                - devops/commits
-                - devops/labels
-                - license
-                - issue
-                - discussion
-                - pull
-                - media
-                - logo
-            - type: string
-              pattern: "^[A-Za-z0-9]+$"
-            - type: string
-              pattern: "^\\d{3}-\\d{2}-\\d{4}$"
+          type: string
+          enum:
+            - core/credits
+            - core/intro
+            - core/license
+            - dev/branches
+            - dev/changelogs
+            - dev/commits
+            - dev/discussions
+            - dev/issues
+            - dev/labels
+            - dev/maintainers
+            - dev/repo
+            - dev/tags
+            - dev/workflows
+            - package/build
+            - package/docs
+            - package/entry_points
+            - package/metadata
+            - package/requirements
+            - package/tools
+            - ui/health_files
+            - ui/readme
+            - ui/theme
+            - ui/web
         repo:
           type: string
           pattern: ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$
