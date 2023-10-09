@@ -1,0 +1,214 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_labels
+description: GitHub labels settings for the project
+
+type: object
+additionalProperties: false
+properties:
+  label:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      group:
+        type: object
+        description: Label groups
+        default: {}
+        properties:
+          primary_commit_type:
+            type: object
+            description: Primary commit types
+            default: {}
+            properties:
+              prefix:
+                description: Prefix for the label name
+                type: string
+                default: 'Type: '
+              color:
+                description: Color of the label
+                type: string
+                pattern: ^[0-9a-fA-F]{6}$
+                default: '0366d6'
+              labels:
+                description: Labels for the commit type
+                type: object
+                default: {}
+                properties:
+                  package_release_major:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'major-release'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          Resolving/merging the labeled issue/pull-request will result in a major release of the package.
+                  package_release_minor:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'minor-release'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          Resolving/merging the labeled issue/pull-request will result in a minor release of the package.
+                  package_release_patch:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'patch-release'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          Resolving/merging the labeled issue/pull-request will result in a patch release of the package.
+                  package_release_post:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'post-release'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          Resolving/merging the labeled issue/pull-request will result in a post release of the package.
+                  website_deploy:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'website'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          Resolving/merging the labeled issue/pull-request will result in deployment of the website.
+                  meta:
+                    type: object
+                    default: {}
+                    properties:
+                      suffix:
+                        description: Suffix for the label name
+                        type: string
+                        default: 'meta'
+                      description:
+                        description: Description of the label
+                        type: string
+                        default: |
+                          An issue/pull-request about the meta content of the repository.
+
+#  labels:
+#    description: Labels for the repository
+#    type: array
+#    uniqueItems: true
+#    items:
+#      type: object
+#      required:
+#      - name
+#      - description
+#      - color
+#      additionalProperties: false
+#      properties:
+#        name:
+#          description: Name of the label
+#          type: string
+#        description:
+#          description: Description of the label
+#          type: string
+#        color:
+#          description: Color of the label
+#          type: string
+#          pattern: ^[0-9a-fA-F]{6}$
+#        issues:
+#          type: array
+#          items:
+#            type: string
+#        pulls:
+#          description: Pull request settings
+#          type: object
+#          required:
+#          - matcher
+#          additionalProperties: false
+#          properties:
+#            sync:
+#              description: Whether the label is enabled for pull requests
+#              type: boolean
+#            matcher:
+#              description: Whether the label is required for pull requests
+#              type: object
+#              additionalProperties: false
+#              minProperties: 1
+#              properties:
+#                title:
+#                  description: RegEx pattern to match the title of the pull request
+#                  type: string
+#                body:
+#                  description: RegEx pattern to match the body of the pull request
+#                  type: string
+#                comment:
+#                  description: RegEx pattern to match the comment of the pull request
+#                  type: string
+#                branch:
+#                  description: RegEx pattern to match the branch of the pull request
+#                  type: string
+#                baseBranch:
+#                  description: RegEx pattern to match the base branch of the pull
+#                    request
+#                  type: string
+#                commits:
+#                  description: RegEx pattern to match the commits of the pull request
+#                  type: string
+#                author:
+#                  description: List of authors of the pull request to match
+#                  type: array
+#                  minItems: 1
+#                  items:
+#                    type: string
+#                files:
+#                  description: List of files of the pull request to match
+#                  oneOf:
+#                  - type: array
+#                    minItems: 1
+#                    uniqueItems: true
+#                    items:
+#                      type: string
+#                  - type: object
+#                    properties:
+#                      count:
+#                        description: Number of files to match
+#                        type: object
+#                        properties:
+#                          lte:
+#                            description: Maximum number of files that still match
+#                            type: integer
+#                            minimum: 0
+#                          gte:
+#                            description: Minimum number of files that still match
+#                            type: integer
+#                            minimum: 0
+#                      any:
+#                        type: array
+#                        minItems: 1
+#                        items:
+#                          type: string
+#                      all:
+#                        type: array
+#                        minItems: 1
+#                        items:
+#                          type: string
