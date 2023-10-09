@@ -1,0 +1,47 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_core_intro
+description: Descriptions for the project
+
+type: object
+additionalProperties: false
+properties:
+
+  name:
+    description: Name of the project
+    type: string
+    pattern: ^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$
+
+  tagline:
+    description: A short description, or slogan of the project
+    type: string
+
+  description:
+    description: A long description of the project
+    type: string
+
+  keywords:
+    description: Keywords of the project
+    type: array
+    uniqueItems: true
+    items:
+      type: string
+      maxLength: 50
+      pattern: ^[A-Za-z0-9][A-Za-z0-9\-\s]*$
+
+  keynotes:
+    description: Keynotes for the project
+    type: array
+    uniqueItems: true
+    items:
+      type: object
+      required:
+        - title
+        - description
+      additionalProperties: false
+      properties:
+        title:
+          description: Title of the keynote
+          type: string
+        description:
+          description: Description of the keynote
+          type: string
