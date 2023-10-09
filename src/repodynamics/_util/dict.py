@@ -180,7 +180,7 @@ class _DictFiller:
             match_whole_str = re.match(r"^\${{([\w\.\:\-\[\] ]+)}}$", value)
             if match_whole_str:
                 return self._substitute_val(match_whole_str.group(1))
-            return re.sub(r"^\${{([\w\.\:\-\[\] ]+?)}}", lambda x: str(self._substitute_val(x.group(1))), value)
+            return re.sub(r"\${{([\w\.\:\-\[\] ]+?)}}", lambda x: str(self._substitute_val(x.group(1))), value)
         if isinstance(value, list):
             for idx, elem in enumerate(value):
                 value[idx] = self._recursive_subst(elem)
