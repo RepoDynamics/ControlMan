@@ -3,43 +3,25 @@ from pathlib import Path
 
 from repodynamics.meta.reader import MetaReader
 from repodynamics.logger import Logger
+from repodynamics.meta.writer import OutputFile, OutputPaths
 
 
 class HealthFileGenerator:
-    def __init__(self, metadata: dict, reader: MetaReader, logger: Logger = None):
-        if not isinstance(reader, MetaReader):
-            raise TypeError(f"reader must be of type MetaReader, not {type(reader)}")
-        self._reader = reader
-        self._logger = logger or reader.logger
+    def __init__(self, metadata: dict, path_root: str | Path = ".", logger: Logger = None):
+        self._path_root = Path(path_root).resolve()
+        self._logger = logger or Logger()
         self._meta = metadata
-        self._health_file = {
-            "code_of_conduct": "CODE_OF_CONDUCT.md",
-            "codeowners": "CODEOWNERS",
-            "contributing": "CONTRIBUTING.md",
-            "governance": "GOVERNANCE.md",
-            "security": "SECURITY.md",
-            "support": "SUPPORT.md",
-        }
+        self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
         self._logger.h2("Generate Files")
         return
 
-    def generate(self) -> list[dict]:
+    def generate(self) -> list[tuple[OutputFile, str]]:
         updates = []
-        for health_file in self._health_file:
-            update = {"category": "health_file", "name": health_file, "content": "", "target_path": "."}
-            target_path = self._meta.get("health_file", {}).get(health_file)
-            if not target_path:
-                self._logger.skip(f"'{health_file}' not set in metadata; skipping.")
-                updates.append(update)
-                continue
-            update['target_path'] = target_path
-            update['content'] = self._health_file_content(health_file)
+        for health_file_id, data in self._meta["health_file"].items():
+            info = self._out_db.health_file(health_file_id, target_path=data["path"])
+            text = self._generate_codeowners() if health_file_id == "codeowners" else data["text"]
+            updates.append((info, text))
         return updates
-
-    def _health_file_content(self, name: str) -> str:
-        if name == "codeowners":
-            return self._generate_codeowners()
-        return self._reader.template("health_file", self._health_file[name]).format(**self._meta)
 
     def _generate_codeowners(self) -> str:
         """
@@ -51,12 +33,15 @@ class HealthFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        # Get the maximum length of patterns to align the columns when writing the file
-        if not self._meta.get("pulls"):
+        codeowners = self._meta.get("maintainer", {}).get("pull", {}).get("reviewer", {}).get("by_path")
+        if codeowners:
             return ""
-        max_len = max([len(entry["pattern"]) for entry in self._meta["pulls"]])
+        # Get the maximum length of patterns to align the columns when writing the file
+        max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
         text = ""
-        for entry in self._meta["pulls"]:
-            reviewers = " ".join([f"@{reviewer.removeprefix('@')}" for reviewer in entry["reviewers"]])
-            text += f'{entry["pattern"]: <{max_len}}   {reviewers}\n'
+        for entry in codeowners:
+            pattern = list(entry.keys())[0]
+            reviewers_list = entry[pattern]
+            reviewers = " ".join([f"@{reviewer.removeprefix('@')}" for reviewer in reviewers_list])
+            text += f'{pattern: <{max_len}}   {reviewers}\n'
         return text
