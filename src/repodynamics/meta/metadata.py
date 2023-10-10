@@ -100,8 +100,17 @@ class MetadataGenerator:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
         self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
+        self._validate_relationships()
         self._reader.cache_save()
         return self._metadata
+
+    def _validate_relationships(self):
+        issue_ids = [issue["id"] for issue in self._metadata.get("issue", {}).get("forms", [])]
+        for issue_id in self._metadata.get("maintainer", {}).get("issue", {}).keys():
+            if issue_id not in issue_ids:
+                self._logger.error(
+                    f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
+                )
 
     def _repo(self) -> dict:
         self._logger.h3("Generate 'repo' metadata")
@@ -219,7 +228,7 @@ class MetadataGenerator:
         license_id = self._metadata["license"].get("id")
         if not license_id:
             self._logger.attention("No license ID specified; skip.")
-            return {}
+            return self._metadata["license"]
         license_info = self._reader.db['license_id'].get(license_id.lower())
         if not license_info:
             self._logger.error(f"License ID '{license_id}' not found in database.")
@@ -227,8 +236,8 @@ class MetadataGenerator:
             license_info = copy.deepcopy(license_info)
             license_info["trove_classifier"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
             filename = license_id.lower().removesuffix('+')
-            license_info["fulltext"] = _util.file.datafile(f"license/{filename}.txt").read_text()
-            license_info["shorttext"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
+            license_info["text"] = _util.file.datafile(f"license/{filename}.txt").read_text()
+            license_info["notice"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
         self._logger.success(f"License metadata set.", license_info)
         return license_info
 
