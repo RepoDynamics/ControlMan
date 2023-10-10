@@ -1,15 +1,156 @@
-from typing import Literal, Optional, Sequence, Callable
+from typing import Literal, Optional, Sequence, Callable, NamedTuple
 from pathlib import Path
 import json
 import difflib
 import re
 import shutil
 
+
 from markitup import html, md
 import tomlkit
 
 from repodynamics.logger import Logger
 from repodynamics import git
+from repodynamics import _util
+
+
+class OutputFile(NamedTuple):
+    id: str
+    title: str
+    filename: str
+    rel_path: str
+    path: Path
+    alt_paths: list[Path] | None = None
+
+
+class OutputPaths:
+
+    def __init__(self, path_root: str | Path, logger: Logger | None = None):
+        self._logger = logger or Logger()
+        self._path_root = Path(path_root).resolve()
+        self._paths = _util.dict.read(
+            path=self._path_root / ".path.json",
+            schema=_util.file.datafile("schema/path.yaml"),
+            logger=self._logger
+        )
+        return
+
+    @property
+    def metadata(self) -> OutputFile:
+        filename = ".metadata.json"
+        rel_path = f".github/{filename}"
+        path = self._path_root / rel_path
+        return OutputFile("metadata", "Metadata Files", filename, rel_path, path)
+
+    @property
+    def license(self) -> OutputFile:
+        filename = "LICENSE"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("license", "License Files", filename, rel_path, path)
+
+    @property
+    def readme_main(self) -> OutputFile:
+        filename = "README.md"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("readme-main", "ReadMe Files", filename, rel_path, path)
+
+    @property
+    def readme_pypi(self) -> OutputFile:
+        filename = "readme_pypi.md"
+        rel_path = f'{self._paths["dir"]["source"]}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("readme-pypi", "ReadMe Files", filename, rel_path, path)
+
+    @property
+    def funding(self) -> OutputFile:
+        filename = "FUNDING.yml"
+        rel_path = f'.github/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("funding", "Configuration Files", filename, rel_path, path)
+
+    @property
+    def labels_repo(self) -> OutputFile:
+        filename = "repo_labels.yaml"
+        rel_path = f'.github/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("labels-repo", "Configuration Files", filename, rel_path, path)
+
+    def workflow_requirements(self, name: str) -> OutputFile:
+        filename = f"{name}.txt"
+        rel_path = f'.github/requirements/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"workflow-requirement-{name}", "Configuration Files", filename, rel_path, path)
+
+    @property
+    def pre_commit_config(self) -> OutputFile:
+        filename = ".pre-commit-config.yaml"
+        rel_path = f'.github/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("pre-commit-config", "Configuration Files", filename, rel_path, path)
+
+    @property
+    def read_the_docs_config(self) -> OutputFile:
+        filename = ".readthedocs.yaml"
+        rel_path = f'.github/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("read-the-docs-config", "Configuration Files", filename, rel_path, path)
+
+    def health_file(
+        self,
+        name: Literal['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support'],
+        target_path: Literal['.', 'docs', '.github'] = "."
+    ) -> OutputFile:
+        allowed_paths = [".", "docs", ".github"]
+        if target_path not in allowed_paths:
+            self._logger.error(f"Path '{target_path}' not allowed for health files.")
+        filename = name.upper() + (".md" if name != "codeowners" else "")
+        rel_path = ("" if target_path == "." else f"{target_path}/") + filename
+        path = self._path_root / rel_path
+        allowed_paths.remove(target_path)
+        alt_paths = [self._path_root / dir_ / filename for dir_ in allowed_paths]
+        return OutputFile(f"health-file-{name}", "Health Files", filename, rel_path, path, alt_paths)
+
+    @property
+    def issue_template_chooser_config(self) -> OutputFile:
+        filename = "config.yml"
+        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("issue-template-chooser-config", "Configuration Files", filename, rel_path, path)
+
+    def issue_form(self, name: str, priority: int) -> OutputFile:
+        filename = f"{priority:02}_{name}.yaml"
+        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"issue-form-{name}", "Forms", filename, rel_path, path)
+
+    def discussion_form(self, name: str) -> OutputFile:
+        filename = f"{name}.yaml"
+        rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"discussion-form-{name}", "Forms", filename, rel_path, path)
+
+    @property
+    def package_pyproject(self) -> OutputFile:
+        filename = "pyproject.toml"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("package-pyproject", "Package Files", filename, rel_path, path)
+
+    @property
+    def package_requirements(self) -> OutputFile:
+        filename = "requirements.txt"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("package-requirements", "Package Files", filename, rel_path, path)
+
+    @property
+    def package_init(self) -> OutputFile:
+        filename = "__init__.py"
+        rel_path = f'{self._paths["dir"]["source"]}/{{package_name}}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("package-init", "Package Files", filename, rel_path, path)
 
 
 class MetaWriter:
@@ -17,7 +158,7 @@ class MetaWriter:
     def __init__(
         self,
         path_root: str | Path = ".",
-        logger: Logger = None
+        logger: Logger | None = None
     ):
         self.path_root = Path(path_root).resolve()
         self.path_meta = self.path_root / "meta"
@@ -169,52 +310,6 @@ class MetaWriter:
                     changes[category] = True
         return changes
 
-    def _summary(self, changes):
-        results = []
-        if not changes["any"]:
-            results.append(
-                html.li("✅ All dynamic files are in sync with source files; nothing to change.")
-            )
-        else:
-            emoji = "🔄" if self._applied else "❌"
-            results.append(
-                html.li(f"{emoji} Following groups were out of sync with source files:")
-            )
-            results.append(
-                html.ul([self._categories[category] for category in self._categories if changes[category]])
-            )
-            if self._applied:
-                results.append(
-                    html.li("✏️ Changed files were updated successfully.")
-                )
-            if self._commit_hash:
-                results.append(
-                    html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
-                )
-            else:
-                results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
-        summary = html.ElementCollection(
-            [
-                html.h(2, "Meta"),
-                html.h(3, "Summary"),
-                html.ul(results),
-                html.h(3, "Details"),
-                self._color_legend(),
-                self._summary_section_details(),
-                html.h(3, "Log"),
-                html.details(self._logger.file_log, "Log"),
-            ]
-        )
-        return summary
-
-    def _summary_section_details(self):
-        details = html.ElementCollection()
-        for category, category_dict in self._results.items():
-            details.append(html.h(4, self._categories[category]))
-            for item_name, changes_dict in category_dict.items():
-                details.append(self._item_summary(item_name, changes_dict))
-        return details
-
     def _add_result(
         self,
         category: Literal['metadata', 'license', 'config', 'health_file', 'package'],
@@ -273,6 +368,18 @@ class MetaWriter:
         main['status'] = "moved" if content == alt['before'] else "moved/modified"
         return main
 
+    def _remove_alts(self, alt_paths: list[Path]):
+        alts = []
+        for alt_path in alt_paths:
+            if alt_path.exists():
+                if not alt_path.is_file():
+                    self._logger.error(f"Alternate path '{alt_path}' is not a file.")
+                with open(alt_path) as f:
+                    alts.append(
+                        {"path": alt_path, "before": f.read()}
+                    )
+        return alts
+
     def _write_package_init(self, docstring: str, path: Path):
         output = {"status": "", "before": "", "after": docstring, "path": path, "type": "file"}
         docstring_full = f'"""{docstring.strip()}\n"""'
@@ -310,17 +417,51 @@ class MetaWriter:
             output['status'] = "moved"
         return output
 
-    def _remove_alts(self, alt_paths: list[Path]):
-        alts = []
-        for alt_path in alt_paths:
-            if alt_path.exists():
-                if not alt_path.is_file():
-                    self._logger.error(f"Alternate path '{alt_path}' is not a file.")
-                with open(alt_path) as f:
-                    alts.append(
-                        {"path": alt_path, "before": f.read()}
-                    )
-        return alts
+    def _summary(self, changes):
+        results = []
+        if not changes["any"]:
+            results.append(
+                html.li("✅ All dynamic files are in sync with source files; nothing to change.")
+            )
+        else:
+            emoji = "🔄" if self._applied else "❌"
+            results.append(
+                html.li(f"{emoji} Following groups were out of sync with source files:")
+            )
+            results.append(
+                html.ul([self._categories[category] for category in self._categories if changes[category]])
+            )
+            if self._applied:
+                results.append(
+                    html.li("✏️ Changed files were updated successfully.")
+                )
+            if self._commit_hash:
+                results.append(
+                    html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
+                )
+            else:
+                results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
+        summary = html.ElementCollection(
+            [
+                html.h(2, "Meta"),
+                html.h(3, "Summary"),
+                html.ul(results),
+                html.h(3, "Details"),
+                self._color_legend(),
+                self._summary_section_details(),
+                html.h(3, "Log"),
+                html.details(self._logger.file_log, "Log"),
+            ]
+        )
+        return summary
+
+    def _summary_section_details(self):
+        details = html.ElementCollection()
+        for category, category_dict in self._results.items():
+            details.append(html.h(4, self._categories[category]))
+            for item_name, changes_dict in category_dict.items():
+                details.append(self._item_summary(item_name, changes_dict))
+        return details
 
     def _color_legend(self):
         legend = [
