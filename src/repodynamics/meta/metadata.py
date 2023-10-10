@@ -407,14 +407,14 @@ class MetadataGenerator:
                 f"python_version_min '{min_ver_str}' is higher than "
                 f"latest release version '{'.'.join(current_python_versions[-1])}'."
             )
-        compatible_versions = [v[:2] for v in compatible_versions_full]
-        vers = [".".join(map(str, v)) for v in compatible_versions]
-        py3x_format = [f"py{''.join(map(str, v))}" for v in compatible_versions]
+        compatible_minor_versions = sorted(set([v[:2] for v in compatible_versions_full]))
+        vers = [".".join(map(str, v)) for v in compatible_minor_versions]
+        py3x_format = [f"py{''.join(map(str, v))}" for v in compatible_minor_versions]
         output = {
             "python_version_max": vers[-1],
             "python_versions": vers,
             "python_versions_py3x": py3x_format,
-            "python_versions_int": compatible_versions,
+            "python_versions_int": compatible_minor_versions,
             "trove_classifiers": [
                 "Programming Language :: Python :: {}".format(postfix)
                 for postfix in ["3 :: Only"] + vers
@@ -510,7 +510,7 @@ class MetadataGenerator:
     def _get_released_python3_versions(self) -> list[tuple[int, int, int]]:
         release_versions = self._reader.cache_get('python_versions')
         if release_versions:
-            return release_versions
+            return [tuple(ver) for ver in release_versions]
         vers = self._reader.github.user("python").repo("cpython").semantic_versions(tag_prefix="v")
         release_versions = sorted(set([v for v in vers if v[0] >= 3]))
         self._reader.cache_set("python_versions", release_versions)
