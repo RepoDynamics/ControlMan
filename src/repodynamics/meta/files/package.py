@@ -16,27 +16,39 @@ import tomlkit.items
 from repodynamics.logger import Logger
 from repodynamics.meta.reader import MetaReader
 from repodynamics import _util
+from repodynamics.meta.writer import OutputFile, OutputPaths
 
 
 class PackageFileGenerator:
-    def __init__(self, metadata: dict, reader: MetaReader, logger: Logger = None):
-        self._reader = reader
-        self._logger = logger or self._reader.logger
+    def __init__(
+        self,
+        metadata: dict,
+        package_config: tomlkit.TOMLDocument,
+        path_root: str | Path = ".",
+        logger: Logger = None
+    ):
+        self._logger = logger or Logger()
         self._meta = metadata
-        self._root = self._reader.path.root
+        self._pyproject = package_config
+        self._path_root = Path(path_root).resolve()
+        self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
         return
 
     def generate(self):
-        updates = [
-            dict(category="package", name=name, content=content)
-            for name, content in [
-                ("pyproject", self.pyproject()),
-                ("dir", self._package_dir()),
-                ("docstring", self.init_docstring()),
-                ("requirements", self._requirements()),
-            ]
-        ]
-        return updates
+        return self.requirements() + self.init_docstring() + self.pyproject()
+
+    def requirements(self) -> list[tuple[OutputFile, str]]:
+        self._logger.h3("Generate File Content: requirements.txt")
+        info = self._out_db.package_requirements
+        text = ""
+        if self._meta["package"].get("core_dependencies"):
+            for dep in self._meta["package"]["dependencies"]:
+                text += f"{dep['pip_spec']}\n"
+        if self._meta["package"].get("optional_dependencies"):
+            for dep_group in self._meta["package"]["optional_dependencies"]:
+                for dep in dep_group["packages"]:
+                    text += f"{dep['pip_spec']}\n"
+        return [(info, text)]
 
     def _package_dir(self):
         self._logger.h4("Update path: package")
@@ -80,31 +92,36 @@ class PackageFileGenerator:
             )
         return
 
-    def init_docstring(self) -> str:
+    def init_docstring(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Generate File Content: __init__.py")
-        content = self._meta["package"]["init"].format(**self._meta).strip()
-        return content
+        info = self._out_db.package_init
+        text = self._meta["package"].get("docs", {}).get("main_init", "").strip()
+        return [(info, text)]
 
-    def pyproject(self):
-        pyproject = _util.dict.fill_template(self._reader.package_config, metadata=self._meta)
+    def pyproject(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.package_pyproject
+        pyproject = _util.dict.fill_template(self._pyproject, metadata=self._meta)
         project = pyproject.setdefault("project", {})
         for key, val in self.pyproject_project().items():
             if key not in project:
                 project[key] = val
-        return tomlkit.dumps(pyproject)
+        return [(info, tomlkit.dumps(pyproject))]
 
     def pyproject_project(self) -> dict:
         data_type = {
             "name": ("str", self._meta["package"]["name"]),
             "dynamic": ("array", ["version"]),
-            "description": ("str", self._meta["tagline"]),
-            "readme": ("str", f"{self._meta['path']['source']}/readme_pypi.md"),
+            "description": ("str", self._meta.get("tagline")),
+            "readme": ("str", self._out_db.readme_pypi.rel_path),
             "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
-            "license": ("inline_table", {"file": "LICENSE"}),
+            "license": (
+                "inline_table",
+                {"file": self._out_db.license.rel_path} if self._meta.get("license") else None
+            ),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
-            "keywords": ("array", self._meta["keywords"]),
-            "classifiers": ("array", self._meta["package"]["trove_classifiers"]),
+            "keywords": ("array", self._meta.get("keywords")),
+            "classifiers": ("array", self._meta["package"].get("trove_classifiers")),
             "urls": ("table", self._meta["package"].get("urls")),
             "scripts": ("table", self.pyproject_project_scripts),
             "gui-scripts": ("table", self.pyproject_project_gui_scripts),
@@ -128,9 +145,9 @@ class PackageFileGenerator:
 
     @property
     def pyproject_project_dependencies(self):
-        if not self._meta["package"].get("dependencies"):
+        if not self._meta["package"].get("core_dependencies"):
             return
-        return [dep["pip_spec"] for dep in self._meta["package"]["dependencies"]]
+        return [dep["pip_spec"] for dep in self._meta["package"]["core_dependencies"]]
 
     @property
     def pyproject_project_optional_dependencies(self):
@@ -165,18 +182,6 @@ class PackageFileGenerator:
             else None
         )
 
-    def _requirements(self) -> str:
-        self._logger.h3("Generate File Content: requirements.txt")
-        requirements = ""
-        if self._meta["package"].get("dependencies"):
-            for dep in self._meta["package"]["dependencies"]:
-                requirements += f"{dep['pip_spec']}\n"
-        if self._meta["package"].get("optional_dependencies"):
-            for dep_group in self._meta["package"]["optional_dependencies"]:
-                for dep in dep_group["packages"]:
-                    requirements += f"{dep['pip_spec']}\n"
-        return requirements
-
     def _get_authors_maintainers(self, role: Literal["authors", "maintainers"]):
         """
         Update the project authors in the pyproject.toml file.
@@ -186,7 +191,11 @@ class PackageFileGenerator:
         https://packaging.python.org/en/latest/specifications/declaring-project-metadata/#authors-maintainers
         """
         people = []
-        for person in self._meta[role]:
+        target_people = (
+            self._meta.get("maintainer", {}).get("list", []) if role == "maintainers"
+            else self._meta.get("authors", [])
+        )
+        for person in target_people:
             if not person["name"]:
                 self._logger.warning(
                     f'One of {role} with username \'{person["username"]}\' '
