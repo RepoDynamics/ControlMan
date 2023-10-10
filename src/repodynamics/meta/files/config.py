@@ -1,23 +1,30 @@
+from pathlib import Path
+
 # Non-standard libraries
 import ruamel.yaml
+from ruamel.yaml import YAML
 from repodynamics.logger import Logger
+from repodynamics.meta.writer import OutputFile, OutputPaths
 
 
 class ConfigFileGenerator:
-    def __init__(self, metadata: dict, logger: Logger = None):
+    def __init__(self, metadata: dict, path_root: str | Path = ".", logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
+        self._out_db = OutputPaths(path_root=path_root, logger=self._logger)
         self._logger.h2("Generate Files")
         return
 
-    def generate(self) -> list[dict]:
+    def generate(self) -> list[tuple[OutputFile, str]]:
         # label_syncer, pr_labeler = self._labels()
-        updates = [
-            dict(category="config", name="funding", content=self._funding()),
-            dict(category="config", name="labels", content=self._labels()),
-            # dict(category="config", name="labels_pr", content=pr_labeler),
-        ]
-        return updates
+        return (
+            self.repo_labels()
+            + self.funding()
+            + self.workflow_requirements()
+            + self.pre_commit_config()
+            + self.read_the_docs()
+            + self.issue_template_chooser()
+        )
 
     # def _labels(self) -> tuple[str, str]:
     #     self._logger.h3("Process metadata: labels")
@@ -37,9 +44,10 @@ class ConfigFileGenerator:
     #     ) if pr_labels else ""
     #     return label_syncer, pr_labeler
 
-    def _labels(self) -> str:
+    def repo_labels(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Process metadata: labels")
         # repo labels: https://github.com/marketplace/actions/label-syncer
+        info = self._out_db.labels_repo
         out = []
         prefixes = []
         for group_name, group in self._meta["label"]["group"]:
@@ -60,19 +68,21 @@ class ConfigFileGenerator:
                         "color": group["color"]
                     }
                 )
-        return ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
+        text = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
+        return [(info, text)]
 
-    def _funding(self) -> str:
+    def funding(self) -> list[tuple[OutputFile, str]]:
         """
         References
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
         self._logger.h3("Generate File: FUNDING.yml")
+        info = self._out_db.funding
         funding = self._meta.get("funding")
         if not funding:
             self._logger.skip("'funding' not set in metadata; skipping.")
-            return ""
+            return [(info, "")]
         output = {}
         for funding_platform, users in funding.items():
             if funding_platform in ["github", "custom"]:
@@ -86,6 +96,43 @@ class ConfigFileGenerator:
                 # Other cases are not possible because of the schema
             else:
                 output[funding_platform] = users
-        output_str = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(output, add_final_eol=True)
+        output_str = YAML(typ=['rt', 'string']).dumps(output, add_final_eol=True)
         self._logger.success(f"Generated 'FUNDING.yml' file.", output_str)
-        return output_str
+        return [(info, output_str)]
+
+    def workflow_requirements(self) -> list[tuple[OutputFile, str]]:
+        tools = self._meta.get("workflow", {}).get("tool", {})
+        out = []
+        for tool_name, tool_spec in tools.items():
+            text = "\n".join(tool_spec["pip_spec"])
+            out.append((self._out_db.workflow_requirements(tool_name), text))
+        return out
+
+    def pre_commit_config(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.pre_commit_config
+        config = self._meta.get("workflow", {}).get("pre_commit")
+        if not config:
+            self._logger.skip("'pre_commit' not set in metadata.")
+            return [(info, "")]
+        text = YAML(typ=['rt', 'string']).dumps(config, add_final_eol=True)
+        return [(info, text)]
+
+    def read_the_docs(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.read_the_docs_config
+        config = self._meta.get("web", {}).get("readthedocs")
+        if not config:
+            self._logger.skip("'readthedocs' not set in metadata.")
+            return [(info, "")]
+        text = YAML(typ=['rt', 'string']).dumps(
+            {key: val for key, val in config.items() if key != "name"},
+            add_final_eol=True
+        )
+        return [(info, text)]
+
+    def issue_template_chooser(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.issue_template_chooser_config
+        file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
+        if self._meta["issue"].get("contact_links"):
+            file["contact_links"] = self._meta["issue"]["contact_links"]
+        text = YAML(typ=['rt', 'string']).dumps(file, add_final_eol=True)
+        return [(info, text)]
