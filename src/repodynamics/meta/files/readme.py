@@ -11,6 +11,7 @@ import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
 import repodynamics
+from repodynamics.meta.writer import OutputPaths, OutputFile
 
 from readme_renderer.markdown import render
 
@@ -35,9 +36,10 @@ class ReadmeFileGenerator:
         #     repo=self.github["repo"],
         #     branch=self.github["branch"],
         # )
+        self._out_db: OutputPaths = OutputPaths(path_root=self._path_root, logger=logger)
         return
 
-    def generate(self) -> html.ElementCollection:
+    def generate(self) -> list[tuple[OutputFile, str]]:
         # file_content = html.ElementCollection(
         #     elements=[
         #         html.Comment(f"{self._metadata['name']} ReadMe File"),
@@ -67,7 +69,7 @@ class ReadmeFileGenerator:
         #     ]
         # )
         file_content = self.header()
-        return [{"category": "readme", "name": "readme_main", "content": str(file_content)}]
+        return [(self._out_db.readme_main, str(file_content))]
 
     def header(self):
         top_menu, bottom_menu = self.menu()
