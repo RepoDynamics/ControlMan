@@ -4,6 +4,7 @@ title: meta_ui_health_files
 description: Paths and content of repository health files
 
 type: object
+additionalProperties: false
 properties:
 
   health_file:
@@ -14,6 +15,7 @@ properties:
 
       code_of_conduct:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
@@ -27,20 +29,20 @@ properties:
 
       codeowners:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
-            type: string
             enum: [., .github, docs]
-            default: .
+            default: .github
         required: [path]
 
       contributing:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
-            type: string
             enum: [., .github, docs]
             default: .
           text:
@@ -50,10 +52,10 @@ properties:
 
       governance:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
-            type: string
             enum: [., .github, docs]
             default: .
           text:
@@ -63,10 +65,10 @@ properties:
 
       security:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
-            type: string
             enum: [., .github, docs]
             default: .
           text:
@@ -76,10 +78,10 @@ properties:
 
       support:
         type: object
+        default: {}
         additionalProperties: false
         properties:
           path:
-            type: string
             enum: [., .github, docs]
             default: .
           text:
