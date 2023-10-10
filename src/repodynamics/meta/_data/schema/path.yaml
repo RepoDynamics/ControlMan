@@ -27,18 +27,4 @@ properties:
       tests:
         type: string
         default: tests
-
-  file:
-    type: object
-    default: {}
-    additionalProperties: false
-    properties:
-
-      meta:
-        type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          config_local:
-            type: string
-            default: ${{path.dir.local}}/config.yaml
+    required: [ meta, source, local, tests ]
