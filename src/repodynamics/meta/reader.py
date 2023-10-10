@@ -30,6 +30,7 @@ class MetaReader:
 
         self._extensions, self._path_extensions = self._read_extensions()
         self._metadata: dict = self._read_raw_metadata()
+        self._metadata["path"] = self.path.paths
 
         if self._metadata.get("package"):
             self._package_config = self._read_pyproject_metadata()
@@ -45,7 +46,7 @@ class MetaReader:
         return self._metadata
 
     @property
-    def package_config(self) -> dict:
+    def package_config(self) -> tomlkit.TOMLDocument | None:
         return self._package_config
 
     @property
@@ -380,7 +381,7 @@ class PathReader:
 
     @property
     def local_config(self) -> Path:
-        return self._path_root / self._paths["file"]["meta"]["config_local"]
+        return self.dir_local / "config.yaml"
 
     @property
     def local_api_cache(self):
