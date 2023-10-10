@@ -27,7 +27,7 @@ properties:
               - bsd_3_clause
               - bsl_v1
               - unlicense
-      - required: [ shortname, fullname, trove_classifier, fulltext, shorttext ]
+      - required: [ shortname, fullname, trove_classifier, text, notice ]
         additionalProperties: false
         properties:
             shortname:
@@ -39,10 +39,10 @@ properties:
             trove_classifier:
                 description: Trove classifier of the project's license
                 type: string
-            fulltext:
+            text:
                 description: Full text of the project's license
                 type: string
-            shorttext:
+            notice:
                 description: Short text of the project's license
                 type: string
   copyright:
