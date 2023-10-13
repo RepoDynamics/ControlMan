@@ -32,17 +32,19 @@ class PackageFileGenerator:
         self._pyproject = package_config
         self._path_root = Path(path_root).resolve()
         self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
+
+        self._package_dir_output = []
         return
 
     def generate(self):
-        return self.requirements() + self.init_docstring() + self.pyproject()
+        return self.requirements() + self.init_docstring() + self.pyproject() + self._package_dir()
 
     def requirements(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Generate File Content: requirements.txt")
         info = self._out_db.package_requirements
         text = ""
         if self._meta["package"].get("core_dependencies"):
-            for dep in self._meta["package"]["dependencies"]:
+            for dep in self._meta["package"]["core_dependencies"]:
                 text += f"{dep['pip_spec']}\n"
         if self._meta["package"].get("optional_dependencies"):
             for dep_group in self._meta["package"]["optional_dependencies"]:
@@ -50,21 +52,23 @@ class PackageFileGenerator:
                     text += f"{dep['pip_spec']}\n"
         return [(info, text)]
 
-    def _package_dir(self):
+    def _package_dir(self) -> list[tuple[OutputFile, str]]:
+        if self._package_dir_output:
+            return self._package_dir_output
         self._logger.h4("Update path: package")
-        path_src = self._reader.path.dir_source
         package_name = self._meta["package"]["name"]
-        path_package = path_src / package_name
-        if path_package.exists():
-            self._logger.skip(f"Package path exists", f"{path_package}")
-            return path_package, path_package
+        path = self._path_root / self._meta["path"]["dir"]["source"] / package_name
+        if path.exists():
+            self._logger.skip(f"Package path exists", f"{path}")
+            self._package_dir_output = [(self._out_db.package_dir(package_name, path, path), "")]
+            return self._package_dir_output
         self._logger.info(
-            f"Package path '{path_package}' does not exist; looking for package directory."
+            f"Package path '{path}' does not exist; looking for package directory."
         )
         package_dirs = [
             subdir
             for subdir in [
-                content for content in path_src.iterdir() if content.is_dir()
+                content for content in path.iterdir() if content.is_dir()
             ]
             if "__init__.py"
             in [
@@ -74,28 +78,50 @@ class PackageFileGenerator:
             ]
         ]
         count_dirs = len(package_dirs)
-        if count_dirs == 0:
-            self._logger.success(
-                f"No package directory found in '{path_src}'; creating one."
-            )
-            return None, path_package
-        elif count_dirs == 1:
-            self._logger.success(
-                f"Rename package directory to '{package_name}'",
-                f"Old Path: '{package_dirs[0]}'\nNew Path: '{path_package}'",
-            )
-            return package_dirs[0], path_package
-        else:
+        if count_dirs > 1:
             self._logger.error(
-                f"More than one package directory found in '{path_src}'",
+                f"More than one package directory found in '{path}'",
                 "\n".join([str(package_dir) for package_dir in package_dirs]),
             )
-        return
+        if count_dirs == 1:
+            self._logger.success(
+                f"Rename package directory to '{package_name}'",
+                f"Old Path: '{package_dirs[0]}'\nNew Path: '{path}'",
+            )
+            self._package_dir_output = [(self._out_db.package_dir(package_name, old_path=package_dirs[0], new_path=path), "")]
+            return self._package_dir_output
+        self._logger.success(
+            f"No package directory found in '{path}'; creating one."
+        )
+        self._package_dir_output = [(self._out_db.package_dir(package_name, old_path=None, new_path=path), "")]
+        return self._package_dir_output
 
     def init_docstring(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Generate File Content: __init__.py")
-        info = self._out_db.package_init
-        text = self._meta["package"].get("docs", {}).get("main_init", "").strip()
+        docs_config = self._meta["package"].get("docs", {})
+        if "main_init" not in docs_config:
+            self._logger.skip("No docstring set in package.docs.main_init; skipping.")
+            return []
+        docstring_text = docs_config["main_init"].strip()
+        docstring = f'"""\n{docstring_text}\n"""\n'
+
+        package_dir_info = self._package_dir()[0][0]
+        current_dir_path = package_dir_info.alt_paths[0] if package_dir_info.alt_paths else package_dir_info.path
+        filepath = current_dir_path / "__init__.py"
+        if filepath.is_file():
+            with open(filepath, "r") as f:
+                file_content = f.read()
+        else:
+            file_content = ""
+        pattern = re.compile(r'^((?:[\t ]*#.*\n|[\t ]*\n)*)("""(?:.|\n)*?"""(?:\n|$))', re.MULTILINE)
+        match = pattern.match(file_content)
+        if not match:
+            # If no docstring found, add the new docstring at the beginning of the file
+            text = f"{docstring}\n\n\n{file_content}".strip() + "\n"
+        else:
+            # Replace the existing docstring with the new one
+            text = re.sub(pattern, rf'\1{docstring}', file_content)
+        info = self._out_db.package_init(self._meta["package"]["name"])
         return [(info, text)]
 
     def pyproject(self) -> list[tuple[OutputFile, str]]:
