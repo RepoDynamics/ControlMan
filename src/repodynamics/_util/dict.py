@@ -221,7 +221,7 @@ class _DictFiller:
                     slice_ = [int(i) if i else None for i in idx.split(":")]
                     parsed_ind.append(slice(*slice_))
             parsed_address.extend(parsed_ind)
-        return recursive_retrieve(self._data, address=parsed_address)
+        return recursive_retrieve(self._meta, address=parsed_address)
 
 
 def extend_with_default(validator_class):
