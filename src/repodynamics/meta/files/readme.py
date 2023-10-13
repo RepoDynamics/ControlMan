@@ -191,7 +191,7 @@ class ReadmeFileGenerator:
         def get_bottom_data():
             return [
                 {"text": item["title"], "link": item["path"]}
-                for group in self._metadata["quicklinks"]
+                for group in self._metadata.get("web", {}).get("quicklinks")
                 for item in group
                 if item.get("include_in_readme")
             ]
