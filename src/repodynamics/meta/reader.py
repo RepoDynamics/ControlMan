@@ -325,7 +325,7 @@ class MetaReader:
 
 
 class PathReader:
-    def __init__(self, path_root: str | Path, logger: Logger | None = None):
+    def __init__(self, path_root: str | Path = ".", logger: Logger | None = None):
         self._logger = logger or Logger()
         self._path_root = Path(path_root).resolve()
         self._paths = _util.dict.read(
@@ -334,13 +334,15 @@ class PathReader:
             logger=self._logger
         )
 
-        if not self.dir_meta.is_dir():
-            self._logger.error(f"Input meta directory '{self.dir_meta}' not found.")
+        for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
+            if not path.is_dir():
+                self._logger.error(f"Input {name} directory '{path}' not found.")
 
-        if not self.dir_local_meta_extensions.is_dir():
-            self._logger.error(
-                f"Could not find Local meta extensions directory at: '{self.dir_local_meta_extensions}'."
-            )
+        if self.dir_local.is_file():
+            self._logger.error(f"Input local directory '{self.dir_local}' is a file.")
+        if not self.dir_local.exists():
+            self._logger.info(f"Creating input local directory '{self.dir_local}'.")
+            self.dir_local.mkdir()
         return
 
     @property
@@ -350,6 +352,10 @@ class PathReader:
     @property
     def root(self):
         return self._path_root
+
+    @property
+    def dir_github(self):
+        return self._path_root / ".github"
 
     @property
     def dir_source(self):
