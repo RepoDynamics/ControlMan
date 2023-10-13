@@ -34,7 +34,7 @@ class HealthFileGenerator:
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
         codeowners = self._meta.get("maintainer", {}).get("pull", {}).get("reviewer", {}).get("by_path")
-        if codeowners:
+        if not codeowners:
             return ""
         # Get the maximum length of patterns to align the columns when writing the file
         max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
