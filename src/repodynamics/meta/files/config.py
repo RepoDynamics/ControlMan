@@ -50,7 +50,7 @@ class ConfigFileGenerator:
         info = self._out_db.labels_repo
         out = []
         prefixes = []
-        for group_name, group in self._meta["label"]["group"]:
+        for group_name, group in self._meta["label"]["group"].items():
             prefix = group["prefix"]
             if prefix in prefixes:
                 self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
