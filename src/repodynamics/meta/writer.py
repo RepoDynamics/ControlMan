@@ -92,7 +92,7 @@ class OutputPaths:
 
     def workflow_requirements(self, name: str) -> OutputFile:
         filename = f"{name}.txt"
-        rel_path = f'.github/requirements/{filename}'
+        rel_path = f'.github/workflow_requirements/{filename}'
         path = self._path_root / rel_path
         return OutputFile(f"workflow-requirement-{name}", FileCategory.CONFIG, filename, rel_path, path)
 
@@ -172,6 +172,27 @@ class OutputPaths:
         rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
         path = self._path_root / rel_path
         return OutputFile("package-init", FileCategory.PACKAGE, filename, rel_path, path)
+
+    @property
+    def codecov_config(self) -> OutputFile:
+        filename = ".codecov.yml"
+        rel_path = f'.github/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("codecov-config", FileCategory.CONFIG, filename, rel_path, path)
+
+    @property
+    def gitignore(self) -> OutputFile:
+        filename = ".gitignore"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("gitignore", FileCategory.CONFIG, filename, rel_path, path)
+
+    @property
+    def gitattributes(self) -> OutputFile:
+        filename = ".gitattributes"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("gitattributes", FileCategory.CONFIG, filename, rel_path, path)
 
 
 class _FileStatus(NamedTuple):

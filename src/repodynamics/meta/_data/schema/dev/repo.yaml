@@ -61,4 +61,28 @@ properties:
         description: Target repository for development
         default: source
         enum: [ source, parent, self ]
+
+      gitignore:
+        description: List of files and directories to ignore in the repository
+        type: array
+        default: []
+        uniqueItems: true
+        items:
+          type: string
+
+      gitattributes:
+        description: List of files and directories to treat as text or binary
+        type: array
+        default: []
+        uniqueItems: true
+        items:
+          type: object
+          minProperties: 1
+          maxProperties: 1
+          additionalProperties:
+            type: array
+            minItems: 1
+            items:
+              type: string
+
     required: [ target ]

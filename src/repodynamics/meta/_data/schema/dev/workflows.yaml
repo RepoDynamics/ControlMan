@@ -107,3 +107,7 @@ properties:
                     required: [ id, stages ]
               required: [ repo, rev, hooks ]
         required: [ repos ]
+
+      codecov:
+        type: object
+        minProperties: 1

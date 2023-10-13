@@ -3,6 +3,8 @@ from pathlib import Path
 # Non-standard libraries
 import ruamel.yaml
 from ruamel.yaml import YAML
+import pylinks
+from pylinks.http import WebAPIError
 from repodynamics.logger import Logger
 from repodynamics.meta.writer import OutputFile, OutputPaths
 
@@ -23,7 +25,10 @@ class ConfigFileGenerator:
             + self.workflow_requirements()
             + self.pre_commit_config()
             + self.read_the_docs()
+            + self.codecov_config()
             + self.issue_template_chooser()
+            + self.gitignore()
+            + self.gitattributes()
         )
 
     # def _labels(self) -> tuple[str, str]:
@@ -129,10 +134,55 @@ class ConfigFileGenerator:
         )
         return [(info, text)]
 
+    def codecov_config(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.codecov_config
+        config = self._meta.get("workflow", {}).get("codecov")
+        if not config:
+            self._logger.skip("'codecov' not set in metadata.")
+            return [(info, "")]
+        text = YAML(typ=['rt', 'string']).dumps(config, add_final_eol=True)
+        try:
+            # Validate the config file
+            # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
+            pylinks.request(
+                verb="POST",
+                url="https://codecov.io/validate",
+                data=text.encode(),
+            )
+        except WebAPIError as e:
+            self._logger.error("Validation of Codecov configuration file failed.", str(e))
+        return [(info, text)]
+
     def issue_template_chooser(self) -> list[tuple[OutputFile, str]]:
         info = self._out_db.issue_template_chooser_config
         file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
         if self._meta["issue"].get("contact_links"):
             file["contact_links"] = self._meta["issue"]["contact_links"]
         text = YAML(typ=['rt', 'string']).dumps(file, add_final_eol=True)
+        return [(info, text)]
+
+    def gitignore(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.gitignore
+        local_dir = self._meta["path"]["dir"]["local"]
+        text = "\n".join(
+            self._meta.get("repo", {}).get("gitignore", []) + [
+                f"{local_dir}/**",
+                f"!{local_dir}/**/",
+                f"!{local_dir}/**/README.md",
+                f"!{local_dir}/config.yaml",
+            ]
+        )
+        return [(info, text)]
+
+    def gitattributes(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.gitattributes
+        text = ""
+        attributes = self._meta.get("repo", {}).get("gitattributes", [])
+        max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
+        max_len_attr = max([max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes])
+        for attribute in attributes:
+            pattern = list(attribute.keys())[0]
+            attrs = list(attribute.values())[0]
+            attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs)
+            text += f'{pattern: <{max_len_pattern}}    {attrs_str}\n'
         return [(info, text)]
