@@ -1,33 +1,46 @@
+"""
+Writer
+"""
+
 from typing import Literal, Optional, Sequence, Callable, NamedTuple
 from pathlib import Path
 import json
 import difflib
-import re
 import shutil
-
+from enum import Enum
 
 from markitup import html, md
-import tomlkit
 
 from repodynamics.logger import Logger
 from repodynamics import git
 from repodynamics import _util
 
 
+class FileCategory(Enum):
+    METADATA = "Metadata Files"
+    LICENSE = "License Files"
+    PACKAGE = "Package Files"
+    CONFIG = "Configuration Files"
+    README = "ReadMe Files"
+    HEALTH = "Health Files"
+    FORM = "Forms"
+
+
 class OutputFile(NamedTuple):
     id: str
-    title: str
+    category: FileCategory
     filename: str
     rel_path: str
     path: Path
     alt_paths: list[Path] | None = None
+    is_dir: bool = False
 
 
 class OutputPaths:
 
     def __init__(self, path_root: str | Path, logger: Logger | None = None):
-        self._logger = logger or Logger()
         self._path_root = Path(path_root).resolve()
+        self._logger = logger or Logger()
         self._paths = _util.dict.read(
             path=self._path_root / ".path.json",
             schema=_util.file.datafile("schema/path.yaml"),
@@ -40,68 +53,69 @@ class OutputPaths:
         filename = ".metadata.json"
         rel_path = f".github/{filename}"
         path = self._path_root / rel_path
-        return OutputFile("metadata", "Metadata Files", filename, rel_path, path)
+        return OutputFile("metadata", FileCategory.METADATA, filename, rel_path, path)
 
     @property
     def license(self) -> OutputFile:
         filename = "LICENSE"
         rel_path = filename
         path = self._path_root / rel_path
-        return OutputFile("license", "License Files", filename, rel_path, path)
+        return OutputFile("license", FileCategory.LICENSE, filename, rel_path, path)
 
     @property
     def readme_main(self) -> OutputFile:
         filename = "README.md"
         rel_path = filename
         path = self._path_root / rel_path
-        return OutputFile("readme-main", "ReadMe Files", filename, rel_path, path)
+        return OutputFile("readme-main", FileCategory.README, filename, rel_path, path)
 
     @property
     def readme_pypi(self) -> OutputFile:
         filename = "readme_pypi.md"
         rel_path = f'{self._paths["dir"]["source"]}/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("readme-pypi", "ReadMe Files", filename, rel_path, path)
+        return OutputFile("readme-pypi", FileCategory.README, filename, rel_path, path)
 
     @property
     def funding(self) -> OutputFile:
         filename = "FUNDING.yml"
         rel_path = f'.github/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("funding", "Configuration Files", filename, rel_path, path)
+        return OutputFile("funding", FileCategory.CONFIG, filename, rel_path, path)
 
     @property
     def labels_repo(self) -> OutputFile:
         filename = "repo_labels.yaml"
         rel_path = f'.github/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("labels-repo", "Configuration Files", filename, rel_path, path)
+        return OutputFile("labels-repo", FileCategory.CONFIG, filename, rel_path, path)
 
     def workflow_requirements(self, name: str) -> OutputFile:
         filename = f"{name}.txt"
         rel_path = f'.github/requirements/{filename}'
         path = self._path_root / rel_path
-        return OutputFile(f"workflow-requirement-{name}", "Configuration Files", filename, rel_path, path)
+        return OutputFile(f"workflow-requirement-{name}", FileCategory.CONFIG, filename, rel_path, path)
 
     @property
     def pre_commit_config(self) -> OutputFile:
         filename = ".pre-commit-config.yaml"
         rel_path = f'.github/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("pre-commit-config", "Configuration Files", filename, rel_path, path)
+        return OutputFile("pre-commit-config", FileCategory.CONFIG, filename, rel_path, path)
 
     @property
     def read_the_docs_config(self) -> OutputFile:
         filename = ".readthedocs.yaml"
         rel_path = f'.github/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("read-the-docs-config", "Configuration Files", filename, rel_path, path)
+        return OutputFile("read-the-docs-config", FileCategory.CONFIG, filename, rel_path, path)
 
     def health_file(
         self,
         name: Literal['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support'],
         target_path: Literal['.', 'docs', '.github'] = "."
     ) -> OutputFile:
+        # Health files are only allowed in the root, docs, and .github directories
         allowed_paths = [".", "docs", ".github"]
         if target_path not in allowed_paths:
             self._logger.error(f"Path '{target_path}' not allowed for health files.")
@@ -110,47 +124,77 @@ class OutputPaths:
         path = self._path_root / rel_path
         allowed_paths.remove(target_path)
         alt_paths = [self._path_root / dir_ / filename for dir_ in allowed_paths]
-        return OutputFile(f"health-file-{name}", "Health Files", filename, rel_path, path, alt_paths)
+        return OutputFile(f"health-file-{name}", FileCategory.HEALTH, filename, rel_path, path, alt_paths)
 
     @property
     def issue_template_chooser_config(self) -> OutputFile:
         filename = "config.yml"
         rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("issue-template-chooser-config", "Configuration Files", filename, rel_path, path)
+        return OutputFile("issue-template-chooser-config", FileCategory.CONFIG, filename, rel_path, path)
 
     def issue_form(self, name: str, priority: int) -> OutputFile:
         filename = f"{priority:02}_{name}.yaml"
         rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
         path = self._path_root / rel_path
-        return OutputFile(f"issue-form-{name}", "Forms", filename, rel_path, path)
+        return OutputFile(f"issue-form-{name}", FileCategory.FORM, filename, rel_path, path)
 
     def discussion_form(self, name: str) -> OutputFile:
         filename = f"{name}.yaml"
         rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
         path = self._path_root / rel_path
-        return OutputFile(f"discussion-form-{name}", "Forms", filename, rel_path, path)
+        return OutputFile(f"discussion-form-{name}", FileCategory.FORM, filename, rel_path, path)
 
     @property
     def package_pyproject(self) -> OutputFile:
         filename = "pyproject.toml"
         rel_path = filename
         path = self._path_root / rel_path
-        return OutputFile("package-pyproject", "Package Files", filename, rel_path, path)
+        return OutputFile("package-pyproject", FileCategory.PACKAGE, filename, rel_path, path)
 
     @property
     def package_requirements(self) -> OutputFile:
         filename = "requirements.txt"
         rel_path = filename
         path = self._path_root / rel_path
-        return OutputFile("package-requirements", "Package Files", filename, rel_path, path)
+        return OutputFile("package-requirements", FileCategory.PACKAGE, filename, rel_path, path)
 
-    @property
-    def package_init(self) -> OutputFile:
+    def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> OutputFile:
+        filename = package_name
+        rel_path = str(new_path.relative_to(self._path_root))
+        alt_paths = [old_path] if old_path else None
+        return OutputFile(
+            "package-dir", FileCategory.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
+        )
+
+    def package_init(self, package_name: str) -> OutputFile:
         filename = "__init__.py"
-        rel_path = f'{self._paths["dir"]["source"]}/{{package_name}}/{filename}'
+        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
         path = self._path_root / rel_path
-        return OutputFile("package-init", "Package Files", filename, rel_path, path)
+        return OutputFile("package-init", FileCategory.PACKAGE, filename, rel_path, path)
+
+
+class _FileStatus(NamedTuple):
+    title: str
+    emoji: str
+
+
+class FileStatus(Enum):
+    REMOVED = _FileStatus("Removed", "🔴")
+    MODIFIED = _FileStatus("Modified", "🟣")
+    MOVED_MODIFIED = _FileStatus("Moved & Modified", "🟠")
+    MOVED_REMOVED = _FileStatus("Moved & Removed", "🟠")
+    MOVED = _FileStatus("Moved", "🟡")
+    CREATED = _FileStatus("Created", "🟢")
+    UNCHANGED = _FileStatus("Unchanged", "⚪️")
+    DISABLED = _FileStatus("Disabled", "⚫")
+
+
+class Diff(NamedTuple):
+    status: FileStatus
+    after: str
+    before: str = ""
+    path_before: Path | None = None
 
 
 class MetaWriter:
@@ -161,52 +205,16 @@ class MetaWriter:
         logger: Logger | None = None
     ):
         self.path_root = Path(path_root).resolve()
-        self.path_meta = self.path_root / "meta"
         self._logger = logger or Logger()
-        self._categories = {
-            'metadata': "Metadata Files",
-            'license': "License Files",
-            'config': "Configuration Files",
-            'health_file': "Health Files",
-            'package': "Package Files",
-            'readme': 'ReadMe Files'
-        }
-        self._path = {
-            ('metadata', 'metadata'): self.path_meta / ".out" / "metadata.json",
-            ('license', 'license'): self.path_root / "LICENSE",
-            ('config', 'funding'): self.path_root / ".github" / "FUNDING.yml",
-            ('config', 'labels'): self.path_root / ".github" / "labels.yaml",
-            ('config', 'labels_pr'): self.path_root / ".github" / "labels_pr.yaml",
-            ('package', 'pyproject'): self.path_root / "pyproject.toml",
-            ('package', 'requirements'): self.path_root / "requirements.txt",
-            ("readme", 'readme_main'): self.path_root / "README.md",
-        }
-        self._filename = {
-            'metadata': 'metadata.json',
-            'license': 'LICENSE',
-            'funding': 'FUNDING.yml',
-            'labels': 'labels.yaml',
-            'labels_pr': 'labels_pr.yaml',
-            'code_of_conduct': "CODE_OF_CONDUCT.md",
-            'codeowners': "CODEOWNERS",
-            'contributing': "CONTRIBUTING.md",
-            'governance': "GOVERNANCE.md",
-            'security': "SECURITY.md",
-            'support': "SUPPORT.md",
-            'pyproject': 'pyproject.toml',
-            'requirements': 'requirements.txt',
-            'docstring': '__init__.py',
-            'dir': 'Package Directory',
-            'readme_main': 'README.md',
-        }
-        self._results = {}
+
+        self._results: list[tuple[OutputFile, Diff]] = []
         self._applied: bool = False
         self._commit_hash: str = ""
         return
 
     def write(
         self,
-        updates: list[dict],
+        updates: list[tuple[OutputFile, str]],
         action: Literal['report', 'apply', 'amend', 'commit']
     ):
         if action not in ['report', 'apply', 'amend', 'commit']:
@@ -214,11 +222,11 @@ class MetaWriter:
         self._results = {}
         self._applied = False
         self._commit_hash = ""
-        self._register(updates)
+        self.compare(updates)
         changes = self._changes()
         if changes['any']:
             if action != 'report':
-                self._apply()
+                self.apply()
                 self._applied = True
             if action in ['amend', 'commit']:
                 self._commit_hash = git.Git(path_repo=self.path_root).commit(
@@ -235,138 +243,91 @@ class MetaWriter:
         }
         return output
 
-    def _register(
+    def compare(
         self,
-        updates: list[dict],
-    ):
-        package_update = {}
-        for update in updates:
-            if update['category'] not in self._categories:
-                self._logger.error(f"Category '{update['category']}' not recognized.")
-            if update['category'] == "health_file":
-                self._add_result(
-                    category="health_file",
-                    name=update['name'],
-                    result=self._update_health_file(
-                        name=update['name'],
-                        target_path=update['target_path'],
-                        content=update['content']
-                    )
+        updates: list[tuple[OutputFile, str]],
+    ) -> tuple[list[tuple[OutputFile, Diff]], dict[FileCategory, dict[str, bool]], str]:
+        results = []
+        file_updates = []
+        for info, content in updates:
+            if info.is_dir:
+                result = self._compare_dir(
+                    path_old=info.alt_paths[0] if info.alt_paths else None,
+                    path_new=info.path
                 )
-                continue
-            if update['category'] == "package" and update['name'] in ['dir', 'docstring']:
-                package_update[update['name']] = update['content']
-                continue
-            path = self._path[(update['category'], update['name'])]
-            self._add_result(
-                category=update['category'],
-                name=update['name'],
-                result=self._update_file(path=path, content=update['content'])
-            )
-        if package_update:
-            package_dir_result = self._update_package_dir(package_update['dir'])
-            self._add_result(
-                category="package",
-                name="dir",
-                result=package_dir_result
-            )
-            self._add_result(
-                category="package",
-                name="docstring",
-                result=self._write_package_init(
-                    docstring=package_update['docstring'],
-                    path=(package_dir_result['path_before'] or package_dir_result['path']) / "__init__.py"
+                results.append((info, result))
+            else:
+                file_updates.append((info, content))
+        for info, content in file_updates:
+            if info.alt_paths:
+                result = self._compare_file_multiloc(
+                    path=info.path,
+                    content=content,
+                    alt_paths=info.alt_paths,
                 )
-            )
-        return self._results
+            else:
+                result = self._compare_file(path=info.path, content=content)
+            results.append((info, result))
+        changes, summary = self._summary(results)
+        return results, changes, summary
 
-    def _apply(self):
-        for category_dict in self._results.values():
-            for result in category_dict.values():
-                if result['status'] in ['disabled', 'unchanged']:
-                    continue
-                if result['status'] == "removed":
-                    result['path'].unlink() if result['type'] == 'file' else shutil.rmtree(result['path'])
-                    continue
-                if result['status'] == "moved":
-                    result['path_before'].rename(result['path'])
-                    continue
-                if result['type'] == "dir":
-                    result['path'].mkdir(parents=True, exist_ok=True)
-                else:
-                    result['path'].parent.mkdir(parents=True, exist_ok=True)
-                    if result['status'] == "moved/modified":
-                        result['path_before'].unlink()
-                    with open(result['path'], "w") as f:
-                        f.write(result['after'])
+    @staticmethod
+    def apply(results: list[tuple[OutputFile, Diff]]):
+        for info, diff in results:
+            if diff.status in [FileStatus.DISABLED, FileStatus.UNCHANGED]:
+                continue
+            if diff.status == FileStatus.REMOVED:
+                shutil.rmtree(info.path) if info.is_dir else info.path.unlink()
+                continue
+            if diff.status == FileStatus.MOVED:
+                diff.path_before.rename(info.path)
+                continue
+            if info.is_dir:
+                info.path.mkdir(parents=True, exist_ok=True)
+            else:
+                info.path.parent.mkdir(parents=True, exist_ok=True)
+                if diff.status == FileStatus.MOVED_MODIFIED:
+                    diff.path_before.unlink()
+                with open(info.path, "w") as f:
+                    f.write(f"{diff.after.strip()}\n")
         return
 
-    def _changes(self):
-        changes = {"any": False} | {category: False for category in self._categories}
-        for category, category_dict in self._results.items():
-            for item_name, changes_dict in category_dict.items():
-                if changes_dict['status'] not in ["unchanged", "disabled"]:
-                    changes["any"] = True
-                    changes[category] = True
-        return changes
-
-    def _add_result(
-        self,
-        category: Literal['metadata', 'license', 'config', 'health_file', 'package'],
-        name: str,
-        result: dict
-    ):
-        if category not in self._categories:
-            self._logger.error(f"Category '{category}' not recognized.")
-        category_dict = self._results.setdefault(category, dict())
-        category_dict[name] = result
-        return
-
-    def _update_file(self, path: Path, content: str) -> dict:
-        content = f"{content.rstrip()}\n"
-        output = {"status": "", "before": "", "after": content, "path": path, "type": "file"}
+    def _compare_file(self, path: Path, content: str) -> Diff:
+        content = content.strip()
         if not path.exists():
-            output['status'] = "created" if content else "disabled"
-            return output
-        if not path.is_file():
-            self._logger.error(f"Path '{path}' is not a file.")
-        with open(path) as f:
-            old_content = output['before'] = f.read()
-        output['status'] = "unchanged" if old_content == content else (
-            "modified" if content else "removed"
-        )
-        return output
+            before = ""
+            status = FileStatus.CREATED if content else FileStatus.DISABLED
+        elif not path.is_file():
+            self._logger.error(f"Cannot write file to '{path}'; path exists as a directory.")
+        else:
+            with open(path) as f:
+                before = f.read().strip()
+            status = FileStatus.UNCHANGED if before == content else (
+                FileStatus.MODIFIED if content else FileStatus.REMOVED
+            )
+        return Diff(status=status, before=before, after=content)
 
-    def _update_health_file(
-        self, name: str, target_path: Literal['.', 'docs', '.github'], content: str
-    ) -> dict:
-        allowed_paths = ['.', 'docs', '.github']
-        # Health files are only allowed in the root, docs, and .github directories
-        if target_path not in allowed_paths:
-            self._logger.error(f"Path '{target_path}' not recognized.")
-        allowed_paths.remove(target_path)
-        target_path = self.path_root / target_path / self._filename[name]
-        alt_paths = [self.path_root / allowed_path / self._filename[name] for allowed_path in allowed_paths]
+    def _compare_file_multiloc(self, path: Path, alt_paths: list[Path], content: str) -> Diff:
         alts = self._remove_alts(alt_paths)
-        main = self._update_file(target_path, content)
+        main = self._compare_file(path, content)
         if not alts:
             return main
-        filename = target_path.name
-        err = f"File '{filename}' found in multiple paths"
-        alt_paths_str = '\n'.join([str(alt['path'].relative_to(self.path_root)) for alt in alts])
-        if len(alts) > 1:
-            self._logger.error(err, alt_paths_str)
+        if len(alts) > 1 or main.status not in [FileStatus.CREATED, FileStatus.DISABLED]:
+            paths_str = '\n'.join(
+                [str(path.relative_to(self.path_root))]
+                + [str(alt['path'].relative_to(self.path_root)) for alt in alts]
+            )
+            self._logger.error(f"File '{path.name}' found in multiple paths", paths_str)
         alt = alts[0]
-        if main['status'] not in ["created", "disabled"]:
-            main_path_str = str(target_path.relative_to(self.path_root))
-            self._logger.error(err, f"{main_path_str}\n{alt_paths_str}")
-        if main['status'] == "disabled":
-            main['status'] = "removed"
-            return main | alt
-        main['path_before'] = alt['path']
-        main['before'] = alt['before']
-        main['status'] = "moved" if content == alt['before'] else "moved/modified"
-        return main
+        diff = Diff(
+            status=FileStatus.MOVED_REMOVED if main.status == FileStatus.DISABLED else (
+                FileStatus.MOVED if content == alt['before'] else FileStatus.MOVED_MODIFIED
+            ),
+            before=alt['before'],
+            after=content,
+            path_before=alt['path']
+        )
+        return diff
 
     def _remove_alts(self, alt_paths: list[Path]):
         alts = []
@@ -380,135 +341,87 @@ class MetaWriter:
                     )
         return alts
 
-    def _write_package_init(self, docstring: str, path: Path):
-        output = {"status": "", "before": "", "after": docstring, "path": path, "type": "file"}
-        docstring_full = f'"""{docstring.strip()}\n"""'
-        if not path.exists():
-            if docstring:
-                output['after'] = f'{docstring_full}\n'
-                output['status'] = "created"
-            else:
-                output['status'] = "disabled"
-            return output
-        if not path.is_file():
-            self._logger.error(f"Path '{path}' is not a file.")
-        with open(path) as f:
-            output['before'] = f.read()
-        docstring_pattern = r'^\s*"""(.*?)"""'
-        match = re.search(docstring_pattern, output['before'], re.DOTALL)
-        if match:
-            # Replace the existing docstring with the new one
-            output['after'] = re.sub(docstring_pattern, docstring_full, output['before'], flags=re.DOTALL)
+    @staticmethod
+    def _compare_dir(path_old: Path | None, path_new: Path):
+        if path_old == path_new:
+            status = FileStatus.UNCHANGED
+        elif not path_old:
+            status = FileStatus.CREATED
         else:
-            # If no docstring found, add the new docstring at the beginning of the file
-            output['after'] = f"{docstring_full}\n\n\n{output['before'].strip()}".strip() + "\n"
-        output['status'] = "unchanged" if output['before'] == output['after'] else "modified"
-        return output
+            status = FileStatus.MOVED
+        return Diff(status=status, after="", path_before=path_old)
+
+    def _summary(
+        self, results: list[tuple[OutputFile, Diff]]
+    ) -> tuple[dict[FileCategory, dict[str, bool]], str]:
+        details, changes = self._summary_section_details(results)
+        summary = html.ElementCollection([html.h(3, "Meta")])
+        any_changes = any(any(category.values()) for category in changes.values())
+        if not any_changes:
+            rest = [
+                html.ul(["✅ All dynamic files were in sync with meta content."]),
+                html.hr()
+            ]
+        else:
+            rest = [
+                html.ul(["❌ Some dynamic files were out of sync with meta content:"]),
+                details,
+                html.hr(),
+                self._color_legend()
+            ]
+        rest.append(html.details(self._logger.file_log, "Log"))
+        summary.extend(rest)
+        return changes, str(summary)
+
+    def _summary_section_details(
+        self, results: list[tuple[OutputFile, Diff]]
+    ) -> tuple[html.ElementCollection, dict[FileCategory, dict[str, bool]]]:
+        categories_sorted = [cat for cat in FileCategory]
+        results = sorted(
+            results,
+            key=lambda elem: (categories_sorted.index(elem[0].category), elem[0].rel_path)
+        )
+        details = html.ElementCollection()
+        changes = {}
+        for info, diff in results:
+            if info.category not in changes:
+                changes[info.category] = {}
+                details.append(html.h(4, info.category.value))
+            changes[info.category][info.id] = diff.status not in [FileStatus.UNCHANGED, FileStatus.DISABLED]
+            details.append(self._item_summary(info, diff))
+        return details, changes
 
     @staticmethod
-    def _update_package_dir(content: tuple[Path, Path]):
-        old_path, new_path = content
-        output = {"status": "", "path": new_path, "path_before": old_path, "type": "dir"}
-        if old_path == new_path:
-            output['status'] = "unchanged"
-        elif not old_path:
-            output['status'] = "created"
-        else:
-            output['status'] = "moved"
-        return output
-
-    def _summary(self, changes):
-        results = []
-        if not changes["any"]:
-            results.append(
-                html.li("✅ All dynamic files are in sync with source files; nothing to change.")
-            )
-        else:
-            emoji = "🔄" if self._applied else "❌"
-            results.append(
-                html.li(f"{emoji} Following groups were out of sync with source files:")
-            )
-            results.append(
-                html.ul([self._categories[category] for category in self._categories if changes[category]])
-            )
-            if self._applied:
-                results.append(
-                    html.li("✏️ Changed files were updated successfully.")
-                )
-            if self._commit_hash:
-                results.append(
-                    html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
-                )
-            else:
-                results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
-        summary = html.ElementCollection(
-            [
-                html.h(2, "Meta"),
-                html.h(3, "Summary"),
-                html.ul(results),
-                html.h(3, "Details"),
-                self._color_legend(),
-                self._summary_section_details(),
-                html.h(3, "Log"),
-                html.details(self._logger.file_log, "Log"),
-            ]
-        )
-        return summary
-
-    def _summary_section_details(self):
-        details = html.ElementCollection()
-        for category, category_dict in self._results.items():
-            details.append(html.h(4, self._categories[category]))
-            for item_name, changes_dict in category_dict.items():
-                details.append(self._item_summary(item_name, changes_dict))
-        return details
-
-    def _color_legend(self):
-        legend = [
-            "🔴  Removed",
-            "🟢  Created",
-            "🟣  Modified",
-            "🟡  Moved",
-            "🟠  Moved & Modified",
-            "⚪️  Unchanged",
-            "⚫  Disabled",
-        ]
+    def _color_legend():
+        legend = [f"{status.value.emoji}  {status.value.title}" for status in FileStatus]
         color_legend = html.details(content=html.ul(legend), summary="Color Legend")
         return color_legend
 
-    def _item_summary(self, name, dic):
-        emoji = {
-            "removed": "🔴",
-            "created": "🟢",
-            "modified": "🟣",
-            "moved": "🟡",
-            "moved/modified": "🟠",
-            "unchanged": "⚪️",
-            "disabled": "⚫",
-        }
+    @staticmethod
+    def _item_summary(info: OutputFile, diff: Diff) -> html.DETAILS:
         details = html.ElementCollection()
         output = html.details(
             content=details,
-            summary=f"{emoji[dic['status']]}  {self._filename[name]}"
+            summary=f"{diff.status.value.emoji}  {info.rel_path}"
         )
-        typ = "File" if dic['type'] == "file" else "Directory"
-        status = f"{typ} {dic['status']}{':' if dic['status'] != 'disabled' else ''}"
+        typ = "Directory" if info.is_dir else "File"
+        status = f"{typ} {diff.status.value.title}{':' if diff.status != FileStatus.DISABLED else ''}"
         details.append(status)
-        if dic["status"] == "disabled":
+        if diff.status == FileStatus.DISABLED:
             return output
         details_ = [
-            f"Old Path: <code>{dic['path_before']}</code>", f"New Path: <code>{dic['path']}</code>"
-        ] if dic['status'] in ["moved", "moved/modified"] else [
-            f"Path: <code>{dic['path']}</code>"
+            f"Old Path: <code>{diff.path_before}</code>", f"New Path: <code>{info.path}</code>"
+        ] if diff.status in [FileStatus.MOVED, FileStatus.MOVED_MODIFIED, FileStatus.MOVED_REMOVED] else [
+            f"Path: <code>{info.path}</code>"
         ]
-        if dic['type'] == 'file':
-            if name == "metadata":
+        if not info.is_dir:
+            if info.id == "metadata":
                 before, after = [
-                    json.dumps(json.loads(dic[i]), indent=3) if dic[i] else ""
-                    for i in ['before', 'after']
+                    json.dumps(json.loads(state), indent=3) if state else ""
+                    for state in (diff.before, diff.after)
                 ]
             else:
-                before, after = dic['before'], dic['after']
+                before, after = diff.before, diff.after
             diff_lines = list(difflib.ndiff(before.splitlines(), after.splitlines()))
             diff = "\n".join([line for line in diff_lines if line[:2] != "? "])
             details_.append(html.details(content=md.code_block(diff, "diff"), summary="Content"))
