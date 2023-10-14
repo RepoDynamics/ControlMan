@@ -14,7 +14,28 @@ from repodynamics import hooks, _util
 import repodynamics.commits
 
 
-def init(context: dict, logger=None):
+
+class Init:
+
+    NON_MODIFYING_EVENTS = [
+        "issue_comment",
+        "issues",
+        "pull_request_review",
+        "pull_request_review_comment",
+        "pull_request_target",
+        "schedule",
+        "workflow_dispatch",
+    ]
+    MODIFYING_EVENTS = ["pull_request", "push"]
+
+    def __init__(self, context: dict, logger=None):
+        self._context = context
+        self._logger = logger or Logger()
+        return
+
+
+
+def init(context: dict, admin_token: str = "", logger=None):
     match context["event_name"]:
         case "schedule", "workflow_dispatch":
             return Dispatch(context=context).run()
@@ -121,38 +142,6 @@ class EventHandler:
             self._logger.error("Hooks failed.")
         return
 
-    @staticmethod
-    def _process_changes(changes):
-        """
-
-        Parameters
-        ----------
-        changes
-
-        Returns
-        -------
-        The keys of the JSON dictionary are the groups that the files belong to,
-        defined in `.github/config/changed_files.yaml`. Another key is `all`, which is added as extra
-        (i.e. without being defined in the config file), which contains details on changes in the entire repository.
-        Each value is then a dictionary itself, as defined in the action's documentation.
-
-        Notes
-        -----
-        The boolean values in the output are given as strings, i.e. `true` and `false`.
-
-        References
-        ----------
-        - https://github.com/marketplace/actions/changed-files
-        """
-        sep_groups = dict()
-        for item_name, val in changes.items():
-            group_name, attr = item_name.split("_", 1)
-            group = sep_groups.setdefault(group_name, dict())
-            group[attr] = val
-        for group_name, group_attrs in sep_groups.items():
-            sep_groups[group_name] = dict(sorted(group_attrs.items()))
-        return sep_groups
-
     def assemble_summary(self):
         sections = [
             html.h(2, "Summary"),
@@ -204,6 +193,40 @@ class EventHandler:
         return summary
 
 
+class ModifyingEvent(EventHandler):
+    def __init__(self, context: dict):
+        super().__init__(context)
+        self._changes = self._process_changes(self.context["changes"])
+        self._output = {}
+        return
+
+    @property
+    def hash_before(self) -> str:
+        """The SHA hash of the most recent commit on the branch before the event."""
+        raise NotImplementedError
+
+    @property
+    def hash_after(self) -> str:
+        """The SHA hash of the most recent commit on the branch after the event."""
+        raise NotImplementedError
+
+    def _get_changed_files(self) -> list[str]:
+        filepaths = []
+        changes = self._git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
+        for change_type, changed_paths in changes.items():
+            if change_type in ["unknown", "broken"]:
+                self._logger.warning(
+                    f"Found {change_type} files",
+                    f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
+                    "These files will be ignored."
+                )
+                continue
+            if change_type.startswith("copied") and change_type.endswith("from"):
+                continue
+            filepaths.extend(changed_paths)
+        return filepaths
+
+
 class Push(EventHandler):
     """
     References
@@ -241,21 +264,7 @@ class Push(EventHandler):
     def _get_tags(self):
 
 
-    def _get_changed_files(self) -> list[str]:
-        filepaths = []
-        changes = self._git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
-        for change_type, changed_paths in changes.items():
-            if change_type in ["unknown", "broken"]:
-                self._logger.warning(
-                    f"Found {change_type} files",
-                    f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
-                    "These files will be ignored."
-                )
-                continue
-            if change_type.startswith("copied") and change_type.endswith("from"):
-                continue
-            filepaths.extend(changed_paths)
-        return filepaths
+
 
 
 
@@ -350,6 +359,27 @@ This is the initial release of the project. Infrastructure is now in place to su
     def _create_changelog_entry(self):
         log = f"""## [{self._metadata['name']} {self._tag}]()"""
 
+        return
+
+
+class PushMain(PushRelease):
+
+    def __init__(self, context: dict, admin_token: str = ""):
+        super().__init__(context)
+        self._admin_token = admin_token
+        return
+
+    def update_repo_settings(self):
+        data = self._meta["repo"]["config"] | {
+            "has_issues": True,
+            "allow_squash_merge": True,
+            "squash_merge_commit_title": "PR_TITLE",
+            "squash_merge_commit_message": "PR_BODY",
+        }
+        topics = data.pop("topics")
+        admin_api = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
+        admin_api.update_settings(settings=data)
+        admin_api.replace_topics(topics=topics)
         return
 
 
@@ -553,6 +583,7 @@ class IssueComment(EventHandler):
         return
 
     def command_test_package(self, operating_systems):
+        pass
 
     def find_command(self) -> tuple[str, dict]:
         pattern_general = r"""
@@ -704,6 +735,46 @@ def _finalize(
     log = f"<h2>Repository Metadata</h2>{metadata_details}{results_list}"
 
     return {"json": json.dumps(all_groups)}, str(log)
+
+
+    def _summary(self, changes):
+        results = []
+        if not changes["any"]:
+            results.append(
+                html.li("✅ All dynamic files are in sync with meta content.")
+            )
+        else:
+            emoji = "🔄" if self._applied else "❌"
+            results.append(
+                html.li(f"{emoji} Following groups were out of sync with source files:")
+            )
+            results.append(
+                html.ul([self._categories[category] for category in self._categories if changes[category]])
+            )
+            if self._applied:
+                results.append(
+                    html.li("✏️ Changed files were updated successfully.")
+                )
+            if self._commit_hash:
+                results.append(
+                    html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
+                )
+            else:
+                results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
+        summary = html.ElementCollection(
+            [
+                html.h(2, "Meta"),
+                html.h(3, "Summary"),
+                html.ul(results),
+                html.h(3, "Details"),
+                self._color_legend(),
+                self._summary_section_details(),
+                html.h(3, "Log"),
+                html.details(self._logger.file_log, "Log"),
+            ]
+        )
+        return summary
+
 
 
 def find_command(comment: str) -> tuple[str, dict] | None:
