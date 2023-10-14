@@ -13,10 +13,49 @@ properties:
       config:
         description: Configuration for the repository
         type: object
+        default: {}
         properties:
-          has_issues:
-            type: boolean
-            default: true
+          description:
+            description: Description of the repository
+            type: string
+            default: "${{ tagline }}"
+          homepage:
+            description: URL for the project homepage
+            type: string
+            format: uri
+            default: "${{ url.website.base }}"
+          topics:
+            description: List of topics for the repository
+            type: array
+            default: "${{ keyword_slugs }}"
+            uniqueItems: true
+            items:
+              type: string
+              maxLength: 50
+              pattern: ^[a-z0-9][a-z0-9\-]*$
+          security_and_analysis:
+            description: Security and analysis settings for the repository
+            type: object
+            default: {}
+            properties:
+              secret_scanning:
+                description: Secret scanning settings for the repository
+                type: object
+                default: {}
+                properties:
+                  status:
+                    description: Status of secret scanning for the repository
+                    enum: [ enabled, disabled ]
+                    default: enabled
+              secret_scanning_push_protection:
+                description: Secret scanning push protection settings for the repository
+                type: object
+                default: {}
+                properties:
+                  status:
+                    description: Status of secret scanning push protection for the repository
+                    enum: [ enabled, disabled ]
+                    default: enabled
           has_projects:
             type: boolean
             default: false
@@ -29,33 +68,27 @@ properties:
           allow_merge_commit:
             type: boolean
             default: true
-          allow_squash_merge:
-            type: boolean
-            default: true
           allow_rebase_merge:
             type: boolean
             default: true
-          merge_commit_title:
-            enum: [ PR_TITLE, MERGE_MESSAGE ]
-            default: PR_TITLE
-          squash_merge_commit_title:
-            enum: [ PR_TITLE, COMMIT_OR_PR_TITLE ]
-            default: PR_TITLE
-          merge_commit_message:
-            enum: [ PR_TITLE, PR_BODY, BLANK ]
-            default: PR_BODY
-          squash_merge_commit_message:
-            enum: [ PR_BODY, COMMIT_MESSAGES, BLANK ]
-            default: PR_BODY
           allow_auto_merge:
             type: boolean
             default: false
           delete_branch_on_merge:
             type: boolean
-            default: false
+            default: true
           allow_update_branch:
             type: boolean
             default: true
+          merge_commit_title:
+            enum: [ PR_TITLE, MERGE_MESSAGE ]
+            default: PR_TITLE
+          merge_commit_message:
+            enum: [ PR_TITLE, PR_BODY, BLANK ]
+            default: PR_BODY
+          archived:
+            type: boolean
+            default: false
 
       target:
         description: Target repository for development
