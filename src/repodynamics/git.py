@@ -16,7 +16,7 @@ class Git:
         self,
         path_repo: str | Path = ".",
         initialize: bool = False,
-        logger: Logger = None
+        logger: Logger | None = None
     ):
         self._logger = logger or Logger()
         git_available = _run(["git", "--version"], raise_command=False, logger=self._logger)
@@ -125,16 +125,43 @@ class Git:
             return any(self._run(cmd, raise_=False)[2] != 0 for cmd in commands.values())
         return self._run(commands[check_type], raise_=False)[2] != 0
 
-    def changed_files(self, ref_start: str, ref_end: str):
+    def changed_files(self, ref_start: str, ref_end: str) -> dict[str, list[str]]:
         """
-        Get a list of files that have changed between two commits.
+        Get all files that have changed between two commits, and the type of changes.
 
-        Parameters:
-        - ref_start (str): The starting commit hash.
-        - ref_end (str): The ending commit hash.
+        Parameters
+        ----------
+        ref_start : str
+            The starting commit hash.
+        ref_end : str
+            The ending commit hash.
 
-        Returns:
-        - list[str]: A list of changed files.
+        Returns
+        -------
+        dict[str, list[str]]
+            A dictionary where the keys are the type of change, and the values are lists of paths.
+            The paths are given as strings, and are relative to the repository root.
+            The keys are one of the following:
+
+            - 'added': Files that have been added.
+            - 'deleted': Files that have been deleted.
+            - 'modified': Files that have been modified.
+            - 'unmerged': Files that have been unmerged.
+            - 'unknown': Files with unknown changes.
+            - 'broken': Files that are broken.
+            - 'copied_from': Source paths of files that have been copied.
+            - 'copied_to': Destination paths of files that have been copied.
+            - 'renamed_from': Source paths of files that have been renamed.
+            - 'renamed_to': Destination paths of files that have been renamed.
+            - 'copied_modified_from': Source paths of files that have been copied and modified.
+            - 'copied_modified_to': Destination paths of files that have been copied and modified.
+            - 'renamed_modified_from': Source paths of files that have been renamed and modified.
+            - 'renamed_modified_to': Destination paths of files that have been renamed and modified.
+
+            In the case of keys that end with '_from' and '_to', the elements of the corresponding
+            lists are in the same order, e.g. 'copied_from[0]' and 'copied_to[0]' are the source and
+            destination paths of the same file.
+
         """
         key_def = {
             "A": "added",
@@ -154,6 +181,8 @@ class Git:
                 out.setdefault(key_def[key], []).extend(paths)
                 continue
             key, similarity = key[0], int(key[1:])
+            if key not in ["C", "R"]:
+                self._logger.error(f"Unknown change type '{change}'.")
             out_key = key_def[key]
             if similarity != 100:
                 out_key += "_modified"
@@ -300,8 +329,6 @@ class Git:
             commits.append(commit_info)
 
         return commits
-
-
 
     def get_tags(self) -> list[list[str]]:
         """Get a list of tags reachable from the current commit
