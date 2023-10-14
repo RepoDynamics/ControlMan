@@ -7,8 +7,7 @@ from ruamel.yaml import YAML
 from repodynamics.logger import Logger
 from repodynamics.meta.metadata import MetadataGenerator
 from repodynamics.meta.reader import MetaReader
-from repodynamics.meta import files
-from repodynamics.meta.writer import MetaWriter, OutputPaths, OutputFile
+from repodynamics.meta.writer import MetaWriter, OutputPaths, OutputFile, FileCategory
 from repodynamics import _util
 
 from repodynamics.meta.files.config import ConfigFileGenerator
@@ -34,10 +33,14 @@ class Meta:
         self._metadata_raw: dict = {}
         self._metadata: dict = {}
         self._generated_files: list[tuple[OutputFile, str]] = []
+        self._writer: MetaWriter | None = None
+        self._results: list[tuple[OutputFile, str]] = []
+        self._changes: dict[FileCategory, dict[str, bool]] = {}
+        self._summary: str = ""
         return
 
     def read_metadata_output(self):
-        path_metadata = self._path_root / ".github" / ".metadata.json"
+        path_metadata = self._out_db.metadata.path
         metadata = _util.dict.read(path_metadata, logger=self._logger, raise_empty=False)
         if metadata:
             self._logger.success(
@@ -86,6 +89,7 @@ class Meta:
             generated_files += PackageFileGenerator(
                 metadata=metadata,
                 package_config=self._reader.package_config,
+                path_root=self._reader.path.root,
                 logger=self._logger
             ).generate()
         generated_files += ReadmeFileGenerator(
@@ -93,3 +97,12 @@ class Meta:
         ).generate()
         self._generated_files = generated_files
         return self._generated_files
+
+    def compare_files(self):
+        if self._results:
+            return self._results, self._changes, self._summary
+        updates = self.generate_files()
+        self._writer = MetaWriter(path_root=self._path_root, logger=self._logger)
+        self._results, self._changes, self._summary = self._writer.compare(updates)
+        return self._results, self._changes, self._summary
+
