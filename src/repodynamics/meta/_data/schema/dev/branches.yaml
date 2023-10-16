@@ -10,6 +10,30 @@ properties:
     default: {}
     additionalProperties: false
     properties:
+
+      default:
+        description: Default branch
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          name:
+            type: string
+            default: main
+          protection_rules:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              allow_deletion:
+                type: boolean
+                default: false
+              allow_force_push:
+                type: boolean
+                default: true
+
+        required: [ name ]
+
       group:
         type: object
         description: Branch groups
@@ -24,6 +48,9 @@ properties:
                 description: Prefix for the branch name
                 type: string
                 default: dev/
+              protection_rules:
+                description: Branch protection rules
+                type: object
             required: [ prefix ]
         required: [ dev ]
     required: [ group ]
