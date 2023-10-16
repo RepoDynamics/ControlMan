@@ -56,6 +56,13 @@ class OutputPaths:
         return OutputFile("metadata", FileCategory.METADATA, filename, rel_path, path)
 
     @property
+    def metadata_ci(self) -> OutputFile:
+        filename = ".metadata_ci.json"
+        rel_path = f".github/{filename}"
+        path = self._path_root / rel_path
+        return OutputFile("metadata-ci", FileCategory.METADATA, filename, rel_path, path)
+
+    @property
     def license(self) -> OutputFile:
         filename = "LICENSE"
         rel_path = filename
@@ -83,12 +90,12 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile("funding", FileCategory.CONFIG, filename, rel_path, path)
 
-    @property
-    def labels_repo(self) -> OutputFile:
-        filename = "repo_labels.yaml"
-        rel_path = f'.github/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile("labels-repo", FileCategory.CONFIG, filename, rel_path, path)
+    # @property
+    # def labels_repo(self) -> OutputFile:
+    #     filename = "repo_labels.yaml"
+    #     rel_path = f'.github/{filename}'
+    #     path = self._path_root / rel_path
+    #     return OutputFile("labels-repo", FileCategory.CONFIG, filename, rel_path, path)
 
     def workflow_requirements(self, name: str) -> OutputFile:
         filename = f"{name}.txt"
@@ -139,6 +146,12 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile(f"issue-form-{name}", FileCategory.FORM, filename, rel_path, path)
 
+    def pull_request_template(self, name: str | Literal['default']) -> OutputFile:
+        filename = "PULL_REQUEST_TEMPLATE.md" if name == "default" else f"{name}.md"
+        rel_path = f'.github/{filename}' if name == "default" else f'.github/PULL_REQUEST_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"pull-request-template-{name}", FileCategory.CONFIG, filename, rel_path, path)
+
     def discussion_form(self, name: str) -> OutputFile:
         filename = f"{name}.yaml"
         rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
@@ -172,6 +185,19 @@ class OutputPaths:
         rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
         path = self._path_root / rel_path
         return OutputFile("package-init", FileCategory.PACKAGE, filename, rel_path, path)
+
+    @property
+    def package_manifest(self) -> OutputFile:
+        filename = "MANIFEST.in"
+        rel_path = filename
+        path = self._path_root / rel_path
+        return OutputFile("package-manifest", FileCategory.PACKAGE, filename, rel_path, path)
+
+    def package_typing_marker(self, package_name: str) -> OutputFile:
+        filename = "py.typed"
+        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("package-typing-marker", FileCategory.PACKAGE, filename, rel_path, path)
 
     @property
     def codecov_config(self) -> OutputFile:
