@@ -29,6 +29,18 @@ properties:
                 enum: [ fail, amend, commit ]
                 default: commit
             required: [ release_branch, dev_branch ]
+          schedule:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              test:
+                type: string
+                default: '0 0 * * 1'  # Every Monday at midnight UTC.
+              sync:
+                type: string
+                default: '0 0 * * *'  # Every day at midnight UTC.
+            required: [ test, sync ]
           get_owner_publications:
             description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
             type: boolean
