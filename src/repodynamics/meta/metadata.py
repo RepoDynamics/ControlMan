@@ -40,6 +40,7 @@ class MetadataGenerator:
         self._metadata["discussion"]["categories"] = self._discussions()
         self._metadata["license"] |= self._license()
         self._metadata['keyword_slugs'] = self._keywords()
+        self._metadata["label"]["list"] = self.repo_labels()
         self._metadata["url"] = {
             "github": self._urls_github(),
             "website": self._urls_website()
@@ -63,6 +64,8 @@ class MetadataGenerator:
             trove_classifiers = package.setdefault("trove_classifiers", [])
             if self._metadata["license"]:
                 trove_classifiers.append(self._metadata["license"]["trove_classifier"])
+            if self._metadata["package"].get("typed"):
+                trove_classifiers.append("Typing :: Typed")
 
             package_urls = self._package_platform_urls()
             self._metadata["url"] |= {
@@ -271,6 +274,30 @@ class MetadataGenerator:
         for keyword in self._metadata['keywords']:
             slugs.append(keyword.lower().replace(" ", "-"))
         return slugs
+
+    def repo_labels(self) -> list[dict[str, str]]:
+        self._logger.h3("Generate metadata: labels")
+        out = []
+        prefixes = []
+        for group_name, group in self._metadata["label"]["group"].items():
+            prefix = group["prefix"]
+            if prefix in prefixes:
+                self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
+            prefixes.append(prefix)
+            suffixes = []
+            for label in group['labels'].values():
+                suffix = label['suffix']
+                if suffix in suffixes:
+                    self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
+                suffixes.append(suffix)
+                out.append(
+                    {
+                        "name": f"{prefix}{suffix}",
+                        "description": label["description"],
+                        "color": group["color"]
+                    }
+                )
+        return out
 
     def _urls_github(self) -> dict:
         url = {}
