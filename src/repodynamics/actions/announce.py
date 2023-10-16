@@ -4,7 +4,13 @@ from markitup import html, md
 
 
 class Announcement:
-    def __init__(self, retention_days: int, announcement: str, description: str, logger=None):
+    def __init__(
+        self,
+        retention_days: int,
+        announcement: str,
+        description: str,
+        logger=None
+    ):
         if announcement or description:
             if not (announcement and description):
                 logger.error("`announcement` and `description` must be provided together.")
