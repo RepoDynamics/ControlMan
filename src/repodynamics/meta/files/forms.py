@@ -14,6 +14,14 @@ class FormGenerator:
         self._meta = metadata
         return
 
+    def generate(self) -> list[tuple[OutputFile, str]]:
+        # label_syncer, pr_labeler = self._labels()
+        return (
+            self.issue_forms()
+            + self.discussion_forms()
+            + self.pull_request_templates()
+        )
+
     def issue_forms(self) -> list[tuple[OutputFile, str]]:
         out = []
         issues = self._meta["issue"]["forms"]
@@ -34,6 +42,14 @@ class FormGenerator:
             info = self._out_db.discussion_form(discussion["slug"])
             form = {key: val for key, val in discussion.items() if key not in ["id"]}
             text = YAML(typ=['rt', 'string']).dumps(form, add_final_eol=True)
+            out.append((info, text))
+        return out
+
+    def pull_request_templates(self) -> list[tuple[OutputFile, str]]:
+        out = []
+        templates = self._meta["pull"]["template"]
+        for name, text in templates.items():
+            info = self._out_db.pull_request_template(name=name)
             out.append((info, text))
         return out
 
