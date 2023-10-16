@@ -9,74 +9,81 @@ import pylinks
 import repodynamics as rd
 from repodynamics.logger import Logger
 from repodynamics.git import Git
-from repodynamics import meta
+from repodynamics.meta.meta import Meta
 from repodynamics import hooks, _util
 import repodynamics.commits
 
 
-
 class Init:
 
-    NON_MODIFYING_EVENTS = [
-        "issue_comment",
-        "issues",
-        "pull_request_review",
-        "pull_request_review_comment",
-        "pull_request_target",
-        "schedule",
-        "workflow_dispatch",
-    ]
-    MODIFYING_EVENTS = ["pull_request", "push"]
-
-    def __init__(self, context: dict, logger=None):
+    def __init__(
+        self,
+        context: dict,
+        admin_token: str = "",
+        package_build: bool = False,
+        package_lint: bool = False,
+        package_test: bool = False,
+        website_build: bool = False,
+        website_announcement: str = "",
+        website_announcement_message: str = "",
+        logger: Logger | None = None
+    ):
         self._context = context
-        self._logger = logger or Logger()
-        return
+        self._admin_token = admin_token
 
+        # Inputs when event is triggered by a workflow dispatch
+        self._package_build = package_build
+        self._package_lint = package_lint
+        self._package_test = package_test
+        self._website_build = website_build
+        self._website_announcement = website_announcement
+        self._website_announcement_message = website_announcement_message
 
+        self.logger = logger or Logger("github")
+        self.git: Git = Git(logger=self.logger)
+        self.api = pylinks.api.github(token=context["token"]).user(self.repo_owner).repo(self.repo_name)
+        self.meta = Meta(path_root=".", github_token=self.context["token"], logger=self.logger)
 
-def init(context: dict, admin_token: str = "", logger=None):
-    match context["event_name"]:
-        case "schedule", "workflow_dispatch":
-            return Dispatch(context=context).run()
-        case "issue":
-            return Issue(context=context).run()
-        case "pull_request":
-            return Pull(context=context).run()
-        case "push":
-            if context["event"]["created"]:
-                logger.error("Creation Event: Skipping.")
-                return None, None, None
-            ref = context["ref_name"]
-            if ref == "main" or ref.startswith("release/"):
-                logger.success("Detected Event: Push to release branch")
-                return PushRelease(context=context).run()
-            elif ref.startswith("dev/"):
-                logger.success("Detected Event: Push to development branch")
-                return PushDev(context=context).run()
-        case _:
-            logger.error(f"Event '{context['event_name']}' is not supported.")
-    return
+        self.output = {
+            "config": {
+                "checkout": {
+                    "ref": "",
+                    "ref_before": "",
+                    "repository": "",
+                },
+                "run": {
+                    "package_build": False,
+                    "package_test_local": False,
+                    "package_lint": False,
+                    "website_build": False,
+                    "website_deploy": False,
+                    "website_rtd_preview": False,
+                    "package_publish_testpypi": False,
+                    "package_publish_pypi": False,
+                    "package_test_testpypi": False,
+                    "package_test_pypi": False,
+                    "github_release": False,
+                },
+                "package": {
+                    "version": "",
+                    "upload_url_testpypi": "https://test.pypi.org/legacy/",
+                    "upload_url_pypi": "https://upload.pypi.org/legacy/",
+                    "download_url_testpypi": "",
+                    "download_url_pypi": "",
+                },
+                "release": {
+                    "tag_name": "",
+                    "name": "",
+                    "body": "",
+                    "prerelease": False,
+                    "discussion_category_name": "",
+                    "make_latest": "legacy",
+                }
+            },
+            "metadata_ci": {},
+        }
 
-
-def pull_post_process(pull):
-    pr_nr = pull["pull-request-number"]
-    pr_url = pull["pull-request-url"]
-    pr_head_sha = pull["pull-request-head-sha"]
-
-
-class EventHandler:
-
-    def __init__(self, context: dict):
-        self._context: dict = context
-        self._logger: Logger = Logger("github")
-        self._git: Git = Git(logger=self._logger)
-        self._api = pylinks.api.github(token=context["token"]).user(self.repo_owner).repo(self.repo_name)
-        self._metadata: dict = meta.load(logger=self._logger)
-        self._latest_version = self._git.describe()
-
-        self._output_meta: dict = {}
-        self._output_hooks: dict = {}
+        self.metadata: dict = {}
         return
 
     @property
@@ -118,6 +125,133 @@ class EventHandler:
     def repo_name(self) -> str:
         """Name of the repository."""
         return self.context["repository"].removeprefix(f"{self.repo_owner}/")
+
+    @property
+    def default_branch(self) -> str:
+        return self.payload["repository"]["default_branch"]
+
+    def run(self):
+        event_handler = {
+            "issue_comment": self.event_issue_comment,
+            "issues": self.event_issues,
+            "pull_request_review": self.event_pull_request_review,
+            "pull_request_review_comment": self.event_pull_request_review_comment,
+            "pull_request_target": self.event_pull_request_target,
+            "schedule": self.event_schedule,
+            "workflow_dispatch": self.event_workflow_dispatch,
+            "pull_request": self.event_pull_request,
+            "push": self.event_push,
+        }
+        if self.event_name not in event_handler:
+            self.logger.error(f"Event '{self.event_name}' is not supported.")
+        return event_handler[self.event_name]()
+
+    def event_push(self):
+
+        def ref_type() -> Literal["tag", "branch"]:
+            if self.context["ref"].startswith("refs/tags/"):
+                return "tag"
+            if self.context["ref"].startswith("refs/heads/"):
+                return "branch"
+            self._logger.error(f"Invalid ref: {self.context['ref']}")
+
+        def change_type() -> Literal["created", "deleted", "modified"]:
+            if self.payload["created"]:
+                return "created"
+            if self.payload["deleted"]:
+                return "deleted"
+            return "modified"
+
+        event_handler = {
+            ("tag", "created"): self.event_push_tag_created,
+            ("tag", "deleted"): self.event_push_tag_deleted,
+            ("tag", "modified"): self.event_push_tag_modified,
+            ("branch", "created"): self.event_push_branch_created,
+            ("branch", "deleted"): self.event_push_branch_deleted,
+            ("branch", "modified"): self.event_push_branch_modified,
+        }
+        return event_handler[(ref_type(), change_type())]()
+
+    def event_push_branch_created(self):
+        if self.ref_name == self.default_branch:
+            return self.event_repository_created()
+
+    def event_repository_created(self):
+        Path(".path.json").unlink()
+        self.git.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True)
+        return None, None, None
+
+    def event_schedule(self):
+        self.metadata = self.meta.read_metadata_output()
+        cron = self.payload["schedule"]
+        schedule_type = self.metadata["workflow"]["init"]["schedule"]
+        if cron == schedule_type["sync"]:
+            return self.event_schedule_sync()
+        if cron == schedule_type["test"]:
+            return self.event_schedule_test()
+        self.logger.error(
+            f"Unknown cron expression for scheduled workflow: {cron}",
+            f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
+            f"{schedule_type}"
+        )
+        return
+
+    def event_schedule_sync(self):
+        return
+
+    def event_schedule_test(self):
+        return
+
+    def action_website_announcement_check(self):
+        path_announcement_file = Path(self.metadata["path"]["file"]["website_announcement"])
+
+
+
+
+
+def init(
+    context: dict,
+    admin_token: str = "",
+    package_build: bool = False,
+    package_lint: bool = False,
+    package_test: bool = False,
+    website_build: bool = False,
+    website_announcement: str = "",
+    website_announcement_message: str = "",
+    logger=None
+):
+    return Init(
+        context=context,
+        admin_token=admin_token,
+        package_build=package_build,
+        package_lint=package_lint,
+        package_test=package_test,
+        website_build=website_build,
+        website_announcement=website_announcement,
+        website_announcement_message=website_announcement_message,
+        logger=logger,
+    ).run()
+
+
+def pull_post_process(pull):
+    pr_nr = pull["pull-request-number"]
+    pr_url = pull["pull-request-url"]
+    pr_head_sha = pull["pull-request-head-sha"]
+
+
+class EventHandler:
+
+    def __init__(self, context: dict):
+        self._context: dict = context
+        self._logger: Logger = Logger("github")
+
+        self._latest_version = self._git.describe()
+
+        self._output_meta: dict = {}
+        self._output_hooks: dict = {}
+        return
+
+
 
 
     def _update_meta(self, action: Literal['fail', 'amend', 'commit']):
@@ -262,10 +396,7 @@ class Push(EventHandler):
             conventional_commit = rd.commits.parse(msg=commit["message"], types=types, logger=self._logger)
 
     def _get_tags(self):
-
-
-
-
+        return
 
 
 
@@ -545,6 +676,14 @@ class Pull(EventHandler):
     def merged(self) -> bool:
         """Whether the pull request is merged."""
         return self.state == 'closed' and self.info["merged"]
+
+    @property
+    def head_repo(self):
+        return self.head["repo"]["full_name"]
+
+    @property
+    def head_sha(self):
+        return self.head["sha"]
 
 
 class Issue(EventHandler):
