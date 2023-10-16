@@ -62,9 +62,6 @@ properties:
           has_wiki:
             type: boolean
             default: false
-          default_branch:
-            type: string
-            default: main
           allow_merge_commit:
             type: boolean
             default: true
