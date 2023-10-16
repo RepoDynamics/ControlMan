@@ -14,6 +14,7 @@ from repodynamics.meta.files.config import ConfigFileGenerator
 from repodynamics.meta.files.health import HealthFileGenerator
 from repodynamics.meta.files.package import PackageFileGenerator
 from repodynamics.meta.files.readme import ReadmeFileGenerator
+from repodynamics.meta.files.forms import FormGenerator
 
 
 class Meta:
@@ -32,6 +33,7 @@ class Meta:
         self._reader: MetaReader | None = None
         self._metadata_raw: dict = {}
         self._metadata: dict = {}
+        self._metadata_ci: dict = {}
         self._generated_files: list[tuple[OutputFile, str]] = []
         self._writer: MetaWriter | None = None
         self._results: list[tuple[OutputFile, str]] = []
@@ -39,7 +41,7 @@ class Meta:
         self._summary: str = ""
         return
 
-    def read_metadata_output(self):
+    def read_metadata_output(self) -> dict:
         path_metadata = self._out_db.metadata.path
         metadata = _util.dict.read(path_metadata, logger=self._logger, raise_empty=False)
         if metadata:
@@ -67,24 +69,33 @@ class Meta:
             return self._metadata
         self.read_metadata_raw()
         self._metadata = MetadataGenerator(reader=self._reader, logger=self._logger).generate()
-        return self._metadata
+        self._metadata_ci = self._generate_metadata_ci()
+        return self._metadata, self._metadata_ci
 
     def generate_files(self) -> list[tuple[OutputFile, str]]:
         if self._generated_files:
             return self._generated_files
-        metadata = self.read_metadata_full()
+        metadata, metadata_ci = self.read_metadata_full()
         self._logger.h2("Generate Files")
 
         generated_files = [
             (self._out_db.metadata, json.dumps(metadata)),
+            (self._out_db.metadata_ci, json.dumps(metadata_ci)),
             (self._out_db.license, metadata["license"].get("text", "")),
         ]
+
         generated_files += ConfigFileGenerator(
             metadata=metadata, path_root=self._reader.path.root, logger=self._logger
         ).generate()
+
+        generated_files += FormGenerator(
+            metadata=metadata, path_root=self._reader.path.root, logger=self._logger
+        ).generate()
+
         generated_files += HealthFileGenerator(
             metadata=metadata, path_root=self._reader.path.root, logger=self._logger
         ).generate()
+
         if "package" in self._metadata:
             generated_files += PackageFileGenerator(
                 metadata=metadata,
@@ -92,9 +103,11 @@ class Meta:
                 path_root=self._reader.path.root,
                 logger=self._logger
             ).generate()
+
         generated_files += ReadmeFileGenerator(
             metadata=metadata, path_root=self._reader.path.root, logger=self._logger
         ).generate()
+
         self._generated_files = generated_files
         return self._generated_files
 
@@ -105,4 +118,24 @@ class Meta:
         self._writer = MetaWriter(path_root=self._path_root, logger=self._logger)
         self._results, self._changes, self._summary = self._writer.compare(updates)
         return self._results, self._changes, self._summary
+
+    def _generate_metadata_ci(self) -> dict:
+        out = {}
+        metadata = self._metadata
+        out["path"] = metadata["path"]
+        out["web"] = {
+            "readthedocs": {"name": metadata["web"].get("readthedocs", {}).get("name")},
+        }
+        if metadata.get("package"):
+            pkg = metadata["package"]
+            out["package"] = {
+                "name": pkg["name"],
+                "github_runners": pkg["github_runners"],
+                "python_versions": pkg["python_versions"],
+                "python_version_max": pkg["python_version_max"],
+                "pure_python": pkg["pure_python"],
+                "cibw_matrix_platform": pkg.get("cibw_matrix_platform", []),
+                "cibw_matrix_python": pkg.get("cibw_matrix_python", []),
+            }
+        return out
 
