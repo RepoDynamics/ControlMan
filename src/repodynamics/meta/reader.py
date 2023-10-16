@@ -31,6 +31,9 @@ class MetaReader:
         self._extensions, self._path_extensions = self._read_extensions()
         self._metadata: dict = self._read_raw_metadata()
         self._metadata["path"] = self.path.paths
+        self._metadata["path"]["file"] = {
+            "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
+        }
 
         if self._metadata.get("package"):
             self._package_config = self._read_pyproject_metadata()
@@ -190,6 +193,7 @@ class MetaReader:
             "dev/issues",
             "dev/labels",
             "dev/maintainers",
+            "dev/pulls",
             "dev/repo",
             "dev/tags",
             "dev/workflows",
