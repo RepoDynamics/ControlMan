@@ -11,6 +11,22 @@ properties:
     additionalProperties: false
     properties:
 
+      manifest:
+        description: MANIFEST.in configuration
+        type: array
+        default:
+          - graft ${{ path.dir.source }}/${{ package.name }}
+          - include CODE_OF_CONDUCT.md
+          - global-exclude *.py[cod] __pycache__ *.so
+        uniqueItems: true
+        items:
+          type: string
+
+      typed:
+        description: Whether the package is typed
+        type: boolean
+        default: true
+
       trove_classifiers:
         description: Trove classifiers for the project
         type: array
