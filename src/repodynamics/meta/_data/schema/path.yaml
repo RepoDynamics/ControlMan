@@ -4,27 +4,28 @@ title: repo_paths
 description: Paths to files and directories in the repository
 
 type: object
+default: {}
+additionalProperties: false
 properties:
-
   dir:
     type: object
     default: {}
     additionalProperties: false
     properties:
-
       meta:
         type: string
         default: .meta
-
       source:
         type: string
         default: src
-
       local:
         type: string
         default: .local
-
       tests:
         type: string
         default: tests
-    required: [ meta, source, local, tests ]
+      website:
+        type: string
+        default: docs/website
+    required: [ meta, source, local, tests, website ]
+required: [ dir ]
