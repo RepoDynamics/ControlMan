@@ -39,6 +39,14 @@ class PackageFileGenerator:
     def generate(self):
         return self.requirements() + self.init_docstring() + self.pyproject() + self._package_dir()
 
+    def typing_marker(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.package_typing_marker(package_name=self._meta["package"]["name"])
+        text = (
+            "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
+            if self._meta["package"].get("typed") else ""
+        )
+        return [(info, text)]
+
     def requirements(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Generate File Content: requirements.txt")
         info = self._out_db.package_requirements
@@ -122,6 +130,11 @@ class PackageFileGenerator:
             # Replace the existing docstring with the new one
             text = re.sub(pattern, rf'\1{docstring}', file_content)
         info = self._out_db.package_init(self._meta["package"]["name"])
+        return [(info, text)]
+
+    def manifest(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.package_manifest
+        text = "\n".join(self._meta["package"].get("manifest", []))
         return [(info, text)]
 
     def pyproject(self) -> list[tuple[OutputFile, str]]:
