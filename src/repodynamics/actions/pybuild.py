@@ -34,13 +34,9 @@ def publish(
         "PyPI": "https://pypi.org/project",
         "TestPyPI": "https://test.pypi.org/project",
     }
-    upload_url = {
-        "PyPI": "https://upload.pypi.org/legacy/",
-        "TestPyPI": "https://test.pypi.org/legacy/",
-    }
+
     outputs = {
         "download_url": f"{download_url[platform]}/{package_name}/{package_version}",
-        "upload_url": upload_url[platform],
     }
 
     dists = "\n".join([path.name for path in list(Path(path_dist).glob("*.*"))])
