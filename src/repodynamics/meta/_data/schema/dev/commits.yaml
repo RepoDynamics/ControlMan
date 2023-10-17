@@ -11,10 +11,43 @@ properties:
     default: {}
     additionalProperties: false
     properties:
+
       primary:
         description: Primary commit types
         type: object
         default: {}
+        properties:
+
+          website:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: web
+              description:
+                type: string
+                default: Change the website content, design or backend.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+              announcement:
+                type: object
+                default: {}
+                additionalProperties: false
+                properties:
+                  scope:
+                    type: string
+                    default: ""
+                  changelog_id:
+                    type: string
+                    default: ""
+                  changelog_section_id:
+                    type: string
+                    default: ""
+                required: [ scope, changelog_id, changelog_section_id ]
+            required: [ type, description, sub_types, announcement ]
+
         additionalProperties:
           type: object
           additionalProperties: false
@@ -24,46 +57,14 @@ properties:
             description:
               type: string
             sub_types:
-              type: object
-              properties:
-                any:
-                  type: array
-                  items:
-                    type: string
-                  minItems: 1
-                  uniqueItems: true
-                all:
-                  type: array
-                  items:
-                      type: string
-                  minItems: 1
-                  uniqueItems: true
-                include:
-                  type: array
-                  items:
-                      type: string
-                  minItems: 1
-                  uniqueItems: true
-                exclude:
-                  type: array
-                  items:
-                      type: string
-                  minItems: 1
-                  uniqueItems: true
-              allOf:
-                - anyOf:
-                    - required: [ any ]
-                    - required: [ all ]
-                - not:
-                    anyOf:
-                      - required: [ include, exclude ]
+              $ref: '#/definitions/sub_types'
           required: [ type, description, sub_types ]
         required:
-          - package_release_major
-          - package_release_minor
-          - package_release_patch
-          - package_release_post
-          - website_deploy
+          - package_major
+          - package_minor
+          - package_patch
+          - package_post
+          - website
 
       secondary:
         description: Secondary commit types
@@ -98,3 +99,39 @@ properties:
             default: auto-refactor
         required: [ meta-update, revert, auto-refactor ]
     required: [ primary, secondary, action ]
+
+
+definitions:
+  type: object
+  properties:
+    any:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      uniqueItems: true
+    all:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      uniqueItems: true
+    include:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      uniqueItems: true
+    exclude:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      uniqueItems: true
+  allOf:
+    - anyOf:
+        - required: [ any ]
+        - required: [ all ]
+    - not:
+        anyOf:
+          - required: [ include, exclude ]
