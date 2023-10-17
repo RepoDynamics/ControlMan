@@ -2,9 +2,11 @@ from pathlib import Path
 import json
 from typing import Literal, Optional
 import re
+import datetime
 
 from markitup import html, md
 import pylinks
+from ruamel.yaml import YAML
 
 import repodynamics as rd
 from repodynamics.logger import Logger
@@ -12,6 +14,116 @@ from repodynamics.git import Git
 from repodynamics.meta.meta import Meta
 from repodynamics import hooks, _util
 import repodynamics.commits
+from repodynamics.versioning import PEP440SemVer
+
+
+class ChangelogManager:
+    def __init__(
+        self,
+        changelog_metadata: dict,
+        ver_dist: str,
+        commit_type: str,
+        commit_title: str,
+        parent_commit_hash: str,
+        parent_commit_url: str,
+        logger: Logger = None
+    ):
+        self.meta = changelog_metadata
+        self.vars = {
+            "ver_dist": ver_dist,
+            "date": datetime.date.today().strftime("%Y.%m.%d"),
+            "commit_type": commit_type,
+            "commit_title": commit_title,
+            "parent_commit_hash": parent_commit_hash,
+            "parent_commit_url": parent_commit_url,
+        }
+        self.logger = logger or Logger("github")
+        self.changes = {}
+        return
+
+    def add_change(self, changelog_id: str, section_id: str, change_title: str, change_details: str):
+        if changelog_id not in self.meta:
+            self.logger.error(f"Invalid changelog ID: {changelog_id}")
+        changelog_dict = self.changes.setdefault(changelog_id, {})
+        if not isinstance(changelog_dict, dict):
+            self.logger.error(f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes.")
+        for section_idx, section in enumerate(self.meta[changelog_id]["sections"]):
+            if section["id"] == section_id:
+                section_dict = changelog_dict.setdefault(section_idx, {"title": section["title"], "changes": []})
+                section_dict["changes"].append({"title": change_title, "details": change_details})
+                break
+        else:
+            self.logger.error(f"Invalid section ID: {section_id}")
+        return
+
+    def add_entry(self, changelog_id: str, sections: str):
+        if changelog_id not in self.meta:
+            self.logger.error(f"Invalid changelog ID: {changelog_id}")
+        if changelog_id in self.changes:
+            self.logger.error(f"Changelog {changelog_id} is already updated with an entry; cannot add new entry.")
+        self.changes[changelog_id] = sections
+        return
+
+    def write_all_changelogs(self):
+        for changelog_id in self.changes:
+            self.write_changelog(changelog_id)
+        return
+
+    def write_changelog(self, changelog_id: str):
+        if changelog_id not in self.changes:
+            return
+        changelog = self.get_changelog(changelog_id)
+        with open(self.meta[changelog_id]["path"], "w") as f:
+            f.write(changelog)
+        return
+
+    def get_changelog(self, changelog_id: str) -> str:
+        if changelog_id not in self.changes:
+            return ""
+        path = Path(self.meta[changelog_id]["path"])
+        if not path.exists():
+            title = f"# {self.meta[changelog_id]['title']}"
+            intro = self.meta[changelog_id]["intro"].strip()
+            text_before = f"{title}\n\n{intro}"
+            text_after = ""
+        else:
+            with open(path) as f:
+                text = f.read()
+            parts = re.split(r'^## ', text, maxsplit=1, flags=re.MULTILINE)
+            if len(parts) == 2:
+                text_before, text_after = parts[0].strip(), f"## {parts[1].strip()}"
+            else:
+                text_before, text_after = text.strip(), ""
+        entry = self.get_entry(changelog_id).strip()
+        changelog = f"{text_before}\n\n{entry}\n\n{text_after}".strip() + "\n"
+        return changelog
+
+    def get_entry(self, changelog_id: str) -> str:
+        if changelog_id not in self.changes:
+            return ""
+        entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
+        entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
+        entry_sections = self.get_sections(changelog_id)
+        entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
+        return entry
+
+    def get_sections(self, changelog_id: str) -> str:
+        if changelog_id not in self.changes:
+            return ""
+        if isinstance(self.changes[changelog_id], str):
+            return self.changes[changelog_id]
+        changelog_dict = self.changes[changelog_id]
+        sorted_sections = [value for key, value in sorted(changelog_dict.items())]
+        sections_str = ""
+        for section in sorted_sections:
+            sections_str += f"### {section['title']}\n\n"
+            for change in section["changes"]:
+                sections_str += f"#### {change['title']}\n\n{change['details']}\n\n"
+        return sections_str.strip() + "\n"
+
+    @property
+    def open_changelogs(self) -> tuple[str]:
+        return tuple(self.changes.keys())
 
 
 class Init:
@@ -25,9 +137,11 @@ class Init:
         package_test: bool = False,
         website_build: bool = False,
         website_announcement: str = "",
-        website_announcement_message: str = "",
+        website_announcement_msg: str = "",
         logger: Logger | None = None
     ):
+        self._github_token = context.pop("token")
+        self._payload = context.pop("event")
         self._context = context
         self._admin_token = admin_token
 
@@ -37,12 +151,15 @@ class Init:
         self._package_test = package_test
         self._website_build = website_build
         self._website_announcement = website_announcement
-        self._website_announcement_message = website_announcement_message
+        self._website_announcement_msg = website_announcement_msg
 
         self.logger = logger or Logger("github")
         self.git: Git = Git(logger=self.logger)
-        self.api = pylinks.api.github(token=context["token"]).user(self.repo_owner).repo(self.repo_name)
-        self.meta = Meta(path_root=".", github_token=self.context["token"], logger=self.logger)
+        self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
+        self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
+
+        self.metadata = self.meta.read_metadata_output()
+        self.last_ver, self.dist_ver = self.get_latest_version()
 
         self.output = {
             "config": {
@@ -82,8 +199,6 @@ class Init:
             },
             "metadata_ci": {},
         }
-
-        self.metadata: dict = {}
         return
 
     @property
@@ -104,7 +219,7 @@ class Init:
         ----------
         - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
         """
-        return self.context["event"]
+        return self._payload
 
     @property
     def event_name(self) -> str:
@@ -129,6 +244,24 @@ class Init:
     @property
     def default_branch(self) -> str:
         return self.payload["repository"]["default_branch"]
+
+    @property
+    def hash_before(self) -> str:
+        """The SHA hash of the most recent commit on the branch before the event."""
+        if self.event_name == "push":
+            return self.payload["before"]
+        if self.event_name == "pull_request":
+            return self.payload["pull_request"]["base"]["sha"]
+        return self.git.commit_hash_normal()
+
+    @property
+    def hash_after(self) -> str:
+        """The SHA hash of the most recent commit on the branch after the event."""
+        if self.event_name == "push":
+            return self.payload["after"]
+        if self.event_name == "pull_request":
+            return self.payload["pull_request"]["head"]["sha"]
+        return self.git.commit_hash_normal()
 
     def run(self):
         event_handler = {
@@ -182,7 +315,6 @@ class Init:
         return None, None, None
 
     def event_schedule(self):
-        self.metadata = self.meta.read_metadata_output()
         cron = self.payload["schedule"]
         schedule_type = self.metadata["workflow"]["init"]["schedule"]
         if cron == schedule_type["sync"]:
@@ -197,16 +329,246 @@ class Init:
         return
 
     def event_schedule_sync(self):
+        announcement = self.action_website_announcement_check()
+        if announcement["status"] == "expired":
+            self.action_website_announcement_update(announcement="null")
+
         return
 
     def event_schedule_test(self):
         return
 
+    def event_workflow_dispatch(self):
+        if self._website_announcement:
+            self.action_website_announcement_update(announcement=self._website_announcement)
+        return
+
     def action_website_announcement_check(self):
+        name = "Website Announcement Expiry Check"
         path_announcement_file = Path(self.metadata["path"]["file"]["website_announcement"])
+        if not path_announcement_file.exists():
+            summary, section = self.get_action_summary(
+                name=name,
+                status="skip",
+                oneliner="🚫 Announcement file does not exist.",
+                details=html.ul(
+                    [
+                        f"❎ No changes were made.",
+                        f"🚫 The announcement file was not found at '{path_announcement_file}'"
+                    ]
+                )
+            )
+            return False, summary, section,
+        with open(path_announcement_file) as f:
+            current_announcement = f.read()
+        (
+            commit_date_relative,
+            commit_date_absolute,
+            commit_date_epoch,
+            commit_details
+        ) = (
+            self.git.log(
+                number=1,
+                simplify_by_decoration=False,
+                pretty=pretty,
+                date=date,
+                paths=str(path_announcement_file),
+            ) for pretty, date in (
+                ("format:%cd", "relative"),
+                ("format:%cd", None),
+                ("format:%cd", "unix"),
+                (None, None),
+            )
+        )
+        if not current_announcement:
+            last_commit_details_html = html.details(
+                content=md.code_block(commit_details),
+                summary="📝 Removal Commit Details",
+            )
+            summary, section = self.get_action_summary(
+                name=name,
+                status="skip",
+                oneliner="📭 No announcement to check.",
+                details=html.ul(
+                    [
+                        f"❎ No changes were made."
+                        f"📭 The announcement file at '{path_announcement_file}' is empty.\n",
+                        f"📅 The last announcement was removed {commit_date_relative} on {commit_date_absolute}.\n",
+                        last_commit_details_html,
+                    ]
+                )
+            )
+            return False, summary, section,
+
+        current_date_epoch = int(
+            _util.shell.run_command(["date", "-u", "+%s"], logger=self.logger)
+        )
+        elapsed_seconds = current_date_epoch - int(commit_date_epoch)
+        elapsed_days = elapsed_seconds / (24 * 60 * 60)
+        retention_days = self.metadata["web"]["announcement_retention_days"]
+        retention_seconds = retention_days * 24 * 60 * 60
+        remaining_seconds = retention_seconds - elapsed_seconds
+        remaining_days = retention_days - elapsed_days
+
+        if remaining_seconds > 0:
+            current_announcement_html = html.details(
+                content=md.code_block(current_announcement, "html"),
+                summary="📣 Current Announcement",
+            )
+            last_commit_details_html = html.details(
+                content=md.code_block(commit_details),
+                summary="📝 Current Announcement Commit Details",
+            )
+            summary, section = self.get_action_summary(
+                name=name,
+                status="skip",
+                oneliner=f"📬 Announcement is still valid for another {remaining_days:.2f} days.",
+                details=html.ul(
+                    [
+                        "❎ No changes were made.",
+                        "📬 Announcement is still valid.",
+                        f"⏳️ Elapsed Time: {elapsed_days:.2f} days ({elapsed_seconds} seconds)",
+                        f"⏳️ Retention Period: {retention_days} days ({retention_seconds} seconds)",
+                        f"⏳️ Remaining Time: {remaining_days:.2f} days ({remaining_seconds} seconds)",
+                        current_announcement_html,
+                        last_commit_details_html,
+                    ]
+                )
+            )
+            return False, summary, section,
+
+        with open(path_announcement_file, "w") as f:
+            f.write("")
+        removed_announcement_html = html.details(
+            content=md.code_block(current_announcement, "html"),
+            summary="📣 Removed Announcement",
+        )
+        last_commit_details_html = html.details(
+            content=md.code_block(commit_details),
+            summary="📝 Removed Announcement Commit Details",
+        )
+        summary, section = self.get_action_summary(
+            name=name,
+            status="pass",
+            oneliner="🗑 Announcement was expired and thus removed.",
+            details=html.ul(
+                [
+                    f"✅ The announcement was removed.",
+                    f"⌛ The announcement had expired {abs(remaining_days):.2f} days ({abs(remaining_seconds)} seconds) ago.",
+                    f"⏳️ Elapsed Time: {elapsed_days:.2f} days ({elapsed_seconds} seconds)",
+                    f"⏳️ Retention Period: {retention_days} days ({retention_seconds} seconds)",
+                    removed_announcement_html,
+                    last_commit_details_html,
+                ]
+            )
+        )
+        commit_title = "Remove expired announcement"
+        commit_body = (
+            f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
+            f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"
+            f"{current_announcement}"
+        )
+        changelog_id = self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_id"]
+        if changelog_id:
+            changelog_manager = ChangelogManager(
+                changelog_metadata=self.metadata["changelog"],
+                ver_dist=f"{self.last_ver}+{self.dist_ver}",
+                commit_type="website",
+                commit_title=commit_title,
+                parent_commit_hash=self.hash_after,
+                parent_commit_url=f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{self.hash_after}"
+            )
+            changelog_manager.add_change(
+                changelog_id=changelog_id,
+                section_id=self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_section_id"],
+                change_title=commit_title,
+                change_details=commit_body,
+            )
+            changelog_manager.write_all_changelogs()
 
 
+        return True, summary, section,
 
+    def action_website_announcement_update(self, announcement: str):
+        if announcement == "null":
+            announcement = ""
+        if announcement:
+            announcement = f"{announcement.strip()}\n"
+        with open(self.metadata["path"]["file"]["website_announcement"], "w") as f:
+            f.write(announcement)
+        return
+
+    def get_changed_files(self) -> list[str]:
+        filepaths = []
+        changes = self.git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
+        for change_type, changed_paths in changes.items():
+            if change_type in ["unknown", "broken"]:
+                self.logger.warning(
+                    f"Found {change_type} files",
+                    f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
+                    "These files will be ignored."
+                )
+                continue
+            if change_type.startswith("copied") and change_type.endswith("from"):
+                continue
+            filepaths.extend(changed_paths)
+        return filepaths
+
+    def get_latest_version(self):
+        tags_lists = self.git.get_tags()
+        if not tags_lists:
+            self.logger.error("No tags found in the repository.")
+        ver_tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
+        for tags_list in tags_lists:
+            ver_tags = []
+            for tag in tags_list:
+                if tag.startswith(ver_tag_prefix):
+                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
+            if ver_tags:
+                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
+                distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
+                return max_version, distance
+        self.logger.error(f"No tags found with prefix '{ver_tag_prefix}'.")
+        return
+
+    def assemble_summary(self, intro: str, oneliners: list[str], sections: list[str]):
+        github_context, event_payload = (
+            html.details(
+                content=md.code_block(
+                    YAML(typ=['rt', 'string']).dumps(dict(sorted(data.items())), add_final_eol=True),
+                    "yaml"
+                ),
+                summary=summary,
+            ) for data, summary in (
+                (self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload")
+            )
+        )
+        return html.ElementCollection(
+            [
+                html.h(1, "Workflow Report"),
+                intro,
+                html.ul([github_context, event_payload]),
+                html.h(2, "🏁 Summary"),
+                html.ul(oneliners),
+                *sections,
+            ]
+        )
+
+    def get_action_summary(
+        self,
+        name: str,
+        status: Literal['pass', 'fail', 'skip'],
+        oneliner: str,
+        details: str | html.Element | html.ElementCollection
+    ):
+        emoji = {
+            "pass": "✅",
+            "fail": "❌",
+            "skip": "❎",
+        }
+        summary = f"{emoji[status]} <b>{name}</b>: {oneliner}"
+        section = f"## {name}\n\n{details}\n\n"
+        return summary, section
 
 
 def init(
@@ -217,7 +579,7 @@ def init(
     package_test: bool = False,
     website_build: bool = False,
     website_announcement: str = "",
-    website_announcement_message: str = "",
+    website_announcement_msg: str = "",
     logger=None
 ):
     return Init(
@@ -228,7 +590,7 @@ def init(
         package_test=package_test,
         website_build=website_build,
         website_announcement=website_announcement,
-        website_announcement_message=website_announcement_message,
+        website_announcement_msg=website_announcement_msg,
         logger=logger,
     ).run()
 
@@ -242,17 +604,10 @@ def pull_post_process(pull):
 class EventHandler:
 
     def __init__(self, context: dict):
-        self._context: dict = context
-        self._logger: Logger = Logger("github")
-
         self._latest_version = self._git.describe()
-
         self._output_meta: dict = {}
         self._output_hooks: dict = {}
         return
-
-
-
 
     def _update_meta(self, action: Literal['fail', 'amend', 'commit']):
         self._output_meta = meta.update(
@@ -327,40 +682,6 @@ class EventHandler:
         return summary
 
 
-class ModifyingEvent(EventHandler):
-    def __init__(self, context: dict):
-        super().__init__(context)
-        self._changes = self._process_changes(self.context["changes"])
-        self._output = {}
-        return
-
-    @property
-    def hash_before(self) -> str:
-        """The SHA hash of the most recent commit on the branch before the event."""
-        raise NotImplementedError
-
-    @property
-    def hash_after(self) -> str:
-        """The SHA hash of the most recent commit on the branch after the event."""
-        raise NotImplementedError
-
-    def _get_changed_files(self) -> list[str]:
-        filepaths = []
-        changes = self._git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
-        for change_type, changed_paths in changes.items():
-            if change_type in ["unknown", "broken"]:
-                self._logger.warning(
-                    f"Found {change_type} files",
-                    f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
-                    "These files will be ignored."
-                )
-                continue
-            if change_type.startswith("copied") and change_type.endswith("from"):
-                continue
-            filepaths.extend(changed_paths)
-        return filepaths
-
-
 class Push(EventHandler):
     """
     References
@@ -376,16 +697,6 @@ class Push(EventHandler):
         return
 
     @property
-    def hash_before(self) -> str:
-        """The SHA hash of the most recent commit on the branch before the push."""
-        return self.payload["before"]
-
-    @property
-    def hash_after(self) -> str:
-        """The SHA hash of the most recent commit on the branch after the push."""
-        return self.payload["after"]
-
-    @property
     def changed_files(self) -> list[str]:
         """List of changed files."""
         return self._changes
@@ -397,7 +708,6 @@ class Push(EventHandler):
 
     def _get_tags(self):
         return
-
 
 
 class PushRelease(Push):
@@ -618,8 +928,6 @@ class Pull(EventHandler):
         return
 
     def run(self):
-        hash_before = self.payload['pull_request']['base']['sha']
-        hash_after = self.payload['pull_request']['head']['sha']
         self._update_meta(action="report")
         self._update_hooks(action="report", ref_range=(hash_before, hash_after))
         return
