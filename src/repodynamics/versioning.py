@@ -1,128 +1,138 @@
 from typing import Literal, Optional
-import re
-from repodynamics import git
+from packaging.version import Version
 
 
 class PEP440SemVer:
 
-    def __init__(
-        self,
-        major: int,
-        minor: int,
-        patch: int,
-        pre_phase: Optional[Literal['a', 'b', 'rc']] = None,
-        pre_num: Optional[int] = None,
-        post: Optional[int] = None,
-        dev: Optional[int] = None,
-        epoch: Optional[int] = None,
-    ):
-        def check_int(name, val):
-            if not isinstance(val, int):
-                raise TypeError(f"{name} must be an integer")
-            if val < 0:
-                raise ValueError(f"{name} must be a positive integer")
-            return
-
-        for name, val in [("major", major), ("minor", minor), ("patch", patch)]:
-            check_int(name=name, val=val)
-
-        for name, val in [("post", post), ("dev", dev), ("epoch", epoch)]:
-            if val is not None:
-                check_int(name=name, val=val)
-
-        if pre_phase:
-            if pre_phase not in ('a', 'b', 'rc'):
-                raise ValueError("pre_phase must be one of 'a', 'b', or 'rc'")
-            if pre_num is None:
-                raise ValueError("pre_num must be specified if pre_phase is specified")
-            check_int(name="pre_num", val=pre_num)
-        elif pre_num is not None:
-            raise ValueError("pre_num must not be specified if pre_phase is not specified")
-
-        self._major = major
-        self._minor = minor
-        self._patch = patch
-        self._pre_phase = pre_phase
-        self._pre_num = pre_num
-        self._post = post
-        self._dev = dev
-        self._epoch = epoch
+    def __init__(self, version: str):
+        self._version_input = version
+        self._version = Version(version)
+        if len(self._version.release) != 3:
+            raise ValueError(f"Invalid version: {version}")
+        if self._version.local:
+            raise ValueError(f"Invalid version: {version}")
         return
 
     @property
+    def base(self) -> str:
+        """The base version string."""
+        return self._version.base_version
+
+    @property
+    def epoch(self) -> int:
+        """The epoch of the version. If unspecified, this is 0."""
+        return self._version.epoch
+
+    @property
+    def release(self) -> tuple[int, int, int]:
+        """The release segment of the version."""
+        return self._version.release
+
+    @property
+    def pre(self) -> tuple[Literal['a', 'b', 'rc'], int] | None:
+        """The pre-release segment of the version."""
+        return self._version.pre
+
+    @property
+    def post(self) -> int | None:
+        """The post segment of the version."""
+        return self._version.post
+
+    @property
+    def dev(self) -> int | None:
+        """The dev segment of the version."""
+        return self._version.dev
+
+    @property
+    def major(self) -> int:
+        """The major number of the release segment."""
+        return self.release[0]
+
+    @property
+    def minor(self) -> int:
+        """The minor number of the release segment."""
+        return self.release[1]
+
+    @property
+    def patch(self) -> int:
+        """The patch number of the release segment."""
+        return self.release[2]
+
+    @property
+    def input(self) -> str:
+        """The input string used to create this object."""
+        return self._version_input
+
+    @property
     def release_type(self) -> Literal['final', 'pre', 'post', 'dev']:
-        if self._dev is not None:
+        if self.dev is not None:
             return 'dev'
-        if self._post is not None:
+        if self.post is not None:
             return 'post'
-        if self._pre_phase:
+        if self.pre:
             return 'pre'
         return 'final'
 
     def __str__(self):
-        version = f"{self._major}.{self._minor}.{self._patch}"
-        if self._pre_phase:
-            version += f"{self._pre_phase}{self._pre_num}"
-        if self._post:
-            version += f".post{self._post}"
-        if self._dev:
-            version += f".dev{self._dev}"
-        if self._epoch:
-            version = f"{self._epoch}!{version}"
-        return version
+        return str(self._version)
 
     def __repr__(self):
-        return (
-            f"PEP440SemVer({self._major}, {self._minor}, {self._patch}, "
-            f"{self._pre_phase}, {self._pre_num}, {self._post}, {self._dev}, {self._epoch})"
-        )
+        return f'PEP440SemVer("{self.input}")'
 
+    def __hash__(self):
+        return hash(self._version)
 
-def from_git_tag(prefix: str = "vers/") -> PEP440SemVer:
-    tag = git.Git().describe(
-        abbrev=0,
-        match=f"{prefix}[0-9]*.[0-9]*.[0-9]*"
-    )
-    if not tag:
-        raise ValueError(f"No git tag found with prefix '{prefix}'")
-    version = tag.removeprefix(prefix)
-    return from_string(version=version)
+    def __lt__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__lt__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__lt__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__lt__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
+    def __le__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__le__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__le__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__le__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-def from_string(version: str) -> PEP440SemVer:
-    components = _parse_pep440_version(version=version)
-    if not components:
-        raise ValueError(f"Invalid PEP440 version string: {version}")
-    release = components.pop("release")
-    if len(release) != 3:
-        raise ValueError(f"Invalid PEP440 version string: {version}")
-    return PEP440SemVer(*release, **components)
+    def __eq__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__eq__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__eq__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__eq__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
+    def __ne__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__ne__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__ne__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__ne__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-def _parse_pep440_version(version: str) -> dict:
-    pattern = re.compile(r'''
-    ^
-    (?:(?P<epoch>0|[1-9]\d*)!)?            # epoch segment (optional)
-    (?P<release>0|[1-9]\d*)                # release segment (required)
-    (?P<rest>(?:\.(0|[1-9]\d*))*)?         # additional release segment values (optional) 
-    (?:                                    # pre-release segment (optional)
-        (?P<pre_phase>a|b|rc)              # pre-release phase
-        (?P<pre_num>0|[1-9]\d*)            # pre-release number
-    )? 
-    (?:\.post(?P<post>0|[1-9]\d*))?        # post-release segment (optional)
-    (?:\.dev(?P<dev>0|[1-9]\d*))?          # development release segment (optional)
-    $
-    ''', re.VERBOSE)
-    match = pattern.match(version)
-    if not match:
-        return
-    components = match.groupdict()
-    for key in ["epoch", "release", "pre_num", "post", "dev"]:
-        components[key] = int(components[key]) if components[key] else None
-    components["release"] = [components["release"]]
-    release_rest = components.pop("rest")
-    if release_rest:
-        components["release"].extend(
-            list(map(int, release_rest.removeprefix(".").split(".")))
-        )
-    return components
+    def __gt__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__gt__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__gt__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__gt__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
+
+    def __ge__(self, other: str | Version | 'PEP440SemVer'):
+        if isinstance(other, str):
+            return self._version.__ge__(Version(other))
+        if isinstance(other, Version):
+            return self._version.__ge__(other)
+        if isinstance(other, PEP440SemVer):
+            return self._version.__ge__(other._version)
+        raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
+
