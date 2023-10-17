@@ -71,7 +71,8 @@ class Git:
             if not message:
                 commit_cmd.append("--no-edit")
         for msg_line in message.splitlines():
-            commit_cmd.extend(["-m", msg_line])
+            if msg_line:
+                commit_cmd.extend(["-m", msg_line])
 
         if stage != 'none':
             flag = "-A" if stage == 'all' else "-u"
@@ -220,20 +221,29 @@ class Git:
 
     def log(
         self,
+        number: int | None = None,
         simplify_by_decoration: bool = True,
         tags: bool | str = True,
         pretty: str | None = "format:%D",
+        date: str | None = None,
         revision_range: str | None = None,
+        paths: str | list[str] | None = None
     ):
         cmd = ["git", "log"]
+        if number:
+            cmd.append(f"-{number}")
         if simplify_by_decoration:
             cmd.append("--simplify-by-decoration")
         if tags:
             cmd.append(f"--tags={tags}" if isinstance(tags, str) else "--tags")
         if pretty:
             cmd.append(f"--pretty={pretty}")
+        if date:
+            cmd.append(f"--date={date}")
         if revision_range:
             cmd.append(revision_range)
+        if paths:
+            cmd.extend(["--"] + (paths if isinstance(paths, list) else [paths]))
         return self._run(cmd)
 
     def set_user(
@@ -329,6 +339,19 @@ class Git:
             commits.append(commit_info)
 
         return commits
+
+    def get_distance(self, ref_start: str, ref_end: str = "HEAD") -> int:
+        """
+        Get the distance between two commits.
+
+        Parameters:
+        - ref_start (str): The starting commit hash.
+        - ref_end (str): The ending commit hash.
+
+        Returns:
+        - int: The distance between the two commits.
+        """
+        return int(self._run(["git", "rev-list", "--count", f"{ref_start}..{ref_end}"]))
 
     def get_tags(self) -> list[list[str]]:
         """Get a list of tags reachable from the current commit
