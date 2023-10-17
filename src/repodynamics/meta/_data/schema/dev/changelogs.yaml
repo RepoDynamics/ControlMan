@@ -106,6 +106,20 @@ definitions:
         type: string
         default: ""
 
+      entry:
+        type: object
+        additionalProperties: false
+        properties:
+          title:
+            type: string
+            default: "[{ver_dist}] – {date}"
+          intro:
+            type: string
+            default: |
+              - Commit Type: {commit_type}
+              - Commit Title: {commit_title}
+              - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+
       sections:
         type: array
         minItems: 1
