@@ -1,8 +1,9 @@
 from pathlib import Path
 import json
-from typing import Literal, Optional
+from typing import Literal, Optional, NamedTuple
 import re
 import datetime
+from enum import Enum
 
 from markitup import html, md
 import pylinks
@@ -13,9 +14,16 @@ from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.meta import Meta
 from repodynamics import hooks, _util
-from repodynamics.commits import CommitParser, Commit
+from repodynamics.commits import CommitParser, CommitMsg
 from repodynamics.versioning import PEP440SemVer
 
+
+class PrimaryAction(Enum):
+    MAJOR_RE
+
+
+class Commit(NamedTuple):
+    type
 
 class ChangelogManager:
     def __init__(
@@ -158,7 +166,7 @@ class Init:
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
         self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
 
-        self.metadata = self.meta.read_metadata_output()
+        self.metadata, self.metadata_ci = self.meta.read_metadata_output()
         self.last_ver, self.dist_ver = self.get_latest_version()
 
         self.output = {
@@ -197,7 +205,7 @@ class Init:
                     "make_latest": "legacy",
                 }
             },
-            "metadata_ci": {},
+            "metadata_ci": self.metadata_ci,
         }
         return
 
@@ -227,6 +235,14 @@ class Init:
         return self.context["event_name"]
 
     @property
+    def ref(self) -> str:
+        """
+        The full ref name of the branch or tag that triggered the event,
+        e.g. 'refs/heads/main', 'refs/tags/v1.0' etc.
+        """
+        return self.context["ref"]
+
+    @property
     def ref_name(self) -> str:
         """The short ref name of the branch or tag that triggered the event, e.g. 'main', 'dev/1' etc."""
         return self.context["ref_name"]
@@ -244,6 +260,10 @@ class Init:
     @property
     def default_branch(self) -> str:
         return self.payload["repository"]["default_branch"]
+
+    @property
+    def ref_is_main(self) -> bool:
+        return self.ref == f"refs/heads/{self.default_branch}"
 
     @property
     def hash_before(self) -> str:
@@ -282,9 +302,9 @@ class Init:
     def event_push(self):
 
         def ref_type() -> Literal["tag", "branch"]:
-            if self.context["ref"].startswith("refs/tags/"):
+            if self.ref.startswith("refs/tags/"):
                 return "tag"
-            if self.context["ref"].startswith("refs/heads/"):
+            if self.ref.startswith("refs/heads/"):
                 return "branch"
             self.logger.error(f"Invalid ref: {self.context['ref']}")
 
@@ -305,13 +325,40 @@ class Init:
         }
         return event_handler[(ref_type(), change_type())]()
 
+    def event_push_tag_created(self):
+        return None, None, None
+
+    def event_push_tag_deleted(self):
+        return None, None, None
+
+    def event_push_tag_modified(self):
+        return None, None, None
+
     def event_push_branch_created(self):
-        if self.ref_name == self.default_branch:
+        if self.ref_is_main:
             if not self.last_ver:
                 return self.event_repository_created()
+            return None, None, None
+        return None, None, None
+
+    def event_push_branch_deleted(self):
+        return None, None, None
+
+    def event_push_branch_modified(self):
+        if self.ref_is_main:
+            return self.event_push_branch_modified_main()
+        return None, None, None
+
+    def event_push_branch_modified_main(self):
+        self.metadata, self.metadata_ci = self.meta.read_metadata_full()
+
 
     def event_repository_created(self):
-        Path(".path.json").unlink()
+        for path_dynamic_file in self.meta.all_dynamic_paths:
+            path_dynamic_file.unlink(missing_ok=True)
+        for changelog_data in self.metadata["changelog"].values():
+            path_changelog_file = Path(changelog_data["path"])
+            path_changelog_file.unlink(missing_ok=True)
         self.git.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True)
         return None, None, None
 
@@ -587,7 +634,7 @@ class Init:
                 change_details=change_body,
             )
             changelog_manager.write_all_changelogs()
-        commit = Commit(
+        commit = CommitMsg(
             typ=self.metadata["commit"]["primary"]["website"]["type"],
             title=commit_title,
             body=commit_body,
@@ -612,6 +659,11 @@ class Init:
                 continue
             filepaths.extend(changed_paths)
         return filepaths
+
+    def get_commits(self):
+        commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        for commit in commits:
+            conventional_commit = rd.commits.parse(msg=commit["message"], types=types, logger=self._logger)
 
     def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
         tags_lists = self.git.get_tags()
@@ -798,11 +850,6 @@ class Push(EventHandler):
     def changed_files(self) -> list[str]:
         """List of changed files."""
         return self._changes
-
-    def _get_commits(self) -> list[dict]:
-        commits = self._git.get_commits(f"{self.hash_before}..{self.hash_after}")
-        for commit in commits:
-            conventional_commit = rd.commits.parse(msg=commit["message"], types=types, logger=self._logger)
 
     def _get_tags(self):
         return
