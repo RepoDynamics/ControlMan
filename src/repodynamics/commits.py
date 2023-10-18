@@ -4,7 +4,7 @@ import re
 from repodynamics.logger import Logger
 
 
-class Commit:
+class CommitMsg:
     def __init__(
         self,
         typ: str,
@@ -78,7 +78,7 @@ class CommitParser:
         self._pattern = re.compile(pattern, flags=re.VERBOSE | re.DOTALL)
         return
 
-    def parse(self, msg: str) -> Commit | None:
+    def parse(self, msg: str) -> CommitMsg | None:
         match = self._pattern.match(msg)
         if not match:
             return
@@ -98,4 +98,4 @@ class CommitParser:
                     # Otherwise, the footer is invalid
                     self._logger.error(f"Invalid footer: {footer}")
             commit_parts["footer"] = parsed_footers
-        return Commit(**commit_parts)
+        return CommitMsg(**commit_parts)
