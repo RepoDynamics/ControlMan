@@ -13,7 +13,7 @@ from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.meta import Meta
 from repodynamics import hooks, _util
-import repodynamics.commits
+from repodynamics.commits import CommitParser, Commit
 from repodynamics.versioning import PEP440SemVer
 
 
@@ -286,7 +286,7 @@ class Init:
                 return "tag"
             if self.context["ref"].startswith("refs/heads/"):
                 return "branch"
-            self._logger.error(f"Invalid ref: {self.context['ref']}")
+            self.logger.error(f"Invalid ref: {self.context['ref']}")
 
         def change_type() -> Literal["created", "deleted", "modified"]:
             if self.payload["created"]:
@@ -307,7 +307,8 @@ class Init:
 
     def event_push_branch_created(self):
         if self.ref_name == self.default_branch:
-            return self.event_repository_created()
+            if not self.last_ver:
+                return self.event_repository_created()
 
     def event_repository_created(self):
         Path(".path.json").unlink()
@@ -358,7 +359,7 @@ class Init:
                     ]
                 )
             )
-            return False, summary, section,
+            return summary, section
         with open(path_announcement_file) as f:
             current_announcement = f.read()
         (
@@ -398,7 +399,7 @@ class Init:
                     ]
                 )
             )
-            return False, summary, section,
+            return summary, section
 
         current_date_epoch = int(
             _util.shell.run_command(["date", "-u", "+%s"], logger=self.logger)
@@ -435,10 +436,22 @@ class Init:
                     ]
                 )
             )
-            return False, summary, section,
+            return summary, section
 
         with open(path_announcement_file, "w") as f:
             f.write("")
+        commit_title = "Remove expired announcement"
+        commit_body = (
+            f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
+            f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"
+            f"{current_announcement}"
+        )
+        commit_hash, commit_link = self.commit_website_announcement(
+            commit_title=commit_title,
+            commit_body=commit_body,
+            change_title=commit_title,
+            change_body=commit_body,
+        )
         removed_announcement_html = html.details(
             content=md.code_block(current_announcement, "html"),
             summary="📣 Removed Announcement",
@@ -453,7 +466,7 @@ class Init:
             oneliner="🗑 Announcement was expired and thus removed.",
             details=html.ul(
                 [
-                    f"✅ The announcement was removed.",
+                    f"✅ The announcement was removed (commit {html.a(commit_link, commit_hash)}).",
                     f"⌛ The announcement had expired {abs(remaining_days):.2f} days ({abs(remaining_seconds)} seconds) ago.",
                     f"⏳️ Elapsed Time: {elapsed_days:.2f} days ({elapsed_seconds} seconds)",
                     f"⏳️ Retention Period: {retention_days} days ({retention_seconds} seconds)",
@@ -462,18 +475,107 @@ class Init:
                 ]
             )
         )
-        commit_title = "Remove expired announcement"
-        commit_body = (
-            f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
-            f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"
-            f"{current_announcement}"
+        return summary, section
+
+    def action_website_announcement_update(self):
+        name = "Website Announcement Manual Update"
+        announcement = self._website_announcement
+        old_announcement = self.read_website_announcement().strip()
+        old_announcement_details = self.git.log(
+            number=1,
+            simplify_by_decoration=False,
+            pretty=None,
+            date=None,
+            paths=self.metadata["path"]["file"]["website_announcement"],
         )
+        if announcement == "null":
+            if not old_announcement:
+                summary, section = self.get_action_summary(
+                    name=name,
+                    status="skip",
+                    oneliner="🚫 No announcement to remove.",
+                    details=html.ul(
+                        [
+                            f"❎ No changes were made.",
+                            f"🚫 The 'null' string was passed to delete the current announcement, "
+                            f"but the announcement file is already empty."
+                        ]
+                    )
+                )
+                return summary, section
+
+
+            announcement = ""
+
+        if announcement.strip() == old_announcement.strip():
+            details_list = ["❎ No changes were made."]
+            if not announcement:
+                oneliner = "🚫 No announcement to remove."
+                details_list.append(
+                    "🚫 The announcement file is already empty."
+                )
+            else:
+                details_list.append("🚫 The announcement is already up-to-date.")
+            summary, section = self.get_action_summary(
+                name=name,
+                status="fail",
+                oneliner="🚫 The new announcement is the same as the existing announcement.",
+                details=html.ul(
+
+                )
+            )
+            return summary, section
+        self.write_website_announcement(announcement)
+        commit_title = "Manually update announcement"
+        commit_hash, commit_url = self.commit_website_announcement(
+            commit_title=commit_title,
+            commit_body=self._website_announcement_msg,
+            change_title=commit_title,
+            change_body=self._website_announcement_msg,
+        )
+
+        new_announcement_html = html.details(
+            content=md.code_block(announcement, "html"),
+            summary="📣 New Announcement",
+        )
+
+        summary, section = self.get_action_summary(
+            name="Website Announcement Manual Update",
+            status="pass",
+            oneliner="📝 Announcement was manually updated.",
+            details=html.ul(
+                [
+                    f"✅ The announcement was manually updated (commit {html.a(commit_url, commit_hash)}).",
+                    f"📝 New Announcement:\n{announcement}",
+                ]
+            )
+        )
+        return summary, section
+
+    def write_website_announcement(self, announcement: str):
+        if announcement:
+            announcement = f"{announcement.strip()}\n"
+        with open(self.metadata["path"]["file"]["website_announcement"], "w") as f:
+            f.write(announcement)
+        return
+
+    def read_website_announcement(self) -> str:
+        with open(self.metadata["path"]["file"]["website_announcement"]) as f:
+            return f.read()
+
+    def commit_website_announcement(
+        self,
+        commit_title: str,
+        commit_body: str,
+        change_title: str,
+        change_body: str,
+    ):
         changelog_id = self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_id"]
         if changelog_id:
             changelog_manager = ChangelogManager(
                 changelog_metadata=self.metadata["changelog"],
                 ver_dist=f"{self.last_ver}+{self.dist_ver}",
-                commit_type="website",
+                commit_type=self.metadata["commit"]["primary"]["website"]["type"],
                 commit_title=commit_title,
                 parent_commit_hash=self.hash_after,
                 parent_commit_url=f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{self.hash_after}"
@@ -481,22 +583,19 @@ class Init:
             changelog_manager.add_change(
                 changelog_id=changelog_id,
                 section_id=self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_section_id"],
-                change_title=commit_title,
-                change_details=commit_body,
+                change_title=change_title,
+                change_details=change_body,
             )
             changelog_manager.write_all_changelogs()
-
-
-        return True, summary, section,
-
-    def action_website_announcement_update(self, announcement: str):
-        if announcement == "null":
-            announcement = ""
-        if announcement:
-            announcement = f"{announcement.strip()}\n"
-        with open(self.metadata["path"]["file"]["website_announcement"], "w") as f:
-            f.write(announcement)
-        return
+        commit = Commit(
+            typ=self.metadata["commit"]["primary"]["website"]["type"],
+            title=commit_title,
+            body=commit_body,
+            scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"]
+        )
+        commit_hash = self.git.commit(message=str(commit), stage='all')
+        commit_link = f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_hash}"
+        return commit_hash, commit_link
 
     def get_changed_files(self) -> list[str]:
         filepaths = []
@@ -514,10 +613,10 @@ class Init:
             filepaths.extend(changed_paths)
         return filepaths
 
-    def get_latest_version(self):
+    def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
         tags_lists = self.git.get_tags()
         if not tags_lists:
-            self.logger.error("No tags found in the repository.")
+            return None, None
         ver_tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
         for tags_list in tags_lists:
             ver_tags = []
@@ -528,8 +627,7 @@ class Init:
                 max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
                 distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
                 return max_version, distance
-        self.logger.error(f"No tags found with prefix '{ver_tag_prefix}'.")
-        return
+        self.logger.error(f"No version tags found with prefix '{ver_tag_prefix}'.")
 
     def assemble_summary(self, intro: str, oneliners: list[str], sections: list[str]):
         github_context, event_payload = (
