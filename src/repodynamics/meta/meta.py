@@ -7,7 +7,7 @@ from ruamel.yaml import YAML
 from repodynamics.logger import Logger
 from repodynamics.meta.metadata import MetadataGenerator
 from repodynamics.meta.reader import MetaReader
-from repodynamics.meta.writer import MetaWriter, OutputPaths, OutputFile, FileCategory
+from repodynamics.meta.writer import MetaWriter, OutputPaths, OutputFile, FileCategory, Diff
 from repodynamics import _util
 
 from repodynamics.meta.files.config import ConfigFileGenerator
@@ -36,22 +36,30 @@ class Meta:
         self._metadata_ci: dict = {}
         self._generated_files: list[tuple[OutputFile, str]] = []
         self._writer: MetaWriter | None = None
-        self._results: list[tuple[OutputFile, str]] = []
+        self._results: list[tuple[OutputFile, Diff]] = []
         self._changes: dict[FileCategory, dict[str, bool]] = {}
         self._summary: str = ""
         return
 
-    def read_metadata_output(self) -> dict:
-        path_metadata = self._out_db.metadata.path
-        metadata = _util.dict.read(path_metadata, logger=self._logger, raise_empty=False)
-        if metadata:
-            self._logger.success(
-                f"Loaded metadata from {path_metadata}.",
-                json.dumps(metadata, indent=3)
-            )
-        else:
-            self._logger.attention(f"No metadata found in {path_metadata}.")
-        return metadata
+    @property
+    def all_dynamic_paths(self) -> list[Path]:
+        return self._out_db.all_paths_to_dynamic_files
+
+    def read_metadata_output(self) -> tuple[dict, dict]:
+        out = []
+        for filename, path in (
+            ("main metadata, ", self._out_db.metadata.path), ("CI metadata, ", self._out_db.metadata_ci.path)
+        ):
+            metadata = _util.dict.read(path, logger=self._logger, raise_empty=False)
+            out.append(metadata)
+            if metadata:
+                self._logger.success(
+                    f"Loaded {filename} file from {path}.",
+                    json.dumps(metadata, indent=3)
+                )
+            else:
+                self._logger.attention(f"No {filename} file found in {path}.")
+        return tuple(out)
 
     def read_metadata_raw(self):
         if self._metadata_raw:
@@ -118,6 +126,12 @@ class Meta:
         self._writer = MetaWriter(path_root=self._path_root, logger=self._logger)
         self._results, self._changes, self._summary = self._writer.compare(updates)
         return self._results, self._changes, self._summary
+
+    def apply_changes(self):
+        if not self._results:
+            self.compare_files()
+        self._writer.apply(self._results)
+        return
 
     def _generate_metadata_ci(self) -> dict:
         out = {}
