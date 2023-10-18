@@ -12,11 +12,81 @@ properties:
     additionalProperties: false
     properties:
 
-      primary:
-        description: Primary commit types
+      primary_action:
+        description: Primary action commit types
         type: object
         default: {}
+        additionalProperties: false
         properties:
+
+          package_major:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: major
+              description:
+                type: string
+                default: |
+                  Remove features/components from - or introduce breaking changes to - the public API, 
+                  and publish a new major release of the package.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+            required: [ type, description ]
+
+          package_minor:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: minor
+              description:
+                type: string
+                default: |
+                  Add features/components to - or enhance/deprecate existing features in - the public API, 
+                  and publish a new minor release of the package.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+            required: [ type, description ]
+
+          package_patch:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: patch
+              description:
+                type: string
+                default: |
+                  Fix bugs or security issues in the public API, 
+                  or improve the performance of existing functionalities, 
+                  and publish a new patch release of the package.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+            required: [ type, description ]
+
+          package_post:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: post
+              description:
+                type: string
+                default: |
+                  Fix documentation or release notes in a previous package release, 
+                  and publish a new post release.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+            required: [ type, description ]
 
           website:
             type: object
@@ -46,31 +116,93 @@ properties:
                     type: string
                     default: ""
                 required: [ scope, changelog_id, changelog_section_id ]
-            required: [ type, description, sub_types, announcement ]
+            required: [ type, description, announcement ]
 
-        additionalProperties:
-          type: object
-          additionalProperties: false
-          properties:
-            type:
-              type: string
-            description:
-              type: string
-            sub_types:
-              $ref: '#/definitions/sub_types'
-          required: [ type, description, sub_types ]
+          meta:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: meta
+              description:
+                type: string
+                default: |
+                  Change the meta content of the repository.
+              sub_types:
+                $ref: '#/definitions/sub_types'
+            required: [ type, description ]
+
         required:
           - package_major
           - package_minor
           - package_patch
           - package_post
           - website
+          - meta
 
-      secondary:
+      primary_custom:
+        type: object
+        default: {}
+        additionalProperties:
+          type:
+            type: string
+          description:
+            type: string
+          sub_types:
+            $ref: '#/definitions/sub_types'
+        required: [ type, description ]
+
+      secondary_action:
+        description: Secondary action commit types
+        type: object
+        default: { }
+        properties:
+          meta-update:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: meta-update
+              description:
+                type: string
+                default: |
+                  Update the dynamic files of the repository.
+            required: [ type, description ]
+          revert:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: revert
+              description:
+                type: string
+                default: |
+                  Revert a previous commit.
+
+          auto-refactor:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                default: auto-refactor
+              description:
+                type: string
+                default: |
+                  Automatically refactor the code.
+        required: [ meta-update, revert, auto-refactor ]
+
+      secondary_custom:
         description: Secondary commit types
         type: object
         default: {}
-        minProperties: 1
         additionalProperties:
           type: object
           additionalProperties: false
@@ -81,24 +213,9 @@ properties:
               type: string
             changelog_section_id:
               type: string
-          required: [ description, changelog_id ]
+          required: [ description, changelog_id, changelog_section_id ]
 
-      action:
-        description: Action commit types
-        type: object
-        default: {}
-        properties:
-          meta-update:
-            type: string
-            default: meta-update
-          revert:
-            type: string
-            default: revert
-          auto-refactor:
-            type: string
-            default: auto-refactor
-        required: [ meta-update, revert, auto-refactor ]
-    required: [ primary, secondary, action ]
+    required: [ primary_action, primary_custom, secondary_action, secondary_custom ]
 
 
 definitions:
