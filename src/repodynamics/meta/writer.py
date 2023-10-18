@@ -49,6 +49,36 @@ class OutputPaths:
         return
 
     @property
+    def all_paths_to_dynamic_files(self):
+        files = [
+            self.metadata.path,
+            self.metadata_ci.path,
+            self.license.path,
+            self.readme_main.path,
+            self.readme_pypi.path,
+            self.funding.path,
+            self.pre_commit_config.path,
+            self.read_the_docs_config.path,
+            self.issue_template_chooser_config.path,
+            self.package_pyproject.path,
+            self.package_requirements.path,
+            self.package_manifest.path,
+            self.codecov_config.path,
+            self.gitignore.path,
+            self.gitattributes.path,
+            self.pull_request_template("default").path,
+        ]
+        files.extend(list((self._path_root / ".github/workflow_requirements").glob("*.txt")))
+        for health_file_name in ['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support']:
+            for target_path in ['.', 'docs', '.github']:
+                files.append(self.health_file(health_file_name, target_path).path)
+        files.extend(list((self._path_root / ".github/ISSUE_TEMPLATE").glob("*.yaml")))
+        files.extend(list((self._path_root / ".github/PULL_REQUEST_TEMPLATE").glob("*.md")))
+        files.remove(self._path_root / ".github/PULL_REQUEST_TEMPLATE/README.md")
+        files.extend(list((self._path_root / ".github/DISCUSSION_TEMPLATE").glob("*.yaml")))
+        return files
+
+    @property
     def metadata(self) -> OutputFile:
         filename = ".metadata.json"
         rel_path = f".github/{filename}"
@@ -90,19 +120,6 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile("funding", FileCategory.CONFIG, filename, rel_path, path)
 
-    # @property
-    # def labels_repo(self) -> OutputFile:
-    #     filename = "repo_labels.yaml"
-    #     rel_path = f'.github/{filename}'
-    #     path = self._path_root / rel_path
-    #     return OutputFile("labels-repo", FileCategory.CONFIG, filename, rel_path, path)
-
-    def workflow_requirements(self, name: str) -> OutputFile:
-        filename = f"{name}.txt"
-        rel_path = f'.github/workflow_requirements/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile(f"workflow-requirement-{name}", FileCategory.CONFIG, filename, rel_path, path)
-
     @property
     def pre_commit_config(self) -> OutputFile:
         filename = ".pre-commit-config.yaml"
@@ -117,46 +134,12 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile("read-the-docs-config", FileCategory.CONFIG, filename, rel_path, path)
 
-    def health_file(
-        self,
-        name: Literal['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support'],
-        target_path: Literal['.', 'docs', '.github'] = "."
-    ) -> OutputFile:
-        # Health files are only allowed in the root, docs, and .github directories
-        allowed_paths = [".", "docs", ".github"]
-        if target_path not in allowed_paths:
-            self._logger.error(f"Path '{target_path}' not allowed for health files.")
-        filename = name.upper() + (".md" if name != "codeowners" else "")
-        rel_path = ("" if target_path == "." else f"{target_path}/") + filename
-        path = self._path_root / rel_path
-        allowed_paths.remove(target_path)
-        alt_paths = [self._path_root / dir_ / filename for dir_ in allowed_paths]
-        return OutputFile(f"health-file-{name}", FileCategory.HEALTH, filename, rel_path, path, alt_paths)
-
     @property
     def issue_template_chooser_config(self) -> OutputFile:
         filename = "config.yml"
         rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
         path = self._path_root / rel_path
         return OutputFile("issue-template-chooser-config", FileCategory.CONFIG, filename, rel_path, path)
-
-    def issue_form(self, name: str, priority: int) -> OutputFile:
-        filename = f"{priority:02}_{name}.yaml"
-        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile(f"issue-form-{name}", FileCategory.FORM, filename, rel_path, path)
-
-    def pull_request_template(self, name: str | Literal['default']) -> OutputFile:
-        filename = "PULL_REQUEST_TEMPLATE.md" if name == "default" else f"{name}.md"
-        rel_path = f'.github/{filename}' if name == "default" else f'.github/PULL_REQUEST_TEMPLATE/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile(f"pull-request-template-{name}", FileCategory.CONFIG, filename, rel_path, path)
-
-    def discussion_form(self, name: str) -> OutputFile:
-        filename = f"{name}.yaml"
-        rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile(f"discussion-form-{name}", FileCategory.FORM, filename, rel_path, path)
 
     @property
     def package_pyproject(self) -> OutputFile:
@@ -172,32 +155,12 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile("package-requirements", FileCategory.PACKAGE, filename, rel_path, path)
 
-    def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> OutputFile:
-        filename = package_name
-        rel_path = str(new_path.relative_to(self._path_root))
-        alt_paths = [old_path] if old_path else None
-        return OutputFile(
-            "package-dir", FileCategory.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
-        )
-
-    def package_init(self, package_name: str) -> OutputFile:
-        filename = "__init__.py"
-        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile("package-init", FileCategory.PACKAGE, filename, rel_path, path)
-
     @property
     def package_manifest(self) -> OutputFile:
         filename = "MANIFEST.in"
         rel_path = filename
         path = self._path_root / rel_path
         return OutputFile("package-manifest", FileCategory.PACKAGE, filename, rel_path, path)
-
-    def package_typing_marker(self, package_name: str) -> OutputFile:
-        filename = "py.typed"
-        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
-        path = self._path_root / rel_path
-        return OutputFile("package-typing-marker", FileCategory.PACKAGE, filename, rel_path, path)
 
     @property
     def codecov_config(self) -> OutputFile:
@@ -219,6 +182,68 @@ class OutputPaths:
         rel_path = filename
         path = self._path_root / rel_path
         return OutputFile("gitattributes", FileCategory.CONFIG, filename, rel_path, path)
+
+    def workflow_requirements(self, name: str) -> OutputFile:
+        filename = f"{name}.txt"
+        rel_path = f'.github/workflow_requirements/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"workflow-requirement-{name}", FileCategory.CONFIG, filename, rel_path, path)
+
+    def health_file(
+        self,
+        name: Literal['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support'],
+        target_path: Literal['.', 'docs', '.github'] = "."
+    ) -> OutputFile:
+        # Health files are only allowed in the root, docs, and .github directories
+        allowed_paths = [".", "docs", ".github"]
+        if target_path not in allowed_paths:
+            self._logger.error(f"Path '{target_path}' not allowed for health files.")
+        if name not in ['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support']:
+            self._logger.error(f"Health file '{name}' not recognized.")
+        filename = name.upper() + (".md" if name != "codeowners" else "")
+        rel_path = ("" if target_path == "." else f"{target_path}/") + filename
+        path = self._path_root / rel_path
+        allowed_paths.remove(target_path)
+        alt_paths = [self._path_root / dir_ / filename for dir_ in allowed_paths]
+        return OutputFile(f"health-file-{name}", FileCategory.HEALTH, filename, rel_path, path, alt_paths)
+
+    def issue_form(self, name: str, priority: int) -> OutputFile:
+        filename = f"{priority:02}_{name}.yaml"
+        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"issue-form-{name}", FileCategory.FORM, filename, rel_path, path)
+
+    def pull_request_template(self, name: str | Literal['default']) -> OutputFile:
+        filename = "PULL_REQUEST_TEMPLATE.md" if name == "default" else f"{name}.md"
+        rel_path = f'.github/{filename}' if name == "default" else f'.github/PULL_REQUEST_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"pull-request-template-{name}", FileCategory.CONFIG, filename, rel_path, path)
+
+    def discussion_form(self, name: str) -> OutputFile:
+        filename = f"{name}.yaml"
+        rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile(f"discussion-form-{name}", FileCategory.FORM, filename, rel_path, path)
+
+    def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> OutputFile:
+        filename = package_name
+        rel_path = str(new_path.relative_to(self._path_root))
+        alt_paths = [old_path] if old_path else None
+        return OutputFile(
+            "package-dir", FileCategory.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
+        )
+
+    def package_init(self, package_name: str) -> OutputFile:
+        filename = "__init__.py"
+        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("package-init", FileCategory.PACKAGE, filename, rel_path, path)
+
+    def package_typing_marker(self, package_name: str) -> OutputFile:
+        filename = "py.typed"
+        rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("package-typing-marker", FileCategory.PACKAGE, filename, rel_path, path)
 
 
 class _FileStatus(NamedTuple):
