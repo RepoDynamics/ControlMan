@@ -48,9 +48,13 @@ class CommitMsg:
             )
         return
 
-    def __str__(self):
+    @property
+    def summary(self):
         scope = f"({', '.join(self.scope)})" if self.scope else ""
-        commit = f"{self.type}{scope}: {self.title}"
+        return f"{self.type}{scope}: {self.title}"
+
+    def __str__(self):
+        commit = self.summary
         if self.body:
             commit += f"\n\n{self.body}"
         if self.footer:
