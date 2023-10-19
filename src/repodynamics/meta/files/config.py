@@ -20,8 +20,7 @@ class ConfigFileGenerator:
     def generate(self) -> list[tuple[OutputFile, str]]:
         # label_syncer, pr_labeler = self._labels()
         return (
-            self.repo_labels()
-            + self.funding()
+            self.funding()
             + self.workflow_requirements()
             + self.pre_commit_config()
             + self.read_the_docs()
@@ -49,32 +48,32 @@ class ConfigFileGenerator:
     #     ) if pr_labels else ""
     #     return label_syncer, pr_labeler
 
-    def repo_labels(self) -> list[tuple[OutputFile, str]]:
-        self._logger.h3("Process metadata: labels")
-        # repo labels: https://github.com/marketplace/actions/label-syncer
-        info = self._out_db.labels_repo
-        out = []
-        prefixes = []
-        for group_name, group in self._meta["label"]["group"].items():
-            prefix = group["prefix"]
-            if prefix in prefixes:
-                self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
-            prefixes.append(prefix)
-            suffixes = []
-            for label in group['labels'].values():
-                suffix = label['suffix']
-                if suffix in suffixes:
-                    self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
-                suffixes.append(suffix)
-                out.append(
-                    {
-                        "name": f"{prefix}{suffix}",
-                        "description": label["description"],
-                        "color": group["color"]
-                    }
-                )
-        text = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
-        return [(info, text)]
+    # def repo_labels(self) -> list[tuple[OutputFile, str]]:
+    #     self._logger.h3("Process metadata: labels")
+    #     # repo labels: https://github.com/marketplace/actions/label-syncer
+    #     info = self._out_db.labels_repo
+    #     out = []
+    #     prefixes = []
+    #     for group_name, group in self._meta["label"]["group"].items():
+    #         prefix = group["prefix"]
+    #         if prefix in prefixes:
+    #             self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
+    #         prefixes.append(prefix)
+    #         suffixes = []
+    #         for label in group['labels'].values():
+    #             suffix = label['suffix']
+    #             if suffix in suffixes:
+    #                 self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
+    #             suffixes.append(suffix)
+    #             out.append(
+    #                 {
+    #                     "name": f"{prefix}{suffix}",
+    #                     "description": label["description"],
+    #                     "color": group["color"]
+    #                 }
+    #             )
+    #     text = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
+    #     return [(info, text)]
 
     def funding(self) -> list[tuple[OutputFile, str]]:
         """
