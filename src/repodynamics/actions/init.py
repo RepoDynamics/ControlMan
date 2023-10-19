@@ -1262,11 +1262,12 @@ def init(
     logger=None
 ):
     for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):
-        if arg not in ['report', 'amend', 'commit', 'pull', 'none']:
+        if arg not in ['report', 'amend', 'commit', 'pull', 'none', '']:
             raise ValueError(
                 f"Invalid input argument for '{arg_name}': "
                 f"Expected one of 'report', 'amend', 'commit', 'pull', or 'none', but got '{arg}'."
             )
+
     return Init(
         context=context,
         admin_token=admin_token,
@@ -1274,8 +1275,8 @@ def init(
         package_lint=package_lint,
         package_test=package_test,
         website_build=website_build,
-        meta_sync=meta_sync,
-        hooks=hooks,
+        meta_sync=meta_sync or 'none',
+        hooks=hooks or 'none',
         website_announcement=website_announcement,
         website_announcement_msg=website_announcement_msg,
         logger=logger,
