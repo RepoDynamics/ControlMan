@@ -141,18 +141,20 @@ properties:
           - package_post
           - website
           - meta
-
       primary_custom:
         type: object
         default: {}
         additionalProperties:
-          type:
-            type: string
-          description:
-            type: string
-          sub_types:
-            $ref: '#/definitions/sub_types'
-        required: [ type, description ]
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+            description:
+              type: string
+            sub_types:
+              $ref: '#/definitions/sub_types'
+          required: [ type, description ]
 
       secondary_action:
         description: Secondary action commit types
