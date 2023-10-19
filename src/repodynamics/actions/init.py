@@ -12,18 +12,59 @@ from ruamel.yaml import YAML
 import repodynamics as rd
 from repodynamics.logger import Logger
 from repodynamics.git import Git
-from repodynamics.meta.meta import Meta
+from repodynamics.meta.meta import Meta, FileCategory
 from repodynamics import hooks, _util
 from repodynamics.commits import CommitParser, CommitMsg
 from repodynamics.versioning import PEP440SemVer
+from repodynamics.emoji import emoji
 
 
-class PrimaryAction(Enum):
-    MAJOR_RE
+class EventType(Enum):
+    PUSH_MAIN = "push_main"
+    PUSH_RELEASE = "push_release"
+    PUSH_DEV = "push_dev"
+    PUSH_OTHER = "push_other"
+    PULL_MAIN = "pull_main"
+    PULL_RELEASE = "pull_release"
+    PULL_DEV = "pull_dev"
+    PULL_OTHER = "pull_other"
+    SCHEDULE = "schedule"
+    DISPATCH = "dispatch"
+
+
+class CommitGroup(Enum):
+    PRIMARY_ACTION = 0
+    PRIMARY_CUSTOM = 1
+    SECONDARY_ACTION = 2
+    SECONDARY_CUSTOM = 3
+    NON_CONV = 4
+
+
+class PrimaryCommitAction(Enum):
+    PACKAGE_MAJOR = 0
+    PACKAGE_MINOR = 1
+    PACKAGE_PATCH = 2
+    PACKAGE_POST = 3
+    WEBSITE = 4
+    META = 5
+
+
+class SecondaryCommitAction(Enum):
+    META_SYNC = 0
+    REVERT = 1
+    HOOK_FIX = 2
 
 
 class Commit(NamedTuple):
-    type
+    hash: str
+    author: str
+    date: str
+    files: list[str]
+    msg: str
+    typ: CommitGroup = CommitGroup.NON_CONV
+    conv_msg: CommitMsg | None = None
+    action: PrimaryCommitAction | SecondaryCommitAction | None = None
+
 
 class ChangelogManager:
     def __init__(
@@ -144,6 +185,8 @@ class Init:
         package_lint: bool = False,
         package_test: bool = False,
         website_build: bool = False,
+        meta_sync: Literal['report', 'amend', 'commit', 'pull', 'none'] = 'none',
+        hooks: Literal['report', 'amend', 'commit', 'pull', 'none'] = 'none',
         website_announcement: str = "",
         website_announcement_msg: str = "",
         logger: Logger | None = None
@@ -158,19 +201,31 @@ class Init:
         self._package_lint = package_lint
         self._package_test = package_test
         self._website_build = website_build
+        self._meta_sync = meta_sync
+        self._hooks = hooks
         self._website_announcement = website_announcement
         self._website_announcement_msg = website_announcement_msg
 
         self.logger = logger or Logger("github")
         self.git: Git = Git(logger=self.logger)
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
+        self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
         self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
 
         self.metadata, self.metadata_ci = self.meta.read_metadata_output()
         self.last_ver, self.dist_ver = self.get_latest_version()
 
+        self.summary_oneliners: list[str] = []
+        self.summary_sections: list[str | html.ElementCollection | html.Element] = []
+
+        self.meta_results = []
+        self.meta_changes = {}
+        self.event_type: EventType | None = None
+        self._hash_latest: str | None = None
+
         self.output = {
             "config": {
+                "fail": False,
                 "checkout": {
                     "ref": "",
                     "ref_before": "",
@@ -207,6 +262,21 @@ class Init:
             },
             "metadata_ci": self.metadata_ci,
         }
+        return
+
+    @property
+    def fail(self):
+        return self.output["config"]["fail"]
+
+    @fail.setter
+    def fail(self, value: bool):
+        self.output["config"]["fail"] = True
+        return
+
+    def enable_job_run(self, job_id: str):
+        if job_id not in self.output["config"]["run"]:
+            self.logger.error(f"Invalid job ID: {job_id}")
+        self.output["config"]["run"][job_id] = True
         return
 
     @property
@@ -283,6 +353,20 @@ class Init:
             return self.payload["pull_request"]["head"]["sha"]
         return self.git.commit_hash_normal()
 
+    @property
+    def hash_latest(self) -> str:
+        """The SHA hash of the most recent commit on the branch,
+        including commits made during the workflow run.
+        """
+        if self._hash_latest:
+            return self._hash_latest
+        return self.hash_after
+
+    @property
+    def pull_is_internal(self) -> bool:
+        """Whether the pull request is internal, i.e. within the same repository."""
+        return self.payload["pull_request"]["head"]["repo"]["full_name"] == self.context["repository"]
+
     def run(self):
         event_handler = {
             "issue_comment": self.event_issue_comment,
@@ -297,7 +381,14 @@ class Init:
         }
         if self.event_name not in event_handler:
             self.logger.error(f"Event '{self.event_name}' is not supported.")
-        return event_handler[self.event_name]()
+        event_handler[self.event_name]()
+        if self.fail:
+            # Just to be safe, disable publish/deploy/release jobs if fail is True
+            for job_id in (
+                "website_deploy", "package_publish_testpypi", "package_publish_pypi", "github_release"
+            ):
+                self.output["config"]["run"][job_id] = False
+        return self.output, None, self.assemble_summary()
 
     def event_push(self):
 
@@ -323,38 +414,42 @@ class Init:
             ("branch", "deleted"): self.event_push_branch_deleted,
             ("branch", "modified"): self.event_push_branch_modified,
         }
-        return event_handler[(ref_type(), change_type())]()
+        event_handler[(ref_type(), change_type())]()
+        return
 
     def event_push_tag_created(self):
-        return None, None, None
+        return
 
     def event_push_tag_deleted(self):
-        return None, None, None
+        return
 
     def event_push_tag_modified(self):
-        return None, None, None
+        return
 
     def event_push_branch_created(self):
         if self.ref_is_main:
             if not self.last_ver:
-                return self.event_repository_created()
-            return None, None, None
-        return None, None, None
+                self.event_repository_created()
+            return
+        return
 
     def event_push_branch_deleted(self):
-        return None, None, None
+        return
 
     def event_push_branch_modified(self):
         if self.ref_is_main:
-            return self.event_push_branch_modified_main()
-        return None, None, None
+            self.event_push_branch_modified_main()
+        return
 
     def event_push_branch_modified_main(self):
-        self.metadata, self.metadata_ci = self.meta.read_metadata_full()
-
+        self.event_type = EventType.PUSH_MAIN
+        self.action_meta()
+        self.action_hooks()
+        commits = self.get_commits()
+        return
 
     def event_repository_created(self):
-        for path_dynamic_file in self.meta.all_dynamic_paths:
+        for path_dynamic_file in self.meta.output_paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in self.metadata["changelog"].values():
             path_changelog_file = Path(changelog_data["path"])
@@ -391,11 +486,224 @@ class Init:
             self.action_website_announcement_update(announcement=self._website_announcement)
         return
 
+    def action_meta(self):
+        name = "Meta Sync"
+        self.logger.h1(name)
+        if self.event_type == EventType.DISPATCH:
+            action = self._meta_sync
+            self.logger.input(f"Read action from workflow dispatch input: {action}")
+        else:
+            action = self.metadata["workflow"]["init"]["meta_check_action"][self.event_type.value]
+            self.logger.input(
+                f"Read action from 'meta.workflow.init.meta_check_action.{self.event_type.value}': {action}"
+            )
+        if action == "none":
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="Meta synchronization is disabled for this event type❗",
+            )
+            self.logger.skip("Meta synchronization is disabled for this event type; skip❗")
+            return
+        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
+            self.logger.attention(
+                "Meta synchronization cannot be performed as pull request is from a forked repository; "
+                f"switching action from '{action}' to 'fail'."
+            )
+            action = "fail"
+        if action == "pull":
+            pr_branch = self.switch_to_ci_branch("meta")
+        self.metadata, self.metadata_ci = self.meta.read_metadata_full()
+        self.meta_results, self.meta_changes, meta_summary = self.meta.compare_files()
+        meta_changes_any = any(any(change.values()) for change in self.meta_changes.values())
+
+        # Push/amend/pull if changes are made and action is not 'fail' or 'report'
+        if action not in ["fail", "report"] and meta_changes_any:
+            self.meta.apply_changes()
+            if action == "amend":
+                self.git.commit(stage="all", amend=True)
+                latest_hash = self.git.push(force_with_lease=True)
+            else:
+                commit_msg = CommitMsg(
+                    typ=self.metadata["commit"]["secondary_action"]["meta_sync"]["type"],
+                    title="Sync dynamic files with meta content",
+                )
+                self.git.commit(message=str(commit_msg), stage="all")
+                latest_hash = self.git.push()
+            if action == "pull":
+                pull_data = self.api.pull_create(
+                    head=self.git.current_branch_name(),
+                    base=self.ref_name,
+                    title=commit_msg.summary,
+                    body=commit_msg.body,
+                )
+                self.switch_to_original_branch()
+            else:
+                self._hash_latest = latest_hash
+
+        if meta_changes_any and action in ["fail", "report", "pull"]:
+            self.fail = True
+            status = "fail"
+        else:
+            status = "pass"
+
+        if not meta_changes_any:
+            oneliner = "All dynamic files are in sync with meta content."
+            self.logger.success(oneliner)
+        else:
+            oneliner = "Some dynamic files were out of sync with meta content."
+            if action in ["pull", "commit", "amend"]:
+                oneliner += " These were resynchronized and applied to "
+                if action == "pull":
+                    link = html.a(href=pull_data['url'], content=pull_data['number'])
+                    oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
+                else:
+                    link = html.a(href=str(self.gh_link.commit(self._hash_latest)), content=latest_hash[:7])
+                    oneliner += "the current branch " + (
+                        f"in a new commit (hash: {link})" if action == "commit"
+                        else f"by amending the latest commit (new hash: {link})"
+                    )
+        self.add_summary(name=name, status=status, oneliner=oneliner)
+        return
+
+    def action_hooks(self):
+        name = "Workflow Hooks"
+        self.logger.h1(name)
+        if self.event_type == EventType.DISPATCH:
+            action = self._hooks
+            self.logger.input(f"Read action from workflow dispatch input: {action}")
+        else:
+            action = self.metadata["workflow"]["init"]["hooks_check_action"][self.event_type.value]
+            self.logger.input(
+                f"Read action from 'meta.workflow.init.hooks_check_action.{self.event_type.value}': {action}"
+            )
+        if action == "none":
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="Hooks are disabled for this event type❗",
+            )
+            self.logger.skip("Hooks are disabled for this event type; skip❗")
+            return
+        if not self.metadata["workflow"].get("pre_commit"):
+            oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
+            self.fail = True
+            self.add_summary(
+                name=name,
+                status="fail",
+                oneliner=oneliner,
+            )
+            self.logger.error(oneliner, raise_error=False)
+            return
+        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
+            self.logger.attention(
+                "Hook fixes cannot be applied as pull request is from a forked repository; "
+                f"switching action from '{action}' to 'fail'."
+            )
+            action = "fail"
+        if action == "pull":
+            pr_branch = self.switch_to_ci_branch("hooks")
+        if self.meta_changes.get(FileCategory.CONFIG, {}).get("pre-commit-config"):
+            pre_commit_temp = True
+            pre_commit_config_path = ".__temporary_pre_commit_config__.yaml"
+            for result in self.meta_results:
+                if result[0].id == "pre-commit-config":
+                    with open(pre_commit_config_path, "w") as f:
+                        f.write(result[1].after)
+                    self.logger.success(
+                        "Write temporary pre-commit config file.",
+                        "The pre-commit config had been changed in this event, and thus "
+                        "the current config file was not valid anymore."
+                    )
+                    break
+            else:
+                self.logger.error(
+                    "Could not find pre-commit-config in meta results.",
+                    "This is an internal error that should not happen; please report it on GitHub."
+                )
+        else:
+            pre_commit_temp = False
+            pre_commit_config_path = self.meta.output_paths.pre_commit_config.rel_path
+        hooks_output = hooks.run(
+            apply=action not in ["fail", "report"],
+            ref_range=(self.hash_before, self.hash_after),
+            path_config=pre_commit_config_path,
+            logger=self.logger,
+        )
+        passed = hooks_output["passed"]
+        modified = hooks_output["modified"]
+        if pre_commit_temp:
+            Path(pre_commit_config_path).unlink()
+            self.logger.success("Remove temporary pre-commit config file.")
+
+        # Push/amend/pull if changes are made and action is not 'fail' or 'report'
+        if action not in ["fail", "report"] and modified:
+            if action == "amend":
+                self.git.commit(stage="all", amend=True)
+                latest_hash = self.git.push(force_with_lease=True)
+            else:
+                commit_msg = CommitMsg(
+                    typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
+                    title="Apply automatic fixes made by workflow hooks",
+                )
+                self.git.commit(message=str(commit_msg), stage="all")
+                latest_hash = self.git.push()
+            if action == "pull":
+                pull_data = self.api.pull_create(
+                    head=self.git.current_branch_name(),
+                    base=self.ref_name,
+                    title=commit_msg.summary,
+                    body=commit_msg.body,
+                )
+                self.switch_to_original_branch()
+            else:
+                self._hash_latest = latest_hash
+
+        if not passed or (action == "pull" and modified):
+            self.fail = True
+            status = "fail"
+        else:
+            status = "pass"
+
+        if action == "pull" and modified:
+            link = html.a(href=pull_data['url'], content=pull_data['number'])
+            target = f"branch '{pr_branch}' and a pull request ({link}) was created"
+        if action in ["commit", "amend"] and modified:
+            link = html.a(href=str(self.gh_link.commit(self._hash_latest)), content=latest_hash[:7])
+            target = "the current branch " + (
+                f"in a new commit (hash: {link})" if action == "commit"
+                else f"by amending the latest commit (new hash: {link})"
+            )
+
+        if passed:
+            oneliner = "All hooks passed without making any modifications." if not modified else (
+                "All hooks passed in the second run. "
+                f"The modifications made during the first run were applied to {target}."
+            )
+        elif action in ["fail", "report"]:
+            mode = "some failures were auto-fixable" if modified else "failures were not auto-fixable"
+            oneliner = f"Some hooks failed ({mode})."
+        elif modified:
+            oneliner = (
+                "Some hooks failed even after the second run. "
+                f"The modifications made during the first run were still applied to {target}."
+            )
+        else:
+            oneliner = "Some hooks failed (failures were not auto-fixable)."
+        self.add_summary(
+            name=name,
+            status=status,
+            oneliner=oneliner,
+            details=hooks_output["summary"]
+        )
+        return
+
+
     def action_website_announcement_check(self):
         name = "Website Announcement Expiry Check"
         path_announcement_file = Path(self.metadata["path"]["file"]["website_announcement"])
         if not path_announcement_file.exists():
-            summary, section = self.get_action_summary(
+            self.add_summary(
                 name=name,
                 status="skip",
                 oneliner="🚫 Announcement file does not exist.",
@@ -406,7 +714,7 @@ class Init:
                     ]
                 )
             )
-            return summary, section
+            return
         with open(path_announcement_file) as f:
             current_announcement = f.read()
         (
@@ -433,7 +741,7 @@ class Init:
                 content=md.code_block(commit_details),
                 summary="📝 Removal Commit Details",
             )
-            summary, section = self.get_action_summary(
+            self.add_summary(
                 name=name,
                 status="skip",
                 oneliner="📭 No announcement to check.",
@@ -446,7 +754,7 @@ class Init:
                     ]
                 )
             )
-            return summary, section
+            return
 
         current_date_epoch = int(
             _util.shell.run_command(["date", "-u", "+%s"], logger=self.logger)
@@ -467,7 +775,7 @@ class Init:
                 content=md.code_block(commit_details),
                 summary="📝 Current Announcement Commit Details",
             )
-            summary, section = self.get_action_summary(
+            self.add_summary(
                 name=name,
                 status="skip",
                 oneliner=f"📬 Announcement is still valid for another {remaining_days:.2f} days.",
@@ -483,7 +791,7 @@ class Init:
                     ]
                 )
             )
-            return summary, section
+            return
 
         with open(path_announcement_file, "w") as f:
             f.write("")
@@ -507,7 +815,7 @@ class Init:
             content=md.code_block(commit_details),
             summary="📝 Removed Announcement Commit Details",
         )
-        summary, section = self.get_action_summary(
+        self.add_summary(
             name=name,
             status="pass",
             oneliner="🗑 Announcement was expired and thus removed.",
@@ -522,7 +830,7 @@ class Init:
                 ]
             )
         )
-        return summary, section
+        return
 
     def action_website_announcement_update(self):
         name = "Website Announcement Manual Update"
@@ -537,7 +845,7 @@ class Init:
         )
         if announcement == "null":
             if not old_announcement:
-                summary, section = self.get_action_summary(
+                self.add_summary(
                     name=name,
                     status="skip",
                     oneliner="🚫 No announcement to remove.",
@@ -549,7 +857,7 @@ class Init:
                         ]
                     )
                 )
-                return summary, section
+                return
 
 
             announcement = ""
@@ -563,7 +871,7 @@ class Init:
                 )
             else:
                 details_list.append("🚫 The announcement is already up-to-date.")
-            summary, section = self.get_action_summary(
+            self.add_summary(
                 name=name,
                 status="fail",
                 oneliner="🚫 The new announcement is the same as the existing announcement.",
@@ -571,7 +879,7 @@ class Init:
 
                 )
             )
-            return summary, section
+            return
         self.write_website_announcement(announcement)
         commit_title = "Manually update announcement"
         commit_hash, commit_url = self.commit_website_announcement(
@@ -586,7 +894,7 @@ class Init:
             summary="📣 New Announcement",
         )
 
-        summary, section = self.get_action_summary(
+        self.add_summary(
             name="Website Announcement Manual Update",
             status="pass",
             oneliner="📝 Announcement was manually updated.",
@@ -597,7 +905,7 @@ class Init:
                 ]
             )
         )
-        return summary, section
+        return
 
     def write_website_announcement(self, announcement: str):
         if announcement:
@@ -625,7 +933,7 @@ class Init:
                 commit_type=self.metadata["commit"]["primary"]["website"]["type"],
                 commit_title=commit_title,
                 parent_commit_hash=self.hash_after,
-                parent_commit_url=f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{self.hash_after}"
+                parent_commit_url=str(self.gh_link.commit(self.hash_after))
             )
             changelog_manager.add_change(
                 changelog_id=changelog_id,
@@ -641,7 +949,7 @@ class Init:
             scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"]
         )
         commit_hash = self.git.commit(message=str(commit), stage='all')
-        commit_link = f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_hash}"
+        commit_link = str(self.gh_link.commit(commit_hash))
         return commit_hash, commit_link
 
     def get_changed_files(self) -> list[str]:
@@ -661,9 +969,48 @@ class Init:
         return filepaths
 
     def get_commits(self):
+        primary_action = {}
+        primary_action_types = []
+        for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
+            conv_commit_type = primary_action_commit["type"]
+            primary_action_types.append(conv_commit_type)
+            primary_action[conv_commit_type] = PrimaryCommitAction[primary_action_id.upper()]
+        secondary_action = {}
+        secondary_action_types = []
+        for secondary_action_id, secondary_action_commit in self.metadata["commit"]["secondary_action"].items():
+            conv_commit_type = secondary_action_commit["type"]
+            secondary_action_types.append(conv_commit_type)
+            secondary_action[conv_commit_type] = SecondaryCommitAction[secondary_action_id.upper()]
+        primary_custom_types = []
+        for primary_custom_commit in self.metadata["commit"]["primary_custom"].values():
+            conv_commit_type = primary_custom_commit["type"]
+            primary_custom_types.append(conv_commit_type)
+        all_conv_commit_types = (
+            primary_action_types
+            + secondary_action_types
+            + primary_custom_types
+            + list(self.metadata["commit"]["secondary_custom"].keys())
+        )
+        parser = CommitParser(types=all_conv_commit_types)
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        parsed_commits = []
         for commit in commits:
-            conventional_commit = rd.commits.parse(msg=commit["message"], types=types, logger=self._logger)
+            conv_msg = parser.parse(msg=commit["msg"])
+            if not conv_msg:
+                parsed_commits.append(Commit(**commit))
+            elif conv_msg.type in primary_action_types:
+                parsed_commits.append(
+                    Commit(**commit, typ=CommitGroup.PRIMARY_ACTION, action=primary_action[conv_msg.type])
+                )
+            elif conv_msg.type in secondary_action_types:
+                parsed_commits.append(
+                    Commit(**commit, typ=CommitGroup.SECONDARY_ACTION, action=secondary_action[conv_msg.type])
+                )
+            elif conv_msg.type in primary_custom_types:
+                parsed_commits.append(Commit(**commit, typ=CommitGroup.PRIMARY_CUSTOM))
+            else:
+                parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
+        return parsed_commits
 
     def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
         tags_lists = self.git.get_tags()
@@ -681,7 +1028,19 @@ class Init:
                 return max_version, distance
         self.logger.error(f"No version tags found with prefix '{ver_tag_prefix}'.")
 
-    def assemble_summary(self, intro: str, oneliners: list[str], sections: list[str]):
+    def switch_to_ci_branch(self, typ: Literal['hooks', 'meta']):
+        current_branch = self.git.current_branch_name()
+        new_branch_prefix = self.metadata["branch"]["group"]["ci_pull"]["prefix"]
+        new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
+        self.git.checkout(branch=new_branch_name, reset=True)
+        self.logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
+        return new_branch_name
+
+    def switch_to_original_branch(self):
+        self.git.checkout(branch=self.ref_name)
+        return
+
+    def assemble_summary(self) -> str:
         github_context, event_payload = (
             html.details(
                 content=md.code_block(
@@ -693,32 +1052,37 @@ class Init:
                 (self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload")
             )
         )
-        return html.ElementCollection(
+        intro = [f"{emoji.PLAY}The workflow was triggered by a <code>{self.event_name}</code> event."]
+        if self.output["config"]["fail"]:
+            intro.append(f"{emoji.FAIL}The workflow failed.")
+        else:
+            intro.append(f"{emoji.PASS}The workflow passed.")
+        intro = html.ul(intro)
+        summary = html.ElementCollection(
             [
                 html.h(1, "Workflow Report"),
                 intro,
                 html.ul([github_context, event_payload]),
                 html.h(2, "🏁 Summary"),
-                html.ul(oneliners),
-                *sections,
+                html.ul(self.summary_oneliners),
+                html.ElementCollection(self.summary_sections),
+                html.h(2, "🪵 Logs"),
+                html.details(self.logger.file_log, "Log"),
             ]
         )
+        return str(summary)
 
-    def get_action_summary(
+    def add_summary(
         self,
         name: str,
         status: Literal['pass', 'fail', 'skip'],
         oneliner: str,
-        details: str | html.Element | html.ElementCollection
+        details: str | html.Element | html.ElementCollection | None = None,
     ):
-        emoji = {
-            "pass": "✅",
-            "fail": "❌",
-            "skip": "❎",
-        }
-        summary = f"{emoji[status]} <b>{name}</b>: {oneliner}"
-        section = f"## {name}\n\n{details}\n\n"
-        return summary, section
+        self.summary_oneliners.append(f"{emoji[status]} <b>{name}</b>: {oneliner}")
+        if details:
+            self.summary_sections.append(f"## {name}\n\n{details}\n\n")
+        return
 
 
 def init(
@@ -728,10 +1092,18 @@ def init(
     package_lint: bool = False,
     package_test: bool = False,
     website_build: bool = False,
+    meta_sync: str = "none",
+    hooks: str = "none",
     website_announcement: str = "",
     website_announcement_msg: str = "",
     logger=None
 ):
+    for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):
+        if arg not in ['report', 'amend', 'commit', 'pull', 'none']:
+            raise ValueError(
+                f"Invalid input argument for '{arg_name}': "
+                f"Expected one of 'report', 'amend', 'commit', 'pull', or 'none', but got '{arg}'."
+            )
     return Init(
         context=context,
         admin_token=admin_token,
@@ -739,63 +1111,15 @@ def init(
         package_lint=package_lint,
         package_test=package_test,
         website_build=website_build,
+        meta_sync=meta_sync,
+        hooks=hooks,
         website_announcement=website_announcement,
         website_announcement_msg=website_announcement_msg,
         logger=logger,
     ).run()
 
 
-def pull_post_process(pull):
-    pr_nr = pull["pull-request-number"]
-    pr_url = pull["pull-request-url"]
-    pr_head_sha = pull["pull-request-head-sha"]
-
-
 class EventHandler:
-
-    def __init__(self, context: dict):
-        self._latest_version = self._git.describe()
-        self._output_meta: dict = {}
-        self._output_hooks: dict = {}
-        return
-
-    def _update_meta(self, action: Literal['fail', 'amend', 'commit']):
-        self._output_meta = meta.update(
-            action="report" if action == "fail" else action,
-            github_token=self._context["token"],
-            logger=self._logger,
-        )
-        if action == "fail" and not self._output_meta["passed"]:
-            self._logger.error("Dynamic files are not in sync.")
-        self._metadata = self._output_meta["metadata"]
-        return
-
-    def _update_hooks(self, action: Literal['fail', 'amend', 'commit'], ref_range: Optional[tuple[str, str]] = None):
-        self._output_hooks = hooks.run(
-            action="report" if action == "fail" else action,
-            ref_range=ref_range,
-            path_config=self._metadata["workflow_hooks_config_path"],
-            logger=self._logger,
-        )
-        if action == "fail" and not self._output_hooks["passed"]:
-            self._logger.error("Hooks failed.")
-        return
-
-    def assemble_summary(self):
-        sections = [
-            html.h(2, "Summary"),
-            self.summary,
-        ]
-        if self.changes:
-            sections.append(self.changed_files())
-        for job, summary_filepath in zip(
-            (self.meta, self.hooks),
-            (".local/reports/repodynamics/meta.md", ".local/reports/repodynamics/hooks.md")
-        ):
-            if job:
-                with open(summary_filepath) as f:
-                    sections.append(f.read())
-        return html.ElementCollection(sections)
 
     def changed_files_summary(self):
         summary = html.ElementCollection(
@@ -832,29 +1156,6 @@ class EventHandler:
         return summary
 
 
-class Push(EventHandler):
-    """
-    References
-    ----------
-    - [GitHub Docs: Webhook events & payloads](https://docs.github.com/en/webhooks/webhook-events-and-payloads#push)
-    """
-
-    def __init__(self, context: dict):
-        super().__init__(context)
-        self._changes = self._get_changed_files()
-        self._commits = self._get_commits()
-        self._head_commit_msg: str = self.payload["head_commit"]["message"]
-        return
-
-    @property
-    def changed_files(self) -> list[str]:
-        """List of changed files."""
-        return self._changes
-
-    def _get_tags(self):
-        return
-
-
 class PushRelease(Push):
 
     def __init__(self, context: dict, changes: dict):
@@ -863,7 +1164,6 @@ class PushRelease(Push):
         self._head_commit_conv: dict = self._parse_commit_msg(self._head_commit_msg)
         if not self._head_commit_conv:
             self._logger.error(f"Invalid commit message: {self._head_commit_msg}")
-
 
         self._output = {
             "config-repo": False,
@@ -875,10 +1175,7 @@ class PushRelease(Push):
     def _determine_commit_type(self):
         if self._head_commit_conv["breaking"]:
             return "release_major"
-
-
         return
-
 
     def run(self):
         self._update_meta(action="report")
@@ -1051,30 +1348,12 @@ class PushDev(Push):
         )
 
 
-class InitialRelease(EventHandler):
-
-    def __init__(self, context: dict):
-        super().__init__(context)
-        return
-
-    def run(self):
-        return
-
-
 class Pull(EventHandler):
 
     def __init__(self, context: dict, changes: dict):
         super().__init__(context)
-
-
-
         self._changes = self._process_changes(changes)
         self._output = {}
-        return
-
-    def run(self):
-        self._update_meta(action="report")
-        self._update_hooks(action="report", ref_range=(hash_before, hash_after))
         return
 
     @property
@@ -1106,11 +1385,6 @@ class Pull(EventHandler):
         return self.info["base"]
 
     @property
-    def internal(self) -> bool:
-        """Whether the pull request is internal, i.e. within the same repository."""
-        return self.head["repo"]["full_name"] == self._context["repository"]
-
-    @property
     def body(self) -> str | None:
         """Pull request body."""
         return self.info["body"]
@@ -1137,17 +1411,6 @@ class Pull(EventHandler):
     @property
     def head_sha(self):
         return self.head["sha"]
-
-
-class Issue(EventHandler):
-
-    def __init__(self, context: dict):
-        super().__init__(context)
-        self._output = {}
-        return
-
-    def run(self):
-        return
 
 
 class IssueComment(EventHandler):
@@ -1178,6 +1441,36 @@ class IssueComment(EventHandler):
         pass
 
     def find_command(self) -> tuple[str, dict]:
+        """
+        Find and parse a RepoDynamicsBot command in a comment.
+
+        The comment must only contain one command.
+        The command must start with '@RepoDynamicsBot ' at the beginning of a line,
+        followed by the command. If the command requires input arguments, they must
+        be given in the next line(s).
+
+        Parameters
+        ----------
+        comment : str
+
+        Returns
+        -------
+        command, kwargs : tuple[str, dict]
+
+        Examples
+        --------
+        A sample comment:
+
+        @RepoDynamicsBot test
+        operating-systems: `['ubuntu-latest', 'windows-latest']`
+        python-versions: `['3.11', '3.10']`
+        run:
+        ```python
+        import package
+        print(package.__version__)
+        ```
+
+        """
         pattern_general = r"""
         ^@RepoDynamicsBot[ ]     # Matches the string at the start of a line with a space after "Bot"
         (?P<command>[^\n]+)      # Captures the command until a new line
@@ -1204,6 +1497,12 @@ class IssueComment(EventHandler):
                 pattern_arguments, command_match.group("arguments"), re.MULTILINE | re.DOTALL | re.VERBOSE
             )
         }
+        # kv_matches = re.finditer(
+        #     pattern_arguments, command_match.group("arguments"), re.MULTILINE | re.DOTALL | re.VERBOSE
+        # )
+        # kv_dict = {}
+        # for match in kv_matches:
+        #     kv_dict[match.group("key")] = match.group("value1") or match.group("value2")
         return command_match.group("command"), kv_dict
 
     @property
@@ -1237,31 +1536,6 @@ class IssueComment(EventHandler):
         return self.payload["issue"]
 
 
-class Dispatch(EventHandler):
-
-    def __init__(self, context: dict):
-        super().__init__(context)
-        self._output = {"pull": True}
-        return
-
-    def run(self):
-        summary = html.ElementCollection()
-        self._update_meta(action="commit")
-        summary.append(self._output_meta["summary"])
-        if self._metadata.get("workflow_hooks_config_path"):
-            self._update_hooks(action="commit")
-            summary.append(self._output_hooks["summary"])
-        self._create_pull_body()
-        return self._output, None, str(summary)
-
-    def _create_pull_body(self):
-        path = Path(".local/temp/repodynamics/init/pr_body.md")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            f.write("Automatically update all metadata and dynamic files.\nRun hooks.")
-        return
-
-
 
 
 
@@ -1287,13 +1561,6 @@ def _finalize(
     creates a new output variable `json` that contains all the data,
     and writes a job summary.
     """
-    job_summary = html.ElementCollection()
-
-    job_summary.append(html.h(2, "Metadata"))
-
-    with open("meta/.out/metadata.json") as f:
-        metadata_dict = json.load(f)
-
     job_summary.append(
         html.details(
             content=md.code_block(json.dumps(metadata_dict, indent=4), "json"),
@@ -1329,101 +1596,40 @@ def _finalize(
     return {"json": json.dumps(all_groups)}, str(log)
 
 
-    def _summary(self, changes):
-        results = []
-        if not changes["any"]:
+def _summary(self, changes):
+    results = []
+    if not changes["any"]:
+        results.append(
+            html.li("✅ All dynamic files are in sync with meta content.")
+        )
+    else:
+        emoji = "🔄" if self._applied else "❌"
+        results.append(
+            html.li(f"{emoji} Following groups were out of sync with source files:")
+        )
+        results.append(
+            html.ul([self._categories[category] for category in self._categories if changes[category]])
+        )
+        if self._applied:
             results.append(
-                html.li("✅ All dynamic files are in sync with meta content.")
+                html.li("✏️ Changed files were updated successfully.")
+            )
+        if self._commit_hash:
+            results.append(
+                html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
             )
         else:
-            emoji = "🔄" if self._applied else "❌"
-            results.append(
-                html.li(f"{emoji} Following groups were out of sync with source files:")
-            )
-            results.append(
-                html.ul([self._categories[category] for category in self._categories if changes[category]])
-            )
-            if self._applied:
-                results.append(
-                    html.li("✏️ Changed files were updated successfully.")
-                )
-            if self._commit_hash:
-                results.append(
-                    html.li(f"✅ Updates were committed with commit hash '{self._commit_hash}'.")
-                )
-            else:
-                results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
-        summary = html.ElementCollection(
-            [
-                html.h(2, "Meta"),
-                html.h(3, "Summary"),
-                html.ul(results),
-                html.h(3, "Details"),
-                self._color_legend(),
-                self._summary_section_details(),
-                html.h(3, "Log"),
-                html.details(self._logger.file_log, "Log"),
-            ]
-        )
-        return summary
-
-
-
-def find_command(comment: str) -> tuple[str, dict] | None:
-    """
-    Find and parse a RepoDynamicsBot command in a comment.
-
-    The comment must only contain one command.
-    The command must start with '@RepoDynamicsBot ' at the beginning of a line,
-    followed by the command. If the command requires input arguments, they must
-    be given in the next line(s).
-
-    Parameters
-    ----------
-    comment : str
-
-    Returns
-    -------
-    command, kwargs : tuple[str, dict]
-
-    Examples
-    --------
-    A sample comment:
-
-    @RepoDynamicsBot test
-    operating-systems: `['ubuntu-latest', 'windows-latest']`
-    python-versions: `['3.11', '3.10']`
-    run:
-    ```python
-    import package
-    print(package.__version__)
-    ```
-
-    """
-    pattern_general = r"""
-    ^@RepoDynamicsBot[ ]     # Matches the string at the start of a line with a space after "Bot"
-    (?P<command>[^\n]+)      # Captures the command until a new line
-    \n                       # Matches the newline character after the command
-    (?P<arguments>.*)        # Captures everything that comes after the newline in a group called "arguments"
-    """
-    command_match = re.search(pattern_general, comment, re.MULTILINE | re.DOTALL | re.VERBOSE)
-    if not command_match:
-        return
-    pattern_arguments = r"""
-        (?P<key>[a-zA-Z][a-zA-Z0-9_-]*)  # Captures the key
-        :[ \t]*                          # Colon separator, possibly followed by spaces/tabs
-        (?:
-            `(?P<value1>[^`]+)`          # Value enclosed in backticks, capturing at least one character
-            |                            # OR
-            \n```[\w-]*\s*                 # Captures the optional language specifier
-            (?P<value2>.+?)              # Captures the content of the multiline code block non-greedily
-            \n```                          # Ending delimiter of the multiline code block
-        )
-        """
-    kv_matches = re.finditer(
-        pattern_arguments, command_match.group("arguments"), re.MULTILINE | re.DOTALL | re.VERBOSE
+            results.append(html.li(f"❌ Commit mode was not selected; updates were not committed."))
+    summary = html.ElementCollection(
+        [
+            html.h(2, "Meta"),
+            html.h(3, "Summary"),
+            html.ul(results),
+            html.h(3, "Details"),
+            self._color_legend(),
+            self._summary_section_details(),
+            html.h(3, "Log"),
+            html.details(self._logger.file_log, "Log"),
+        ]
     )
-    kv_dict = {}
-    for match in kv_matches:
-        kv_dict[match.group("key")] = match.group("value1") or match.group("value2")
-    return command_match.group("command"), kv_dict
+    return summary
