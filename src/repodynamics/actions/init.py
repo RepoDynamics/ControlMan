@@ -95,7 +95,9 @@ class ChangelogManager:
             self.logger.error(f"Invalid changelog ID: {changelog_id}")
         changelog_dict = self.changes.setdefault(changelog_id, {})
         if not isinstance(changelog_dict, dict):
-            self.logger.error(f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes.")
+            self.logger.error(
+                f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes."
+            )
         for section_idx, section in enumerate(self.meta[changelog_id]["sections"]):
             if section["id"] == section_id:
                 section_dict = changelog_dict.setdefault(section_idx, {"title": section["title"], "changes": []})
@@ -109,7 +111,9 @@ class ChangelogManager:
         if changelog_id not in self.meta:
             self.logger.error(f"Invalid changelog ID: {changelog_id}")
         if changelog_id in self.changes:
-            self.logger.error(f"Changelog {changelog_id} is already updated with an entry; cannot add new entry.")
+            self.logger.error(
+                f"Changelog {changelog_id} is already updated with an entry; cannot add new entry."
+            )
         self.changes[changelog_id] = sections
         return
 
@@ -209,6 +213,7 @@ class Init:
         self.logger = logger or Logger("github")
         self.git: Git = Git(logger=self.logger)
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
+        self.api_admin = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
         self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
         self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
 
@@ -388,7 +393,24 @@ class Init:
                 "website_deploy", "package_publish_testpypi", "package_publish_pypi", "github_release"
             ):
                 self.output["config"]["run"][job_id] = False
-        return self.output, None, self.assemble_summary()
+        summary = self.assemble_summary()
+        self.logger.h1("Finalization")
+        return self.output, None, summary
+
+    def event_issue_comment(self):
+        return
+
+    def event_issues(self):
+        return
+
+    def event_pull_request_review(self):
+        return
+
+    def event_pull_request_review_comment(self):
+        return
+
+    def event_pull_request(self):
+        return
 
     def event_pull_request_target(self):
         self.enable_job_run("website_rtd_preview")
@@ -434,7 +456,15 @@ class Init:
         if self.ref_is_main:
             if not self.last_ver:
                 self.event_repository_created()
-            return
+            else:
+                self.logger.skip(
+                    "Creation of default branch detected while a version tag is present; skipping.",
+                    "This is likely a result of a repository transfer, or renaming of the default branch."
+                )
+        else:
+            self.logger.skip(
+                "Creation of non-default branch detected; skipping.",
+            )
         return
 
     def event_push_branch_deleted(self):
@@ -442,15 +472,19 @@ class Init:
 
     def event_push_branch_modified(self):
         if self.ref_is_main:
-            self.event_push_branch_modified_main()
-        metadata = self.meta.read_metadata_raw()
-        branch_group = metadata["branch"]["group"]
-        if self.ref_name.startswith(branch_group["release"]["prefix"]):
-            self.event_push_branch_modified_release()
-        elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
-            self.event_push_branch_modified_dev()
+            if not self.last_ver:
+                self.event_first_release()
+            else:
+                self.event_push_branch_modified_main()
         else:
-            self.event_push_branch_modified_other()
+            metadata = self.meta.read_metadata_raw()
+            branch_group = metadata["branch"]["group"]
+            if self.ref_name.startswith(branch_group["release"]["prefix"]):
+                self.event_push_branch_modified_release()
+            elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
+                self.event_push_branch_modified_dev()
+            else:
+                self.event_push_branch_modified_other()
         return
 
     def event_push_branch_modified_main(self):
@@ -459,10 +493,13 @@ class Init:
         self.action_hooks()
         self.last_ver, self.dist_ver = self.get_latest_version()
         commits = self.get_commits()
-        commit: Commit
-        if commit.action == PrimaryCommitAction.PACKAGE_MAJOR:
-            self.event_push_branch_modified_main_package_major(commit)
+        # commit: Commit
+        # if commit.action == PrimaryCommitAction.PACKAGE_MAJOR:
+        #     self.event_push_branch_modified_main_package_major(commit)
 
+        return
+
+    def event_push_branch_modified_release(self):
         return
 
     def event_push_branch_modified_dev(self):
@@ -490,6 +527,43 @@ class Init:
             oneliner="Repository created from RepoDynamics PyPackIT template.",
         )
         return
+
+    def event_first_release(self):
+        self.api_admin.activate_pages("workflow")
+        self.action_repo_settings_sync()
+        self.action_repo_labels_sync(init=True)
+        tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
+        version = "0.0.0"
+        tag = f"{tag_prefix}{version}"
+        commit_msg = CommitMsg(
+            typ="init",
+            title="Initialize package and website",
+            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI."
+        )
+        self._hash_latest = self.git.commit(
+            message=str(commit_msg),
+            amend=True
+        )
+        self.git.create_tag(tag=tag, message="First release")
+        for job_id in [
+            "package_build",
+            "package_test_local",
+            "package_lint",
+            "website_build",
+            "website_deploy",
+            "package_publish_testpypi",
+            "package_publish_pypi",
+            "package_test_testpypi",
+            "package_test_pypi",
+        ]:
+            self.enable_job_run(job_id)
+        self.output["config"]["package"]["version"] = version
+        package_name = self.metadata["package"]["name"]
+        self.output["config"]["package"]["download_url_testpypi"] = f"https://test.pypi.org/project/{package_name}/{version}"
+        self.output["config"]["package"]["download_url_pypi"] = f"https://pypi.org/project/{package_name}/{version}"
+        self.output["config"]["ref"] = self.hash_latest
+        return
+
 
     def event_schedule(self):
         cron = self.payload["schedule"]
@@ -727,6 +801,31 @@ class Init:
             oneliner=oneliner,
             details=hooks_output["summary"]
         )
+        return
+
+    def action_repo_labels_sync(self, init: bool = False):
+        name = "Repository Labels Synchronizer"
+        self.logger.h1(name)
+        current_labels = self.api.labels
+        if init:
+            for label in current_labels:
+                self.api.label_delete(label["name"])
+            for label in self.metadata["label"]["list"]:
+                self.api.label_create(**label)
+            return
+
+        return
+
+    def action_repo_settings_sync(self):
+        data = self.metadata["repo"]["config"] | {
+            "has_issues": True,
+            "allow_squash_merge": True,
+            "squash_merge_commit_title": "PR_TITLE",
+            "squash_merge_commit_message": "PR_BODY",
+        }
+        topics = data.pop("topics")
+        self.api_admin.update_settings(settings=data)
+        self.api_admin.replace_topics(topics=topics)
         return
 
     def action_website_announcement_check(self):
@@ -1308,26 +1407,6 @@ This is the initial release of the project. Infrastructure is now in place to su
 
         return
 
-
-class PushMain(PushRelease):
-
-    def __init__(self, context: dict, admin_token: str = ""):
-        super().__init__(context)
-        self._admin_token = admin_token
-        return
-
-    def update_repo_settings(self):
-        data = self._meta["repo"]["config"] | {
-            "has_issues": True,
-            "allow_squash_merge": True,
-            "squash_merge_commit_title": "PR_TITLE",
-            "squash_merge_commit_message": "PR_BODY",
-        }
-        topics = data.pop("topics")
-        admin_api = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
-        admin_api.update_settings(settings=data)
-        admin_api.replace_topics(topics=topics)
-        return
 
 
 class PushDev(Push):
