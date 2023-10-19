@@ -49,7 +49,7 @@ class OutputPaths:
         return
 
     @property
-    def all_paths_to_dynamic_files(self):
+    def all_files(self):
         files = [
             self.metadata.path,
             self.metadata_ci.path,
