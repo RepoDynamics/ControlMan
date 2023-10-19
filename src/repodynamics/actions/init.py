@@ -181,6 +181,17 @@ class ChangelogManager:
 
 class Init:
 
+    SUPPORTED_EVENTS_NON_MODIFYING = [
+        "issue_comment",
+        "issues",
+        "pull_request_review",
+        "pull_request_review_comment",
+        "pull_request_target",
+        "schedule",
+        "workflow_dispatch",
+    ]
+    SUPPORTED_EVENTS_MODIFYING = ["pull_request", "push"]
+
     def __init__(
         self,
         context: dict,
@@ -217,8 +228,10 @@ class Init:
         self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
         self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
 
-        self.metadata, self.metadata_ci = self.meta.read_metadata_output()
-        self.last_ver, self.dist_ver = self.get_latest_version()
+        self.metadata: dict = {}
+        self.metadata_ci: dict = {}
+        self.last_ver: PEP440SemVer | None = None
+        self.dist_ver: int = 0
 
         self.summary_oneliners: list[str] = []
         self.summary_sections: list[str | html.ElementCollection | html.Element] = []
@@ -373,6 +386,12 @@ class Init:
         return self.payload["pull_request"]["head"]["repo"]["full_name"] == self.context["repository"]
 
     def run(self):
+        if self.event_name in self.SUPPORTED_EVENTS_NON_MODIFYING:
+            self.metadata, self.metadata_ci = self.meta.read_metadata_output()
+            self.last_ver, self.dist_ver = self.get_latest_version()
+        elif self.event_name not in self.SUPPORTED_EVENTS_MODIFYING:
+            self.logger.error(f"Event '{self.event_name}' is not supported.")
+
         event_handler = {
             "issue_comment": self.event_issue_comment,
             "issues": self.event_issues,
@@ -384,9 +403,8 @@ class Init:
             "pull_request": self.event_pull_request,
             "push": self.event_push,
         }
-        if self.event_name not in event_handler:
-            self.logger.error(f"Event '{self.event_name}' is not supported.")
         event_handler[self.event_name]()
+
         if self.fail:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
             for job_id in (
