@@ -4,7 +4,7 @@ import re
 from contextlib import contextmanager
 
 from repodynamics.logger import Logger
-from repodynamics._util.shell import run_command as _run
+from repodynamics import _util
 
 
 class Git:
@@ -19,10 +19,10 @@ class Git:
         logger: Logger | None = None
     ):
         self._logger = logger or Logger()
-        git_available = _run(["git", "--version"], raise_command=False, logger=self._logger)
+        git_available = _util.shell.run_command(["git", "--version"], raise_command=False, logger=self._logger)
         if not git_available:
             self._logger.error(f"'git' is not installed. Please install 'git' and try again.")
-        path_root, err, code = _run(
+        path_root, err, code = _util.shell.run_command(
             ["git", "-C", str(Path(path_repo).resolve()), "rev-parse", "--show-toplevel"],
             raise_returncode=False,
             raise_stderr=False,
@@ -51,7 +51,7 @@ class Git:
     def commit(
         self,
         message: str = "",
-        stage: Literal['all', 'tracked', 'none'] = 'tracked',
+        stage: Literal['all', 'tracked', 'none'] = 'all',
         amend: bool = False,
     ):
         """
@@ -333,12 +333,26 @@ class Git:
                 'hash': match[0].strip(),
                 'author': match[1].strip(),
                 'date': match[2].strip(),
-                'message': match[3].strip(),
+                'msg': match[3].strip(),
                 'files': list(filter(None, match[4].strip().split('\n')))
             }
             commits.append(commit_info)
 
         return commits
+
+    def current_branch_name(self) -> str:
+        """Get the name of the current branch."""
+        return self._run(["git", "branch", "--show-current"])
+
+    def checkout(self, branch: str, create: bool = False, reset: bool = False):
+        """Checkout a branch."""
+        cmd = ["git", "checkout"]
+        if reset:
+            cmd.append("-B")
+        elif create:
+            cmd.append("-b")
+        cmd.append(branch)
+        return self._run(cmd)
 
     def get_distance(self, ref_start: str, ref_end: str = "HEAD") -> int:
         """
@@ -507,7 +521,7 @@ class Git:
     def _run(
         self, command: list[str], raise_: bool = True, raise_stderr: bool = False, **kwargs
     ) -> str | tuple[str, str, int]:
-        out, err, code = _run(
+        out, err, code = _util.shell.run_command(
             command,
             cwd=self._path_root,
             raise_returncode=raise_,
@@ -558,5 +572,3 @@ class Git:
                 scope="local"
             )
         return
-
-
