@@ -42,8 +42,8 @@ class Meta:
         return
 
     @property
-    def all_dynamic_paths(self) -> list[Path]:
-        return self._out_db.all_paths_to_dynamic_files
+    def output_paths(self) -> OutputPaths:
+        return self._out_db
 
     def read_metadata_output(self) -> tuple[dict, dict]:
         out = []
