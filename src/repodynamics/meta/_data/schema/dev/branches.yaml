@@ -52,5 +52,18 @@ properties:
                 description: Branch protection rules
                 type: object
             required: [ prefix ]
-        required: [ dev ]
-    required: [ group ]
+          ci_pull:
+            type: object
+            description: CI pull request head branch
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the branch name
+                type: string
+                default: ci-pull/
+              protection_rules:
+                description: Branch protection rules
+                type: object
+            required: [ prefix ]
+        required: [ dev, ci_pull ]
+    required: [ default, group ]
