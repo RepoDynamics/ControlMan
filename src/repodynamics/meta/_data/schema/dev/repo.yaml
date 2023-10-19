@@ -26,13 +26,15 @@ properties:
             default: "${{ url.website.base }}"
           topics:
             description: List of topics for the repository
-            type: array
             default: "${{ keyword_slugs }}"
-            uniqueItems: true
-            items:
-              type: string
-              maxLength: 50
-              pattern: ^[a-z0-9][a-z0-9\-]*$
+            oneOf:
+              - type: string
+              - type: array
+                uniqueItems: true
+                items:
+                  type: string
+                  maxLength: 50
+                  pattern: ^[a-z0-9][a-z0-9\-]*$
           security_and_analysis:
             description: Security and analysis settings for the repository
             type: object
