@@ -20,15 +20,17 @@ properties:
             default: {}
             additionalProperties: false
             properties:
-              release_branch:
-                type: string
-                enum: [ fail, amend, commit ]
-                default: fail
-              dev_branch:
-                type: string
-                enum: [ fail, amend, commit ]
-                default: commit
-            required: [ release_branch, dev_branch ]
+              $ref: '#/definitions/check_action_properties'
+            required:
+              $ref: '#/definitions/check_action_required'
+          hooks_check_action:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              $ref: '#/definitions/check_action_properties'
+            required:
+              $ref: '#/definitions/check_action_required'
           schedule:
             type: object
             default: {}
@@ -45,7 +47,7 @@ properties:
             description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
             type: boolean
             default: false
-        required: [ meta_check_action, get_owner_publications ]
+        required: [ meta_check_action, hooks_check_action, schedule, get_owner_publications ]
       tool:
         type: object
         default: {}
@@ -123,3 +125,55 @@ properties:
       codecov:
         type: object
         minProperties: 1
+    required: [ init, tool, codecov ]
+required: [ workflow ]
+
+
+definitions:
+  check_action_properties:
+    push_main:
+      type: string
+      enum: [ fail, amend, commit, pull ]
+      default: fail
+    push_release:
+      type: string
+      enum: [ fail, amend, commit, pull ]
+      default: fail
+    push_dev:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: commit
+    push_other:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: none
+    pull_main:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: fail
+    pull_release:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: fail
+    pull_dev:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: fail
+    pull_other:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: fail
+    schedule:
+      type: string
+      enum: [ fail, amend, commit, pull, none ]
+      default: pull
+  check_action_required:
+    - push_main
+    - push_release
+    - push_dev
+    - push_other
+    - pull_main
+    - pull_release
+    - pull_dev
+    - pull_other
+    - schedule
