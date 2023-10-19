@@ -390,6 +390,10 @@ class Init:
                 self.output["config"]["run"][job_id] = False
         return self.output, None, self.assemble_summary()
 
+    def event_pull_request_target(self):
+        self.enable_job_run("website_rtd_preview")
+        return
+
     def event_push(self):
 
         def ref_type() -> Literal["tag", "branch"]:
@@ -439,13 +443,38 @@ class Init:
     def event_push_branch_modified(self):
         if self.ref_is_main:
             self.event_push_branch_modified_main()
+        metadata = self.meta.read_metadata_raw()
+        branch_group = metadata["branch"]["group"]
+        if self.ref_name.startswith(branch_group["release"]["prefix"]):
+            self.event_push_branch_modified_release()
+        elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
+            self.event_push_branch_modified_dev()
+        else:
+            self.event_push_branch_modified_other()
         return
 
     def event_push_branch_modified_main(self):
         self.event_type = EventType.PUSH_MAIN
         self.action_meta()
         self.action_hooks()
+        self.last_ver, self.dist_ver = self.get_latest_version()
         commits = self.get_commits()
+        commit: Commit
+        if commit.action == PrimaryCommitAction.PACKAGE_MAJOR:
+            self.event_push_branch_modified_main_package_major(commit)
+
+        return
+
+    def event_push_branch_modified_dev(self):
+        self.event_type = EventType.PUSH_DEV
+        self.action_meta()
+        self.action_hooks()
+        return
+
+    def event_push_branch_modified_other(self):
+        self.event_type = EventType.PUSH_OTHER
+        self.action_meta()
+        self.action_hooks()
         return
 
     def event_repository_created(self):
@@ -455,7 +484,12 @@ class Init:
             path_changelog_file = Path(changelog_data["path"])
             path_changelog_file.unlink(missing_ok=True)
         self.git.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True)
-        return None, None, None
+        self.add_summary(
+            name="Init",
+            status="pass",
+            oneliner="Repository created from RepoDynamics PyPackIT template.",
+        )
+        return
 
     def event_schedule(self):
         cron = self.payload["schedule"]
@@ -472,18 +506,15 @@ class Init:
         return
 
     def event_schedule_sync(self):
-        announcement = self.action_website_announcement_check()
-        if announcement["status"] == "expired":
-            self.action_website_announcement_update(announcement="null")
-
+        self.action_website_announcement_check()
+        self.action_meta()
         return
 
     def event_schedule_test(self):
         return
 
     def event_workflow_dispatch(self):
-        if self._website_announcement:
-            self.action_website_announcement_update(announcement=self._website_announcement)
+        self.action_website_announcement_update()
         return
 
     def action_meta(self):
@@ -698,7 +729,6 @@ class Init:
         )
         return
 
-
     def action_website_announcement_check(self):
         name = "Website Announcement Expiry Check"
         path_announcement_file = Path(self.metadata["path"]["file"]["website_announcement"])
@@ -706,7 +736,7 @@ class Init:
             self.add_summary(
                 name=name,
                 status="skip",
-                oneliner="🚫 Announcement file does not exist.",
+                oneliner="Announcement file does not exist❗",
                 details=html.ul(
                     [
                         f"❎ No changes were made.",
@@ -834,7 +864,25 @@ class Init:
 
     def action_website_announcement_update(self):
         name = "Website Announcement Manual Update"
+        self.logger.h1(name)
+        if not self.ref_is_main:
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="Announcement can only be updated from the main branch❗",
+            )
+            self.logger.warning("Announcement can only be updated from the main branch; skip❗")
+            return
         announcement = self._website_announcement
+        self.logger.input(f"Read announcement from workflow dispatch input: '{announcement}'")
+        if not announcement:
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="No announcement was provided.",
+            )
+            self.logger.skip("No announcement was provided.")
+            return
         old_announcement = self.read_website_announcement().strip()
         old_announcement_details = self.git.log(
             number=1,
@@ -843,67 +891,82 @@ class Init:
             date=None,
             paths=self.metadata["path"]["file"]["website_announcement"],
         )
+        old_md = md.code_block(old_announcement_details)
+
         if announcement == "null":
-            if not old_announcement:
-                self.add_summary(
-                    name=name,
-                    status="skip",
-                    oneliner="🚫 No announcement to remove.",
-                    details=html.ul(
-                        [
-                            f"❎ No changes were made.",
-                            f"🚫 The 'null' string was passed to delete the current announcement, "
-                            f"but the announcement file is already empty."
-                        ]
-                    )
-                )
-                return
-
-
             announcement = ""
 
         if announcement.strip() == old_announcement.strip():
             details_list = ["❎ No changes were made."]
             if not announcement:
-                oneliner = "🚫 No announcement to remove."
-                details_list.append(
-                    "🚫 The announcement file is already empty."
+                oneliner = "No announcement to remove❗"
+                details_list.extend(
+                    [
+                        f"🚫 The 'null' string was passed to delete the current announcement, "
+                        f"but the announcement file is already empty.",
+                        html.details(content=old_md, summary="📝 Last Removal Commit Details")
+                    ]
                 )
             else:
-                details_list.append("🚫 The announcement is already up-to-date.")
+                oneliner = "The provided announcement was identical to the existing announcement❗"
+                details_list.extend(
+                    [
+                        "🚫 The provided announcement was the same as the existing one.",
+                        html.details(content=old_md, summary="📝 Current Announcement Commit Details")
+                    ]
+                )
             self.add_summary(
                 name=name,
-                status="fail",
-                oneliner="🚫 The new announcement is the same as the existing announcement.",
-                details=html.ul(
-
-                )
+                status="skip",
+                oneliner=oneliner,
+                details=html.ul(details_list)
             )
             return
         self.write_website_announcement(announcement)
-        commit_title = "Manually update announcement"
-        commit_hash, commit_url = self.commit_website_announcement(
-            commit_title=commit_title,
-            commit_body=self._website_announcement_msg,
-            change_title=commit_title,
-            change_body=self._website_announcement_msg,
-        )
-
-        new_announcement_html = html.details(
+        new_html = html.details(
             content=md.code_block(announcement, "html"),
             summary="📣 New Announcement",
         )
-
-        self.add_summary(
-            name="Website Announcement Manual Update",
-            status="pass",
-            oneliner="📝 Announcement was manually updated.",
-            details=html.ul(
+        details_list = []
+        if not announcement:
+            oneliner = "Announcement was manually removed 🗑"
+            details_list.extend(
                 [
-                    f"✅ The announcement was manually updated (commit {html.a(commit_url, commit_hash)}).",
-                    f"📝 New Announcement:\n{announcement}",
+                    f"✅ The announcement was manually removed.",
+                    html.details(content=old_md, summary="📝 Removed Announcement Details")
                 ]
             )
+            commit_title = "Manually remove announcement"
+            commit_body = f"Removed announcement:\n\n{old_announcement}"
+        elif not old_announcement:
+            oneliner = "A new announcement was manually added 📣"
+            details_list.extend([f"✅ A new announcement was manually added.", new_html])
+            commit_title = "Manually add new announcement"
+            commit_body = announcement
+        else:
+            oneliner = "Announcement was manually updated 📝"
+            details_list.extend(
+                [
+                    f"✅ The announcement was manually updated.",
+                    new_html,
+                    html.details(content=old_md, summary="📝 Old Announcement Details")
+                ]
+            )
+            commit_title = "Manually update announcement"
+            commit_body = f"New announcement:\n\n{announcement}\n\nRemoved announcement:\n\n{old_announcement}"
+
+        commit_hash, commit_url = self.commit_website_announcement(
+            commit_title=commit_title,
+            commit_body=commit_body,
+            change_title=commit_title,
+            change_body=commit_body,
+        )
+        details_list.append(f"✅ Changes were applied (commit {html.a(commit_url, commit_hash)}).")
+        self.add_summary(
+            name=name,
+            status="pass",
+            oneliner=oneliner,
+            details=html.ul(details_list)
         )
         return
 
@@ -925,7 +988,7 @@ class Init:
         change_title: str,
         change_body: str,
     ):
-        changelog_id = self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_id"]
+        changelog_id = self.metadata["commit"]["primary"]["website"]["announcement"].get("changelog_id")
         if changelog_id:
             changelog_manager = ChangelogManager(
                 changelog_metadata=self.metadata["changelog"],
@@ -950,6 +1013,7 @@ class Init:
         )
         commit_hash = self.git.commit(message=str(commit), stage='all')
         commit_link = str(self.gh_link.commit(commit_hash))
+        self._hash_latest = commit_hash
         return commit_hash, commit_link
 
     def get_changed_files(self) -> list[str]:
