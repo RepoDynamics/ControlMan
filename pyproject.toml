@@ -17,9 +17,10 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev97"
+version = "0.0.0.dev98"
 name = "RepoDynamics"
 dependencies = [
+    "packaging >= 23.2, < 24",
     "pre-commit == 3.3.3",
     "markitup",
     "jsonschema >= 4.19, < 5",
