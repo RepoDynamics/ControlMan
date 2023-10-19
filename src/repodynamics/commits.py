@@ -87,6 +87,9 @@ class CommitParser:
         if not match:
             return
         commit_parts = match.groupdict()
+        if commit_parts["scope"]:
+            commit_parts["scope"] = [scope.strip() for scope in commit_parts["scope"].split(",")]
+        commit_parts["title"] = commit_parts["title"].strip()
         commit_parts["body"] = commit_parts["body"].strip() if commit_parts["body"] else ""
         if commit_parts["footer"]:
             parsed_footers = {}
