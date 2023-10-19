@@ -6,6 +6,7 @@ import datetime
 from markitup import sgr, html, md
 from ruamel.yaml import YAML
 
+
 class Logger:
 
     def __init__(
