@@ -16,21 +16,9 @@ properties:
         additionalProperties: false
         properties:
           meta_check_action:
-            type: object
-            default: {}
-            additionalProperties: false
-            properties:
-              $ref: '#/definitions/check_action_properties'
-            required:
-              $ref: '#/definitions/check_action_required'
+            $ref: '#/definitions/check_action'
           hooks_check_action:
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              $ref: '#/definitions/check_action_properties'
-            required:
-              $ref: '#/definitions/check_action_required'
+            $ref: '#/definitions/check_action'
           schedule:
             type: object
             default: {}
@@ -130,50 +118,54 @@ required: [ workflow ]
 
 
 definitions:
-  check_action_properties:
-    push_main:
-      type: string
-      enum: [ fail, amend, commit, pull ]
-      default: fail
-    push_release:
-      type: string
-      enum: [ fail, amend, commit, pull ]
-      default: fail
-    push_dev:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: commit
-    push_other:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: none
-    pull_main:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: fail
-    pull_release:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: fail
-    pull_dev:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: fail
-    pull_other:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: fail
-    schedule:
-      type: string
-      enum: [ fail, amend, commit, pull, none ]
-      default: pull
-  check_action_required:
-    - push_main
-    - push_release
-    - push_dev
-    - push_other
-    - pull_main
-    - pull_release
-    - pull_dev
-    - pull_other
-    - schedule
+  check_action:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      push_main:
+        type: string
+        enum: [ fail, amend, commit, pull ]
+        default: fail
+      push_release:
+        type: string
+        enum: [ fail, amend, commit, pull ]
+        default: fail
+      push_dev:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: commit
+      push_other:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: none
+      pull_main:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: fail
+      pull_release:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: fail
+      pull_dev:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: fail
+      pull_other:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: fail
+      schedule:
+        type: string
+        enum: [ fail, amend, commit, pull, none ]
+        default: pull
+    required:
+      - push_main
+      - push_release
+      - push_dev
+      - push_other
+      - pull_main
+      - pull_release
+      - pull_dev
+      - pull_other
+      - schedule
