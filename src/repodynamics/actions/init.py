@@ -472,7 +472,7 @@ class Init:
 
     def event_push_branch_created(self):
         if self.ref_is_main:
-            if not self.last_ver:
+            if not self.git.get_tags():
                 self.event_repository_created()
             else:
                 self.logger.skip(
@@ -490,7 +490,7 @@ class Init:
 
     def event_push_branch_modified(self):
         if self.ref_is_main:
-            if not self.last_ver:
+            if not self.git.get_tags():
                 self.event_first_release()
             else:
                 self.event_push_branch_modified_main()
