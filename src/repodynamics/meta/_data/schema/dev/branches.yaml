@@ -39,6 +39,19 @@ properties:
         description: Branch groups
         default: {}
         properties:
+          release:
+            type: object
+            description: Release branch
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the branch name
+                type: string
+                default: release/
+              protection_rules:
+                description: Branch protection rules
+                type: object
+            required: [ prefix ]
           dev:
             type: object
             description: Development branch
@@ -65,5 +78,5 @@ properties:
                 description: Branch protection rules
                 type: object
             required: [ prefix ]
-        required: [ dev, ci_pull ]
+        required: [ release, dev, ci_pull ]
     required: [ default, group ]
