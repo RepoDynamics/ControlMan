@@ -21,6 +21,7 @@ class FileCategory(Enum):
     LICENSE = "License Files"
     PACKAGE = "Package Files"
     CONFIG = "Configuration Files"
+    WEBSITE = "Website Files"
     README = "ReadMe Files"
     HEALTH = "Health Files"
     FORM = "Forms"
@@ -53,30 +54,44 @@ class OutputPaths:
         return self._paths
 
     @property
-    def all_files(self):
+    def fixed_files(self) -> list[OutputFile]:
         files = [
-            self.metadata.path,
-            self.metadata_ci.path,
-            self.license.path,
-            self.readme_main.path,
-            self.readme_pypi.path,
-            self.funding.path,
-            self.pre_commit_config.path,
-            self.read_the_docs_config.path,
-            self.issue_template_chooser_config.path,
-            self.package_pyproject.path,
+            self.metadata,
+            self.metadata_ci,
+            self.license,
+            self.readme_main,
+            self.readme_pypi,
+            self.funding,
+            self.pre_commit_config,
+            self.read_the_docs_config,
+            self.issue_template_chooser_config,
+            self.package_pyproject,
             self.test_package_pyproject,
-            self.package_requirements.path,
-            self.package_manifest.path,
-            self.codecov_config.path,
-            self.gitignore.path,
-            self.gitattributes.path,
-            self.pull_request_template("default").path,
+            self.package_requirements,
+            self.package_manifest,
+            self.codecov_config,
+            self.gitignore,
+            self.gitattributes,
+            self.pull_request_template("default"),
+            self.website_announcement,
         ]
-        files.extend(list((self._path_root / ".github/workflow_requirements").glob("*.txt")))
         for health_file_name in ['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support']:
             for target_path in ['.', 'docs', '.github']:
-                files.append(self.health_file(health_file_name, target_path).path)
+                files.append(self.health_file(health_file_name, target_path))
+        return files
+
+    @property
+    def fixed_dirs(self):
+        return [
+            self.dir_issue_forms,
+            self.dir_pull_request_templates,
+            self.dir_discussion_forms,
+        ]
+
+    @property
+    def all_files(self) -> list[Path]:
+        files = [file.path for file in self.fixed_files]
+        files.extend(list((self._path_root / ".github/workflow_requirements").glob("*.txt")))
         files.extend(list((self._path_root / ".github/ISSUE_TEMPLATE").glob("*.yaml")))
         files.extend(list((self._path_root / ".github/PULL_REQUEST_TEMPLATE").glob("*.md")))
         files.remove(self._path_root / ".github/PULL_REQUEST_TEMPLATE/README.md")
@@ -195,6 +210,13 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile("gitattributes", FileCategory.CONFIG, filename, rel_path, path)
 
+    @property
+    def website_announcement(self) -> OutputFile:
+        filename = "announcement.html"
+        rel_path = f"{self._paths['dir']['website']}/{filename}"
+        path = self._path_root / rel_path
+        return OutputFile("website-announcement", FileCategory.WEBSITE, filename, rel_path, path)
+
     def workflow_requirements(self, name: str) -> OutputFile:
         filename = f"{name}.txt"
         rel_path = f'.github/workflow_requirements/{filename}'
@@ -225,17 +247,32 @@ class OutputPaths:
         path = self._path_root / rel_path
         return OutputFile(f"issue-form-{name}", FileCategory.FORM, filename, rel_path, path)
 
+    def issue_form_outdated(self, path: Path) -> OutputFile:
+        filename = path.name
+        rel_path = str(path.relative_to(self._path_root))
+        return OutputFile(f"issue-form-outdated-{filename}", FileCategory.FORM, filename, rel_path, path)
+
     def pull_request_template(self, name: str | Literal['default']) -> OutputFile:
         filename = "PULL_REQUEST_TEMPLATE.md" if name == "default" else f"{name}.md"
         rel_path = f'.github/{filename}' if name == "default" else f'.github/PULL_REQUEST_TEMPLATE/{filename}'
         path = self._path_root / rel_path
-        return OutputFile(f"pull-request-template-{name}", FileCategory.CONFIG, filename, rel_path, path)
+        return OutputFile(f"pull-request-template-{name}", FileCategory.FORM, filename, rel_path, path)
+
+    def pull_request_template_outdated(self, path: Path) -> OutputFile:
+        filename = path.name
+        rel_path = str(path.relative_to(self._path_root))
+        return OutputFile(f"pull-request-template-outdated-{filename}", FileCategory.FORM, filename, rel_path, path)
 
     def discussion_form(self, name: str) -> OutputFile:
         filename = f"{name}.yaml"
         rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
         path = self._path_root / rel_path
         return OutputFile(f"discussion-form-{name}", FileCategory.FORM, filename, rel_path, path)
+
+    def discussion_form_outdated(self, path: Path) -> OutputFile:
+        filename = path.name
+        rel_path = str(path.relative_to(self._path_root))
+        return OutputFile(f"discussion-form-outdated-{filename}", FileCategory.FORM, filename, rel_path, path)
 
     def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> OutputFile:
         filename = package_name
@@ -269,6 +306,18 @@ class OutputPaths:
         rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
         path = self._path_root / rel_path
         return OutputFile("package-typing-marker", FileCategory.PACKAGE, filename, rel_path, path)
+
+    @property
+    def dir_issue_forms(self):
+        return self._path_root / ".github/ISSUE_TEMPLATE/"
+
+    @property
+    def dir_pull_request_templates(self):
+        return self._path_root / ".github/PULL_REQUEST_TEMPLATE/"
+
+    @property
+    def dir_discussion_forms(self):
+        return self._path_root / ".github/DISCUSSION_TEMPLATE/"
 
 
 class _FileStatus(NamedTuple):
