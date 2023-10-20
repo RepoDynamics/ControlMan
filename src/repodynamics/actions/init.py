@@ -517,6 +517,7 @@ class Init:
         return
 
     def event_push_branch_modified(self):
+        self.get_changed_files()
         if self.ref_is_main:
             if not self.git.get_tags():
                 self.event_first_release()
@@ -646,7 +647,8 @@ class Init:
             action = self._meta_sync
             self.logger.input(f"Read action from workflow dispatch input: {action}")
         else:
-            action = self.metadata["workflow"]["init"]["meta_check_action"][self.event_type.value]
+            metadata_raw = self.meta.read_metadata_raw()
+            action = metadata_raw["workflow"]["init"]["meta_check_action"][self.event_type.value]
             self.logger.input(
                 f"Read action from 'meta.workflow.init.meta_check_action.{self.event_type.value}': {action}"
             )
@@ -1235,6 +1237,11 @@ class Init:
                 changed_groups_str += f", {file_type.value.title}"
         if changed_groups_str:
             oneliner = f"Found changes in following groups: {changed_groups_str[2:]}."
+            if summary_detail[RepoFileType.SUPERMETA]:
+                oneliner = (
+                    f"This event modified SuperMeta files; "
+                    f"make sure to double-check that everything is correct❗ {oneliner}"
+                )
         else:
             oneliner = "No changes were found."
         legend = [f"{status.value.emoji}  {status.value.title}" for status in FileChangeType]
@@ -1242,7 +1249,9 @@ class Init:
         summary_details.insert(0, html.ul([oneliner, color_legend]))
         self.add_summary(
             name=name,
-            status="pass" if changed_groups_str else "skip",
+            status="warning" if summary_detail[RepoFileType.SUPERMETA] else (
+                "pass" if changed_groups_str else "skip"
+            ),
             oneliner=oneliner,
             details=html.ElementCollection(summary_details)
         )
@@ -1355,7 +1364,7 @@ class Init:
     def add_summary(
         self,
         name: str,
-        status: Literal['pass', 'fail', 'skip'],
+        status: Literal['pass', 'fail', 'skip', 'warning'],
         oneliner: str,
         details: str | html.Element | html.ElementCollection | None = None,
     ):

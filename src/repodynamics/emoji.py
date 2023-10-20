@@ -5,6 +5,7 @@ class Emoji:
         "PASS": "✅",
         "SKIP": "❎",
         "FAIL": "❌",
+        "WARNING": "⚠️",
         "PLAY": "▶️",
     }
 
