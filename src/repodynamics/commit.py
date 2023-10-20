@@ -1,6 +1,6 @@
 import re
 
-from repodynamics.datatypes import CommitMsg
+from repodynamics.datatype import CommitMsg
 from repodynamics.logger import Logger
 
 

@@ -13,11 +13,11 @@ from ruamel.yaml import YAML
 from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.meta import Meta, FileCategory
-from repodynamics import hooks, _util
-from repodynamics.commits import CommitParser
-from repodynamics.versioning import PEP440SemVer
+from repodynamics import hook, _util
+from repodynamics.commit import CommitParser
+from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
-from repodynamics.datatypes import (
+from repodynamics.datatype import (
     EventType,
     CommitGroup,
     Commit,
@@ -591,7 +591,7 @@ class Init:
         else:
             pre_commit_temp = False
             pre_commit_config_path = self.meta.output_paths.pre_commit_config.rel_path
-        hooks_output = hooks.run(
+        hooks_output = hook.run(
             apply=action not in ["fail", "report"],
             ref_range=(self.hash_before, self.hash_after),
             path_config=pre_commit_config_path,
