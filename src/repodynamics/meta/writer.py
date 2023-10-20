@@ -49,6 +49,10 @@ class OutputPaths:
         return
 
     @property
+    def input_paths(self):
+        return self._paths
+
+    @property
     def all_files(self):
         files = [
             self.metadata.path,
@@ -61,6 +65,7 @@ class OutputPaths:
             self.read_the_docs_config.path,
             self.issue_template_chooser_config.path,
             self.package_pyproject.path,
+            self.test_package_pyproject,
             self.package_requirements.path,
             self.package_manifest.path,
             self.codecov_config.path,

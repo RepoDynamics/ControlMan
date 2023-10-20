@@ -4,6 +4,7 @@ from typing import Literal, Optional, NamedTuple
 import re
 import datetime
 from enum import Enum
+import shutil
 
 from markitup import html, md
 import pylinks
@@ -533,6 +534,8 @@ class Init:
         return
 
     def event_repository_created(self):
+        shutil.rmtree(self.meta.output_paths.input_paths["dir"]["source"])
+        shutil.rmtree(self.meta.output_paths.input_paths["dir"]["tests"])
         for path_dynamic_file in self.meta.output_paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in self.metadata["changelog"].values():
