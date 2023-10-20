@@ -37,8 +37,9 @@ class MetaReader:
 
         if self._metadata.get("package"):
             self._package_config = self._read_pyproject_metadata()
+            self._test_package_config = self._read_single_file(rel_path="package/build_tests", ext="toml")
         else:
-            self._package_config = None
+            self._package_config = self._test_package_config = None
 
         self._cache: dict = self._initialize_api_cache()
         self._db = self._read_datafile(_util.file.datafile("db.yaml"))
@@ -50,6 +51,10 @@ class MetaReader:
 
     @property
     def package_config(self) -> tomlkit.TOMLDocument | None:
+        return self._package_config
+
+    @property
+    def test_package_config(self) -> tomlkit.TOMLDocument | None:
         return self._package_config
 
     @property
@@ -208,20 +213,7 @@ class MetaReader:
         ]
         metadata = {}
         for entry in data:
-            section = self._read_datafile(self.path.dir_meta / f"{entry}.yaml")
-            for idx, extension in enumerate(self._extensions["extensions"]):
-                if extension["type"] == entry:
-                    self.logger.h4(f"Read Extension Metadata {idx + 1}")
-                    extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{entry}.yaml"
-                    section_extension = self._read_datafile(extionsion_path, raise_missing=True)
-                    self._recursive_update(
-                        source=section,
-                        add=section_extension,
-                        append_list=extension['append_list'],
-                        append_dict=extension['append_dict'],
-                        raise_on_duplicated=extension['raise_duplicate']
-                    )
-            self._validate_datafile(source=section, schema=entry)
+            section = self._read_single_file(rel_path=entry)
             self._recursive_update(
                 source=metadata,
                 add=section,
@@ -233,18 +225,17 @@ class MetaReader:
         return metadata
 
     def _read_pyproject_metadata(self):
-        build = self._read_package_build()
+        build = self._read_single_file(rel_path="package/build", ext="toml")
         tool = self._read_package_config()
         self._recursive_update(build, tool, raise_on_duplicated=True)
         return build
 
-    def _read_package_build(self):
-        path = "package/build"
-        section = self._read_datafile(self.path.dir_meta / f"{path}.toml")
+    def _read_single_file(self, rel_path: str, ext: str = "yaml"):
+        section = self._read_datafile(self.path.dir_meta / f"{rel_path}.{ext}")
         for idx, extension in enumerate(self._extensions["extensions"]):
-            if extension["type"] == "package/build":
+            if extension["type"] == rel_path:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
-                extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{path}.toml"
+                extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
                 section_extension = self._read_datafile(extionsion_path, raise_missing=True)
                 self._recursive_update(
                     source=section,
@@ -253,7 +244,7 @@ class MetaReader:
                     append_dict=extension['append_dict'],
                     raise_on_duplicated=extension['raise_duplicate']
                 )
-        self._validate_datafile(source=section, schema=path)
+        self._validate_datafile(source=section, schema=rel_path)
         return section
 
     def _read_package_config(self):
