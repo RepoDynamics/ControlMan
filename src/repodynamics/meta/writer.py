@@ -149,6 +149,13 @@ class OutputPaths:
         return OutputFile("package-pyproject", FileCategory.PACKAGE, filename, rel_path, path)
 
     @property
+    def test_package_pyproject(self) -> OutputFile:
+        filename = "pyproject.toml"
+        rel_path = f'{self._paths["dir"]["tests"]}/{filename}'
+        path = self._path_root / rel_path
+        return OutputFile("test-package-pyproject", FileCategory.PACKAGE, filename, rel_path, path)
+
+    @property
     def package_requirements(self) -> OutputFile:
         filename = "requirements.txt"
         rel_path = filename
@@ -231,6 +238,19 @@ class OutputPaths:
         alt_paths = [old_path] if old_path else None
         return OutputFile(
             "package-dir", FileCategory.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
+        )
+
+    def python_file(self, path: Path):
+        filename = path.name
+        rel_path = str(path.relative_to(self._path_root))
+        return OutputFile(rel_path, FileCategory.PACKAGE, filename, rel_path, path)
+
+    def package_tests_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> OutputFile:
+        filename = f"{package_name}_tests"
+        rel_path = str(new_path.relative_to(self._path_root))
+        alt_paths = [old_path] if old_path else None
+        return OutputFile(
+            "test-package-dir", FileCategory.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
         )
 
     def package_init(self, package_name: str) -> OutputFile:
