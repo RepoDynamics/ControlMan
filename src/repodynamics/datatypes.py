@@ -1,0 +1,140 @@
+from typing import NamedTuple
+from enum import Enum
+
+
+class EventType(Enum):
+    PUSH_MAIN = "push_main"
+    PUSH_RELEASE = "push_release"
+    PUSH_DEV = "push_dev"
+    PUSH_OTHER = "push_other"
+    PULL_MAIN = "pull_main"
+    PULL_RELEASE = "pull_release"
+    PULL_DEV = "pull_dev"
+    PULL_OTHER = "pull_other"
+    SCHEDULE = "schedule"
+    DISPATCH = "dispatch"
+
+
+class CommitGroup(Enum):
+    PRIMARY_ACTION = 0
+    PRIMARY_CUSTOM = 1
+    SECONDARY_ACTION = 2
+    SECONDARY_CUSTOM = 3
+    NON_CONV = 4
+
+
+class PrimaryCommitAction(Enum):
+    PACKAGE_MAJOR = 0
+    PACKAGE_MINOR = 1
+    PACKAGE_PATCH = 2
+    PACKAGE_POST = 3
+    WEBSITE = 4
+    META = 5
+
+
+class SecondaryCommitAction(Enum):
+    META_SYNC = 0
+    REVERT = 1
+    HOOK_FIX = 2
+
+
+class RepoFileType(Enum):
+    SUPERMETA = "SuperMeta Content"
+    WORKFLOW = "Workflows"
+    META = "Meta Content"
+    DYNAMIC = "Dynamic Content"
+    PACKAGE = "Package Files"
+    TEST = "Test-Suite Files"
+    WEBSITE = "Website Files"
+    README = "README Files"
+    OTHER = "Other Files"
+
+
+class _FileStatus(NamedTuple):
+    title: str
+    emoji: str
+
+
+class FileChangeType(Enum):
+    REMOVED = _FileStatus("Removed", "🔴")
+    MODIFIED = _FileStatus("Modified", "🟣")
+    BROKEN = _FileStatus("Broken", "🟠")
+    CREATED = _FileStatus("Created", "🟢")
+    UNMERGED = _FileStatus("Unmerged", "⚪️")
+    UNKNOWN = _FileStatus("Unknown", "⚫")
+
+
+class CommitMsg:
+    def __init__(
+        self,
+        typ: str,
+        title: str,
+        body: str | None = None,
+        scope: str | tuple[str] | list[str] | None = None,
+        footer: dict[str, str | list[str]] | None = None,
+    ):
+        for arg, arg_name in ((typ, "typ"), (title, "title")):
+            if not isinstance(arg, str):
+                raise TypeError(f"Argument '{arg_name}' must be a string, but got {type(arg)}: {arg}")
+            if "\n" in arg:
+                raise ValueError(f'Argument `{arg_name}` must not contain a newline, but got: """{arg}"""')
+            if ":" in arg:
+                raise ValueError(f'Argument `{arg_name}` must not contain a colon, but got: """{arg}"""')
+        self.type = typ
+        self.title = title
+        if isinstance(body, str):
+            self.body = body.strip()
+        elif body is None:
+            self.body = ""
+        else:
+            raise TypeError(f"Argument 'body' must be a string or None, but got {type(body)}: {body}")
+        if scope is None:
+            self.scope = []
+        if isinstance(scope, (list, tuple)):
+            self.scope = [str(s) for s in scope]
+        elif isinstance(scope, str):
+            self.scope = [scope]
+        else:
+            raise TypeError(
+                f"Argument 'scope' must be a string or list/tuple of strings, but got {type(scope)}: {scope}"
+            )
+        if footer is None:
+            self.footer = {}
+        elif isinstance(footer, dict):
+            self.footer = footer
+        else:
+            raise TypeError(
+                f"Argument 'footer' must be a dict, but got {type(footer)}: {footer}"
+            )
+        return
+
+    @property
+    def summary(self):
+        scope = f"({', '.join(self.scope)})" if self.scope else ""
+        return f"{self.type}{scope}: {self.title}"
+
+    def __str__(self):
+        commit = self.summary
+        if self.body:
+            commit += f"\n\n{self.body}"
+        if self.footer:
+            commit += "\n\n-----------\n\n"
+            for key, values in self.footer.items():
+                if isinstance(values, str):
+                    values = [values]
+                for value in values:
+                    commit += f"{key}: {value}\n"
+        return commit.strip() + "\n"
+
+
+class Commit(NamedTuple):
+    hash: str
+    author: str
+    date: str
+    files: list[str]
+    msg: str
+    typ: CommitGroup = CommitGroup.NON_CONV
+    conv_msg: CommitMsg | None = None
+    action: PrimaryCommitAction | SecondaryCommitAction | None = None
+
+

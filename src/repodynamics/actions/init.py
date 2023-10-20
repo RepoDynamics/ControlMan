@@ -14,197 +14,20 @@ from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.meta import Meta, FileCategory
 from repodynamics import hooks, _util
-from repodynamics.commits import CommitParser, CommitMsg
+from repodynamics.commits import CommitParser
 from repodynamics.versioning import PEP440SemVer
 from repodynamics.emoji import emoji
-
-
-class EventType(Enum):
-    PUSH_MAIN = "push_main"
-    PUSH_RELEASE = "push_release"
-    PUSH_DEV = "push_dev"
-    PUSH_OTHER = "push_other"
-    PULL_MAIN = "pull_main"
-    PULL_RELEASE = "pull_release"
-    PULL_DEV = "pull_dev"
-    PULL_OTHER = "pull_other"
-    SCHEDULE = "schedule"
-    DISPATCH = "dispatch"
-
-
-class CommitGroup(Enum):
-    PRIMARY_ACTION = 0
-    PRIMARY_CUSTOM = 1
-    SECONDARY_ACTION = 2
-    SECONDARY_CUSTOM = 3
-    NON_CONV = 4
-
-
-class PrimaryCommitAction(Enum):
-    PACKAGE_MAJOR = 0
-    PACKAGE_MINOR = 1
-    PACKAGE_PATCH = 2
-    PACKAGE_POST = 3
-    WEBSITE = 4
-    META = 5
-
-
-class SecondaryCommitAction(Enum):
-    META_SYNC = 0
-    REVERT = 1
-    HOOK_FIX = 2
-
-
-class Commit(NamedTuple):
-    hash: str
-    author: str
-    date: str
-    files: list[str]
-    msg: str
-    typ: CommitGroup = CommitGroup.NON_CONV
-    conv_msg: CommitMsg | None = None
-    action: PrimaryCommitAction | SecondaryCommitAction | None = None
-
-
-class RepoFileType(Enum):
-    SUPERMETA = "SuperMeta Content"
-    WORKFLOW = "Workflows"
-    META = "Meta Content"
-    DYNAMIC = "Dynamic Content"
-    PACKAGE = "Package Files"
-    TEST = "Test-Suite Files"
-    WEBSITE = "Website Files"
-    README = "README Files"
-    OTHER = "Other Files"
-
-
-class _FileStatus(NamedTuple):
-    title: str
-    emoji: str
-
-
-class FileChangeType(Enum):
-    REMOVED = _FileStatus("Removed", "🔴")
-    MODIFIED = _FileStatus("Modified", "🟣")
-    BROKEN = _FileStatus("Broken", "🟠")
-    CREATED = _FileStatus("Created", "🟢")
-    UNMERGED = _FileStatus("Unmerged", "⚪️")
-    UNKNOWN = _FileStatus("Unknown", "⚫")
-
-
-class ChangelogManager:
-    def __init__(
-        self,
-        changelog_metadata: dict,
-        ver_dist: str,
-        commit_type: str,
-        commit_title: str,
-        parent_commit_hash: str,
-        parent_commit_url: str,
-        logger: Logger = None
-    ):
-        self.meta = changelog_metadata
-        self.vars = {
-            "ver_dist": ver_dist,
-            "date": datetime.date.today().strftime("%Y.%m.%d"),
-            "commit_type": commit_type,
-            "commit_title": commit_title,
-            "parent_commit_hash": parent_commit_hash,
-            "parent_commit_url": parent_commit_url,
-        }
-        self.logger = logger or Logger("github")
-        self.changes = {}
-        return
-
-    def add_change(self, changelog_id: str, section_id: str, change_title: str, change_details: str):
-        if changelog_id not in self.meta:
-            self.logger.error(f"Invalid changelog ID: {changelog_id}")
-        changelog_dict = self.changes.setdefault(changelog_id, {})
-        if not isinstance(changelog_dict, dict):
-            self.logger.error(
-                f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes."
-            )
-        for section_idx, section in enumerate(self.meta[changelog_id]["sections"]):
-            if section["id"] == section_id:
-                section_dict = changelog_dict.setdefault(
-                    section_idx, {"title": section["title"], "changes": []}
-                )
-                section_dict["changes"].append({"title": change_title, "details": change_details})
-                break
-        else:
-            self.logger.error(f"Invalid section ID: {section_id}")
-        return
-
-    def add_entry(self, changelog_id: str, sections: str):
-        if changelog_id not in self.meta:
-            self.logger.error(f"Invalid changelog ID: {changelog_id}")
-        if changelog_id in self.changes:
-            self.logger.error(
-                f"Changelog {changelog_id} is already updated with an entry; cannot add new entry."
-            )
-        self.changes[changelog_id] = sections
-        return
-
-    def write_all_changelogs(self):
-        for changelog_id in self.changes:
-            self.write_changelog(changelog_id)
-        return
-
-    def write_changelog(self, changelog_id: str):
-        if changelog_id not in self.changes:
-            return
-        changelog = self.get_changelog(changelog_id)
-        with open(self.meta[changelog_id]["path"], "w") as f:
-            f.write(changelog)
-        return
-
-    def get_changelog(self, changelog_id: str) -> str:
-        if changelog_id not in self.changes:
-            return ""
-        path = Path(self.meta[changelog_id]["path"])
-        if not path.exists():
-            title = f"# {self.meta[changelog_id]['title']}"
-            intro = self.meta[changelog_id]["intro"].strip()
-            text_before = f"{title}\n\n{intro}"
-            text_after = ""
-        else:
-            with open(path) as f:
-                text = f.read()
-            parts = re.split(r'^## ', text, maxsplit=1, flags=re.MULTILINE)
-            if len(parts) == 2:
-                text_before, text_after = parts[0].strip(), f"## {parts[1].strip()}"
-            else:
-                text_before, text_after = text.strip(), ""
-        entry = self.get_entry(changelog_id).strip()
-        changelog = f"{text_before}\n\n{entry}\n\n{text_after}".strip() + "\n"
-        return changelog
-
-    def get_entry(self, changelog_id: str) -> str:
-        if changelog_id not in self.changes:
-            return ""
-        entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
-        entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
-        entry_sections = self.get_sections(changelog_id)
-        entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
-        return entry
-
-    def get_sections(self, changelog_id: str) -> str:
-        if changelog_id not in self.changes:
-            return ""
-        if isinstance(self.changes[changelog_id], str):
-            return self.changes[changelog_id]
-        changelog_dict = self.changes[changelog_id]
-        sorted_sections = [value for key, value in sorted(changelog_dict.items())]
-        sections_str = ""
-        for section in sorted_sections:
-            sections_str += f"### {section['title']}\n\n"
-            for change in section["changes"]:
-                sections_str += f"#### {change['title']}\n\n{change['details']}\n\n"
-        return sections_str.strip() + "\n"
-
-    @property
-    def open_changelogs(self) -> tuple[str]:
-        return tuple(self.changes.keys())
+from repodynamics.actions._changelog import ChangelogManager
+from repodynamics.datatypes import (
+    EventType,
+    CommitGroup,
+    Commit,
+    CommitMsg,
+    RepoFileType,
+    PrimaryCommitAction,
+    SecondaryCommitAction,
+    FileChangeType
+)
 
 
 class Init:
