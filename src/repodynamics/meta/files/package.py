@@ -89,7 +89,7 @@ class PackageFileGenerator:
         package_dirs = [
             subdir
             for subdir in [
-                content for content in path.iterdir() if content.is_dir()
+                content for content in path.parent.iterdir() if content.is_dir()
             ]
             if "__init__.py"
             in [
@@ -97,7 +97,7 @@ class PackageFileGenerator:
                 for sub_content in subdir.iterdir()
                 if sub_content.is_file()
             ]
-        ]
+        ] if path.parent.is_dir() else []
         count_dirs = len(package_dirs)
         if count_dirs > 1:
             self._logger.error(

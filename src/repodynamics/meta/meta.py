@@ -108,6 +108,7 @@ class Meta:
             generated_files += PackageFileGenerator(
                 metadata=metadata,
                 package_config=self._reader.package_config,
+                test_package_config=self._reader.test_package_config,
                 path_root=self._reader.path.root,
                 logger=self._logger
             ).generate()
