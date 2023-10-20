@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from typing import Literal, Optional, NamedTuple
+from typing import Literal, NamedTuple
 import re
 import datetime
 from enum import Enum
@@ -10,7 +10,6 @@ from markitup import html, md
 import pylinks
 from ruamel.yaml import YAML
 
-import repodynamics as rd
 from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.meta import Meta, FileCategory
@@ -127,7 +126,9 @@ class ChangelogManager:
             )
         for section_idx, section in enumerate(self.meta[changelog_id]["sections"]):
             if section["id"] == section_id:
-                section_dict = changelog_dict.setdefault(section_idx, {"title": section["title"], "changes": []})
+                section_dict = changelog_dict.setdefault(
+                    section_idx, {"title": section["title"], "changes": []}
+                )
                 section_dict["changes"].append({"title": change_title, "details": change_details})
                 break
         else:
@@ -310,109 +311,6 @@ class Init:
         }
         return
 
-    @property
-    def fail(self):
-        return self.output["config"]["fail"]
-
-    @fail.setter
-    def fail(self, value: bool):
-        self.output["config"]["fail"] = True
-        return
-
-    def enable_job_run(self, job_id: str):
-        if job_id not in self.output["config"]["run"]:
-            self.logger.error(f"Invalid job ID: {job_id}")
-        self.output["config"]["run"][job_id] = True
-        return
-
-    @property
-    def context(self) -> dict:
-        """The 'github' context of the triggering event.
-
-        References
-        ----------
-        - [GitHub Docs](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context)
-        """
-        return self._context
-
-    @property
-    def payload(self) -> dict:
-        """The full webhook payload of the triggering event.
-
-        References
-        ----------
-        - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
-        """
-        return self._payload
-
-    @property
-    def event_name(self) -> str:
-        """The name of the triggering event, e.g. 'push', 'pull_request' etc."""
-        return self.context["event_name"]
-
-    @property
-    def ref(self) -> str:
-        """
-        The full ref name of the branch or tag that triggered the event,
-        e.g. 'refs/heads/main', 'refs/tags/v1.0' etc.
-        """
-        return self.context["ref"]
-
-    @property
-    def ref_name(self) -> str:
-        """The short ref name of the branch or tag that triggered the event, e.g. 'main', 'dev/1' etc."""
-        return self.context["ref_name"]
-
-    @property
-    def repo_owner(self) -> str:
-        """GitHub username of the repository owner."""
-        return self.context["repository_owner"]
-
-    @property
-    def repo_name(self) -> str:
-        """Name of the repository."""
-        return self.context["repository"].removeprefix(f"{self.repo_owner}/")
-
-    @property
-    def default_branch(self) -> str:
-        return self.payload["repository"]["default_branch"]
-
-    @property
-    def ref_is_main(self) -> bool:
-        return self.ref == f"refs/heads/{self.default_branch}"
-
-    @property
-    def hash_before(self) -> str:
-        """The SHA hash of the most recent commit on the branch before the event."""
-        if self.event_name == "push":
-            return self.payload["before"]
-        if self.event_name == "pull_request":
-            return self.payload["pull_request"]["base"]["sha"]
-        return self.git.commit_hash_normal()
-
-    @property
-    def hash_after(self) -> str:
-        """The SHA hash of the most recent commit on the branch after the event."""
-        if self.event_name == "push":
-            return self.payload["after"]
-        if self.event_name == "pull_request":
-            return self.payload["pull_request"]["head"]["sha"]
-        return self.git.commit_hash_normal()
-
-    @property
-    def hash_latest(self) -> str:
-        """The SHA hash of the most recent commit on the branch,
-        including commits made during the workflow run.
-        """
-        if self._hash_latest:
-            return self._hash_latest
-        return self.hash_after
-
-    @property
-    def pull_is_internal(self) -> bool:
-        """Whether the pull request is internal, i.e. within the same repository."""
-        return self.payload["pull_request"]["head"]["repo"]["full_name"] == self.context["repository"]
-
     def run(self):
         if self.event_name in self.SUPPORTED_EVENTS_NON_MODIFYING:
             self.metadata, self.metadata_ci = self.meta.read_metadata_output()
@@ -443,25 +341,6 @@ class Init:
         self.logger.h1("Finalization")
         return self.output, None, summary
 
-    def event_issue_comment(self):
-        return
-
-    def event_issues(self):
-        return
-
-    def event_pull_request_review(self):
-        return
-
-    def event_pull_request_review_comment(self):
-        return
-
-    def event_pull_request(self):
-        return
-
-    def event_pull_request_target(self):
-        self.enable_job_run("website_rtd_preview")
-        return
-
     def event_push(self):
 
         def ref_type() -> Literal["tag", "branch"]:
@@ -489,35 +368,8 @@ class Init:
         event_handler[(ref_type(), change_type())]()
         return
 
-    def event_push_tag_created(self):
-        return
-
-    def event_push_tag_deleted(self):
-        return
-
-    def event_push_tag_modified(self):
-        return
-
-    def event_push_branch_created(self):
-        if self.ref_is_main:
-            if not self.git.get_tags():
-                self.event_repository_created()
-            else:
-                self.logger.skip(
-                    "Creation of default branch detected while a version tag is present; skipping.",
-                    "This is likely a result of a repository transfer, or renaming of the default branch."
-                )
-        else:
-            self.logger.skip(
-                "Creation of non-default branch detected; skipping.",
-            )
-        return
-
-    def event_push_branch_deleted(self):
-        return
-
     def event_push_branch_modified(self):
-        self.get_changed_files()
+        self.action_file_change_detector()
         if self.ref_is_main:
             if not self.git.get_tags():
                 self.event_first_release()
@@ -546,6 +398,21 @@ class Init:
 
         return
 
+    def event_push_branch_created(self):
+        if self.ref_is_main:
+            if not self.git.get_tags():
+                self.event_repository_created()
+            else:
+                self.logger.skip(
+                    "Creation of default branch detected while a version tag is present; skipping.",
+                    "This is likely a result of a repository transfer, or renaming of the default branch."
+                )
+        else:
+            self.logger.skip(
+                "Creation of non-default branch detected; skipping.",
+            )
+        return
+
     def event_push_branch_modified_release(self):
         return
 
@@ -559,6 +426,63 @@ class Init:
         self.event_type = EventType.PUSH_OTHER
         self.action_meta()
         self.action_hooks()
+        return
+
+    def event_push_branch_deleted(self):
+        return
+
+    def event_push_tag_created(self):
+        return
+
+    def event_push_tag_deleted(self):
+        return
+
+    def event_push_tag_modified(self):
+        return
+
+    def event_pull_request(self):
+        return
+
+    def event_pull_request_target(self):
+        self.enable_job_run("website_rtd_preview")
+        return
+
+    def event_schedule(self):
+        cron = self.payload["schedule"]
+        schedule_type = self.metadata["workflow"]["init"]["schedule"]
+        if cron == schedule_type["sync"]:
+            return self.event_schedule_sync()
+        if cron == schedule_type["test"]:
+            return self.event_schedule_test()
+        self.logger.error(
+            f"Unknown cron expression for scheduled workflow: {cron}",
+            f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
+            f"{schedule_type}"
+        )
+        return
+
+    def event_schedule_sync(self):
+        self.action_website_announcement_check()
+        self.action_meta()
+        return
+
+    def event_schedule_test(self):
+        return
+
+    def event_workflow_dispatch(self):
+        self.action_website_announcement_update()
+        return
+
+    def event_issue_comment(self):
+        return
+
+    def event_issues(self):
+        return
+
+    def event_pull_request_review(self):
+        return
+
+    def event_pull_request_review_comment(self):
         return
 
     def event_repository_created(self):
@@ -613,31 +537,96 @@ class Init:
         self.output["config"]["ref"] = self.hash_latest
         return
 
+    def action_file_change_detector(self) -> list[str]:
+        name = "File Change Detector"
+        self.logger.h1(name)
+        change_type_map = {
+            "added": FileChangeType.CREATED,
+            "deleted": FileChangeType.REMOVED,
+            "modified": FileChangeType.MODIFIED,
+            "unmerged": FileChangeType.UNMERGED,
+            "unknown": FileChangeType.UNKNOWN,
+            "broken": FileChangeType.BROKEN,
+            "copied_to": FileChangeType.CREATED,
+            "renamed_from": FileChangeType.REMOVED,
+            "renamed_to": FileChangeType.CREATED,
+            "copied_modified_to": FileChangeType.CREATED,
+            "renamed_modified_from": FileChangeType.REMOVED,
+            "renamed_modified_to": FileChangeType.CREATED,
+        }
+        summary_detail = {file_type: [] for file_type in RepoFileType}
+        change_group = {file_type: [] for file_type in RepoFileType}
+        changes = self.git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
+        self.logger.success("Detected changed files", json.dumps(changes, indent=3))
+        input_path = self.meta.output_paths.input_paths
+        fixed_paths = [outfile.rel_path for outfile in self.meta.output_paths.fixed_files]
+        for change_type, changed_paths in changes.items():
+            # if change_type in ["unknown", "broken"]:
+            #     self.logger.warning(
+            #         f"Found {change_type} files",
+            #         f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
+            #         "These files will be ignored."
+            #     )
+            #     continue
+            if change_type.startswith("copied") and change_type.endswith("from"):
+                continue
+            for path in changed_paths:
+                if path.endswith("/README.md") or path == ".github/_README.md":
+                    typ = RepoFileType.README
+                elif path.startswith(f'{input_path["dir"]["source"]}/'):
+                    typ = RepoFileType.PACKAGE
+                elif path in fixed_paths:
+                    typ = RepoFileType.DYNAMIC
+                elif path.startswith(f'{input_path["dir"]["website"]}/'):
+                    typ = RepoFileType.WEBSITE
+                elif path.startswith(f'{input_path["dir"]["tests"]}/'):
+                    typ = RepoFileType.TEST
+                elif path.startswith(".github/workflows/"):
+                    typ = RepoFileType.WORKFLOW
+                elif (
+                    path.startswith(".github/DISCUSSION_TEMPLATE/")
+                    or path.startswith(".github/ISSUE_TEMPLATE/")
+                    or path.startswith(".github/PULL_REQUEST_TEMPLATE/")
+                    or path.startswith(".github/workflow_requirements")
+                ):
+                    typ = RepoFileType.DYNAMIC
+                elif path.startswith(f'{input_path["dir"]["meta"]}/'):
+                    typ = RepoFileType.META
+                elif path == ".path.json":
+                    typ = RepoFileType.SUPERMETA
+                else:
+                    typ = RepoFileType.OTHER
+                summary_detail[typ].append(f"{change_type_map[change_type].value.emoji} {path}")
+                change_group[typ].append(path)
 
-    def event_schedule(self):
-        cron = self.payload["schedule"]
-        schedule_type = self.metadata["workflow"]["init"]["schedule"]
-        if cron == schedule_type["sync"]:
-            return self.event_schedule_sync()
-        if cron == schedule_type["test"]:
-            return self.event_schedule_test()
-        self.logger.error(
-            f"Unknown cron expression for scheduled workflow: {cron}",
-            f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-            f"{schedule_type}"
+        self.changed_files = change_group
+        summary_details = []
+        changed_groups_str = ""
+        for file_type, summaries in summary_detail.items():
+            if summaries:
+                summary_details.append(html.h(3, file_type.value.title))
+                summary_details.append(html.ul(summaries))
+                changed_groups_str += f", {file_type.value.title}"
+        if changed_groups_str:
+            oneliner = f"Found changes in following groups: {changed_groups_str[2:]}."
+            if summary_detail[RepoFileType.SUPERMETA]:
+                oneliner = (
+                    f"This event modified SuperMeta files; "
+                    f"make sure to double-check that everything is correct❗ {oneliner}"
+                )
+        else:
+            oneliner = "No changes were found."
+        legend = [f"{status.value.emoji}  {status.value.title}" for status in FileChangeType]
+        color_legend = html.details(content=html.ul(legend), summary="Color Legend")
+        summary_details.insert(0, html.ul([oneliner, color_legend]))
+        self.add_summary(
+            name=name,
+            status="warning" if summary_detail[RepoFileType.SUPERMETA] else (
+                "pass" if changed_groups_str else "skip"
+            ),
+            oneliner=oneliner,
+            details=html.ElementCollection(summary_details)
         )
-        return
-
-    def event_schedule_sync(self):
-        self.action_website_announcement_check()
-        self.action_meta()
-        return
-
-    def event_schedule_test(self):
-        return
-
-    def event_workflow_dispatch(self):
-        self.action_website_announcement_update()
         return
 
     def action_meta(self):
@@ -1165,98 +1154,6 @@ class Init:
         self._hash_latest = commit_hash
         return commit_hash, commit_link
 
-    def get_changed_files(self) -> list[str]:
-        name = "File Change Detector"
-        self.logger.h1(name)
-        change_type_map = {
-            "added": FileChangeType.CREATED,
-            "deleted": FileChangeType.REMOVED,
-            "modified": FileChangeType.MODIFIED,
-            "unmerged": FileChangeType.UNMERGED,
-            "unknown": FileChangeType.UNKNOWN,
-            "broken": FileChangeType.BROKEN,
-            "copied_to": FileChangeType.CREATED,
-            "renamed_from": FileChangeType.REMOVED,
-            "renamed_to": FileChangeType.CREATED,
-            "copied_modified_to": FileChangeType.CREATED,
-            "renamed_modified_from": FileChangeType.REMOVED,
-            "renamed_modified_to": FileChangeType.CREATED,
-        }
-        summary_detail = {file_type: [] for file_type in RepoFileType}
-        change_group = {file_type: [] for file_type in RepoFileType}
-        changes = self.git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
-        self.logger.success("Detected changed files", json.dumps(changes, indent=3))
-        input_path = self.meta.output_paths.input_paths
-        fixed_paths = [outfile.rel_path for outfile in self.meta.output_paths.fixed_files]
-        for change_type, changed_paths in changes.items():
-            # if change_type in ["unknown", "broken"]:
-            #     self.logger.warning(
-            #         f"Found {change_type} files",
-            #         f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
-            #         "These files will be ignored."
-            #     )
-            #     continue
-            if change_type.startswith("copied") and change_type.endswith("from"):
-                continue
-            for path in changed_paths:
-                if path.endswith("/README.md") or path == ".github/_README.md":
-                    typ = RepoFileType.README
-                elif path.startswith(f'{input_path["dir"]["source"]}/'):
-                    typ = RepoFileType.PACKAGE
-                elif path in fixed_paths:
-                    typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path["dir"]["website"]}/'):
-                    typ = RepoFileType.WEBSITE
-                elif path.startswith(f'{input_path["dir"]["tests"]}/'):
-                    typ = RepoFileType.TEST
-                elif path.startswith(".github/workflows/"):
-                    typ = RepoFileType.WORKFLOW
-                elif (
-                    path.startswith(".github/DISCUSSION_TEMPLATE/")
-                    or path.startswith(".github/ISSUE_TEMPLATE/")
-                    or path.startswith(".github/PULL_REQUEST_TEMPLATE/")
-                    or path.startswith(".github/workflow_requirements")
-                ):
-                    typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path["dir"]["meta"]}/'):
-                    typ = RepoFileType.META
-                elif path == ".path.json":
-                    typ = RepoFileType.SUPERMETA
-                else:
-                    typ = RepoFileType.OTHER
-                summary_detail[typ].append(f"{change_type_map[change_type].value.emoji} {path}")
-                change_group[typ].append(path)
-
-        self.changed_files = change_group
-        summary_details = []
-        changed_groups_str = ""
-        for file_type, summaries in summary_detail.items():
-            if summaries:
-                summary_details.append(html.h(3, file_type.value.title))
-                summary_details.append(html.ul(summaries))
-                changed_groups_str += f", {file_type.value.title}"
-        if changed_groups_str:
-            oneliner = f"Found changes in following groups: {changed_groups_str[2:]}."
-            if summary_detail[RepoFileType.SUPERMETA]:
-                oneliner = (
-                    f"This event modified SuperMeta files; "
-                    f"make sure to double-check that everything is correct❗ {oneliner}"
-                )
-        else:
-            oneliner = "No changes were found."
-        legend = [f"{status.value.emoji}  {status.value.title}" for status in FileChangeType]
-        color_legend = html.details(content=html.ul(legend), summary="Color Legend")
-        summary_details.insert(0, html.ul([oneliner, color_legend]))
-        self.add_summary(
-            name=name,
-            status="warning" if summary_detail[RepoFileType.SUPERMETA] else (
-                "pass" if changed_groups_str else "skip"
-            ),
-            oneliner=oneliner,
-            details=html.ElementCollection(summary_details)
-        )
-        return
-
     def get_commits(self):
         primary_action = {}
         primary_action_types = []
@@ -1372,6 +1269,109 @@ class Init:
         if details:
             self.summary_sections.append(f"## {name}\n\n{details}\n\n")
         return
+
+    @property
+    def fail(self):
+        return self.output["config"]["fail"]
+
+    @fail.setter
+    def fail(self, value: bool):
+        self.output["config"]["fail"] = True
+        return
+
+    def enable_job_run(self, job_id: str):
+        if job_id not in self.output["config"]["run"]:
+            self.logger.error(f"Invalid job ID: {job_id}")
+        self.output["config"]["run"][job_id] = True
+        return
+
+    @property
+    def context(self) -> dict:
+        """The 'github' context of the triggering event.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context)
+        """
+        return self._context
+
+    @property
+    def payload(self) -> dict:
+        """The full webhook payload of the triggering event.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+        """
+        return self._payload
+
+    @property
+    def event_name(self) -> str:
+        """The name of the triggering event, e.g. 'push', 'pull_request' etc."""
+        return self.context["event_name"]
+
+    @property
+    def ref(self) -> str:
+        """
+        The full ref name of the branch or tag that triggered the event,
+        e.g. 'refs/heads/main', 'refs/tags/v1.0' etc.
+        """
+        return self.context["ref"]
+
+    @property
+    def ref_name(self) -> str:
+        """The short ref name of the branch or tag that triggered the event, e.g. 'main', 'dev/1' etc."""
+        return self.context["ref_name"]
+
+    @property
+    def repo_owner(self) -> str:
+        """GitHub username of the repository owner."""
+        return self.context["repository_owner"]
+
+    @property
+    def repo_name(self) -> str:
+        """Name of the repository."""
+        return self.context["repository"].removeprefix(f"{self.repo_owner}/")
+
+    @property
+    def default_branch(self) -> str:
+        return self.payload["repository"]["default_branch"]
+
+    @property
+    def ref_is_main(self) -> bool:
+        return self.ref == f"refs/heads/{self.default_branch}"
+
+    @property
+    def hash_before(self) -> str:
+        """The SHA hash of the most recent commit on the branch before the event."""
+        if self.event_name == "push":
+            return self.payload["before"]
+        if self.event_name == "pull_request":
+            return self.payload["pull_request"]["base"]["sha"]
+        return self.git.commit_hash_normal()
+
+    @property
+    def hash_after(self) -> str:
+        """The SHA hash of the most recent commit on the branch after the event."""
+        if self.event_name == "push":
+            return self.payload["after"]
+        if self.event_name == "pull_request":
+            return self.payload["pull_request"]["head"]["sha"]
+        return self.git.commit_hash_normal()
+
+    @property
+    def hash_latest(self) -> str:
+        """The SHA hash of the most recent commit on the branch,
+        including commits made during the workflow run.
+        """
+        if self._hash_latest:
+            return self._hash_latest
+        return self.hash_after
+
+    @property
+    def pull_is_internal(self) -> bool:
+        """Whether the pull request is internal, i.e. within the same repository."""
+        return self.payload["pull_request"]["head"]["repo"]["full_name"] == self.context["repository"]
 
 
 def init(
