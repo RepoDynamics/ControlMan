@@ -24,12 +24,14 @@ class PackageFileGenerator:
         self,
         metadata: dict,
         package_config: tomlkit.TOMLDocument,
+        test_package_config: tomlkit.TOMLDocument,
         path_root: str | Path = ".",
         logger: Logger = None
     ):
         self._logger = logger or Logger()
         self._meta = metadata
         self._pyproject = package_config
+        self._pyproject_test = test_package_config
         self._path_root = Path(path_root).resolve()
         self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
 
@@ -37,7 +39,17 @@ class PackageFileGenerator:
         return
 
     def generate(self):
-        return self.requirements() + self.init_docstring() + self.pyproject() + self._package_dir()
+        self._package_dir_output = self._package_dir()
+        return (
+            self.requirements()
+            + self.init_docstring()
+            + self.pyproject()
+            + self.pyproject_tests()
+            + self._package_dir_output
+            + self._package_dir(tests=True)
+            + self.typing_marker()
+            + self.manifest()
+        )
 
     def typing_marker(self) -> list[tuple[OutputFile, str]]:
         info = self._out_db.package_typing_marker(package_name=self._meta["package"]["name"])
@@ -60,16 +72,17 @@ class PackageFileGenerator:
                     text += f"{dep['pip_spec']}\n"
         return [(info, text)]
 
-    def _package_dir(self) -> list[tuple[OutputFile, str]]:
-        if self._package_dir_output:
-            return self._package_dir_output
+    def _package_dir(self, tests: bool = False) -> list[tuple[OutputFile, str]]:
         self._logger.h4("Update path: package")
         package_name = self._meta["package"]["name"]
-        path = self._path_root / self._meta["path"]["dir"]["source"] / package_name
+        name = package_name if not tests else f"{package_name}_tests"
+        sub_path = self._meta["path"]["dir"]["source"] if not tests else f'{self._meta["path"]["dir"]["tests"]}/src'
+        path = self._path_root / sub_path / name
+        func = self._out_db.package_tests_dir if tests else self._out_db.package_dir
         if path.exists():
             self._logger.skip(f"Package path exists", f"{path}")
-            self._package_dir_output = [(self._out_db.package_dir(package_name, path, path), "")]
-            return self._package_dir_output
+            out = [(func(name, path, path), "")]
+            return out
         self._logger.info(
             f"Package path '{path}' does not exist; looking for package directory."
         )
@@ -93,16 +106,28 @@ class PackageFileGenerator:
             )
         if count_dirs == 1:
             self._logger.success(
-                f"Rename package directory to '{package_name}'",
+                f"Rename package directory to '{name}'",
                 f"Old Path: '{package_dirs[0]}'\nNew Path: '{path}'",
             )
-            self._package_dir_output = [(self._out_db.package_dir(package_name, old_path=package_dirs[0], new_path=path), "")]
-            return self._package_dir_output
+            out = [(func(package_name, old_path=package_dirs[0], new_path=path), "")]
+            package_old_name = package_dirs[0].name
+            for filepath in self._path_root.glob("**/*.py") if not tests else path.glob("**/*.py"):
+                new_content = self.rename_imports(
+                    module_content=path.read_text(),
+                    old_name=package_old_name,
+                    new_name=name
+                )
+                out.append((self._out_db.python_file(filepath), new_content))
+            return out
         self._logger.success(
             f"No package directory found in '{path}'; creating one."
         )
-        self._package_dir_output = [(self._out_db.package_dir(package_name, old_path=None, new_path=path), "")]
-        return self._package_dir_output
+        out = [(func(name, old_path=None, new_path=path), "")]
+        for testsuite_filename in ["__init__.py", "__main__.py", "general_tests.py"]:
+            filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
+            text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta)
+            out.append((self._out_db.python_file(path / testsuite_filename), text))
+        return out
 
     def init_docstring(self) -> list[tuple[OutputFile, str]]:
         self._logger.h3("Generate File Content: __init__.py")
@@ -113,19 +138,20 @@ class PackageFileGenerator:
         docstring_text = docs_config["main_init"].strip()
         docstring = f'"""\n{docstring_text}\n"""\n'
 
-        package_dir_info = self._package_dir()[0][0]
+        package_dir_info = self._package_dir_output[0][0]
         current_dir_path = package_dir_info.alt_paths[0] if package_dir_info.alt_paths else package_dir_info.path
         filepath = current_dir_path / "__init__.py"
         if filepath.is_file():
             with open(filepath, "r") as f:
-                file_content = f.read()
+                file_content = f.read().strip()
         else:
-            file_content = ""
+            file_content = """__version_details__ = {"version": "0.0.0"}
+__version__ = __version_details__["version"]"""
         pattern = re.compile(r'^((?:[\t ]*#.*\n|[\t ]*\n)*)("""(?:.|\n)*?"""(?:\n|$))', re.MULTILINE)
         match = pattern.match(file_content)
         if not match:
             # If no docstring found, add the new docstring at the beginning of the file
-            text = f"{docstring}\n\n\n{file_content}".strip() + "\n"
+            text = f"{docstring}\n\n{file_content}".strip() + "\n"
         else:
             # Replace the existing docstring with the new one
             text = re.sub(pattern, rf'\1{docstring}', file_content)
@@ -144,6 +170,11 @@ class PackageFileGenerator:
         for key, val in self.pyproject_project().items():
             if key not in project:
                 project[key] = val
+        return [(info, tomlkit.dumps(pyproject))]
+
+    def pyproject_tests(self) -> list[tuple[OutputFile, str]]:
+        info = self._out_db.test_package_pyproject
+        pyproject = _util.dict.fill_template(self._pyproject_test, metadata=self._meta)
         return [(info, tomlkit.dumps(pyproject))]
 
     def pyproject_project(self) -> dict:
@@ -255,3 +286,31 @@ class PackageFileGenerator:
             if self._meta["package"].get(cat)
             else None
         )
+
+    def rename_imports(self, module_content: str, old_name: str, new_name: str) -> str:
+        """
+        Rename the old import name to the new import name in the provided module content.
+
+        Parameters:
+        - module_content: str - The content of the Python module as a string.
+        - old_name: str - The old name of the import to be renamed.
+        - new_name: str - The new name that will replace the old name.
+
+        Returns:
+        - The updated module content as a string with the old names replaced by the new names.
+        """
+        # Regular expression patterns to match the old name in import statements
+        patterns = [
+            rf'^\s*from\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*\s+import',
+            rf'^\s*import\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*'
+        ]
+        updated_module_content = module_content
+        for pattern in patterns:
+            # Compile the pattern into a regular expression object
+            regex = re.compile(pattern, flags=re.MULTILINE)
+            # Replace the old name with the new name wherever it matches
+            updated_module_content = regex.sub(
+                lambda match: match.group(0).replace(old_name, new_name, 1),
+                updated_module_content
+            )
+        return updated_module_content
