@@ -16,7 +16,6 @@ from repodynamics.meta.meta import Meta, FileCategory
 from repodynamics import hooks, _util
 from repodynamics.commits import CommitParser
 from repodynamics.versioning import PEP440SemVer
-from repodynamics.emoji import emoji
 from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.datatypes import (
     EventType,
@@ -26,7 +25,8 @@ from repodynamics.datatypes import (
     RepoFileType,
     PrimaryCommitAction,
     SecondaryCommitAction,
-    FileChangeType
+    FileChangeType,
+    Emoji
 )
 
 
@@ -1061,11 +1061,11 @@ class Init:
                 (self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload")
             )
         )
-        intro = [f"{emoji.PLAY}The workflow was triggered by a <code>{self.event_name}</code> event."]
+        intro = [f"{Emoji.PLAY}The workflow was triggered by a <code>{self.event_name}</code> event."]
         if self.output["config"]["fail"]:
-            intro.append(f"{emoji.FAIL}The workflow failed.")
+            intro.append(f"{Emoji.FAIL}The workflow failed.")
         else:
-            intro.append(f"{emoji.PASS}The workflow passed.")
+            intro.append(f"{Emoji.PASS}The workflow passed.")
         intro = html.ul(intro)
         summary = html.ElementCollection(
             [
@@ -1088,7 +1088,7 @@ class Init:
         oneliner: str,
         details: str | html.Element | html.ElementCollection | None = None,
     ):
-        self.summary_oneliners.append(f"{emoji[status]} <b>{name}</b>: {oneliner}")
+        self.summary_oneliners.append(f"{Emoji[status]} <b>{name}</b>: {oneliner}")
         if details:
             self.summary_sections.append(f"## {name}\n\n{details}\n\n")
         return
