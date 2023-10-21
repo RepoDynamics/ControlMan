@@ -75,6 +75,38 @@ class PEP440SemVer:
             return 'pre'
         return 'final'
 
+    @property
+    def is_final_like(self) -> bool:
+        """Whether the version is final or post-final."""
+        return not (self.dev is not None or self.pre)
+
+    @property
+    def next_major(self) -> PEP440SemVer:
+        """The next major version."""
+        return PEP440SemVer(f"{self.major + 1}.0.0")
+
+    @property
+    def next_minor(self) -> PEP440SemVer:
+        """The next minor version."""
+        return PEP440SemVer(f"{self.major}.{self.minor + 1}.0")
+
+    @property
+    def next_patch(self) -> PEP440SemVer:
+        """The next patch version."""
+        return PEP440SemVer(f"{self.major}.{self.minor}.{self.patch + 1}")
+
+    @property
+    def next_post(self) -> PEP440SemVer:
+        """The next post version."""
+        if self.dev is not None:
+            raise ValueError("Cannot increment post version of dev version")
+        base = self.base
+        if self.pre:
+            base += f".{self.pre[0]}{self.pre[1]}"
+        if self.post is None:
+            return PEP440SemVer(f"{base}.post0")
+        return PEP440SemVer(f"{base}.post{self.post + 1}")
+
     def __str__(self):
         return str(self._version)
 
