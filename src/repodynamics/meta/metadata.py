@@ -591,31 +591,32 @@ class MetadataGenerator:
                 PrimaryActionCommit.PACKAGE_PATCH.value,
                 PrimaryActionCommit.PACKAGE_POST.value
             ]:
-                base_ver = PEP440SemVer(group_labels["version"])
-                if base_ver.major in release_branch:
-                    curr_base_ver = release_branch[base_ver.major]["version"]
-                elif base_ver.major == main_branch["version"].major:
-                    curr_base_ver = main_branch["version"]
-                else:
-                    self._logger.error(
-                        f"No release branch found for major version {base_ver.major}, "
-                        f"found in branch {curr_branch}."
-                    )
-                if group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MAJOR.value:
-                    ver = curr_base_ver.next_major
-                elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MINOR.value:
-                    ver = curr_base_ver.next_minor
-                elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_PATCH.value:
-                    ver = curr_base_ver.next_patch
-                else:
-                    ver = curr_base_ver.next_post
-                release_info = {
-                    "branch": curr_branch,
-                    "version": ver,
-                    "python_versions": self._metadata["package"]["python_versions"],
-                    "os_titles": self._metadata["package"]["os_titles"],
-                }
-                dev_branch.append(release_info)
+                for version_label in group_labels["version"]:
+                    base_ver = PEP440SemVer(version_label)
+                    if base_ver.major in release_branch:
+                        curr_base_ver = release_branch[base_ver.major]["version"]
+                    elif base_ver.major == main_branch["version"].major:
+                        curr_base_ver = main_branch["version"]
+                    else:
+                        self._logger.error(
+                            f"No release branch found for major version {base_ver.major}, "
+                            f"found in branch {curr_branch}."
+                        )
+                    if group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MAJOR.value:
+                        ver = curr_base_ver.next_major
+                    elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MINOR.value:
+                        ver = curr_base_ver.next_minor
+                    elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_PATCH.value:
+                        ver = curr_base_ver.next_patch
+                    else:
+                        ver = curr_base_ver.next_post
+                    release_info = {
+                        "branch": curr_branch,
+                        "version": ver,
+                        "python_versions": self._metadata["package"]["python_versions"],
+                        "os_titles": self._metadata["package"]["os_titles"],
+                    }
+                    dev_branch.append(release_info)
         releases = dev_branch + list(release_branch.values()) + [main_branch]
         releases.sort(key=lambda i: i["version"], reverse=True)
         all_python_versions = []
@@ -643,17 +644,22 @@ class MetadataGenerator:
                 return max_version
         return
 
-    def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str], list[str]]:
+    def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
         label_prefix = {
             group_id: group_data["prefix"]
             for group_id, group_data in self._metadata["label"]["group"].items()
         }
+        version_label_prefix = self._metadata["label"]["auto_group"]["version"]["prefix"]
         labels = self._reader.github.user(self._metadata["repo"]["owner"]).repo(
             self._metadata["repo"]["name"]
         ).issue_labels(number=issue_number)
         out_dict = {}
         out_list = []
         for label in labels:
+            if label["name"].startswith(version_label_prefix):
+                versions = out_dict.setdefault("version", [])
+                versions.append(label["name"].removeprefix(version_label_prefix))
+                continue
             for group_id, prefix in label_prefix.items():
                 if label["name"].startswith(prefix):
                     if group_id in out_dict:
@@ -666,7 +672,7 @@ class MetadataGenerator:
                         break
             else:
                 out_list.append(label["name"])
-        for group_id in ("primary_type", "version", "status"):
+        for group_id in ("primary_type", "status"):
             if group_id not in out_dict:
                 self._logger.error(
                     f"Missing label group '{group_id}' for issue {issue_number}.",
