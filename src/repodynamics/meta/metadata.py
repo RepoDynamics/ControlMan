@@ -103,13 +103,15 @@ class MetadataGenerator:
                 package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
                 package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
 
-            release_info, all_os_titles, all_python_versions, all_package_versions, all_package_managers = self._package_releases()
+            release_info = self._package_releases()
             package["releases"] = {
-                "data": release_info,
-                "os_titles": all_os_titles,
-                "python_versions": all_python_versions,
-                "package_versions": all_package_versions,
-                "package_managers": all_package_managers,
+                "per_branch": release_info["per_branch"],
+                "os_titles": release_info["os_titles"],
+                "python_versions": release_info["python_versions"],
+                "package_versions": release_info["package_versions"],
+                "package_managers": release_info["package_managers"],
+                "cli_scripts": release_info["cli_scripts"],
+                "gui_scripts": release_info["gui_scripts"],
             }
 
             for classifier in trove_classifiers:
@@ -517,9 +519,7 @@ class MetadataGenerator:
             )
         return output
 
-    def _package_releases(self) -> tuple[
-        list[dict[str, str | list | PEP440SemVer]], list[str], list[str], list[str], list[str]
-    ]:
+    def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
         self._logger.h3("Process metadata: package.releases")
         ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
         curr_branch, other_branches = self._git.get_all_branch_names()
@@ -562,7 +562,9 @@ class MetadataGenerator:
                 "version": ver,
                 "python_versions": branch_metadata["package"]["python_versions"],
                 "os_titles": branch_metadata["package"]["os_titles"],
-                "package_managers": ["pip"] + (["conda"] if branch_metadata["package"].get("conda") else [])
+                "package_managers": ["pip"] + (["conda"] if branch_metadata["package"].get("conda") else []),
+                "cli_scripts": [script["name"] for script in branch_metadata["package"].get("cli_scripts", [])],
+                "gui_scripts": [script["name"] for script in branch_metadata["package"].get("gui_scripts", [])],
             }
             if branch == main_branch_name:
                 main_branch = release_info
@@ -580,7 +582,13 @@ class MetadataGenerator:
                     "version": ver,
                     "python_versions": self._metadata["package"]["python_versions"],
                     "os_titles": self._metadata["package"]["os_titles"],
-                    "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else [])
+                    "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
+                    "cli_scripts": [
+                        script["name"] for script in self._metadata["package"].get("cli_scripts", [])
+                    ],
+                    "gui_scripts": [
+                        script["name"] for script in self._metadata["package"].get("gui_scripts", [])
+                    ],
                 }
                 if curr_branch == main_branch_name:
                     main_branch = release_info
@@ -618,7 +626,13 @@ class MetadataGenerator:
                         "version": ver,
                         "python_versions": self._metadata["package"]["python_versions"],
                         "os_titles": self._metadata["package"]["os_titles"],
-                        "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else [])
+                        "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
+                        "cli_scripts": [
+                            script["name"] for script in self._metadata["package"].get("cli_scripts", [])
+                        ],
+                        "gui_scripts": [
+                            script["name"] for script in self._metadata["package"].get("gui_scripts", [])
+                        ],
                     }
                     dev_branch.append(release_info)
         releases = dev_branch + list(release_branch.values()) + [main_branch]
@@ -626,16 +640,31 @@ class MetadataGenerator:
         all_python_versions = []
         all_os_titles = []
         all_package_versions = []
-        package_managers = []
+        all_package_managers = []
+        all_cli_scripts = []
+        all_gui_scripts = []
         for release in releases:
             all_os_titles.extend(release["os_titles"])
             all_python_versions.extend(release["python_versions"])
             all_package_versions.append(str(release["version"]))
-            package_managers.extend(release["package_managers"])
+            all_package_managers.extend(release["package_managers"])
+            all_cli_scripts.extend(release["cli_scripts"])
+            all_gui_scripts.extend(release["gui_scripts"])
         all_os_titles = sorted(set(all_os_titles))
         all_python_versions = sorted(set(all_python_versions), key=lambda ver: tuple(map(int, ver.split("."))))
-        package_managers = sorted(set(package_managers))
-        return releases, all_os_titles, all_python_versions, all_package_versions, package_managers
+        all_package_managers = sorted(set(all_package_managers))
+        all_cli_scripts = sorted(set(all_cli_scripts))
+        all_gui_scripts = sorted(set(all_gui_scripts))
+        out = {
+            "per_branch": releases,
+            "os_titles": all_os_titles,
+            "python_versions": all_python_versions,
+            "package_versions": all_package_versions,
+            "package_managers": all_package_managers,
+            "cli_scripts": all_cli_scripts,
+            "gui_scripts": all_gui_scripts,
+        }
+        return out
 
     def _get_latest_package_version(self, ver_tag_prefix: str) -> PEP440SemVer | None:
         tags_lists = self._git.get_tags()
