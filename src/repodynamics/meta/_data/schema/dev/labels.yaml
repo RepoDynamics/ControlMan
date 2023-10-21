@@ -10,12 +10,41 @@ properties:
     default: {}
     additionalProperties: false
     properties:
+
+      auto_group:
+        type: object
+        description: Auto label groups
+        default: {}
+        additionalProperties: false
+        properties:
+          version:
+            type: object
+            description: Version labels
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the label name
+                type: string
+                default: 'Version: '
+              color:
+                description: Color of the label
+                type: string
+                pattern: ^[0-9a-fA-F]{6}$
+                default: '0366d6'
+              description:
+                type: string
+                description: Description of the label
+                default: |
+                  The issue/pull request is concerning this specific version of the package.
+            required: [ prefix, color, description ]
+        required: [ version ]
+
       group:
         type: object
         description: Label groups
         default: {}
         properties:
-          primary_commit_type:
+          primary_type:
             type: object
             description: Primary commit types
             default: {}
@@ -34,7 +63,7 @@ properties:
                 type: object
                 default: {}
                 properties:
-                  package_release_major:
+                  package_major:
                     type: object
                     default: {}
                     properties:
@@ -47,7 +76,7 @@ properties:
                         type: string
                         default: |
                           Resolving/merging the labeled issue/pull-request will result in a major release of the package.
-                  package_release_minor:
+                  package_minor:
                     type: object
                     default: {}
                     properties:
@@ -60,7 +89,7 @@ properties:
                         type: string
                         default: |
                           Resolving/merging the labeled issue/pull-request will result in a minor release of the package.
-                  package_release_patch:
+                  package_patch:
                     type: object
                     default: {}
                     properties:
@@ -73,7 +102,7 @@ properties:
                         type: string
                         default: |
                           Resolving/merging the labeled issue/pull-request will result in a patch release of the package.
-                  package_release_post:
+                  package_post:
                     type: object
                     default: {}
                     properties:
@@ -86,7 +115,7 @@ properties:
                         type: string
                         default: |
                           Resolving/merging the labeled issue/pull-request will result in a post release of the package.
-                  website_deploy:
+                  website:
                     type: object
                     default: {}
                     properties:
@@ -112,7 +141,10 @@ properties:
                         type: string
                         default: |
                           An issue/pull-request about the meta content of the repository.
-
+                required: [ package_major, package_minor, package_patch, package_post, website, meta ]
+        required: [ primary_type, status ]
+    required: [ group ]
+required: [ label ]
 #  labels:
 #    description: Labels for the repository
 #    type: array

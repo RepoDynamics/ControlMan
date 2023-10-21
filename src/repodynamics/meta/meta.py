@@ -89,7 +89,9 @@ class Meta:
         if self._metadata:
             return self._metadata, self._metadata_ci
         self.read_metadata_raw()
-        self._metadata = MetadataGenerator(reader=self._reader, logger=self._logger).generate()
+        self._metadata = MetadataGenerator(
+            reader=self._reader, output_path=self.output_path, logger=self._logger
+        ).generate()
         self._metadata_ci = self._generate_metadata_ci()
         return self._metadata, self._metadata_ci
 

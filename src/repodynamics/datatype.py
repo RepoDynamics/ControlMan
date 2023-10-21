@@ -24,13 +24,13 @@ class CommitGroup(Enum):
     NON_CONV = 4
 
 
-class PrimaryCommitAction(Enum):
-    PACKAGE_MAJOR = 0
-    PACKAGE_MINOR = 1
-    PACKAGE_PATCH = 2
-    PACKAGE_POST = 3
-    WEBSITE = 4
-    META = 5
+class PrimaryActionCommit(Enum):
+    PACKAGE_MAJOR = "package_major"
+    PACKAGE_MINOR = "package_minor"
+    PACKAGE_PATCH = "package_patch"
+    PACKAGE_POST = "package_post"
+    WEBSITE = "website"
+    META = "meta"
 
 
 class SecondaryCommitAction(Enum):
@@ -180,7 +180,7 @@ class Commit(NamedTuple):
     msg: str
     typ: CommitGroup = CommitGroup.NON_CONV
     conv_msg: CommitMsg | None = None
-    action: PrimaryCommitAction | SecondaryCommitAction | None = None
+    action: PrimaryActionCommit | SecondaryCommitAction | None = None
 
 
 class Emoji:

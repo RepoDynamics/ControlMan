@@ -24,7 +24,7 @@ from repodynamics.datatype import (
     Commit,
     CommitMsg,
     RepoFileType,
-    PrimaryCommitAction,
+    PrimaryActionCommit,
     SecondaryCommitAction,
     FileChangeType,
     Emoji
@@ -984,7 +984,7 @@ class Init:
         for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
             conv_commit_type = primary_action_commit["type"]
             primary_action_types.append(conv_commit_type)
-            primary_action[conv_commit_type] = PrimaryCommitAction[primary_action_id.upper()]
+            primary_action[conv_commit_type] = PrimaryActionCommit[primary_action_id.upper()]
         secondary_action = {}
         secondary_action_types = []
         for secondary_action_id, secondary_action_commit in self.metadata["commit"]["secondary_action"].items():
