@@ -71,10 +71,10 @@ class FormGenerator:
     def discussion_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
         paths = []
-        forms = self._meta["discussion"]["forms"]
+        forms = self._meta.get("discussion", {}).get("forms", [])
         for discussion in forms:
             info = self._out_db.discussion_form(discussion["slug"])
-            form = {key: val for key, val in discussion.items() if key not in ["id"]}
+            form = {key: val for key, val in discussion.items() if key not in ["slug"]}
             text = YAML(typ=['rt', 'string']).dumps(form, add_final_eol=True)
             out.append((info, text))
             paths.append(info.path)
