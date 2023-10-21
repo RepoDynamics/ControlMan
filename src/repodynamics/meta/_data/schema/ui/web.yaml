@@ -116,3 +116,24 @@ properties:
                 description: URL for Plausible Analytics
                 type: string
                 format: uri
+      path:
+        description: Relative paths to important pages on the website
+        type: object
+        default: {}
+        additionalProperties:
+          type: string
+        properties:
+          contact:
+            description: Relative path to the contact page
+            type: string
+            default: help/contact
+          news:
+            description: Relative path to the news page
+            type: string
+            default: news
+        not:
+          anyOf:
+            - required: [ base ]
+            - required: [ home ]
+            - required: [ announcement ]
+    required: [ announcement_retention_days, path ]

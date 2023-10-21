@@ -344,6 +344,12 @@ class MetadataGenerator:
             issue_type["id"]: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type['id']}.yaml"
             for idx, issue_type in enumerate(self._metadata["issue"]["forms"])
         }
+        # Discussions
+        url["discussions"]["new"] = {
+            discussion["slug"]: f"{url['discussions']['home']}/new?category={discussion['slug']}"
+            for discussion in self._metadata.get("discussion", {}).get("forms", [])
+        }
+
         # Security
         url["security"]["policy"] = f"{url['security']['home']}/policy"
         url["security"]["advisories"] = f"{url['security']['home']}/advisories"
@@ -365,16 +371,12 @@ class MetadataGenerator:
                 base += f"/{self._metadata['repo']['name']}"
         url['base'] = base
         url["home"] = base
-        url["news"] = f"{base}/news"
         url["announcement"] = (
             f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/"
             f"announcement/announcement.html"
         )
-        url["contributors"] = f"{base}/about#contributors"
-        url["contributing"] = f"{base}/contribute"
-        url["license"] = f"{base}/license"
-        url["security_measures"] = f"{base}/contribute/collaborate/maintain/security"
-        url["sponsor"] = f"{base}/contribute/collaborate/maintain/sponsor"
+        for path_id, rel_path in self._metadata["web"]["path"].items():
+            url[path_id] = f"{base}/{rel_path}"
         return url
 
     def _publications(self) -> list[dict]:
