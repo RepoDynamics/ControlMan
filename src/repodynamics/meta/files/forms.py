@@ -1,4 +1,5 @@
-from pathlib import Path
+import copy
+
 from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
@@ -29,8 +30,15 @@ class FormGenerator:
         paths = []
         label_meta = self._meta["label"]["group"]
         for idx, issue in enumerate(issues):
+            pre_process = issue.get("pre_process")
+            if pre_process and not self._pre_process_existence(pre_process):
+                continue
             info = self._out_db.issue_form(issue["id"], idx + 1)
-            form = {key: val for key, val in issue.items() if key not in ["id", "primary_commit_id"]}
+            form = {
+                key: val for key, val in issue.items()
+                if key not in ["id", "primary_commit_id", "body", "pre_process", "post_process"]
+            }
+
             labels = form.setdefault("labels", [])
             type_label_prefix = label_meta["primary_type"]["prefix"]
             type_label_suffix = label_meta["primary_type"]["labels"][issue["primary_commit_id"]]["suffix"]
@@ -40,6 +48,15 @@ class FormGenerator:
             labels.append(f"{status_label_prefix}{status_label_suffix}")
             if issue["id"] in issue_maintainers.keys():
                 form["assignees"] = issue_maintainers[issue["id"]]
+
+            form["body"] = []
+            for elem in issue["body"]:
+                pre_process = elem.get("pre_process")
+                if not pre_process or self._pre_process_existence(pre_process):
+                    form["body"].append(
+                        {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
+                    )
+
             text = YAML(typ=['rt', 'string']).dumps(form, add_final_eol=True)
             out.append((info, text))
             paths.append(info.path)
@@ -82,4 +99,16 @@ class FormGenerator:
                 if file not in paths and file.name != "README.md":
                     out.append((self._out_db.pull_request_template_outdated(path=file), ""))
         return out
+
+    @staticmethod
+    def _pre_process_existence(commands: dict) -> bool:
+        if "if_any" in commands:
+            return any(commands["if_any"])
+        if "if_all" in commands:
+            return all(commands["if_all"])
+        if "if_none" in commands:
+            return not any(commands["if_none"])
+        if "if_equal" in commands:
+            return all([commands["if_equal"][0] == elem for elem in commands["if_equal"][1:]])
+        return True
 
