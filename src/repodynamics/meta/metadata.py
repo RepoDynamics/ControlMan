@@ -1,6 +1,6 @@
 # Standard libraries
 import datetime
-from typing import Literal
+from pathlib import Path
 import json
 import re
 import copy
@@ -13,12 +13,14 @@ from repodynamics.meta.reader import MetaReader
 from repodynamics import git
 from repodynamics import _util
 from repodynamics.logger import Logger
+from repodynamics.version import PEP440SemVer
 
 
 class MetadataGenerator:
     def __init__(
         self,
         reader: MetaReader,
+        path_root: str | Path = ".",
         logger: Logger = None
     ):
         if not isinstance(reader, MetaReader):
@@ -26,8 +28,9 @@ class MetadataGenerator:
         self._reader = reader
         self._logger = logger or reader.logger
         self._logger.h2("Generate Metadata")
+        self._path_root = Path(path_root).resolve()
         self._logger.h3("Detect Git Repository")
-        self._git = git.Git(path_repo=reader.path.root, logger=self._logger)
+        self._git = git.Git(path_repo=self._path_root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
         self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
@@ -90,6 +93,7 @@ class MetadataGenerator:
             os_info = self._package_operating_systems()
             trove_classifiers.extend(os_info["trove_classifiers"])
             package |= {
+                "os_titles": os_info["os_titles"],
                 "os_independent": os_info["os_independent"],
                 "pure_python": os_info["pure_python"],
                 "github_runners": os_info["github_runners"],
@@ -313,25 +317,8 @@ class MetadataGenerator:
         # Issues
         url["issues"]["template_chooser"] = f"{url['issues']['home']}/new/choose"
         url["issues"]["new"] = {
-            issue_type: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type}.yaml"
-            for idx, issue_type in enumerate(
-                [
-                    "app_bug_setup",
-                    "app_bug_api",
-                    "app_request_enhancement",
-                    "app_request_feature",
-                    "app_request_change",
-                    "docs_bug_content",
-                    "docs_bug_site",
-                    "docs_request_content",
-                    "docs_request_feature",
-                    "tests_bug",
-                    "tests_request",
-                    "devops_bug",
-                    "devops_request",
-                    "maintenance_request",
-                ]
-            )
+            issue_type["id"]: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type['id']}.yaml"
+            for idx, issue_type in enumerate(self._metadata["issue"]["forms"])
         }
         # Security
         url["security"]["policy"] = f"{url['security']['home']}/policy"
@@ -460,6 +447,7 @@ class MetadataGenerator:
         }
         trove_classifier_template = "Operating System :: {}"
         output = {
+            "os_titles": [],
             "os_independent": True,
             "pure_python": True,
             "github_runners": [],
@@ -467,13 +455,20 @@ class MetadataGenerator:
             "cibw_matrix_platform": [],
             "cibw_matrix_python": [],
         }
+        os_title = {
+            "linux": "Linux",
+            "macos": "macOS",
+            "windows": "Windows",
+        }
         if not self._metadata["package"].get("operating_systems"):
             self._logger.attention("No operating systems provided.")
             output["trove_classifiers"].append(trove_classifier_template.format(trove_classifiers_postfix["independent"]))
             output["github_runners"].extend(["ubuntu-latest", "macos-latest", "windows-latest"])
+            output["os_titles"].extend(list(os_title.values()))
             return output
         output["os_independent"] = False
         for os_name, specs in self._metadata["package"]["operating_systems"].items():
+            output["os_titles"].append(os_title[os_name])
             output["trove_classifiers"].append(
                 trove_classifier_template.format(trove_classifiers_postfix[os_name])
             )

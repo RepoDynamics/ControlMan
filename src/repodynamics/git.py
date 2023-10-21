@@ -344,6 +344,23 @@ class Git:
         """Get the name of the current branch."""
         return self._run(["git", "branch", "--show-current"])
 
+    def get_all_branch_names(self) -> tuple[str, list[str]]:
+        """Get the name of the current branch."""
+        branches_str = self._run(["git", "branch"])
+        branches_other = []
+        branch_current = []
+        for branch in branches_str.split("\n"):
+            branch = branch.strip()
+            if not branch:
+                continue
+            if branch.startswith("*"):
+                branch_current.append(branch.removeprefix("*").strip())
+            else:
+                branches_other.append(branch)
+        if len(branch_current) > 1:
+            raise RuntimeError("More than one current branch found.")
+        return branch_current[0], branches_other
+
     def checkout(self, branch: str, create: bool = False, reset: bool = False):
         """Checkout a branch."""
         cmd = ["git", "checkout"]

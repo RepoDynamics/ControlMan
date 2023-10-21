@@ -6,18 +6,19 @@ from ruamel.yaml import YAML
 import pylinks
 from pylinks.http import WebAPIError
 from repodynamics.logger import Logger
-from repodynamics.meta.writer import OutputFile, OutputPaths
+from repodynamics.path import OutputPath
+from repodynamics.datatype import DynamicFile
 
 
 class ConfigFileGenerator:
-    def __init__(self, metadata: dict, path_root: str | Path = ".", logger: Logger = None):
+    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
-        self._out_db = OutputPaths(path_root=path_root, logger=self._logger)
+        self._out_db = output_path
         self._logger.h2("Generate Files")
         return
 
-    def generate(self) -> list[tuple[OutputFile, str]]:
+    def generate(self) -> list[tuple[DynamicFile, str]]:
         # label_syncer, pr_labeler = self._labels()
         return (
             self.funding()
@@ -75,7 +76,7 @@ class ConfigFileGenerator:
     #     text = ruamel.yaml.YAML(typ=['rt', 'string']).dumps(out, add_final_eol=True) if out else ""
     #     return [(info, text)]
 
-    def funding(self) -> list[tuple[OutputFile, str]]:
+    def funding(self) -> list[tuple[DynamicFile, str]]:
         """
         References
         ----------
@@ -104,7 +105,7 @@ class ConfigFileGenerator:
         self._logger.success(f"Generated 'FUNDING.yml' file.", output_str)
         return [(info, output_str)]
 
-    def workflow_requirements(self) -> list[tuple[OutputFile, str]]:
+    def workflow_requirements(self) -> list[tuple[DynamicFile, str]]:
         tools = self._meta.get("workflow", {}).get("tool", {})
         out = []
         for tool_name, tool_spec in tools.items():
@@ -112,7 +113,7 @@ class ConfigFileGenerator:
             out.append((self._out_db.workflow_requirements(tool_name), text))
         return out
 
-    def pre_commit_config(self) -> list[tuple[OutputFile, str]]:
+    def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.pre_commit_config
         config = self._meta.get("workflow", {}).get("pre_commit")
         if not config:
@@ -121,7 +122,7 @@ class ConfigFileGenerator:
         text = YAML(typ=['rt', 'string']).dumps(config, add_final_eol=True)
         return [(info, text)]
 
-    def read_the_docs(self) -> list[tuple[OutputFile, str]]:
+    def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.read_the_docs_config
         config = self._meta.get("web", {}).get("readthedocs")
         if not config:
@@ -133,7 +134,7 @@ class ConfigFileGenerator:
         )
         return [(info, text)]
 
-    def codecov_config(self) -> list[tuple[OutputFile, str]]:
+    def codecov_config(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.codecov_config
         config = self._meta.get("workflow", {}).get("codecov")
         if not config:
@@ -152,7 +153,7 @@ class ConfigFileGenerator:
             self._logger.error("Validation of Codecov configuration file failed.", str(e))
         return [(info, text)]
 
-    def issue_template_chooser(self) -> list[tuple[OutputFile, str]]:
+    def issue_template_chooser(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.issue_template_chooser_config
         file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
         if self._meta["issue"].get("contact_links"):
@@ -160,7 +161,7 @@ class ConfigFileGenerator:
         text = YAML(typ=['rt', 'string']).dumps(file, add_final_eol=True)
         return [(info, text)]
 
-    def gitignore(self) -> list[tuple[OutputFile, str]]:
+    def gitignore(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.gitignore
         local_dir = self._meta["path"]["dir"]["local"]
         text = "\n".join(
@@ -173,7 +174,7 @@ class ConfigFileGenerator:
         )
         return [(info, text)]
 
-    def gitattributes(self) -> list[tuple[OutputFile, str]]:
+    def gitattributes(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.gitattributes
         text = ""
         attributes = self._meta.get("repo", {}).get("gitattributes", [])

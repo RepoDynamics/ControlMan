@@ -2,19 +2,19 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
-from repodynamics.meta.writer import OutputFile, OutputPaths
+from repodynamics.path import OutputPath
+from repodynamics.datatype import DynamicFile
 
 
 class FormGenerator:
 
-    def __init__(self, metadata: dict, path_root: str | Path = ".", logger: Logger = None):
+    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
-        self._path_root = Path(path_root).resolve()
-        self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
+        self._out_db = output_path
         self._meta = metadata
         return
 
-    def generate(self) -> list[tuple[OutputFile, str]]:
+    def generate(self) -> list[tuple[DynamicFile, str]]:
         # label_syncer, pr_labeler = self._labels()
         return (
             self.issue_forms()
@@ -22,7 +22,7 @@ class FormGenerator:
             + self.pull_request_templates()
         )
 
-    def issue_forms(self) -> list[tuple[OutputFile, str]]:
+    def issue_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
         issues = self._meta["issue"]["forms"]
         issue_maintainers = self._meta.get("maintainer", {}).get("issue", {})
@@ -51,7 +51,7 @@ class FormGenerator:
                     out.append((self._out_db.issue_form_outdated(path=file), ""))
         return out
 
-    def discussion_forms(self) -> list[tuple[OutputFile, str]]:
+    def discussion_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
         paths = []
         forms = self._meta["discussion"]["forms"]
@@ -68,7 +68,7 @@ class FormGenerator:
                     out.append((self._out_db.discussion_form_outdated(path=file), ""))
         return out
 
-    def pull_request_templates(self) -> list[tuple[OutputFile, str]]:
+    def pull_request_templates(self) -> list[tuple[DynamicFile, str]]:
         out = []
         paths = []
         templates = self._meta["pull"]["template"]

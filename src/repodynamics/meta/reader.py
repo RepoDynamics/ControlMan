@@ -12,25 +12,26 @@ from pylinks import api
 from pylinks.http import WebAPIPersistentStatusCodeError
 from repodynamics import _util
 from repodynamics.logger import Logger
+from repodynamics.path import InputPath
 import tomlkit
 
 
 class MetaReader:
     def __init__(
         self,
-        path_root: str | Path = ".",
+        input_path: InputPath,
         github_token: Optional[str] = None,
         logger: Logger = None
     ):
         self.logger = logger or Logger()
         self.logger.h2("Process Meta Source Files")
         self._github_token = github_token
-        self._path = PathReader(path_root=path_root, logger=self.logger)
+        self._input_path = input_path
         self._local_config = self._get_local_config()
 
         self._extensions, self._path_extensions = self._read_extensions()
         self._metadata: dict = self._read_raw_metadata()
-        self._metadata["path"] = self.path.paths
+        self._metadata["path"] = self._input_path.paths
         self._metadata["path"]["file"] = {
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
         }
@@ -91,18 +92,14 @@ class MetaReader:
         return
 
     def cache_save(self):
-        with open(self.path.local_api_cache, "w") as f:
+        with open(self._input_path.local_api_cache, "w") as f:
             YAML(typ="safe").dump(self._cache, f)
-        self.logger.success(f"Cache file saved at {self.path.local_api_cache}.")
+        self.logger.success(f"Cache file saved at {self._input_path.local_api_cache}.")
         return
-
-    @property
-    def path(self):
-        return self._path
 
     def _read_extensions(self) -> tuple[dict, Path | None]:
         extensions = _util.dict.read(
-            path=self.path.meta_core_extensions,
+            path=self._input_path.meta_core_extensions,
             schema=self._get_schema("core/extensions"),
             logger=self.logger
         )
@@ -122,19 +119,19 @@ class MetaReader:
             r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
             r"([a-fA-F0-9]{32})$"
         )
-        for path in self.path.dir_local_meta_extensions.iterdir():
+        for path in self._input_path.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
                 if match and match.group(2) == hash and not self._is_expired(match.group(1), typ="extensions"):
                     self.logger.success(f"Found non-expired local extensions at '{path}'.")
                     return path, True
         self.logger.info(f"No non-expired local extensions found.")
-        new_path = self.path.dir_local_meta_extensions / f"{self._now}__{hash}"
+        new_path = self._input_path.dir_local_meta_extensions / f"{self._now}__{hash}"
         return new_path, False
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
         self.logger.h3("Download Meta Extensions")
-        _util.file.delete_dir_content(self.path.dir_local_meta_extensions, exclude=["README.md"])
+        _util.file.delete_dir_content(self._input_path.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
             self.logger.h4(f"Download Extension {idx + 1}")
             self.logger.info(f"Input: {extension}")
@@ -168,18 +165,18 @@ class MetaReader:
 
     def _initialize_api_cache(self):
         self.logger.h3("Initialize Cache")
-        if not self.path.local_api_cache.is_file():
-            self.logger.info(f"API cache file not found at '{self.path.local_api_cache}'.")
+        if not self._input_path.local_api_cache.is_file():
+            self.logger.info(f"API cache file not found at '{self._input_path.local_api_cache}'.")
             cache = {}
             return cache
-        cache = self._read_datafile(self.path.local_api_cache)
-        self.logger.success(f"API cache loaded from '{self.path.local_api_cache}'", json.dumps(cache, indent=3))
+        cache = self._read_datafile(self._input_path.local_api_cache)
+        self.logger.success(f"API cache loaded from '{self._input_path.local_api_cache}'", json.dumps(cache, indent=3))
         return cache
 
     def _get_local_config(self):
         self.logger.h3("Read Local Config")
         local_config = self._read_datafile(
-            source=self.path.local_config,
+            source=self._input_path.local_config,
             schema=self._get_schema("local_config"),
         )
         self.logger.success("Local config set.", json.dumps(local_config, indent=3))
@@ -231,7 +228,7 @@ class MetaReader:
         return build
 
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
-        section = self._read_datafile(self.path.dir_meta / f"{rel_path}.{ext}")
+        section = self._read_datafile(self._input_path.dir_meta / f"{rel_path}.{ext}")
         for idx, extension in enumerate(self._extensions["extensions"]):
             if extension["type"] == rel_path:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
@@ -264,7 +261,7 @@ class MetaReader:
                     raise_on_duplicated=True
                 )
             return config
-        toml_dict = read_package_toml(self.path.dir_meta)
+        toml_dict = read_package_toml(self._input_path.dir_meta)
         for idx, extension in enumerate(self._extensions["extensions"]):
             if extension["type"] == "package/tools":
                 extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
@@ -317,80 +314,3 @@ class MetaReader:
             logger=self.logger
         )
         return
-
-
-class PathReader:
-    def __init__(self, path_root: str | Path = ".", logger: Logger | None = None):
-        self._logger = logger or Logger()
-        self._path_root = Path(path_root).resolve()
-        self._paths = _util.dict.read(
-            path=self._path_root / ".path.json",
-            schema=_util.file.datafile("schema/path.yaml"),
-            logger=self._logger
-        )
-
-        for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
-            if not path.is_dir():
-                self._logger.error(f"Input {name} directory '{path}' not found.")
-
-        if self.dir_local.is_file():
-            self._logger.error(f"Input local directory '{self.dir_local}' is a file.")
-        if not self.dir_local.exists():
-            self._logger.info(f"Creating input local directory '{self.dir_local}'.")
-            self.dir_local.mkdir()
-        return
-
-    @property
-    def paths(self) -> dict:
-        return self._paths
-
-    @property
-    def root(self):
-        return self._path_root
-
-    @property
-    def dir_github(self):
-        return self._path_root / ".github"
-
-    @property
-    def dir_source(self):
-        return self._path_root / self._paths["dir"]["source"]
-
-    @property
-    def dir_meta(self):
-        return self._path_root / self._paths["dir"]["meta"]
-
-    @property
-    def dir_local(self):
-        return self._path_root / self._paths["dir"]["local"]
-
-    @property
-    def dir_local_meta(self):
-        return self.dir_local / "meta"
-
-    @property
-    def dir_local_meta_extensions(self):
-        return self.dir_local_meta / "extensions"
-
-    @property
-    def dir_meta_package_config_build(self):
-        return self.dir_meta / "package" / "config_build"
-
-    @property
-    def dir_meta_package_config_tools(self):
-        return self.dir_meta / "package" / "config_tools"
-
-    @property
-    def local_config(self) -> Path:
-        return self.dir_local / "config.yaml"
-
-    @property
-    def local_api_cache(self):
-        return self.dir_local_meta / "api_cache.yaml"
-
-    @property
-    def meta_core_extensions(self):
-        return self.dir_meta / "core" / "extensions.yaml"
-
-
-

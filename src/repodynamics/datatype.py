@@ -1,4 +1,5 @@
 from typing import NamedTuple
+from pathlib import Path
 from enum import Enum
 
 
@@ -50,6 +51,27 @@ class RepoFileType(Enum):
     OTHER = "Other Files"
 
 
+class DynamicFileType(Enum):
+    METADATA = "Metadata Files"
+    LICENSE = "License Files"
+    PACKAGE = "Package Files"
+    CONFIG = "Configuration Files"
+    WEBSITE = "Website Files"
+    README = "ReadMe Files"
+    HEALTH = "Health Files"
+    FORM = "Forms"
+
+
+class DynamicFile(NamedTuple):
+    id: str
+    category: DynamicFileType
+    filename: str
+    rel_path: str
+    path: Path
+    alt_paths: list[Path] | None = None
+    is_dir: bool = False
+
+
 class _FileStatus(NamedTuple):
     title: str
     emoji: str
@@ -62,6 +84,29 @@ class FileChangeType(Enum):
     CREATED = _FileStatus("Created", "🟢")
     UNMERGED = _FileStatus("Unmerged", "⚪️")
     UNKNOWN = _FileStatus("Unknown", "⚫")
+
+
+class DynamicFileChangeTypeContent(NamedTuple):
+    title: str
+    emoji: str
+
+
+class DynamicFileChangeType(Enum):
+    REMOVED = DynamicFileChangeTypeContent("Removed", "🔴")
+    MODIFIED = DynamicFileChangeTypeContent("Modified", "🟣")
+    MOVED_MODIFIED = DynamicFileChangeTypeContent("Moved & Modified", "🟠")
+    MOVED_REMOVED = DynamicFileChangeTypeContent("Moved & Removed", "🟠")
+    MOVED = DynamicFileChangeTypeContent("Moved", "🟡")
+    CREATED = DynamicFileChangeTypeContent("Created", "🟢")
+    UNCHANGED = DynamicFileChangeTypeContent("Unchanged", "⚪️")
+    DISABLED = DynamicFileChangeTypeContent("Disabled", "⚫")
+
+
+class Diff(NamedTuple):
+    status: DynamicFileChangeType
+    after: str
+    before: str = ""
+    path_before: Path | None = None
 
 
 class CommitMsg:

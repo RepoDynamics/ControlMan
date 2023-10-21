@@ -12,12 +12,13 @@ from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
 from repodynamics.git import Git
-from repodynamics.meta.meta import Meta, FileCategory
+from repodynamics.meta.meta import Meta
 from repodynamics import hook, _util
 from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.datatype import (
+    DynamicFileType,
     EventType,
     CommitGroup,
     Commit,
@@ -221,21 +222,6 @@ class Init:
 
         return
 
-    def event_push_branch_created(self):
-        if self.ref_is_main:
-            if not self.git.get_tags():
-                self.event_repository_created()
-            else:
-                self.logger.skip(
-                    "Creation of default branch detected while a version tag is present; skipping.",
-                    "This is likely a result of a repository transfer, or renaming of the default branch."
-                )
-        else:
-            self.logger.skip(
-                "Creation of non-default branch detected; skipping.",
-            )
-        return
-
     def event_push_branch_modified_release(self):
         return
 
@@ -249,6 +235,21 @@ class Init:
         self.event_type = EventType.PUSH_OTHER
         self.action_meta()
         self.action_hooks()
+        return
+
+    def event_push_branch_created(self):
+        if self.ref_is_main:
+            if not self.git.get_tags():
+                self.event_repository_created()
+            else:
+                self.logger.skip(
+                    "Creation of default branch detected while a version tag is present; skipping.",
+                    "This is likely a result of a repository transfer, or renaming of the default branch."
+                )
+        else:
+            self.logger.skip(
+                "Creation of non-default branch detected; skipping.",
+            )
         return
 
     def event_push_branch_deleted(self):
@@ -309,9 +310,9 @@ class Init:
         return
 
     def event_repository_created(self):
-        shutil.rmtree(self.meta.output_paths.input_paths["dir"]["source"])
-        shutil.rmtree(self.meta.output_paths.input_paths["dir"]["tests"])
-        for path_dynamic_file in self.meta.output_paths.all_files:
+        shutil.rmtree(self.meta.input_path.dir_source)
+        shutil.rmtree(self.meta.input_path.dir_tests)
+        for path_dynamic_file in self.meta.output_path.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in self.metadata["changelog"].values():
             path_changelog_file = Path(changelog_data["path"])
@@ -381,8 +382,8 @@ class Init:
         change_group = {file_type: [] for file_type in RepoFileType}
         changes = self.git.changed_files(ref_start=self.hash_before, ref_end=self.hash_after)
         self.logger.success("Detected changed files", json.dumps(changes, indent=3))
-        input_path = self.meta.output_paths.input_paths
-        fixed_paths = [outfile.rel_path for outfile in self.meta.output_paths.fixed_files]
+        input_path = self.meta.input_path
+        fixed_paths = [outfile.rel_path for outfile in self.meta.output_path.fixed_files]
         for change_type, changed_paths in changes.items():
             # if change_type in ["unknown", "broken"]:
             #     self.logger.warning(
@@ -570,7 +571,7 @@ class Init:
             action = "fail"
         if action == "pull":
             pr_branch = self.switch_to_ci_branch("hooks")
-        if self.meta_changes.get(FileCategory.CONFIG, {}).get("pre-commit-config"):
+        if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
             pre_commit_temp = True
             pre_commit_config_path = ".__temporary_pre_commit_config__.yaml"
             for result in self.meta_results:
@@ -590,7 +591,7 @@ class Init:
                 )
         else:
             pre_commit_temp = False
-            pre_commit_config_path = self.meta.output_paths.pre_commit_config.rel_path
+            pre_commit_config_path = self.meta.output_path.pre_commit_config.rel_path
         hooks_output = hook.run(
             apply=action not in ["fail", "report"],
             ref_range=(self.hash_before, self.hash_after),

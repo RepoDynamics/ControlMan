@@ -3,19 +3,19 @@ from pathlib import Path
 
 from repodynamics.meta.reader import MetaReader
 from repodynamics.logger import Logger
-from repodynamics.meta.writer import OutputFile, OutputPaths
+from repodynamics.path import OutputPath
+from repodynamics.datatype import DynamicFile
 
 
 class HealthFileGenerator:
-    def __init__(self, metadata: dict, path_root: str | Path = ".", logger: Logger = None):
-        self._path_root = Path(path_root).resolve()
+    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
-        self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
+        self._out_db = output_path
         self._logger.h2("Generate Files")
         return
 
-    def generate(self) -> list[tuple[OutputFile, str]]:
+    def generate(self) -> list[tuple[DynamicFile, str]]:
         updates = []
         for health_file_id, data in self._meta["health_file"].items():
             info = self._out_db.health_file(health_file_id, target_path=data["path"])

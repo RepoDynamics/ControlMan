@@ -16,7 +16,8 @@ import tomlkit.items
 from repodynamics.logger import Logger
 from repodynamics.meta.reader import MetaReader
 from repodynamics import _util
-from repodynamics.meta.writer import OutputFile, OutputPaths
+from repodynamics.path import OutputPath
+from repodynamics.datatype import DynamicFile
 
 
 class PackageFileGenerator:
@@ -25,15 +26,14 @@ class PackageFileGenerator:
         metadata: dict,
         package_config: tomlkit.TOMLDocument,
         test_package_config: tomlkit.TOMLDocument,
-        path_root: str | Path = ".",
+        output_path: OutputPath,
         logger: Logger = None
     ):
         self._logger = logger or Logger()
         self._meta = metadata
         self._pyproject = package_config
         self._pyproject_test = test_package_config
-        self._path_root = Path(path_root).resolve()
-        self._out_db = OutputPaths(path_root=self._path_root, logger=self._logger)
+        self._out_db = output_path
 
         self._package_dir_output = []
         return
@@ -51,7 +51,7 @@ class PackageFileGenerator:
             + self.manifest()
         )
 
-    def typing_marker(self) -> list[tuple[OutputFile, str]]:
+    def typing_marker(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.package_typing_marker(package_name=self._meta["package"]["name"])
         text = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
@@ -59,7 +59,7 @@ class PackageFileGenerator:
         )
         return [(info, text)]
 
-    def requirements(self) -> list[tuple[OutputFile, str]]:
+    def requirements(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h3("Generate File Content: requirements.txt")
         info = self._out_db.package_requirements
         text = ""
@@ -72,12 +72,12 @@ class PackageFileGenerator:
                     text += f"{dep['pip_spec']}\n"
         return [(info, text)]
 
-    def _package_dir(self, tests: bool = False) -> list[tuple[OutputFile, str]]:
+    def _package_dir(self, tests: bool = False) -> list[tuple[DynamicFile, str]]:
         self._logger.h4("Update path: package")
         package_name = self._meta["package"]["name"]
         name = package_name if not tests else f"{package_name}_tests"
         sub_path = self._meta["path"]["dir"]["source"] if not tests else f'{self._meta["path"]["dir"]["tests"]}/src'
-        path = self._path_root / sub_path / name
+        path = self._out_db.root / sub_path / name
         func = self._out_db.package_tests_dir if tests else self._out_db.package_dir
         if path.exists():
             self._logger.skip(f"Package path exists", f"{path}")
@@ -111,7 +111,7 @@ class PackageFileGenerator:
             )
             out = [(func(package_name, old_path=package_dirs[0], new_path=path), "")]
             package_old_name = package_dirs[0].name
-            for filepath in self._path_root.glob("**/*.py") if not tests else path.glob("**/*.py"):
+            for filepath in self._out_db.root.glob("**/*.py") if not tests else path.glob("**/*.py"):
                 new_content = self.rename_imports(
                     module_content=path.read_text(),
                     old_name=package_old_name,
@@ -129,7 +129,7 @@ class PackageFileGenerator:
             out.append((self._out_db.python_file((path / testsuite_filename).with_suffix(".py")), text))
         return out
 
-    def init_docstring(self) -> list[tuple[OutputFile, str]]:
+    def init_docstring(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h3("Generate File Content: __init__.py")
         docs_config = self._meta["package"].get("docs", {})
         if "main_init" not in docs_config:
@@ -158,12 +158,12 @@ __version__ = __version_details__["version"]"""
         info = self._out_db.package_init(self._meta["package"]["name"])
         return [(info, text)]
 
-    def manifest(self) -> list[tuple[OutputFile, str]]:
+    def manifest(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.package_manifest
         text = "\n".join(self._meta["package"].get("manifest", []))
         return [(info, text)]
 
-    def pyproject(self) -> list[tuple[OutputFile, str]]:
+    def pyproject(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.package_pyproject
         pyproject = _util.dict.fill_template(self._pyproject, metadata=self._meta)
         project = pyproject.setdefault("project", {})
@@ -172,7 +172,7 @@ __version__ = __version_details__["version"]"""
                 project[key] = val
         return [(info, tomlkit.dumps(pyproject))]
 
-    def pyproject_tests(self) -> list[tuple[OutputFile, str]]:
+    def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.test_package_pyproject
         pyproject = _util.dict.fill_template(self._pyproject_test, metadata=self._meta)
         return [(info, tomlkit.dumps(pyproject))]
