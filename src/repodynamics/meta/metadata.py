@@ -14,23 +14,25 @@ from repodynamics import git
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
+from repodynamics.path import OutputPath
+from repodynamics.datatype import PrimaryActionCommit
 
 
 class MetadataGenerator:
     def __init__(
         self,
         reader: MetaReader,
-        path_root: str | Path = ".",
-        logger: Logger = None
+        output_path: OutputPath,
+        logger: Logger = None,
     ):
         if not isinstance(reader, MetaReader):
             raise TypeError(f"reader must be of type MetaReader, not {type(reader)}")
         self._reader = reader
         self._logger = logger or reader.logger
         self._logger.h2("Generate Metadata")
-        self._path_root = Path(path_root).resolve()
+        self._output_path = output_path
         self._logger.h3("Detect Git Repository")
-        self._git = git.Git(path_repo=self._path_root, logger=self._logger)
+        self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
         self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
@@ -43,7 +45,6 @@ class MetadataGenerator:
         self._metadata["discussion"]["categories"] = self._discussions()
         self._metadata["license"] |= self._license()
         self._metadata['keyword_slugs'] = self._keywords()
-        self._metadata["label"]["list"] = self.repo_labels()
         self._metadata["url"] = {
             "github": self._urls_github(),
             "website": self._urls_website()
@@ -102,10 +103,20 @@ class MetadataGenerator:
                 package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
                 package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
 
+            release_info, all_os_titles, all_python_versions, all_package_versions = self._package_releases()
+            package["releases"] = {
+                "data": release_info,
+                "os_titles": all_os_titles,
+                "python_versions": all_python_versions,
+                "package_versions": all_package_versions,
+            }
+
             for classifier in trove_classifiers:
                 if classifier not in _trove_classifiers.classifiers:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
+
+        self._metadata["label"]["list"] = self.repo_labels()
         self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
         self._validate_relationships()
         self._reader.cache_save()
@@ -301,6 +312,15 @@ class MetadataGenerator:
                         "color": group["color"]
                     }
                 )
+        package_versions = self._metadata.get("package", {}).get("releases", {}).get("package_versions", [])
+        version_label_data = self._metadata["label"]["auto_group"]["version"]
+        for package_version in package_versions:
+            label = {
+                "name": f"{version_label_data['prefix']}{package_version}",
+                "description": version_label_data["description"],
+                "color": version_label_data["color"]
+            }
+            out.append(label)
         return out
 
     def _urls_github(self) -> dict:
@@ -312,6 +332,7 @@ class MetadataGenerator:
             url[key] = {"home": f"{home}/{key}"}
 
         url["tree"] = f"{home}/tree/{main_branch}"
+        url["blob"] = f"{home}/blob/{main_branch}"
         url["raw"] = f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/{main_branch}"
 
         # Issues
@@ -324,6 +345,12 @@ class MetadataGenerator:
         url["security"]["policy"] = f"{url['security']['home']}/policy"
         url["security"]["advisories"] = f"{url['security']['home']}/advisories"
         url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
+        url["health_file"] = {}
+        for health_file_id, health_file_data in self._metadata["health_file"].items():
+            health_file_rel_path = self._output_path.health_file(
+                name=health_file_id, target_path=health_file_data["path"]
+            )
+            url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
         return url
 
     def _urls_website(self) -> dict:
@@ -488,6 +515,164 @@ class MetadataGenerator:
                 [f"cp{ver.replace('.', '')}" for ver in self._metadata["package"]["python_versions"]]
             )
         return output
+
+    def _package_releases(self) -> tuple[
+        list[dict[str, str | list | PEP440SemVer]], list[str], list[str], list[str]
+    ]:
+        self._logger.h3("Process metadata: package.releases")
+        ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
+        curr_branch, other_branches = self._git.get_all_branch_names()
+        release_prefix, dev_prefix = allowed_prefixes = tuple(
+            self._metadata["branch"]["group"][group_name]["prefix"] for group_name in ["release", "dev"]
+        )
+        main_branch_name = self._metadata["branch"]["default"]["name"]
+        release_branch = {}
+        main_branch = {}
+        dev_branch = []
+        self._git.stash()
+        for branch in other_branches:
+            if not (branch.startswith(allowed_prefixes) or branch == main_branch_name):
+                continue
+            self._git.checkout(branch)
+            ver = self._get_latest_package_version(ver_tag_prefix)
+            if not (ver and ver.release_type != 'dev'):
+                continue
+            if branch.startswith(dev_prefix) and ver.is_final_like:
+                # This is a dev branch that has no new pre-release versions since branching
+                continue
+            branch_metadata = _util.dict.read(self._output_path.metadata.path)
+            if not branch_metadata:
+                self._logger.warning(
+                    f"Failed to read metadata from branch '{branch}'; skipping branch."
+                )
+                continue
+            if not branch_metadata.get("package", {}).get("python_versions"):
+                self._logger.warning(
+                    f"No Python versions specified for branch '{branch}'; skipping branch."
+                )
+                continue
+            if not branch_metadata.get("package", {}).get("os_titles"):
+                self._logger.warning(
+                    f"No operating systems specified for branch '{branch}'; skipping branch."
+                )
+                continue
+            release_info = {
+                "branch": branch,
+                "version": ver,
+                "python_versions": branch_metadata["package"]["python_versions"],
+                "os_titles": branch_metadata["package"]["os_titles"],
+            }
+            if branch == main_branch_name:
+                main_branch = release_info
+            elif branch.startswith(release_prefix):
+                release_branch[int(branch.removeprefix(release_prefix))] = release_info
+            elif branch.startswith(dev_prefix):
+                dev_branch.append(release_info)
+        self._git.checkout(curr_branch)
+        self._git.stash_pop()
+        if curr_branch == main_branch_name or curr_branch.startswith(release_prefix):
+            ver = self._get_latest_package_version(ver_tag_prefix)
+            if ver:
+                release_info = {
+                    "branch": curr_branch,
+                    "version": ver,
+                    "python_versions": self._metadata["package"]["python_versions"],
+                    "os_titles": self._metadata["package"]["os_titles"],
+                }
+                if curr_branch == main_branch_name:
+                    main_branch = release_info
+                else:
+                    release_branch[int(curr_branch.removeprefix(release_prefix))] = release_info
+        elif curr_branch.startswith(dev_prefix):
+            group_labels, _ = self._get_issue_labels(int(curr_branch.removeprefix(dev_prefix)))
+            if group_labels["primary_type"] in [
+                PrimaryActionCommit.PACKAGE_MAJOR.value,
+                PrimaryActionCommit.PACKAGE_MINOR.value,
+                PrimaryActionCommit.PACKAGE_PATCH.value,
+                PrimaryActionCommit.PACKAGE_POST.value
+            ]:
+                base_ver = PEP440SemVer(group_labels["version"])
+                if base_ver.major in release_branch:
+                    curr_base_ver = release_branch[base_ver.major]["version"]
+                elif base_ver.major == main_branch["version"].major:
+                    curr_base_ver = main_branch["version"]
+                else:
+                    self._logger.error(
+                        f"No release branch found for major version {base_ver.major}, "
+                        f"found in branch {curr_branch}."
+                    )
+                if group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MAJOR.value:
+                    ver = curr_base_ver.next_major
+                elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MINOR.value:
+                    ver = curr_base_ver.next_minor
+                elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_PATCH.value:
+                    ver = curr_base_ver.next_patch
+                else:
+                    ver = curr_base_ver.next_post
+                release_info = {
+                    "branch": curr_branch,
+                    "version": ver,
+                    "python_versions": self._metadata["package"]["python_versions"],
+                    "os_titles": self._metadata["package"]["os_titles"],
+                }
+                dev_branch.append(release_info)
+        releases = dev_branch + list(release_branch.values()) + [main_branch]
+        releases.sort(key=lambda i: i["version"], reverse=True)
+        all_python_versions = []
+        all_os_titles = []
+        all_package_versions = []
+        for release in releases:
+            all_os_titles.extend(release["os_titles"])
+            all_python_versions.extend(release["python_versions"])
+            all_package_versions.append(str(release["version"]))
+        all_os_titles = sorted(set(all_os_titles))
+        all_python_versions = sorted(set(all_python_versions), key=lambda ver: tuple(map(int, ver.split("."))))
+        return releases, all_os_titles, all_python_versions, all_package_versions
+
+    def _get_latest_package_version(self, ver_tag_prefix: str) -> PEP440SemVer | None:
+        tags_lists = self._git.get_tags()
+        if not tags_lists:
+            return None
+        for tags_list in tags_lists:
+            ver_tags = []
+            for tag in tags_list:
+                if tag.startswith(ver_tag_prefix):
+                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
+            if ver_tags:
+                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
+                return max_version
+        return
+
+    def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str], list[str]]:
+        label_prefix = {
+            group_id: group_data["prefix"]
+            for group_id, group_data in self._metadata["label"]["group"].items()
+        }
+        labels = self._reader.github.user(self._metadata["repo"]["owner"]).repo(
+            self._metadata["repo"]["name"]
+        ).issue_labels(number=issue_number)
+        out_dict = {}
+        out_list = []
+        for label in labels:
+            for group_id, prefix in label_prefix.items():
+                if label["name"].startswith(prefix):
+                    if group_id in out_dict:
+                        self._logger.error(
+                            f"Duplicate label group '{group_id}' found for issue {issue_number}.",
+                            label["name"],
+                        )
+                    else:
+                        out_dict[group_id] = label["name"].removeprefix(prefix)
+                        break
+            else:
+                out_list.append(label["name"])
+        for group_id in ("primary_type", "version", "status"):
+            if group_id not in out_dict:
+                self._logger.error(
+                    f"Missing label group '{group_id}' for issue {issue_number}.",
+                    out_dict,
+                )
+        return out_dict, out_list
 
     def _get_user(self, username: str) -> dict:
         user_info = self._reader.cache_get(f"user__{username}")
