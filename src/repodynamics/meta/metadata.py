@@ -103,12 +103,13 @@ class MetadataGenerator:
                 package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
                 package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
 
-            release_info, all_os_titles, all_python_versions, all_package_versions = self._package_releases()
+            release_info, all_os_titles, all_python_versions, all_package_versions, all_platforms = self._package_releases()
             package["releases"] = {
                 "data": release_info,
                 "os_titles": all_os_titles,
                 "python_versions": all_python_versions,
                 "package_versions": all_package_versions,
+                "platforms": all_platforms,
             }
 
             for classifier in trove_classifiers:
@@ -517,7 +518,7 @@ class MetadataGenerator:
         return output
 
     def _package_releases(self) -> tuple[
-        list[dict[str, str | list | PEP440SemVer]], list[str], list[str], list[str]
+        list[dict[str, str | list | PEP440SemVer]], list[str], list[str], list[str], list[str]
     ]:
         self._logger.h3("Process metadata: package.releases")
         ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
@@ -561,6 +562,7 @@ class MetadataGenerator:
                 "version": ver,
                 "python_versions": branch_metadata["package"]["python_versions"],
                 "os_titles": branch_metadata["package"]["os_titles"],
+                "platforms": ["pip"] + (["conda"] if branch_metadata["package"].get("conda") else [])
             }
             if branch == main_branch_name:
                 main_branch = release_info
@@ -578,6 +580,7 @@ class MetadataGenerator:
                     "version": ver,
                     "python_versions": self._metadata["package"]["python_versions"],
                     "os_titles": self._metadata["package"]["os_titles"],
+                    "platforms": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else [])
                 }
                 if curr_branch == main_branch_name:
                     main_branch = release_info
@@ -615,6 +618,7 @@ class MetadataGenerator:
                         "version": ver,
                         "python_versions": self._metadata["package"]["python_versions"],
                         "os_titles": self._metadata["package"]["os_titles"],
+                        "platforms": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else [])
                     }
                     dev_branch.append(release_info)
         releases = dev_branch + list(release_branch.values()) + [main_branch]
@@ -622,13 +626,16 @@ class MetadataGenerator:
         all_python_versions = []
         all_os_titles = []
         all_package_versions = []
+        all_platforms = []
         for release in releases:
             all_os_titles.extend(release["os_titles"])
             all_python_versions.extend(release["python_versions"])
             all_package_versions.append(str(release["version"]))
+            all_platforms.extend(release["platforms"])
         all_os_titles = sorted(set(all_os_titles))
         all_python_versions = sorted(set(all_python_versions), key=lambda ver: tuple(map(int, ver.split("."))))
-        return releases, all_os_titles, all_python_versions, all_package_versions
+        all_platforms = sorted(set(all_platforms))
+        return releases, all_os_titles, all_python_versions, all_package_versions, all_platforms
 
     def _get_latest_package_version(self, ver_tag_prefix: str) -> PEP440SemVer | None:
         tags_lists = self._git.get_tags()

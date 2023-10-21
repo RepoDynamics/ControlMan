@@ -199,6 +199,7 @@ class MetaReader:
             "dev/repo",
             "dev/tags",
             "dev/workflows",
+            "package/conda",
             "package/docs",
             "package/entry_points",
             "package/metadata",
