@@ -39,12 +39,16 @@ class MetaValidator:
             for elem_idx, elem in enumerate(form["body"]):
                 if elem["type"] == "markdown":
                     continue
-                if elem["id"] in element_ids:
-                    self._logger.error(
-                        f"Duplicate issue-form body-element ID: {elem['id']}",
-                        f"The element number {elem_idx} has an ID that is already used by another earlier element."
-                    )
-                element_ids.append(elem["id"])
+                elem_id = elem.get("id")
+                if elem_id:
+                    if elem_id in element_ids:
+                        self._logger.error(
+                            f"Duplicate issue-form body-element ID: {elem_id}",
+                            f"The element number {elem_idx} has an ID that is "
+                            f"already used by another earlier element."
+                        )
+                    else:
+                        element_ids.append(elem["id"])
                 if elem["attributes"]["label"] in element_labels:
                     self._logger.error(
                         f"Duplicate issue-form body-element label: {elem['attributes']['label']}",
@@ -72,8 +76,9 @@ class MetaValidator:
                                 f"The ID '{if_checkbox}' is not a valid element ID within the issue body."
                             )
                         for elem in form["body"]:
-                            if elem["id"] == if_checkbox["id"]:
-                                if elem["type"] != "checkbox":
+                            elem_id = elem.get("id")
+                            if elem_id and elem_id == if_checkbox["id"]:
+                                if elem["type"] != "checkboxes":
                                     self._logger.error(
                                         f"Invalid issue-form post-process assign_creator if_checkbox ID: {if_checkbox}",
                                         f"The ID '{if_checkbox}' is not a checkbox element."
@@ -84,6 +89,7 @@ class MetaValidator:
                                         f"The number '{if_checkbox['number']}' is greater than the number of "
                                         f"checkbox options."
                                     )
+                                break
         for primary_type_id, sub_type_id in form_identifying_labels:
             if primary_type_id not in self._data["label"]["group"]["primary_type"]["labels"]:
                 self._logger.error(
