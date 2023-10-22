@@ -314,7 +314,8 @@ class Init:
         shutil.rmtree(self.meta.input_path.dir_tests)
         for path_dynamic_file in self.meta.output_path.all_files:
             path_dynamic_file.unlink(missing_ok=True)
-        for changelog_data in self.metadata["changelog"].values():
+        metadata = self.meta.read_metadata_output()[0]
+        for changelog_data in metadata.get("changelog", {}).values():
             path_changelog_file = Path(changelog_data["path"])
             path_changelog_file.unlink(missing_ok=True)
         self.git.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True)

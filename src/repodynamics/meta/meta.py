@@ -61,7 +61,8 @@ class Meta:
     def read_metadata_output(self) -> tuple[dict, dict]:
         out = []
         for filename, path in (
-            ("main metadata, ", self._output_path.metadata.path), ("CI metadata, ", self._output_path.metadata_ci.path)
+            ("main metadata, ", self._output_path.metadata.path),
+            ("CI metadata, ", self._output_path.metadata_ci.path)
         ):
             metadata = _util.dict.read(path, logger=self._logger, raise_empty=False)
             out.append(metadata)
@@ -72,7 +73,7 @@ class Meta:
                 )
             else:
                 self._logger.attention(f"No {filename} file found in {path}.")
-        return tuple(out)
+        return out[0], out[1]
 
     def read_metadata_raw(self):
         if self._metadata_raw:
