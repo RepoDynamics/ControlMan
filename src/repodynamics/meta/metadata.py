@@ -563,7 +563,7 @@ class MetadataGenerator:
                 continue
             release_info = {
                 "branch": branch,
-                "version": ver,
+                "version": str(ver),
                 "python_versions": branch_metadata["package"]["python_versions"],
                 "os_titles": branch_metadata["package"]["os_titles"],
                 "package_managers": ["pip"] + (["conda"] if branch_metadata["package"].get("conda") else []),
@@ -583,7 +583,7 @@ class MetadataGenerator:
             if ver:
                 release_info = {
                     "branch": curr_branch,
-                    "version": ver,
+                    "version": str(ver),
                     "python_versions": self._metadata["package"]["python_versions"],
                     "os_titles": self._metadata["package"]["os_titles"],
                     "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
@@ -627,7 +627,7 @@ class MetadataGenerator:
                         ver = curr_base_ver.next_post
                     release_info = {
                         "branch": curr_branch,
-                        "version": ver,
+                        "version": str(ver),
                         "python_versions": self._metadata["package"]["python_versions"],
                         "os_titles": self._metadata["package"]["os_titles"],
                         "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
