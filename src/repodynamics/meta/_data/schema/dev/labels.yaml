@@ -142,6 +142,37 @@ properties:
                         default: |
                           An issue/pull-request about the meta content of the repository.
                 required: [ package_major, package_minor, package_patch, package_post, website, meta ]
+          sub_type:
+            type: object
+            description: Issue sub types
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the label name
+                type: string
+                default: 'SubType: '
+              color:
+                description: Color of the label
+                type: string
+                pattern: ^[0-9a-fA-F]{6}$
+                default: '0366d6'
+              labels:
+                description: Labels for the issue sub-type
+                type: object
+                default: { }
+                additionalProperties:
+                  description: Labels for the issue sub-type
+                  type: object
+                  default: { }
+                  properties:
+                    suffix:
+                      description: Suffix for the label name
+                      type: string
+                    description:
+                      description: Description of the label
+                      type: string
+                  required: [ suffix, description ]
+            required: [ prefix, color, labels ]
         required: [ primary_type, status ]
     required: [ group ]
 required: [ label ]
