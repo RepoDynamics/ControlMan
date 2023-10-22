@@ -62,12 +62,7 @@ class Init:
         self._payload = context.pop("event")
         self._context = context
         self._admin_token = admin_token
-
         # Inputs when event is triggered by a workflow dispatch
-        self._package_build = package_build
-        self._package_lint = package_lint
-        self._package_test = package_test
-        self._website_build = website_build
         self._meta_sync = meta_sync
         self._hooks = hooks
         self._website_announcement = website_announcement
@@ -85,54 +80,35 @@ class Init:
         self.last_ver: PEP440SemVer | None = None
         self.dist_ver: int = 0
         self.changed_files: dict[RepoFileType, list[str]] = {}
-
+        self._amended: bool = False
+        self._tag: str = ""
+        self._version: str = ""
+        self._fail: bool = False
+        self._run_job = {
+            "package_build": package_build,
+            "package_test_local": package_test,
+            "package_lint": package_lint,
+            "website_build": website_build,
+            "website_deploy": False,
+            "website_rtd_preview": False,
+            "package_publish_testpypi": False,
+            "package_publish_pypi": False,
+            "package_test_testpypi": False,
+            "package_test_pypi": False,
+            "github_release": False,
+        }
+        self._release_info = {
+            "name": "",
+            "body": "",
+            "prerelease": False,
+            "make_latest": "legacy",
+        }
         self.summary_oneliners: list[str] = []
         self.summary_sections: list[str | html.ElementCollection | html.Element] = []
-
         self.meta_results = []
         self.meta_changes = {}
         self.event_type: EventType | None = None
         self._hash_latest: str | None = None
-
-        self.output = {
-            "config": {
-                "fail": False,
-                "checkout": {
-                    "ref": "",
-                    "ref_before": "",
-                    "repository": "",
-                },
-                "run": {
-                    "package_build": False,
-                    "package_test_local": False,
-                    "package_lint": False,
-                    "website_build": False,
-                    "website_deploy": False,
-                    "website_rtd_preview": False,
-                    "package_publish_testpypi": False,
-                    "package_publish_pypi": False,
-                    "package_test_testpypi": False,
-                    "package_test_pypi": False,
-                    "github_release": False,
-                },
-                "package": {
-                    "version": "",
-                    "upload_url_testpypi": "https://test.pypi.org/legacy/",
-                    "upload_url_pypi": "https://upload.pypi.org/legacy/",
-                    "download_url_testpypi": "",
-                    "download_url_pypi": "",
-                },
-                "release": {
-                    "tag_name": "",
-                    "name": "",
-                    "body": "",
-                    "prerelease": False,
-                    "discussion_category_name": "",
-                    "make_latest": "legacy",
-                }
-            },
-            "metadata_ci": self.metadata_ci,
-        }
         return
 
     def run(self):
@@ -160,7 +136,7 @@ class Init:
             for job_id in (
                 "website_deploy", "package_publish_testpypi", "package_publish_pypi", "github_release"
             ):
-                self.output["config"]["run"][job_id] = False
+                self.set_job_run(job_id, False)
         summary = self.assemble_summary()
         self.logger.h1("Finalization")
         return self.output, None, summary
@@ -216,10 +192,30 @@ class Init:
         self.action_hooks()
         self.last_ver, self.dist_ver = self.get_latest_version()
         commits = self.get_commits()
-        # commit: Commit
-        # if commit.action == PrimaryCommitAction.PACKAGE_MAJOR:
-        #     self.event_push_branch_modified_main_package_major(commit)
-
+        if len(commits) != 1:
+            self.logger.error(
+                f"Push event on main branch should only contain a single commit, but found {len(commits)}.",
+                raise_error=False
+            )
+            self.fail = True
+            return
+        commit = commits[0]
+        if commit.typ not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
+            self.logger.error(
+                f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
+                raise_error=False
+            )
+            self.fail = True
+            return
+        if self.fail:
+            return
+        body = commit.conv_msg.body
+        self.action_update_changelogs_from_commit_body(body)
+        self.commit(amend=True, push=True)
+        if commit.typ == CommitGroup.SECONDARY_ACTION:
+            return
+        if commit.action == PrimaryActionCommit.PACKAGE_MAJOR:
+            pass
         return
 
     def event_push_branch_modified_release(self):
@@ -269,7 +265,7 @@ class Init:
         return
 
     def event_pull_request_target(self):
-        self.enable_job_run("website_rtd_preview")
+        self.set_job_run("website_rtd_preview")
         return
 
     def event_schedule(self):
@@ -302,6 +298,16 @@ class Init:
         return
 
     def event_issues(self):
+        event_handler = {
+            "opened": self.event_issues_opened,
+        }
+        event_handler[self.issue_triggering_action]()
+        return
+
+    def event_issues_opened(self):
+        self.api.issue_comment_create(number=self.issue_number, body="This post tracks the issue.")
+        self.action_post_process_issue()
+
         return
 
     def event_pull_request_review(self):
@@ -319,7 +325,7 @@ class Init:
         for changelog_data in metadata.get("changelog", {}).values():
             path_changelog_file = Path(changelog_data["path"])
             path_changelog_file.unlink(missing_ok=True)
-        self.git.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True)
+        self.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True)
         self.add_summary(
             name="Init",
             status="pass",
@@ -332,18 +338,19 @@ class Init:
         self.action_repo_settings_sync()
         self.action_repo_labels_sync(init=True)
         tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
-        version = "0.0.0"
-        tag = f"{tag_prefix}{version}"
+        self._version = "0.0.0"
+        self._tag = f"{tag_prefix}{self._version}"
         commit_msg = CommitMsg(
             typ="init",
             title="Initialize package and website",
             body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI."
         )
-        self._hash_latest = self.git.commit(
+        self.commit(
             message=str(commit_msg),
-            amend=True
+            amend=True,
+            push=True,
         )
-        self.git.create_tag(tag=tag, message="First release")
+        self.git.create_tag(tag=self._tag, message="First release")
         for job_id in [
             "package_build",
             "package_test_local",
@@ -355,12 +362,7 @@ class Init:
             "package_test_testpypi",
             "package_test_pypi",
         ]:
-            self.enable_job_run(job_id)
-        self.output["config"]["package"]["version"] = version
-        package_name = self.metadata["package"]["name"]
-        self.output["config"]["package"]["download_url_testpypi"] = f"https://test.pypi.org/project/{package_name}/{version}"
-        self.output["config"]["package"]["download_url_pypi"] = f"https://pypi.org/project/{package_name}/{version}"
-        self.output["config"]["ref"] = self.hash_latest
+            self.set_job_run(job_id)
         return
 
     def action_file_change_detector(self) -> list[str]:
@@ -491,15 +493,13 @@ class Init:
         if action not in ["fail", "report"] and meta_changes_any:
             self.meta.apply_changes()
             if action == "amend":
-                self.git.commit(stage="all", amend=True)
-                latest_hash = self.git.push(force_with_lease=True)
+                self.commit(stage="all", amend=True, push=True)
             else:
                 commit_msg = CommitMsg(
                     typ=self.metadata["commit"]["secondary_action"]["meta_sync"]["type"],
                     title="Sync dynamic files with meta content",
                 )
-                self.git.commit(message=str(commit_msg), stage="all")
-                latest_hash = self.git.push()
+                self.commit(message=str(commit_msg), stage="all", push=True)
             if action == "pull":
                 pull_data = self.api.pull_create(
                     head=self.git.current_branch_name(),
@@ -508,8 +508,6 @@ class Init:
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
-            else:
-                self._hash_latest = latest_hash
 
         if meta_changes_any and action in ["fail", "report", "pull"]:
             self.fail = True
@@ -528,7 +526,7 @@ class Init:
                     link = html.a(href=pull_data['url'], content=pull_data['number'])
                     oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
                 else:
-                    link = html.a(href=str(self.gh_link.commit(self._hash_latest)), content=latest_hash[:7])
+                    link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
                     oneliner += "the current branch " + (
                         f"in a new commit (hash: {link})" if action == "commit"
                         else f"by amending the latest commit (new hash: {link})"
@@ -601,15 +599,13 @@ class Init:
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         if action not in ["fail", "report"] and modified:
             if action == "amend":
-                self.git.commit(stage="all", amend=True)
-                latest_hash = self.git.push(force_with_lease=True)
+                self.commit(stage="all", amend=True, push=True)
             else:
                 commit_msg = CommitMsg(
                     typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
                     title="Apply automatic fixes made by workflow hooks",
                 )
-                self.git.commit(message=str(commit_msg), stage="all")
-                latest_hash = self.git.push()
+                self.commit(message=str(commit_msg), stage="all", push=True)
             if action == "pull":
                 pull_data = self.api.pull_create(
                     head=self.git.current_branch_name(),
@@ -618,8 +614,6 @@ class Init:
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
-            else:
-                self._hash_latest = latest_hash
 
         if not passed or (action == "pull" and modified):
             self.fail = True
@@ -631,7 +625,7 @@ class Init:
             link = html.a(href=pull_data['url'], content=pull_data['number'])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
         if action in ["commit", "amend"] and modified:
-            link = html.a(href=str(self.gh_link.commit(self._hash_latest)), content=latest_hash[:7])
+            link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
             target = "the current branch " + (
                 f"in a new commit (hash: {link})" if action == "commit"
                 else f"by amending the latest commit (new hash: {link})"
@@ -926,6 +920,60 @@ class Init:
         )
         return
 
+    def action_post_process_issue(self):
+        issue_form = self.meta.manager.get_issue_form_from_labels(self.issue_label_names)
+        if "post_process" not in issue_form:
+            self.logger.skip(
+                "No post-process action defined in issue form; skip❗",
+            )
+            return
+        issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
+        post_body = issue_form["post_process"].get("body")
+        if post_body:
+            new_body = post_body.format(**issue_entries)
+            self.api.issue_update(number=self.issue_number, body=new_body)
+        assign_creator = issue_form["post_process"].get("assign_creator")
+        if assign_creator:
+            if_checkbox = assign_creator.get("if_checkbox")
+            if if_checkbox:
+                checkbox = issue_entries[if_checkbox["id"]].splitlines()[if_checkbox["number"] - 1]
+                if checkbox.startswith("- [X]"):
+                    checked = True
+                elif not checkbox.startswith("- [ ]"):
+                    self.logger.error(
+                        "Could not match checkbox in issue body to pattern defined in metadata.",
+                    )
+                else:
+                    checked = False
+                if (if_checkbox["is_checked"] and checked) or (not if_checkbox["is_checked"] and not checked):
+                    self.api.issue_add_assignees(number=self.issue_number, assignees=self.issue_author_username)
+        return
+
+    def _extract_entries_from_issue_body(self, body_elems: list[dict]):
+        def create_pattern(titles):
+            escaped_titles = [re.escape(title) for title in titles]
+            pattern_parts = [rf'### {escaped_titles[0]}\n(.*?)']
+            for title in escaped_titles[1:]:
+                pattern_parts.append(rf'\n### {title}\n(.*?)')
+            return ''.join(pattern_parts)
+        titles = []
+        ids = []
+        for elem in body_elems:
+            if elem.get("id"):
+                ids.append(elem["id"])
+                titles.append(elem["attributes"]["label"])
+        pattern = create_pattern(titles)
+        compiled_pattern = re.compile(pattern, re.S)
+        # Search for the pattern in the markdown
+        match = re.search(compiled_pattern, self.issue_body)
+        if not match:
+            self.logger.error(
+                "Could not match the issue body to pattern defined in metadata.",
+            )
+        # Create a dictionary with titles as keys and matched content as values
+        sections = {id_: content.strip() for id_, content in zip(ids, match.groups())}
+        return sections
+
     def write_website_announcement(self, announcement: str):
         if announcement:
             announcement = f"{announcement.strip()}\n"
@@ -967,7 +1015,7 @@ class Init:
             body=commit_body,
             scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"]
         )
-        commit_hash = self.git.commit(message=str(commit), stage='all')
+        commit_hash = self.commit(message=str(commit), stage='all')
         commit_link = str(self.gh_link.commit(commit_hash))
         self._hash_latest = commit_hash
         return commit_hash, commit_link
@@ -1057,7 +1105,7 @@ class Init:
             )
         )
         intro = [f"{Emoji.PLAY}The workflow was triggered by a <code>{self.event_name}</code> event."]
-        if self.output["config"]["fail"]:
+        if self.fail:
             intro.append(f"{Emoji.FAIL}The workflow failed.")
         else:
             intro.append(f"{Emoji.PASS}The workflow passed.")
@@ -1088,19 +1136,72 @@ class Init:
             self.summary_sections.append(f"## {name}\n\n{details}\n\n")
         return
 
+    def commit(
+        self,
+        message: str = "",
+        stage: Literal['all', 'staged', 'unstaged'] = 'all',
+        amend: bool = False,
+        push: bool = False
+    ):
+        commit_hash = self.git.commit(message=message, stage=stage, amend=amend)
+        if amend:
+            self._amended = True
+        if push:
+            commit_hash = self.push()
+        return commit_hash
+
+    def tag(self, tag: str, msg: str):
+        self.git.create_tag(tag=tag, msg=msg)
+        self._tag = tag
+        return
+
+    def push(self):
+        new_hash = self.git.push(force_with_lease=self._amended)
+        if new_hash and self.git.current_branch_name() == self.ref_name:
+            self._hash_latest = new_hash
+        return new_hash
+
+    @property
+    def output(self):
+        package_name = self.metadata.get("package", {}).get("name", "")
+        out = {
+            "config": {
+                "fail": self.fail,
+                "checkout": {
+                    "ref": self.hash_latest,
+                    "ref_before": self.hash_before,
+                    "repository": self.target_repo_fullname,
+                },
+                "run": self._run_job,
+                "package": {
+                    "version": self._version,
+                    "upload_url_testpypi": "https://test.pypi.org/legacy/",
+                    "upload_url_pypi": "https://upload.pypi.org/legacy/",
+                    "download_url_testpypi": f"https://test.pypi.org/project/{package_name}/{self._version}",
+                    "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
+                },
+                "release": {
+                               "tag_name": self._tag,
+                               "discussion_category_name": "",
+                           } | self._release_info
+            },
+            "metadata_ci": self.metadata_ci,
+        }
+        return out
+
     @property
     def fail(self):
-        return self.output["config"]["fail"]
+        return self._fail
 
     @fail.setter
     def fail(self, value: bool):
-        self.output["config"]["fail"] = True
+        self._fail = value
         return
 
-    def enable_job_run(self, job_id: str):
-        if job_id not in self.output["config"]["run"]:
+    def set_job_run(self, job_id: str, run: bool = True):
+        if job_id not in self._run_job:
             self.logger.error(f"Invalid job ID: {job_id}")
-        self.output["config"]["run"][job_id] = True
+        self._run_job[job_id] = run
         return
 
     @property
@@ -1149,7 +1250,16 @@ class Init:
     @property
     def repo_name(self) -> str:
         """Name of the repository."""
-        return self.context["repository"].removeprefix(f"{self.repo_owner}/")
+        return self.repo_fullname.removeprefix(f"{self.repo_owner}/")
+
+    @property
+    def repo_fullname(self) -> str:
+        """Name of the repository."""
+        return self.context["repository"]
+
+    @property
+    def target_repo_fullname(self) -> str:
+        return self.pull_head_repo_fullname if self.event_name == "pull_request" else self.repo_fullname
 
     @property
     def default_branch(self) -> str:
@@ -1185,6 +1295,66 @@ class Init:
         if self._hash_latest:
             return self._hash_latest
         return self.hash_after
+
+    @property
+    def issue_triggering_action(self) -> str:
+        """
+        Issues action type that triggered the event,
+        e.g. 'opened', 'closed', 'reopened' etc.
+        See references for a full list of possible values.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#issues)
+        - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads#issues)
+        """
+        return self.payload["action"]
+
+    @property
+    def issue_payload(self) -> dict:
+        return self.payload["issue"]
+
+    @property
+    def issue_title(self) -> str:
+        return self.issue_payload["title"]
+
+    @property
+    def issue_body(self) -> str | None:
+        return self.issue_payload["body"]
+
+    @property
+    def issue_labels(self) -> list[dict]:
+        return self.issue_payload["labels"]
+
+    @property
+    def issue_label_names(self) -> list[str]:
+        return [label["name"] for label in self.issue_labels]
+
+    @property
+    def issue_number(self) -> int:
+        return self.issue_payload["number"]
+
+    @property
+    def issue_state(self) -> Literal["open", "closed"]:
+        return self.issue_payload["state"]
+
+    @property
+    def issue_author_association(self) -> Literal[
+        "OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "MANNEQUIN", "NONE"
+    ]:
+        return self.issue_payload["author_association"]
+
+    @property
+    def issue_num_comments(self) -> int:
+        return self.issue_payload["comments"]
+
+    @property
+    def issue_author(self) -> dict:
+        return self.issue_payload["user"]
+
+    @property
+    def issue_author_username(self) -> str:
+        return self.issue_author["login"]
 
     @property
     def pull_triggering_action(self) -> str:
