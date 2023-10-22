@@ -91,11 +91,12 @@ class Logger:
     def file_log(self):
         return self._log_file
 
-    def _print(self, console: str, file: str):
+    def _print(self, console: str, file: str, is_error: bool = False):
         self._log_console += f"{console}\n"
         self._log_file += f"{file}\n"
         if self._output:
             print(console)
+            # print(console, file=sys.stderr)
         if self._path_log:
             with open(self._path_log, "a") as f:
                 f.write(f"{file}\n")
@@ -126,21 +127,22 @@ class Logger:
         level: Literal["info", "debug", "success", "error", "warning", "attention", "skip", "input"],
         message: str,
         details: str | list = None,
+        is_error: bool = False,
+        index_stack: int = 3
     ):
+        fully_qualified_name = self._get_fully_qualified_name_of_original_caller(index_stack)
         msg = sgr.format(message, sgr.style(text_color=self._color[level]))
         console = f"{self.emoji[level]} {msg}"
+        details_ = f"- Caller: {fully_qualified_name}\n"
         if details:
-            if isinstance(details, list):
-                details = "\n".join(details)
+            details_ += ("\n".join(details) if isinstance(details, list) else details)
             if self._output == "github":
-                console = f"::group::{console}\n{details}\n::endgroup::"
+                console = f"::group::{console}\n{details_}\n::endgroup::"
             else:
-                details_summary = details if len(details) < 300 else f"{details[:300]} ...[shortened]"
+                details_summary = details_ if len(details_) < 300 else f"{details_[:500]} ...[shortened]"
                 console = f"{console}\n{details_summary}"
-        file = html.li(
-            html.details(md.code_block(details), summary=message) if details else message
-        )
-        self._print(console, str(file))
+        file = html.li(html.details(md.code_block(details_), summary=message))
+        self._print(console, str(file), is_error=is_error)
         return console
 
     def info(self, message: str, details: str | list = None):
@@ -167,14 +169,18 @@ class Logger:
     def error(self, message: str, details: str | list = None, raise_error: bool = True, exit_code: int = 1):
         console_msg = self.log("error", message, details)
         if raise_error:
-            stack = inspect.stack()
-            # The caller is the second element in the stack list
-            caller_frame = stack[1]
-            module = inspect.getmodule(caller_frame[0])
-            module_name = module.__name__ if module else "<module>"
-            # Get the function or method name
-            func_name = caller_frame.function
-            # Combine them to get a fully qualified name
-            fully_qualified_name = f"{module_name}.{func_name}"
-            print(f"{fully_qualified_name}:\n{console_msg}", file=sys.stderr)
             sys.exit(exit_code)
+        return console_msg
+
+    @staticmethod
+    def _get_fully_qualified_name_of_original_caller(self, stack_index: int = 3) -> str:
+        stack = inspect.stack()
+        # The caller is the second element in the stack list
+        caller_frame = stack[stack_index]
+        module = inspect.getmodule(caller_frame[0])
+        module_name = module.__name__ if module else "<module>"
+        # Get the function or method name
+        func_name = caller_frame.function
+        # Combine them to get a fully qualified name
+        fully_qualified_name = f"{module_name}.{func_name}"
+        return fully_qualified_name
