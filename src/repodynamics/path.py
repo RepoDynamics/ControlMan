@@ -46,6 +46,10 @@ class InputPath:
         return self._path_root / self._paths["dir"]["meta"]
 
     @property
+    def dir_website(self):
+        return self._path_root / self._paths["dir"]["website"]
+
+    @property
     def dir_local(self):
         return self._path_root / self._paths["dir"]["local"]
 

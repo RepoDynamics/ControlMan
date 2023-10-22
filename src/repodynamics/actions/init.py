@@ -398,13 +398,13 @@ class Init:
             for path in changed_paths:
                 if path.endswith("/README.md") or path == ".github/_README.md":
                     typ = RepoFileType.README
-                elif path.startswith(f'{input_path["dir"]["source"]}/'):
+                elif path.startswith(f'{input_path.dir_source}/'):
                     typ = RepoFileType.PACKAGE
                 elif path in fixed_paths:
                     typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path["dir"]["website"]}/'):
+                elif path.startswith(f'{input_path.dir_website}/'):
                     typ = RepoFileType.WEBSITE
-                elif path.startswith(f'{input_path["dir"]["tests"]}/'):
+                elif path.startswith(f'{input_path.dir_tests}/'):
                     typ = RepoFileType.TEST
                 elif path.startswith(".github/workflows/"):
                     typ = RepoFileType.WORKFLOW
@@ -415,7 +415,7 @@ class Init:
                     or path.startswith(".github/workflow_requirements")
                 ):
                     typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path["dir"]["meta"]}/'):
+                elif path.startswith(f'{input_path.dir_meta}/'):
                     typ = RepoFileType.META
                 elif path == ".path.json":
                     typ = RepoFileType.SUPERMETA
