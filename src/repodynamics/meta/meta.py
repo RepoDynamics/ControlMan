@@ -8,6 +8,8 @@ from repodynamics.logger import Logger
 from repodynamics.meta.metadata import MetadataGenerator
 from repodynamics.meta.reader import MetaReader
 from repodynamics.meta.writer import MetaWriter
+from repodynamics.meta.manager import MetaManager
+from repodynamics.meta.validator import MetaValidator
 from repodynamics.path import InputPath, OutputPath
 from repodynamics.datatype import DynamicFile, Diff
 from repodynamics import _util
@@ -40,6 +42,7 @@ class Meta:
         self._output_path = OutputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
+        self._manager: MetaManager | None = None
         self._metadata_raw: dict = {}
         self._metadata: dict = {}
         self._metadata_ci: dict = {}
@@ -57,6 +60,14 @@ class Meta:
     @property
     def output_path(self) -> OutputPath:
         return self._output_path
+
+    @property
+    def manager(self) -> MetaManager:
+        if self._manager:
+            return self._manager
+        metadata_full, _ = self.read_metadata_full()
+        self._manager = MetaManager(metadata=metadata_full)
+        return self._manager
 
     def read_metadata_output(self) -> tuple[dict, dict]:
         out = []
@@ -94,6 +105,7 @@ class Meta:
             reader=self._reader, output_path=self.output_path, logger=self._logger
         ).generate()
         self._metadata_ci = self._generate_metadata_ci()
+        MetaValidator(metadata=self._metadata, logger=self._logger).validate()
         return self._metadata, self._metadata_ci
 
     def generate_files(self) -> list[tuple[DynamicFile, str]]:
