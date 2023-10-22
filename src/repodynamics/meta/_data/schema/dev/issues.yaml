@@ -43,8 +43,32 @@ properties:
               type: string
             primary_commit_id:
               type: string
+            sub_type:
+              type: string
             pre_process:
               $ref: '#/definitions/pre_process'
+            post_process:
+              type: object
+              additionalProperties: false
+              properties:
+                assign_creator:
+                  type: oject
+                  additionalProperties: false
+                  properties:
+                    if_checkbox:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        id:
+                          type: string
+                        number:
+                          type: integer
+                        is_checked:
+                          type: boolean
+                          default: true
+                      required: [id, number, is_checked]
+                body:
+                  type: string
             name:
               type: string
             description:
@@ -84,7 +108,7 @@ properties:
                   pre_process:
                     $ref: '#/definitions/pre_process'
                 required: [type, attributes]
-          required: [ id, primary_commit_id, name, description, body]
+          required: [ id, primary_commit_id, sub_type, name, description, body]
 
 definitions:
   pre_process:
