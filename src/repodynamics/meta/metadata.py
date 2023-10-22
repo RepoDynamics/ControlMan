@@ -598,7 +598,7 @@ class MetadataGenerator:
                     main_branch = release_info
                 else:
                     release_branch[int(curr_branch.removeprefix(release_prefix))] = release_info
-        elif curr_branch.startswith(dev_prefix):
+        elif curr_branch.startswith(dev_prefix) and curr_branch != f"{dev_prefix}0":
             group_labels, _ = self._get_issue_labels(int(curr_branch.removeprefix(dev_prefix)))
             if group_labels["primary_type"] in [
                 PrimaryActionCommit.PACKAGE_MAJOR.value,
