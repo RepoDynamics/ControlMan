@@ -112,6 +112,8 @@ class MetadataGenerator:
                 "package_managers": release_info["package_managers"],
                 "cli_scripts": release_info["cli_scripts"],
                 "gui_scripts": release_info["gui_scripts"],
+                "has_scripts": release_info["has_scripts"],
+                "interfaces": release_info["interfaces"],
             }
 
             for classifier in trove_classifiers:
@@ -665,7 +667,13 @@ class MetadataGenerator:
             "package_managers": all_package_managers,
             "cli_scripts": all_cli_scripts,
             "gui_scripts": all_gui_scripts,
+            "has_scripts": bool(all_cli_scripts or all_gui_scripts),
+            "interfaces": ["Python API"],
         }
+        if all_cli_scripts:
+            out["interfaces"].append("CLI")
+        if all_gui_scripts:
+            out["interfaces"].append("GUI")
         return out
 
     def _get_latest_package_version(self, ver_tag_prefix: str) -> PEP440SemVer | None:
