@@ -36,7 +36,7 @@ class Git:
             self._path_root = Path(path_root).resolve()
         return
 
-    def push(self, target: str = None, ref: str = None, force_with_lease: bool = False):
+    def push(self, target: str = None, ref: str = None, force_with_lease: bool = False) -> str | None:
         command = ["git", "push"]
         if target:
             command.append(target)
@@ -53,7 +53,7 @@ class Git:
         message: str = "",
         stage: Literal['all', 'tracked', 'none'] = 'all',
         amend: bool = False,
-    ):
+    ) -> str | None:
         """
         Commit changes to git.
 
@@ -191,7 +191,7 @@ class Git:
             out.setdefault(f"{out_key}_to", []).append(paths[1])
         return out
 
-    def commit_hash_normal(self, parent: int = 0):
+    def commit_hash_normal(self, parent: int = 0) -> str | None:
         """
         Get the commit hash of the current commit.
 
