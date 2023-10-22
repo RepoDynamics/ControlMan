@@ -135,7 +135,13 @@ class Logger:
         console = f"{self.emoji[level]} {msg}"
         details_ = f"- Caller: {fully_qualified_name}\n"
         if details:
-            details_ += ("\n".join(details) if isinstance(details, list) else details)
+            if isinstance(details, list):
+                details = "\n".join(details)
+            elif isinstance(details, dict):
+                details = YAML(typ=['rt', 'string']).dumps(details)
+            else:
+                details = str(details)
+            details_ += details
             if self._output == "github":
                 console = f"::group::{console}\n{details_}\n::endgroup::"
             else:
