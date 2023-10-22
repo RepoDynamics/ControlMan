@@ -265,6 +265,7 @@ class Init:
         return
 
     def event_pull_request(self):
+
         return
 
     def event_pull_request_target(self):
@@ -971,7 +972,7 @@ class Init:
         self._hash_latest = commit_hash
         return commit_hash, commit_link
 
-    def get_commits(self):
+    def get_commits(self) -> list[Commit]:
         primary_action = {}
         primary_action_types = []
         for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
@@ -1164,7 +1165,7 @@ class Init:
         if self.event_name == "push":
             return self.payload["before"]
         if self.event_name == "pull_request":
-            return self.payload["pull_request"]["base"]["sha"]
+            return self.pull_base_sha
         return self.git.commit_hash_normal()
 
     @property
@@ -1173,7 +1174,7 @@ class Init:
         if self.event_name == "push":
             return self.payload["after"]
         if self.event_name == "pull_request":
-            return self.payload["pull_request"]["head"]["sha"]
+            return self.pull_head_sha
         return self.git.commit_hash_normal()
 
     @property
@@ -1186,9 +1187,114 @@ class Init:
         return self.hash_after
 
     @property
+    def pull_triggering_action(self) -> str:
+        """
+        Pull-request action type that triggered the event,
+        e.g. 'opened', 'closed', 'reopened' etc.
+        See references for a full list of possible values.
+
+        References
+        ----------
+        - [GitHub Docs](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request)
+        - [GitHub Docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads?#pull_request)
+        """
+        return self.payload["action"]
+
+    @property
+    def pull_payload(self) -> dict:
+        return self.payload["pull_request"]
+
+    @property
+    def pull_number(self) -> int:
+        """Pull-request number, when then event is `pull_request`."""
+        return self.payload["number"]
+
+    @property
+    def pull_state(self) -> Literal["open", "closed"]:
+        """Pull request state; either 'open' or 'closed'."""
+        return self.pull_payload["state"]
+
+    @property
+    def pull_head(self) -> dict:
+        """Pull request's head branch info."""
+        return self.pull_payload["head"]
+
+    @property
+    def pull_head_repo(self) -> dict:
+        return self.pull_head["repo"]
+
+    @property
+    def pull_head_repo_fullname(self):
+        return self.pull_head_repo["full_name"]
+
+    @property
+    def pull_head_sha(self):
+        return self.pull_head["sha"]
+
+    @property
+    def pull_base(self) -> dict:
+        """Pull request's base branch info."""
+        return self.pull_payload["base"]
+
+    @property
+    def pull_base_sha(self) -> str:
+        return self.pull_base["sha"]
+
+    @property
+    def pull_label_names(self) -> list[str]:
+        return [label["name"] for label in self.pull_payload["labels"]]
+
+    @property
+    def pull_title(self) -> str:
+        """Pull request title."""
+        return self.pull_payload["title"]
+
+    @property
+    def pull_body(self) -> str | None:
+        """Pull request body."""
+        return self.pull_payload["body"]
+
+    @property
     def pull_is_internal(self) -> bool:
         """Whether the pull request is internal, i.e. within the same repository."""
-        return self.payload["pull_request"]["head"]["repo"]["full_name"] == self.context["repository"]
+        return self.pull_payload["head"]["repo"]["full_name"] == self.context["repository"]
+
+    @property
+    def pull_is_merged(self) -> bool:
+        """Whether the pull request is merged."""
+        return self.pull_state == 'closed' and self.pull_payload["merged"]
+
+    @property
+    def issue_comment_triggering_action(self) -> str:
+        """Comment action type that triggered the event; one of 'created', 'deleted', 'edited'."""
+        return self.payload["action"]
+
+    @property
+    def issue_comment_issue(self) -> dict:
+        """Issue data."""
+        return self.payload["issue"]
+
+    @property
+    def issue_comment_payload(self) -> dict:
+        """Comment data."""
+        return self.payload["comment"]
+
+    @property
+    def issue_comment_body(self) -> str:
+        """Comment body."""
+        return self.issue_comment_payload["body"]
+
+    @property
+    def issue_comment_id(self) -> int:
+        """Unique identifier of the comment."""
+        return self.issue_comment_payload["id"]
+
+    @property
+    def issue_comment_commenter(self) -> str:
+        """Commenter username."""
+        return self.issue_comment_payload["user"]["login"]
+
+
 
 
 def init(
