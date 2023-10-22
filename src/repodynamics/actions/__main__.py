@@ -25,6 +25,7 @@ def main():
     try:
         outputs, env_vars, summary = action(logger=logger, **inputs)
     except Exception as e:
+        sys.stdout.flush()  # Flush stdout buffer before printing the exception
         logger.error(f"An unexpected error occurred: {e}", traceback.format_exc())
     if outputs:
         io.output(outputs, logger=logger)
