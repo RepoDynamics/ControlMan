@@ -573,14 +573,11 @@ class Init:
         if action == "pull":
             pr_branch = self.switch_to_ci_branch("hooks")
         if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
-            pre_commit_temp = True
-            pre_commit_config_path = ".__temporary_pre_commit_config__.yaml"
             for result in self.meta_results:
                 if result[0].id == "pre-commit-config":
-                    with open(pre_commit_config_path, "w") as f:
-                        f.write(result[1].after)
+                    config = result[1].after
                     self.logger.success(
-                        "Write temporary pre-commit config file.",
+                        "Load pre-commit config from metadata.",
                         "The pre-commit config had been changed in this event, and thus "
                         "the current config file was not valid anymore."
                     )
@@ -591,20 +588,15 @@ class Init:
                     "This is an internal error that should not happen; please report it on GitHub."
                 )
         else:
-            pre_commit_temp = False
-            pre_commit_config_path = self.meta.output_path.pre_commit_config.rel_path
+            config = self.meta.output_path.pre_commit_config.path
         hooks_output = hook.run(
             apply=action not in ["fail", "report"],
             ref_range=(self.hash_before, self.hash_after),
-            path_config=pre_commit_config_path,
+            config=config,
             logger=self.logger,
         )
         passed = hooks_output["passed"]
         modified = hooks_output["modified"]
-        if pre_commit_temp:
-            Path(pre_commit_config_path).unlink()
-            self.logger.success("Remove temporary pre-commit config file.")
-
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         if action not in ["fail", "report"] and modified:
             if action == "amend":

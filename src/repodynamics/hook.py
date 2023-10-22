@@ -14,17 +14,19 @@ class PreCommitHooks:
     def __init__(
         self,
         path_root: str = ".",
-        path_config: str = ".github/.pre-commit-config.yaml",
+        config: str = Path(".github/.pre-commit-config.yaml"),
         git: Git = None,
         logger: Logger = None,
     ):
         self._logger = logger or Logger()
         self._logger.h2("Run Hooks")
         self._path_root = Path(path_root).resolve()
-        path_config = Path(path_config).resolve()
-        if not path_config.exists():
-            self._logger.error(f"pre-commit config file not found at '{path_config}'.")
-        self._config_path = path_config
+
+        if isinstance(config, Path):
+            config = Path(config).resolve()
+            if not config.is_file():
+                self._logger.error(f"pre-commit config file not found at '{config}'.")
+        self._config = config
 
         self._git = git or Git(path_repo=self._path_root, logger=self._logger)
 
@@ -71,45 +73,6 @@ class PreCommitHooks:
         self._git.stash_pop()
         return output, summary
 
-    def _create_summary(
-        self,
-        output: dict,
-        run_summary: list,
-        details,
-    ):
-        passed = output['passed']
-        modified = output['modified']
-        result_emoji = self._emoji["Passed" if passed else "Failed"]
-        result_keyword = 'Pass' if passed else 'Fail'
-        summary_result = f"{result_emoji} {result_keyword}"
-        if modified:
-            summary_result += " (modified files)"
-        action_emoji = "🔧️" if self._apply else "📝"
-            # {"report": "📝", "apply": "🔧️", "commit": "💾", "amend": "📌"}[self._action]
-        action_title = "Fix & Apply" if self._apply else "Validate & Report"
-            # {"report": "Validate", "apply": "Fix", "commit": "Fix & Commit", "amend": "Fix & Amend"}[self._action]
-        scope = f"From ref. '{self._from_ref}' to ref. '{self._to_ref}'" if self._from_ref else "All files"
-        summary_list = [
-                f"Result: {summary_result}",
-                f"Action: {action_emoji} {action_title}",
-                f"Scope: {scope}",
-                f"Runs: ",
-                html.ul(run_summary),
-        ]
-
-        html_summary = html.ElementCollection(
-            [
-                html.h(2, "Hooks"),
-                html.h(3, "Summary"),
-                html.ul(summary_list),
-                html.h(3, "Details"),
-                details,
-                html.h(3, "Log"),
-                html.details(self._logger.file_log, summary="Log")
-            ]
-        )
-        return html_summary
-
     def _run_fix(self):
         self._logger.h3("Fix Run")
         results_fix = self._run_hooks()
@@ -140,44 +103,25 @@ class PreCommitHooks:
         summary = self._create_summary(outputs_validate, run_summary, details)
         return outputs_validate, summary
 
-    def _process_results(self, results: dict[str, dict], validation_run: bool):
-        details_list = []
-        count = {"Passed": 0, "Modified": 0, "Skipped": 0, "Failed": 0}
-        for hook_id, result in results.items():
-            if result['result'] == 'Failed' and result['modified']:
-                result['result'] = 'Modified'
-            count[result['result']] += 1
-            summary = f"{self._emoji[result['result']]} {hook_id}"
-            detail_list = html.ul(
-                [
-                    f"Description: {result['description']}",
-                    f"Result: {result['result']} {result['message']}",
-                    f"Modified Files: {result['modified']}",
-                    f"Exit Code: {result['exit_code']}",
-                    f"Duration: {result['duration']} s"
-                ]
-            )
-            detail = html.ElementCollection([detail_list])
-            if result['details']:
-                detail.append(md.code_block(result['details']))
-            details_block = html.details(content=detail, summary=summary)
-            details_list.append(details_block)
-        passed = count['Failed'] == 0 and count['Modified'] == 0
-        modified = count['Modified'] != 0
-        summary_title = "Validation Run" if validation_run else "Fix Run"
-        summary_details = ", ".join([f"{count[key]} {key}" for key in count])
-        summary_result = f'{self._emoji["Passed" if passed else "Failed"]} {"Pass" if passed else "Fail"}'
-        result_line = f"{summary_title}: {summary_result} ({summary_details})"
-        details = html.ElementCollection(
-            [html.h(4, summary_title), html.ul(details_list)]
-        )
-        outputs = {"passed": passed, "modified": modified, "count": count}
-        return outputs, result_line, details
-
     def _run_hooks(self) -> dict[str, dict]:
         scope = [
             "--from-ref", self._from_ref, "--to-ref", self._to_ref
         ] if self._from_ref else ["--all-files"]
+
+        if isinstance(self._config, str):
+            temp = True
+            path = self._path_root.parent / ".__temporary_pre_commit_config__.yaml"
+            with open(path, "w") as f:
+                f.write(self._config)
+            self._logger.success(
+                "Write temporary pre-commit config file.",
+                f"Path: {path}\nContent:\n{self._config}"
+            )
+
+        else:
+            temp = False
+            path = self._config
+
         command = [
             "pre-commit",
             "run",
@@ -188,11 +132,14 @@ class PreCommitHooks:
             "--color=always",
             "--verbose",
             "--config",
-            str(self._config_path)
+            str(path)
         ]
         out, err, code = _util.shell.run_command(
             command, cwd=self._path_root, raise_returncode=False, logger=self._logger
         )
+        if temp:
+            path.unlink()
+            self._logger.success("Remove temporary pre-commit config file.")
         error_intro = "An unexpected error occurred while running pre-commit hooks."
         if err:
             self._logger.error(error_intro, f"Exit Code: {code}\nError Message: {err}\nOutput: {out}")
@@ -233,17 +180,91 @@ class PreCommitHooks:
         )
         return results
 
+    def _process_results(self, results: dict[str, dict], validation_run: bool):
+        details_list = []
+        count = {"Passed": 0, "Modified": 0, "Skipped": 0, "Failed": 0}
+        for hook_id, result in results.items():
+            if result['result'] == 'Failed' and result['modified']:
+                result['result'] = 'Modified'
+            count[result['result']] += 1
+            summary = f"{self._emoji[result['result']]} {hook_id}"
+            detail_list = html.ul(
+                [
+                    f"Description: {result['description']}",
+                    f"Result: {result['result']} {result['message']}",
+                    f"Modified Files: {result['modified']}",
+                    f"Exit Code: {result['exit_code']}",
+                    f"Duration: {result['duration']} s"
+                ]
+            )
+            detail = html.ElementCollection([detail_list])
+            if result['details']:
+                detail.append(md.code_block(result['details']))
+            details_block = html.details(content=detail, summary=summary)
+            details_list.append(details_block)
+        passed = count['Failed'] == 0 and count['Modified'] == 0
+        modified = count['Modified'] != 0
+        summary_title = "Validation Run" if validation_run else "Fix Run"
+        summary_details = ", ".join([f"{count[key]} {key}" for key in count])
+        summary_result = f'{self._emoji["Passed" if passed else "Failed"]} {"Pass" if passed else "Fail"}'
+        result_line = f"{summary_title}: {summary_result} ({summary_details})"
+        details = html.ElementCollection(
+            [html.h(4, summary_title), html.ul(details_list)]
+        )
+        outputs = {"passed": passed, "modified": modified, "count": count}
+        return outputs, result_line, details
+
+    def _create_summary(
+        self,
+        output: dict,
+        run_summary: list,
+        details,
+    ):
+        passed = output['passed']
+        modified = output['modified']
+        result_emoji = self._emoji["Passed" if passed else "Failed"]
+        result_keyword = 'Pass' if passed else 'Fail'
+        summary_result = f"{result_emoji} {result_keyword}"
+        if modified:
+            summary_result += " (modified files)"
+        action_emoji = "🔧️" if self._apply else "📝"
+            # {"report": "📝", "apply": "🔧️", "commit": "💾", "amend": "📌"}[self._action]
+        action_title = "Fix & Apply" if self._apply else "Validate & Report"
+            # {"report": "Validate", "apply": "Fix", "commit": "Fix & Commit", "amend": "Fix & Amend"}[self._action]
+        scope = f"From ref. '{self._from_ref}' to ref. '{self._to_ref}'" if self._from_ref else "All files"
+        summary_list = [
+                f"Result: {summary_result}",
+                f"Action: {action_emoji} {action_title}",
+                f"Scope: {scope}",
+                f"Runs: ",
+                html.ul(run_summary),
+        ]
+
+        html_summary = html.ElementCollection(
+            [
+                html.h(2, "Hooks"),
+                html.h(3, "Summary"),
+                html.ul(summary_list),
+                html.h(3, "Details"),
+                details,
+                html.h(3, "Log"),
+                html.details(self._logger.file_log, summary="Log")
+            ]
+        )
+        return html_summary
+
+
 
 def run(
     ref_range: tuple[str, str] = None,
     apply: bool = False,
     path_root: str = ".",
-    path_config: str = ".pre-commit-config.yaml",
+    config: str | Path = Path(".github/.pre-commit-config.yaml"),
     logger: Logger = None
 ):
     output = PreCommitHooks(
         path_root=path_root,
-        path_config=path_config,
+        config=config,
         logger=logger
     ).run(apply=apply, ref_range=ref_range)
     return output
