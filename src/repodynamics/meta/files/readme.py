@@ -11,7 +11,7 @@ import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
 import repodynamics
-from repodynamics.path import OutputPath
+from repodynamics.path import InputPath, OutputPath
 from repodynamics.datatype import DynamicFile
 
 from readme_renderer.markdown import render
@@ -26,7 +26,7 @@ def render_pypi_readme(markdown_str: str):
 
 
 class ReadmeFileGenerator:
-    def __init__(self, metadata: dict, output_path: OutputPath, logger=None):
+    def __init__(self, metadata: dict, input_path: InputPath, output_path: OutputPath, logger=None):
         self._metadata = metadata
 
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
@@ -37,8 +37,8 @@ class ReadmeFileGenerator:
         #     repo=self.github["repo"],
         #     branch=self.github["branch"],
         # )
+        self._input_path = input_path
         self._out_db = output_path
-        self._path_root = Path(path_root).resolve()
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
@@ -198,7 +198,7 @@ class ReadmeFileGenerator:
                 if item.get("include_in_readme")
             ]
 
-        path_docs = self._path_root / "docs/website/source"
+        path_docs = self._input_path.dir_website / "source"
         top_data = get_top_data()
         bottom_data = get_bottom_data()
         colors = [

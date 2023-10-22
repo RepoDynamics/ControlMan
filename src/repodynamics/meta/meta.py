@@ -117,7 +117,7 @@ class Meta:
         ).generate()
 
         generated_files += HealthFileGenerator(
-            metadata=metadata, output_path=self.output_path, logger=self._logger
+            metadata=metadata, input_path=self._input_path, output_path=self.output_path, logger=self._logger
         ).generate()
 
         if "package" in self._metadata:
