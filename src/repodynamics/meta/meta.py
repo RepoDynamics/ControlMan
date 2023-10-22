@@ -117,7 +117,7 @@ class Meta:
         ).generate()
 
         generated_files += HealthFileGenerator(
-            metadata=metadata, input_path=self._input_path, output_path=self.output_path, logger=self._logger
+            metadata=metadata, output_path=self.output_path, logger=self._logger
         ).generate()
 
         if "package" in self._metadata:
@@ -130,7 +130,7 @@ class Meta:
             ).generate()
 
         generated_files += ReadmeFileGenerator(
-            metadata=metadata, path_root=self._path_root, logger=self._logger
+            metadata=metadata, input_path=self._input_path, output_path=self.output_path, logger=self._logger
         ).generate()
 
         self._generated_files = generated_files
