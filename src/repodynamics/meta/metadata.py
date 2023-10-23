@@ -360,7 +360,7 @@ class MetadataGenerator:
         for health_file_id, health_file_data in self._metadata["health_file"].items():
             health_file_rel_path = self._output_path.health_file(
                 name=health_file_id, target_path=health_file_data["path"]
-            )
+            ).rel_path
             url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
         return url
 
