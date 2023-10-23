@@ -80,10 +80,9 @@ class Init:
             email=self.triggering_actor_email,
         )
 
-        self.metadata: dict = {}
-        self.metadata_ci: dict = {}
-        self.last_ver: PEP440SemVer | None = None
-        self.dist_ver: int = 0
+        self.metadata, self.metadata_ci = self.meta.read_metadata_output()
+        self.last_ver, self.dist_ver = self.get_latest_version()
+
         self.changed_files: dict[RepoFileType, list[str]] = {}
         self._amended: bool = False
         self._tag: str = ""
@@ -118,8 +117,7 @@ class Init:
 
     def run(self):
         if self.event_name in self.SUPPORTED_EVENTS_NON_MODIFYING:
-            self.metadata, self.metadata_ci = self.meta.read_metadata_output()
-            self.last_ver, self.dist_ver = self.get_latest_version()
+            pass
         elif self.event_name not in self.SUPPORTED_EVENTS_MODIFYING:
             self.logger.error(f"Event '{self.event_name}' is not supported.")
 
@@ -575,8 +573,6 @@ class Init:
                 f"switching action from '{action}' to 'fail'."
             )
             action = "fail"
-        if action == "pull":
-            pr_branch = self.switch_to_ci_branch("hooks")
         if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
             for result in self.meta_results:
                 if result[0].id == "pre-commit-config":
@@ -594,24 +590,28 @@ class Init:
                 )
         else:
             config = self.meta.output_path.pre_commit_config.path
+        if action == "pull":
+            pr_branch = self.switch_to_ci_branch("hooks")
+        input_action = action if action in ["report", "amend", "commit"] else (
+            "report" if action == "fail" else "commit"
+        )
+        commit_msg = CommitMsg(
+            typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
+            title="Apply automatic fixes made by workflow hooks",
+        ) if action in ["commit", "pull"] else ""
         hooks_output = hook.run(
-            apply=action not in ["fail", "report"],
             ref_range=(self.hash_before, self.hash_after),
+            action=input_action,
+            commit_message=commit_msg,
             config=config,
+            git=self.git,
             logger=self.logger,
         )
         passed = hooks_output["passed"]
         modified = hooks_output["modified"]
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         if action not in ["fail", "report"] and modified:
-            if action == "amend":
-                self.commit(stage="all", amend=True, push=True)
-            else:
-                commit_msg = CommitMsg(
-                    typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
-                    title="Apply automatic fixes made by workflow hooks",
-                )
-                self.commit(message=str(commit_msg), stage="all", push=True)
+            self.push(amend=action == "amend")
             if action == "pull":
                 pull_data = self.api.pull_create(
                     head=self.git.current_branch_name(),
@@ -620,7 +620,6 @@ class Init:
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
-
         if not passed or (action == "pull" and modified):
             self.fail = True
             status = "fail"
@@ -1098,7 +1097,7 @@ class Init:
         self.git.checkout(branch=self.ref_name)
         return
 
-    def assemble_summary(self) -> str:
+    def assemble_summary(self) -> tuple[str, str]:
         github_context, event_payload = (
             html.details(
                 content=md.code_block(
@@ -1110,11 +1109,11 @@ class Init:
                 (self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload")
             )
         )
-        intro = [f"{Emoji.PLAY}The workflow was triggered by a <code>{self.event_name}</code> event."]
+        intro = [f"{Emoji.PLAY} The workflow was triggered by a <code>{self.event_name}</code> event."]
         if self.fail:
-            intro.append(f"{Emoji.FAIL}The workflow failed.")
+            intro.append(f"{Emoji.FAIL} The workflow failed.")
         else:
-            intro.append(f"{Emoji.PASS}The workflow passed.")
+            intro.append(f"{Emoji.PASS} The workflow passed.")
         intro = html.ul(intro)
         summary = html.ElementCollection(
             [
@@ -1129,9 +1128,12 @@ class Init:
         logs = html.ElementCollection(
             [html.h(2, "🪵 Logs"), html.details(self.logger.file_log, "Log"),]
         )
-        path_logs = self.meta.input_path.dir_local_log_repodynamics_action / "log.html"
-        with open(path_logs, "w") as f:
+        summaries = html.ElementCollection(self.summary_sections)
+        path_logs = self.meta.input_path.dir_local_log_repodynamics_action
+        with open(path_logs / "log.html", "w") as f:
             f.write(str(logs))
+        with open(path_logs / "report.html", "w") as f:
+            f.write(str(summaries))
         return str(summary), str(path_logs)
 
     def add_summary(
@@ -1165,8 +1167,9 @@ class Init:
         self._tag = tag
         return
 
-    def push(self):
-        new_hash = self.git.push(force_with_lease=self._amended)
+    def push(self, amend: bool = False):
+        new_hash = self.git.push(force_with_lease=self._amended or amend)
+        self._amended = False
         if new_hash and self.git.current_branch_name() == self.ref_name:
             self._hash_latest = new_hash
         return new_hash

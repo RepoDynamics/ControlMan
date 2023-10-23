@@ -1,3 +1,4 @@
+from typing import Literal
 from pathlib import Path
 import re
 import json
@@ -32,17 +33,28 @@ class PreCommitHooks:
 
         self._emoji = {"Passed": "✅", "Failed": "❌", "Skipped": "⏭️", "Modified": "✏️️"}
 
-        self._apply: bool = False
+        self._action: Literal["report", "amend", "commit"] = "report"
+        self._commit_message: str = ""
+        self._commit_hash: str = ""
+
         self._from_ref: str = ""
         self._to_ref: str = ""
         return
 
     def run(
         self,
-        apply: bool = False,
+        action: Literal["report", "amend", "commit"] = "report",
+        commit_message: str = "",
         ref_range: tuple[str, str] = None
     ) -> dict:
-        self._apply = apply
+        if action not in ["report", "amend", "commit"]:
+            self._logger.error(
+                f"Argument 'action' must be one of 'report', 'amend', or 'commit', but got '{action}'."
+            )
+        if action == "commit" and not commit_message:
+            self._logger.error("Argument 'commit_message' must be specified if action is 'commit'.")
+        self._action = action
+        self._commit_message = commit_message
         if ref_range:
             if (
                 not isinstance(ref_range, (tuple, list))
@@ -55,7 +67,7 @@ class PreCommitHooks:
             self._from_ref, self._to_ref = ref_range
         else:
             self._from_ref = self._to_ref = None
-        output, summary = self._run_check() if not apply else self._run_fix()
+        output, summary = self._run_check() if action == "report" else self._run_fix()
         output['summary'] = summary
         return output
 
@@ -85,12 +97,18 @@ class PreCommitHooks:
             )
             return outputs_fix, summary
         # There were fixes
+        self._commit_hash = self._git.commit(
+            message=self._commit_message,
+            stage="all",
+            amend=self._action == "amend",
+        )
         self._logger.h3("Run hooks (validation run)")
         results_validate = self._run_hooks()
         outputs_validate, summary_line_validate, details_validate = self._process_results(
             results_validate, validation_run=True
         )
         outputs_validate['modified'] = outputs_validate['modified'] or outputs_fix['modified']
+        outputs_validate["commit_hash"] = self._commit_hash
         run_summary = [summary_line_fix, summary_line_validate]
         details = html.ElementCollection([details_fix, details_validate])
         # if action in ['amend', 'commit']:
@@ -227,10 +245,9 @@ class PreCommitHooks:
         summary_result = f"{result_emoji} {result_keyword}"
         if modified:
             summary_result += " (modified files)"
-        action_emoji = "🔧️" if self._apply else "📝"
-            # {"report": "📝", "apply": "🔧️", "commit": "💾", "amend": "📌"}[self._action]
-        action_title = "Fix & Apply" if self._apply else "Validate & Report"
-            # {"report": "Validate", "apply": "Fix", "commit": "Fix & Commit", "amend": "Fix & Amend"}[self._action]
+        action_emoji = {"report": "📄", "commit": "💾", "amend": "📌"}[self._action]
+        action_title = {"report": "Validate & Report", "commit": "Fix & Commit", "amend": "Fix & Amend"}[self._action]
+
         scope = f"From ref. '{self._from_ref}' to ref. '{self._to_ref}'" if self._from_ref else "All files"
         summary_list = [
                 f"Result: {summary_result}",
@@ -254,17 +271,19 @@ class PreCommitHooks:
         return html_summary
 
 
-
 def run(
     ref_range: tuple[str, str] = None,
-    apply: bool = False,
+    action: Literal["report", "amend", "commit"] = "amend",
+    commit_message: str = "",
     path_root: str = ".",
     config: str | Path = Path(".github/.pre-commit-config.yaml"),
+    git: Git | None = None,
     logger: Logger = None
 ):
     output = PreCommitHooks(
         path_root=path_root,
         config=config,
+        git=git,
         logger=logger
-    ).run(apply=apply, ref_range=ref_range)
+    ).run(action=action, ref_range=ref_range, commit_message=commit_message)
     return output

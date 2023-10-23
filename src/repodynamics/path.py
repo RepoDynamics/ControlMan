@@ -17,7 +17,7 @@ class InputPath:
         if self.dir_local.is_file():
             self._logger.error(f"Input local directory '{self.dir_local}' is a file.")
         if not self.dir_local_log_repodynamics_action.exists():
-            self._logger.info(f"Creating input local directory '{self.dir_local}'.")
+            self._logger.info(f"Creating input local directory '{self.dir_local_log_repodynamics_action}'.")
             self.dir_local_log_repodynamics_action.mkdir(parents=True, exist_ok=True)
         return
 
