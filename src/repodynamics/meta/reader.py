@@ -56,7 +56,7 @@ class MetaReader:
 
     @property
     def test_package_config(self) -> tomlkit.TOMLDocument | None:
-        return self._package_config
+        return self._test_package_config
 
     @property
     def github(self):
