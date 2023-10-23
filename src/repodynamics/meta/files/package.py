@@ -139,7 +139,8 @@ class PackageFileGenerator:
             return []
         docstring_text = textwrap.fill(
             docs_config["main_init"].strip(),
-            width=self._meta["package"]["dev_config"]["max_line_length"]
+            width=self._meta["package"].get("dev_config", {}).get("max_line_length", 100),
+            replace_whitespace=False,
         )
         docstring = f'"""{docstring_text}\n"""\n'
 
