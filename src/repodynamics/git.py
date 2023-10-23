@@ -529,7 +529,7 @@ class Git:
         This will take the changes stored in the stash and apply them back to the working directory,
         removing the stash from the stack.
         """
-        return self._run(["git", "stash", "pop"])
+        return self._run(["git", "stash", "pop"], raise_=False)
 
     @property
     def path_root(self) -> Path:
