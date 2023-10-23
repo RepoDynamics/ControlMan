@@ -438,7 +438,7 @@ class Init:
             if summaries:
                 summary_details.append(html.h(3, file_type.value.title))
                 summary_details.append(html.ul(summaries))
-                changed_groups_str += f", {file_type.value.title}"
+                changed_groups_str += f", {file_type.value}"
         if changed_groups_str:
             oneliner = f"Found changes in following groups: {changed_groups_str[2:]}."
             if summary_detail[RepoFileType.SUPERMETA]:
