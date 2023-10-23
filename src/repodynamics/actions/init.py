@@ -602,7 +602,7 @@ class Init:
         hooks_output = hook.run(
             ref_range=(self.hash_before, self.hash_after),
             action=input_action,
-            commit_message=commit_msg,
+            commit_message=str(commit_msg),
             config=config,
             git=self.git,
             logger=self.logger,
