@@ -1122,7 +1122,6 @@ class Init:
                 html.ul([github_context, event_payload]),
                 html.h(2, "🏁 Summary"),
                 html.ul(self.summary_oneliners),
-                html.ElementCollection(self.summary_sections),
             ]
         )
         logs = html.ElementCollection(
