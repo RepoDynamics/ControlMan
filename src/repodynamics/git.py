@@ -34,6 +34,9 @@ class Git:
                 self._logger.error(f"No git repository found at '{path_repo}'.")
         else:
             self._path_root = Path(path_root).resolve()
+        default_username, default_email = self.get_user()
+        if not default_username or default_email:
+            self.set_user(username=self._COMMITTER_USERNAME, email=self._COMMITTER_EMAIL)
         return
 
     def push(self, target: str = None, ref: str = None, force_with_lease: bool = False) -> str | None:
