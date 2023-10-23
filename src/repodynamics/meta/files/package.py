@@ -123,10 +123,11 @@ class PackageFileGenerator:
             f"No package directory found in '{path}'; creating one."
         )
         out = [(func(name, old_path=None, new_path=path), "")]
-        for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
-            filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
-            text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta)
-            out.append((self._out_db.python_file((path / testsuite_filename).with_suffix(".py")), text))
+        if tests:
+            for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
+                filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
+                text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta)
+                out.append((self._out_db.python_file((path / testsuite_filename).with_suffix(".py")), text))
         return out
 
     def init_docstring(self) -> list[tuple[DynamicFile, str]]:
