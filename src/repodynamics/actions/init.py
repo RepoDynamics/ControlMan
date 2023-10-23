@@ -75,6 +75,11 @@ class Init:
         self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
         self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
 
+        self.git.set_user(
+            username=self.triggering_actor_username,
+            email=self.triggering_actor_email,
+        )
+
         self.metadata: dict = {}
         self.metadata_ci: dict = {}
         self.last_ver: PEP440SemVer | None = None
@@ -1273,6 +1278,15 @@ class Init:
     @property
     def ref_is_main(self) -> bool:
         return self.ref == f"refs/heads/{self.default_branch}"
+
+    @property
+    def triggering_actor_username(self) -> str:
+        """GitHub username of the user or app that triggered the event."""
+        return self.payload["sender"]["login"]
+
+    @property
+    def triggering_actor_email(self) -> str:
+        return f"{self.payload['sender']['id']}+{self.triggering_actor_username}@users.noreply.github.com"
 
     @property
     def hash_before(self) -> str:
