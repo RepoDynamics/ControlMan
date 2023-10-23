@@ -639,7 +639,7 @@ class MetadataGenerator:
                         ],
                     }
                     dev_branch.append(release_info)
-        releases = dev_branch + list(release_branch.values()) + [main_branch]
+        releases = dev_branch + list(release_branch.values()) + ([main_branch] if main_branch else [])
         releases.sort(key=lambda i: i["version"], reverse=True)
         all_python_versions = []
         all_os_titles = []
