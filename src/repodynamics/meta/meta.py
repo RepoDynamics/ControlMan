@@ -169,6 +169,7 @@ class Meta:
         out["web"] = {
             "readthedocs": {"name": metadata["web"].get("readthedocs", {}).get("name")},
         }
+        out["url"] = {"website": {"base": metadata["url"]["website"]["base"]}}
         if metadata.get("package"):
             pkg = metadata["package"]
             out["package"] = {
