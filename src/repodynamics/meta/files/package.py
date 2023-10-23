@@ -8,6 +8,7 @@ import datetime
 from pathlib import Path
 from typing import Literal
 import re
+import textwrap
 
 # Non-standard libraries
 import tomlkit
@@ -136,8 +137,11 @@ class PackageFileGenerator:
         if "main_init" not in docs_config:
             self._logger.skip("No docstring set in package.docs.main_init; skipping.")
             return []
-        docstring_text = docs_config["main_init"].strip()
-        docstring = f'"""\n{docstring_text}\n"""\n'
+        docstring_text = textwrap.fill(
+            docs_config["main_init"].strip(),
+            width=self._meta["package"]["dev_config"]["max_line_length"]
+        )
+        docstring = f'"""{docstring_text}\n"""\n'
 
         package_dir_info = self._package_dir_output[0][0]
         current_dir_path = package_dir_info.alt_paths[0] if package_dir_info.alt_paths else package_dir_info.path
