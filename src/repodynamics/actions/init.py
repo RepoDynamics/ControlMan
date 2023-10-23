@@ -130,16 +130,17 @@ class Init:
             "push": self.event_push,
         }
         event_handler[self.event_name]()
-
+        self.logger.h1("Finalization")
         if self.fail:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
             for job_id in (
                 "website_deploy", "package_publish_testpypi", "package_publish_pypi", "github_release"
             ):
                 self.set_job_run(job_id, False)
-        summary = self.assemble_summary()
-        self.logger.h1("Finalization")
-        return self.output, None, summary
+        summary, path_logs = self.assemble_summary()
+        output = self.output
+        output["path_log"] = path_logs
+        return output, None, summary
 
     def event_push(self):
 
@@ -531,7 +532,7 @@ class Init:
                         f"in a new commit (hash: {link})" if action == "commit"
                         else f"by amending the latest commit (new hash: {link})"
                     )
-        self.add_summary(name=name, status=status, oneliner=oneliner)
+        self.add_summary(name=name, status=status, oneliner=oneliner, details=meta_summary)
         return
 
     def action_hooks(self):
@@ -1118,11 +1119,15 @@ class Init:
                 html.h(2, "🏁 Summary"),
                 html.ul(self.summary_oneliners),
                 html.ElementCollection(self.summary_sections),
-                html.h(2, "🪵 Logs"),
-                html.details(self.logger.file_log, "Log"),
             ]
         )
-        return str(summary)
+        logs = html.ElementCollection(
+            [html.h(2, "🪵 Logs"), html.details(self.logger.file_log, "Log"),]
+        )
+        path_logs = self.meta.input_path.dir_local_log_repodynamics_action / "log.html"
+        with open(path_logs, "w") as f:
+            f.write(str(logs))
+        return str(summary), str(path_logs)
 
     def add_summary(
         self,
@@ -1131,9 +1136,9 @@ class Init:
         oneliner: str,
         details: str | html.Element | html.ElementCollection | None = None,
     ):
-        self.summary_oneliners.append(f"{Emoji[status]} <b>{name}</b>: {oneliner}")
+        self.summary_oneliners.append(f"{Emoji[status]}&nbsp;<b>{name}</b>: {oneliner}")
         if details:
-            self.summary_sections.append(f"## {name}\n\n{details}\n\n")
+            self.summary_sections.append(f"<h2>{name}</h2>\n\n{details}\n\n")
         return
 
     def commit(

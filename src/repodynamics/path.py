@@ -18,7 +18,7 @@ class InputPath:
             self._logger.error(f"Input local directory '{self.dir_local}' is a file.")
         if not self.dir_local.exists():
             self._logger.info(f"Creating input local directory '{self.dir_local}'.")
-            self.dir_local.mkdir()
+            self.dir_local_log_repodynamics_action.mkdir(parents=True, exist_ok=True)
         return
 
     @property
@@ -52,6 +52,14 @@ class InputPath:
     @property
     def dir_local(self):
         return self._path_root / self._paths["dir"]["local"]
+
+    @property
+    def dir_local_log(self):
+        return self.dir_local / "log"
+
+    @property
+    def dir_local_log_repodynamics_action(self):
+        return self.dir_local_log / "repodynamics"
 
     @property
     def dir_local_meta(self):
