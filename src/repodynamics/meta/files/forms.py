@@ -36,7 +36,7 @@ class FormGenerator:
             info = self._out_db.issue_form(issue["id"], idx + 1)
             form = {
                 key: val for key, val in issue.items()
-                if key not in ["id", "primary_commit_id", "body", "pre_process", "post_process"]
+                if key not in ["id", "primary_commit_id", "sub_type", "body", "pre_process", "post_process"]
             }
 
             labels = form.setdefault("labels", [])
