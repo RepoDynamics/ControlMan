@@ -134,7 +134,7 @@ class CommitMsg:
         else:
             raise TypeError(f"Argument 'body' must be a string or None, but got {type(body)}: {body}")
         if scope is None:
-            self.scope = []
+            scope = []
         if isinstance(scope, (list, tuple)):
             self.scope = [str(s) for s in scope]
         elif isinstance(scope, str):
