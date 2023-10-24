@@ -1282,7 +1282,11 @@ class Init:
         return
 
     def push(self, amend: bool = False, set_upstream: bool = False):
-        new_hash = self.git.push(set_upstream=set_upstream, force_with_lease=self._amended or amend)
+        new_hash = self.git.push(
+            target="origin",
+            set_upstream=set_upstream,
+            force_with_lease=self._amended or amend
+        )
         self._amended = False
         if new_hash and self.git.current_branch_name() == self.ref_name:
             self._hash_latest = new_hash
