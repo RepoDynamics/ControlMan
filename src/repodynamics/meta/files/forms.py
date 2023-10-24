@@ -43,6 +43,9 @@ class FormGenerator:
             type_label_prefix = label_meta["primary_type"]["prefix"]
             type_label_suffix = label_meta["primary_type"]["labels"][issue["primary_commit_id"]]["suffix"]
             labels.append(f"{type_label_prefix}{type_label_suffix}")
+            sub_type_label_prefix = label_meta["sub_type"]["prefix"]
+            sub_type_label_suffix = label_meta["sub_type"]["labels"][issue["sub_type"]]["suffix"]
+            labels.append(f"{sub_type_label_prefix}{sub_type_label_suffix}")
             status_label_prefix = label_meta["status"]["prefix"]
             status_label_suffix = label_meta["status"]["labels"]["triage"]["suffix"]
             labels.append(f"{status_label_prefix}{status_label_suffix}")
