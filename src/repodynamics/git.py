@@ -301,6 +301,22 @@ class Git:
                 self._logger.error(f"Failed to get {user_type}.{key}.", details=err, exit_code=code)
         return tuple(user)
 
+    def fetch_all_remote_branches(self):
+        curr_branch, other_branches = self.get_all_branch_names()
+        local_branches = [curr_branch] + other_branches
+        remote_branches = self._run(["git", "branch", "-r"]).splitlines()
+        for remote_branch in remote_branches:
+            remote_branch = remote_branch.strip()
+            if " -> " in remote_branch:
+                continue
+            remote_branch = remote_branch.removeprefix("origin/")
+            if remote_branch in local_branches:
+                continue
+            self._run(["git", "branch", "--track", remote_branch, f"origin/{remote_branch}"])
+            self._run(["git", "fetch", "--all"])
+            self._run(["git", "pull", "--all"])
+        return
+
     def get_commits(
         self,
         revision_range: str | None = None

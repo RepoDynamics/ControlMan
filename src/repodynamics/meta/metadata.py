@@ -529,6 +529,7 @@ class MetadataGenerator:
     def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
         self._logger.h3("Process metadata: package.releases")
         ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
+        self._git.fetch_all_remote_branches()
         curr_branch, other_branches = self._git.get_all_branch_names()
         release_prefix, dev_prefix = allowed_prefixes = tuple(
             self._metadata["branch"]["group"][group_name]["prefix"] for group_name in ["release", "dev"]
