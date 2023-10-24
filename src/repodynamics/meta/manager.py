@@ -196,7 +196,7 @@ class MetaManager:
             prim_id = issue["primary_commit_id"]
 
             prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]
-            prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]
+            prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
             prim_label = f"{prim_label_prefix}{prim_label_suffix}"
 
             type_labels = [prim_label]
@@ -204,7 +204,7 @@ class MetaManager:
             sub_id = issue.get("sub_type")
             if sub_id:
                 sub_label_prefix = self._data["label"]["group"]["sub_type"]["prefix"]
-                sub_label_suffix = self._data["label"]["group"]["sub_type"]["labels"][sub_id]
+                sub_label_suffix = self._data["label"]["group"]["sub_type"]["labels"][sub_id]["suffix"]
                 sub_label = f"{sub_label_prefix}{sub_label_suffix}"
                 type_labels.append(sub_label)
             else:
