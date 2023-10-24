@@ -25,6 +25,7 @@ class ChangelogManager:
             "parent_commit_hash": parent_commit_hash,
             "parent_commit_url": parent_commit_url,
         }
+        self._name_to_id = {v["name"]: k for k, v in self.meta.items()}
         self.logger = logger or Logger("github")
         self.changes = {}
         return
@@ -58,6 +59,21 @@ class ChangelogManager:
         self.changes[changelog_id] = sections
         return
 
+    def add_from_commit_body(self, body: str):
+        heading_pattern = r'^#\s+(.*?)\n'
+        sections = re.split(heading_pattern, body, flags=re.MULTILINE)
+        for i in range(1, len(sections), 2):
+            heading = sections[i]
+            content = sections[i + 1]
+            if not heading.startswith("Changelog: "):
+                continue
+            changelog_name = heading.removeprefix("Changelog: ").strip()
+            changelog_id = self._name_to_id.get(changelog_name)
+            if not changelog_id:
+                self.logger.error(f"Invalid changelog name: {changelog_name}")
+            self.add_entry(changelog_id, content)
+        return
+
     def write_all_changelogs(self):
         for changelog_id in self.changes:
             self.write_changelog(changelog_id)
@@ -88,18 +104,22 @@ class ChangelogManager:
                 text_before, text_after = parts[0].strip(), f"## {parts[1].strip()}"
             else:
                 text_before, text_after = text.strip(), ""
-        entry = self.get_entry(changelog_id).strip()
+        entry, _ = self.get_entry(changelog_id).strip()
         changelog = f"{text_before}\n\n{entry}\n\n{text_after}".strip() + "\n"
         return changelog
 
-    def get_entry(self, changelog_id: str) -> str:
+    def get_all_entries(self) -> list[tuple[str, str]]:
+        return [self.get_entry(changelog_id) for changelog_id in self.open_changelogs]
+
+    def get_entry(self, changelog_id: str) -> tuple[str, str]:
         if changelog_id not in self.changes:
-            return ""
+            return "", ""
         entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
         entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
         entry_sections = self.get_sections(changelog_id)
         entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
-        return entry
+        changelog_name = self.meta[changelog_id]["name"]
+        return entry, changelog_name
 
     def get_sections(self, changelog_id: str) -> str:
         if changelog_id not in self.changes:
