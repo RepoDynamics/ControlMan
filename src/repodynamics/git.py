@@ -44,7 +44,7 @@ class Git:
         if set_upstream:
             if not target:
                 self._logger.error("No target provided while setting upstream.")
-            command.extend(["--set-upstream", target])
+            command.extend(["--set-upstream", target, self.current_branch_name()])
         elif target:
             command.append(target)
         if ref:
