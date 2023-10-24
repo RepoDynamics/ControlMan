@@ -16,27 +16,16 @@ class EventType(Enum):
     DISPATCH = "dispatch"
 
 
-class CommitGroup(Enum):
-    PRIMARY_ACTION = 0
-    PRIMARY_CUSTOM = 1
-    SECONDARY_ACTION = 2
-    SECONDARY_CUSTOM = 3
-    NON_CONV = 4
+class BranchType(Enum):
+    MAIN = "Default"
+    RELEASE = "Release"
+    DEV = "Development"
+    OTHER = "Other"
 
 
-class PrimaryActionCommit(Enum):
-    PACKAGE_MAJOR = "package_major"
-    PACKAGE_MINOR = "package_minor"
-    PACKAGE_PATCH = "package_patch"
-    PACKAGE_POST = "package_post"
-    WEBSITE = "website"
-    META = "meta"
-
-
-class SecondaryCommitAction(Enum):
-    META_SYNC = 0
-    REVERT = 1
-    HOOK_FIX = 2
+class Branch(NamedTuple):
+    type: BranchType
+    number: int | None = None
 
 
 class RepoFileType(Enum):
@@ -172,15 +161,137 @@ class CommitMsg:
         return commit.strip() + "\n"
 
 
+class CommitGroup(Enum):
+    PRIMARY_ACTION = "primary_action"
+    PRIMARY_CUSTOM = "primary_custom"
+    SECONDARY_ACTION = "secondary_action"
+    SECONDARY_CUSTOM = "secondary_custom"
+    NON_CONV = "non_conventional"
+
+
+class PrimaryActionCommitType(Enum):
+    PACKAGE_MAJOR = "package_major"
+    PACKAGE_MINOR = "package_minor"
+    PACKAGE_PATCH = "package_patch"
+    PACKAGE_POST = "package_post"
+    WEBSITE = "website"
+    META = "meta"
+
+
+class SecondaryActionCommitType(Enum):
+    META_SYNC = "meta_sync"
+    REVERT = "revert"
+    HOOK_FIX = "hook_fix"
+
+
+class GroupedCommit:
+    def __init__(self, group: CommitGroup):
+        self._group = group
+        return
+
+    @property
+    def group(self):
+        return self._group
+
+
+class PrimaryActionCommit(GroupedCommit):
+    def __init__(
+        self,
+        action: PrimaryActionCommitType,
+        conv_type: str,
+    ):
+        super().__init__(CommitGroup.PRIMARY_ACTION)
+        self._action = action
+        self._conv_type = conv_type
+        return
+
+    @property
+    def action(self) -> PrimaryActionCommitType:
+        return self._action
+
+    @property
+    def conv_type(self) -> str:
+        return self._conv_type
+
+
+class PrimaryCustomCommit(GroupedCommit):
+    def __init__(self, group_id: str, conv_type: str):
+        super().__init__(CommitGroup.PRIMARY_CUSTOM)
+        self._conv_type = conv_type
+        self._id = group_id
+        return
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def conv_type(self) -> str:
+        return self._conv_type
+
+
+class SecondaryActionCommit(GroupedCommit):
+    def __init__(self, action: SecondaryActionCommitType, conv_type: str):
+        super().__init__(CommitGroup.SECONDARY_ACTION)
+        self._action = action
+        self._conv_type = conv_type
+        return
+
+    @property
+    def action(self) -> SecondaryActionCommitType:
+        return self._action
+
+    @property
+    def conv_type(self) -> str:
+        return self._conv_type
+
+
+class SecondaryCustomCommit(GroupedCommit):
+    def __init__(self, conv_type: str, changelog_id: str, changelog_section_id: str):
+        super().__init__(CommitGroup.SECONDARY_CUSTOM)
+        self._conv_type = conv_type
+        self._changelog_id = changelog_id
+        self._changelog_section_id = changelog_section_id
+        return
+
+    @property
+    def conv_type(self) -> str:
+        return self._conv_type
+
+    @property
+    def changelog_id(self) -> str:
+        return self._changelog_id
+
+    @property
+    def changelog_section_id(self) -> str:
+        return self._changelog_section_id
+
+
+class NonConventionalCommit(GroupedCommit):
+    def __init__(self):
+        super().__init__(CommitGroup.NON_CONV)
+        return
+
+
 class Commit(NamedTuple):
     hash: str
     author: str
     date: str
     files: list[str]
-    msg: str
-    typ: CommitGroup = CommitGroup.NON_CONV
-    conv_msg: CommitMsg | None = None
-    action: PrimaryActionCommit | SecondaryCommitAction | None = None
+    msg: str | CommitMsg
+    group_data: (
+        PrimaryActionCommit
+        | PrimaryCustomCommit
+        | SecondaryActionCommit
+        | SecondaryCustomCommit
+        | NonConventionalCommit
+    )
+
+
+class Issue(NamedTuple):
+    group_data: PrimaryActionCommit | PrimaryCustomCommit
+    type_labels: list[str]
+    form: dict
 
 
 class Emoji:
@@ -203,4 +314,3 @@ class Emoji:
 
 
 Emoji = Emoji()
-
