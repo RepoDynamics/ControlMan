@@ -1,3 +1,4 @@
+import json
 from typing import Literal, Optional
 from pathlib import Path
 import re
@@ -333,6 +334,7 @@ class Git:
         )
 
         matches = pattern.findall(out)
+        self._logger.success(f"Found {len(matches)} commits.", json.dumps(matches, indent=3))
 
         commits = []
         for match in matches:
