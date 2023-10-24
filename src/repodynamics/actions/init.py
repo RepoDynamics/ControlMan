@@ -352,7 +352,6 @@ class Init:
             number=self.pull_number,
             title=f"{issue_data.group_data.conv_type}: {self.pull_title}",
             body=curr_body,
-            maintainer_can_modify=True,
         )
         return
 
