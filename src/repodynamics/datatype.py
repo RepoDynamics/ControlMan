@@ -213,6 +213,9 @@ class PrimaryActionCommit(GroupedCommit):
     def conv_type(self) -> str:
         return self._conv_type
 
+    def __repr__(self):
+        return f"PrimaryActionCommit(action={self.action}, conv_type={self.conv_type})"
+
 
 class PrimaryCustomCommit(GroupedCommit):
     def __init__(self, group_id: str, conv_type: str):
@@ -229,6 +232,9 @@ class PrimaryCustomCommit(GroupedCommit):
     def conv_type(self) -> str:
         return self._conv_type
 
+    def __repr__(self):
+        return f"PrimaryCustomCommit(id={self.id}, conv_type={self.conv_type})"
+
 
 class SecondaryActionCommit(GroupedCommit):
     def __init__(self, action: SecondaryActionCommitType, conv_type: str):
@@ -244,6 +250,9 @@ class SecondaryActionCommit(GroupedCommit):
     @property
     def conv_type(self) -> str:
         return self._conv_type
+
+    def __repr__(self):
+        return f"SecondaryActionCommit(action={self.action}, conv_type={self.conv_type})"
 
 
 class SecondaryCustomCommit(GroupedCommit):
@@ -266,11 +275,21 @@ class SecondaryCustomCommit(GroupedCommit):
     def changelog_section_id(self) -> str:
         return self._changelog_section_id
 
+    def __repr__(self):
+        return (
+            f"SecondaryCustomCommit("
+            f"conv_type={self.conv_type}, changelog_id={self.changelog_id}, "
+            f"changelog_section_id={self.changelog_section_id})"
+        )
+
 
 class NonConventionalCommit(GroupedCommit):
     def __init__(self):
         super().__init__(CommitGroup.NON_CONV)
         return
+
+    def __repr__(self):
+        return "NonConventionalCommit()"
 
 
 class Commit(NamedTuple):

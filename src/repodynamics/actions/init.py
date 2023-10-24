@@ -334,7 +334,9 @@ class Init:
         )
 
         commits = self.get_commits()
+        self.logger.success(f"Found {len(commits)} commits.")
         for commit in commits:
+            self.logger.info(f"Processing commit: {commit}")
             if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
                 changelog_manager.add_change(
                     changelog_id=commit.group_data.changelog_id,
@@ -343,6 +345,7 @@ class Init:
                     change_details=commit.msg.body,
                 )
         entries = changelog_manager.get_all_entries()
+        self.logger.success(f"Found {len(entries)} changelog entries.", str(entries))
         curr_body = self.pull_body.strip() if self.pull_body else ""
         if curr_body:
             curr_body += "\n\n"
@@ -1143,6 +1146,7 @@ class Init:
         #     + list(self.metadata["commit"]["secondary_custom"].keys())
         # )
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        self.logger.success("Read commits from git history", json.dumps(commits, indent=4))
         parser = CommitParser(types=self.meta.manager.get_all_conventional_commit_types())
         parsed_commits = []
         for commit in commits:
@@ -1239,6 +1243,7 @@ class Init:
         )
         summaries = html.ElementCollection(self.summary_sections)
         path_logs = self.meta.input_path.dir_local_log_repodynamics_action
+        path_logs.mkdir(parents=True, exist_ok=True)
         with open(path_logs / "log.html", "w") as f:
             f.write(str(logs))
         with open(path_logs / "report.html", "w") as f:
