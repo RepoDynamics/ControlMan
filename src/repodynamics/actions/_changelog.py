@@ -104,8 +104,8 @@ class ChangelogManager:
                 text_before, text_after = parts[0].strip(), f"## {parts[1].strip()}"
             else:
                 text_before, text_after = text.strip(), ""
-        entry, _ = self.get_entry(changelog_id).strip()
-        changelog = f"{text_before}\n\n{entry}\n\n{text_after}".strip() + "\n"
+        entry, _ = self.get_entry(changelog_id)
+        changelog = f"{text_before}\n\n{entry.strip()}\n\n{text_after}".strip() + "\n"
         return changelog
 
     def get_all_entries(self) -> list[tuple[str, str]]:
