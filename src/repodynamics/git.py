@@ -39,9 +39,13 @@ class Git:
             self.set_user(username=self._COMMITTER_USERNAME, email=self._COMMITTER_EMAIL)
         return
 
-    def push(self, target: str = None, ref: str = None, force_with_lease: bool = False) -> str | None:
+    def push(self, target: str = None, ref: str = None, set_upstream: bool = False, force_with_lease: bool = False) -> str | None:
         command = ["git", "push"]
-        if target:
+        if set_upstream:
+            if not target:
+                self._logger.error("No target provided while setting upstream.")
+            command.extend(["--set-upstream", target])
+        elif target:
             command.append(target)
         if ref:
             command.append(ref)

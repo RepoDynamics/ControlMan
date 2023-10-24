@@ -597,7 +597,7 @@ class Init:
                     typ=self.metadata["commit"]["secondary_action"]["meta_sync"]["type"],
                     title="Sync dynamic files with meta content",
                 )
-                self.commit(message=str(commit_msg), stage="all", push=True)
+                self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == "pull")
             if action == "pull":
                 pull_data = self.api.pull_create(
                     head=self.git.current_branch_name(),
@@ -705,7 +705,7 @@ class Init:
         modified = hooks_output["modified"]
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         if action not in ["fail", "report"] and modified:
-            self.push(amend=action == "amend")
+            self.push(amend=action == "amend", set_upstream=action == "pull")
             if action == "pull":
                 pull_data = self.api.pull_create(
                     head=self.git.current_branch_name(),
@@ -1262,16 +1262,17 @@ class Init:
         message: str = "",
         stage: Literal['all', 'staged', 'unstaged'] = 'all',
         amend: bool = False,
-        push: bool = False
+        push: bool = False,
+        set_upstream: bool = False
     ):
         commit_hash = self.git.commit(message=message, stage=stage, amend=amend)
         if amend:
             self._amended = True
         if push:
-            commit_hash = self.push()
+            commit_hash = self.push(set_upstream=set_upstream)
         return commit_hash
 
-    def tag_version(self, ver: str | PEP440SemVer, msg: str  = ""):
+    def tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
         tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
         tag = f"{tag_prefix}{ver}"
         if not msg:
@@ -1280,8 +1281,8 @@ class Init:
         self._tag = tag
         return
 
-    def push(self, amend: bool = False):
-        new_hash = self.git.push(force_with_lease=self._amended or amend)
+    def push(self, amend: bool = False, set_upstream: bool = False):
+        new_hash = self.git.push(set_upstream=set_upstream, force_with_lease=self._amended or amend)
         self._amended = False
         if new_hash and self.git.current_branch_name() == self.ref_name:
             self._hash_latest = new_hash
