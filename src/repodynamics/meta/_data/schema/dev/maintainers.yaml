@@ -35,8 +35,11 @@ properties:
           minItems: 1
           uniqueItems: true
           items:
-            type: string
-            pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+            oneOf:
+              - type: string
+                pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+              - type: string
+                pattern: '^\${{\s*.*\s*}}$'
       discussion:
         description: Assignees for the project discussions
         type: object
@@ -45,8 +48,11 @@ properties:
           minItems: 1
           uniqueItems: true
           items:
-            type: string
-            pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+            oneOf:
+              - type: string
+                pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+              - type: string
+                pattern: '^\${{\s*.*\s*}}$'
       pull:
         description: Pull request assignees and reviewers of the repository
         type: object
@@ -70,4 +76,8 @@ properties:
                     uniqueItems: true
                     items:
                       type: string
-                      pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+                      oneOf:
+                        - type: string
+                          pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+                        - type: string
+                          pattern: '^\${{\s*.*\s*}}$'

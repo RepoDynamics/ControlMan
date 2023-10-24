@@ -41,7 +41,6 @@ class MetadataGenerator:
     def generate(self) -> dict:
         self._metadata["name"] = self._name()
         self._metadata["authors"] = self._authors()
-        self._metadata["maintainer"]["list"] = self._maintainers()
         self._metadata["discussion"]["categories"] = self._discussions()
         self._metadata["license"] |= self._license()
         self._metadata['keyword_slugs'] = self._keywords()
@@ -123,6 +122,9 @@ class MetadataGenerator:
 
         self._metadata["label"]["list"] = self.repo_labels()
         self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
+
+        self._metadata["maintainer"]["list"] = self._maintainers()
+
         self._validate_relationships()
         self._reader.cache_save()
         return self._metadata
@@ -640,6 +642,21 @@ class MetadataGenerator:
                         ],
                     }
                     dev_branch.append(release_info)
+        elif curr_branch == f"{dev_prefix}0":
+            release_info = {
+                "branch": curr_branch,
+                "version": "0.0.0",
+                "python_versions": self._metadata["package"]["python_versions"],
+                "os_titles": self._metadata["package"]["os_titles"],
+                "package_managers": ["pip"],
+                "cli_scripts": [
+                    script["name"] for script in self._metadata["package"].get("cli_scripts", [])
+                ],
+                "gui_scripts": [
+                    script["name"] for script in self._metadata["package"].get("gui_scripts", [])
+                ],
+            }
+            dev_branch.append(release_info)
         releases = dev_branch + list(release_branch.values()) + ([main_branch] if main_branch else [])
         releases.sort(key=lambda i: i["version"], reverse=True)
         all_python_versions = []
