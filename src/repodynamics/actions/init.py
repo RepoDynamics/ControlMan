@@ -18,14 +18,21 @@ from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.datatype import (
+    Branch,
+    BranchType,
     DynamicFileType,
     EventType,
     CommitGroup,
     Commit,
     CommitMsg,
     RepoFileType,
+    PrimaryActionCommitType,
+    SecondaryActionCommitType,
     PrimaryActionCommit,
-    SecondaryCommitAction,
+    PrimaryCustomCommit,
+    SecondaryActionCommit,
+    SecondaryCustomCommit,
+    NonConventionalCommit,
     FileChangeType,
     Emoji
 )
@@ -191,6 +198,8 @@ class Init:
         return
 
     def event_push_branch_modified_main(self):
+        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
+            self.set_job_run(job_id)
         self.event_type = EventType.PUSH_MAIN
         self.action_meta()
         self.action_hooks()
@@ -204,7 +213,7 @@ class Init:
             self.fail = True
             return
         commit = commits[0]
-        if commit.typ not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
+        if commit.group_data.group not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
             self.logger.error(
                 f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
                 raise_error=False
@@ -213,13 +222,36 @@ class Init:
             return
         if self.fail:
             return
-        body = commit.conv_msg.body
-        self.action_update_changelogs_from_commit_body(body)
+
+        if commit.group_data.group == CommitGroup.PRIMARY_CUSTOM or commit.group_data.action in [
+            PrimaryActionCommitType.WEBSITE, PrimaryActionCommitType.META
+        ]:
+            ver_dist = f"{self.last_ver}+{self.dist_ver+1}"
+            next_ver = None
+        else:
+            next_ver = self.get_next_version(self.last_ver, commit.group_data.action)
+            ver_dist = str(next_ver)
+
+        changelog_manager = ChangelogManager(
+            changelog_metadata=self.metadata["changelog"],
+            ver_dist=ver_dist,
+            commit_type=commit.group_data.conv_type,
+            commit_title=commit.msg.title,
+            parent_commit_hash=self.hash_before,
+            parent_commit_url=self.gh_link.commit(self.hash_before),
+        )
+        changelog_manager.add_from_commit_body(commit.msg.body)
         self.commit(amend=True, push=True)
-        if commit.typ == CommitGroup.SECONDARY_ACTION:
-            return
-        if commit.action == PrimaryActionCommit.PACKAGE_MAJOR:
-            pass
+
+        if next_ver:
+            self.tag_version(ver=next_ver)
+            for job_id in ("package_publish_testpypi", "package_publish_pypi", "github_release"):
+                self.set_job_run(job_id)
+            self._release_info["body"] = changelog_manager.get_entry("package_public")[0]
+            self._release_info["name"] = f"{self.metadata['name']} {next_ver}"
+
+        if commit.group_data.group == CommitGroup.PRIMARY_ACTION:
+            self.set_job_run("website_deploy")
         return
 
     def event_push_branch_modified_release(self):
@@ -265,7 +297,62 @@ class Init:
         return
 
     def event_pull_request(self):
+        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
+            self.set_job_run(job_id)
+        branch = self.resolve_branch(self.pull_head_ref_name)
+        if branch.type == BranchType.DEV and branch.number == 0:
+            return
+        self.git.checkout(branch=self.pull_base_ref_name)
+        latest_base_hash = self.git.commit_hash_normal()
+        base_ver, dist = self.get_latest_version()
+        self.git.checkout(branch=self.pull_head_ref_name)
 
+        self.action_file_change_detector()
+        self.action_meta()
+        self.action_hooks()
+
+        branch = self.resolve_branch(self.pull_head_ref_name)
+        issue_labels = [label["name"] for label in self.api.issue_labels(number=branch.number)]
+        issue_data = self.meta.manager.get_issue_data_from_labels(issue_labels)
+
+        if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
+            PrimaryActionCommitType.WEBSITE, PrimaryActionCommitType.META
+        ]:
+            ver_dist = f"{base_ver}+{dist+1}"
+        else:
+            ver_dist = str(self.get_next_version(base_ver, issue_data.group_data.action))
+
+        changelog_manager = ChangelogManager(
+            changelog_metadata=self.metadata["changelog"],
+            ver_dist=ver_dist,
+            commit_type=issue_data.group_data.conv_type,
+            commit_title=self.pull_title,
+            parent_commit_hash=latest_base_hash,
+            parent_commit_url=self.gh_link.commit(latest_base_hash),
+            logger=self.logger,
+        )
+
+        commits = self.get_commits()
+        for commit in commits:
+            if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
+                changelog_manager.add_change(
+                    changelog_id=commit.group_data.changelog_id,
+                    section_id=commit.group_data.changelog_section_id,
+                    change_title=commit.msg.title,
+                    change_details=commit.msg.body,
+                )
+        entries = changelog_manager.get_all_entries()
+        curr_body = self.pull_body.strip()
+        if curr_body:
+            curr_body += "\n\n"
+        for entry, changelog_name in entries:
+            curr_body += f"# Changelog: {changelog_name}\n\n{entry}\n\n"
+        self.api.pull_update(
+            number=self.pull_number,
+            title=f"{issue_data.group_data.conv_type}: {self.pull_title}",
+            body=curr_body,
+            maintainer_can_modify=True,
+        )
         return
 
     def event_pull_request_target(self):
@@ -926,7 +1013,7 @@ class Init:
         return
 
     def action_post_process_issue(self):
-        issue_form = self.meta.manager.get_issue_form_from_labels(self.issue_label_names)
+        issue_form = self.meta.manager.get_issue_data_from_labels(self.issue_label_names).form
         if "post_process" not in issue_form:
             self.logger.skip(
                 "No post-process action defined in issue form; skip❗",
@@ -1026,47 +1113,51 @@ class Init:
         return commit_hash, commit_link
 
     def get_commits(self) -> list[Commit]:
-        primary_action = {}
-        primary_action_types = []
-        for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
-            conv_commit_type = primary_action_commit["type"]
-            primary_action_types.append(conv_commit_type)
-            primary_action[conv_commit_type] = PrimaryActionCommit[primary_action_id.upper()]
-        secondary_action = {}
-        secondary_action_types = []
-        for secondary_action_id, secondary_action_commit in self.metadata["commit"]["secondary_action"].items():
-            conv_commit_type = secondary_action_commit["type"]
-            secondary_action_types.append(conv_commit_type)
-            secondary_action[conv_commit_type] = SecondaryCommitAction[secondary_action_id.upper()]
-        primary_custom_types = []
-        for primary_custom_commit in self.metadata["commit"]["primary_custom"].values():
-            conv_commit_type = primary_custom_commit["type"]
-            primary_custom_types.append(conv_commit_type)
-        all_conv_commit_types = (
-            primary_action_types
-            + secondary_action_types
-            + primary_custom_types
-            + list(self.metadata["commit"]["secondary_custom"].keys())
-        )
-        parser = CommitParser(types=all_conv_commit_types)
+        # primary_action = {}
+        # primary_action_types = []
+        # for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
+        #     conv_commit_type = primary_action_commit["type"]
+        #     primary_action_types.append(conv_commit_type)
+        #     primary_action[conv_commit_type] = PrimaryActionCommitType[primary_action_id.upper()]
+        # secondary_action = {}
+        # secondary_action_types = []
+        # for secondary_action_id, secondary_action_commit in self.metadata["commit"]["secondary_action"].items():
+        #     conv_commit_type = secondary_action_commit["type"]
+        #     secondary_action_types.append(conv_commit_type)
+        #     secondary_action[conv_commit_type] = SecondaryActionCommitType[secondary_action_id.upper()]
+        # primary_custom_types = []
+        # for primary_custom_commit in self.metadata["commit"]["primary_custom"].values():
+        #     conv_commit_type = primary_custom_commit["type"]
+        #     primary_custom_types.append(conv_commit_type)
+        # all_conv_commit_types = (
+        #     primary_action_types
+        #     + secondary_action_types
+        #     + primary_custom_types
+        #     + list(self.metadata["commit"]["secondary_custom"].keys())
+        # )
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        parser = CommitParser(types=self.meta.manager.get_all_conventional_commit_types())
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
             if not conv_msg:
-                parsed_commits.append(Commit(**commit))
-            elif conv_msg.type in primary_action_types:
-                parsed_commits.append(
-                    Commit(**commit, typ=CommitGroup.PRIMARY_ACTION, action=primary_action[conv_msg.type])
-                )
-            elif conv_msg.type in secondary_action_types:
-                parsed_commits.append(
-                    Commit(**commit, typ=CommitGroup.SECONDARY_ACTION, action=secondary_action[conv_msg.type])
-                )
-            elif conv_msg.type in primary_custom_types:
-                parsed_commits.append(Commit(**commit, typ=CommitGroup.PRIMARY_CUSTOM))
+                parsed_commits.append(Commit(**commit, group_data=NonConventionalCommit()))
             else:
-                parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
+                group = self.meta.manager.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
+                commit["msg"] = conv_msg
+                parsed_commits.append(Commit(**commit, group_data=group))
+            # elif conv_msg.type in primary_action_types:
+            #     parsed_commits.append(
+            #         Commit(**commit, typ=CommitGroup.PRIMARY_ACTION, action=primary_action[conv_msg.type])
+            #     )
+            # elif conv_msg.type in secondary_action_types:
+            #     parsed_commits.append(
+            #         Commit(**commit, typ=CommitGroup.SECONDARY_ACTION, action=secondary_action[conv_msg.type])
+            #     )
+            # elif conv_msg.type in primary_custom_types:
+            #     parsed_commits.append(Commit(**commit, typ=CommitGroup.PRIMARY_CUSTOM))
+            # else:
+            #     parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
         return parsed_commits
 
     def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
@@ -1084,6 +1175,18 @@ class Init:
                 distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
                 return max_version, distance
         self.logger.error(f"No version tags found with prefix '{ver_tag_prefix}'.")
+
+    def resolve_branch(self, branch_name: str) -> Branch:
+        if branch_name == self.default_branch:
+            return Branch(type=BranchType.MAIN)
+        branch_group = self.metadata["branch"]["group"]
+        if branch_name.startswith(branch_group["release"]["prefix"]):
+            number = int(branch_name.removeprefix(branch_group["release"]["prefix"]))
+            return Branch(type=BranchType.RELEASE, number=number)
+        if branch_name.startswith(branch_group["dev"]["prefix"]):
+            number = int(branch_name.removeprefix(branch_group["dev"]["prefix"]))
+            return Branch(type=BranchType.DEV, number=number)
+        return Branch(type=BranchType.OTHER)
 
     def switch_to_ci_branch(self, typ: Literal['hooks', 'meta']):
         current_branch = self.git.current_branch_name()
@@ -1161,8 +1264,12 @@ class Init:
             commit_hash = self.push()
         return commit_hash
 
-    def tag(self, tag: str, msg: str):
-        self.git.create_tag(tag=tag, msg=msg)
+    def tag_version(self, ver: str | PEP440SemVer, msg: str  = ""):
+        tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
+        tag = f"{tag_prefix}{ver}"
+        if not msg:
+            msg = f"Release version {ver}"
+        self.git.create_tag(tag=tag, message=msg)
         self._tag = tag
         return
 
@@ -1172,6 +1279,18 @@ class Init:
         if new_hash and self.git.current_branch_name() == self.ref_name:
             self._hash_latest = new_hash
         return new_hash
+
+    @staticmethod
+    def get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
+        if action == PrimaryActionCommitType.PACKAGE_MAJOR:
+            return version.next_major
+        if action == PrimaryActionCommitType.PACKAGE_MINOR:
+            return version.next_minor
+        if action == PrimaryActionCommitType.PACKAGE_PATCH:
+            return version.next_patch
+        if action == PrimaryActionCommitType.PACKAGE_POST:
+            return version.next_post
+        return version
 
     @property
     def output(self):
@@ -1193,12 +1312,18 @@ class Init:
                     "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
                 },
                 "release": {
-                               "tag_name": self._tag,
-                               "discussion_category_name": "",
-                           } | self._release_info
+                   "tag_name": self._tag,
+                   "discussion_category_name": "",
+               } | self._release_info
             },
             "metadata_ci": self.metadata_ci,
         }
+        for job_id, dependent_job_id in (
+            ("package_publish_testpypi", "package_test_testpypi"),
+            ("package_publish_pypi", "package_test_pypi"),
+        ):
+            if self._run_job[job_id]:
+                out["config"]["run"][dependent_job_id] = True
         return out
 
     @property
@@ -1419,6 +1544,10 @@ class Init:
         return self.pull_head_repo["full_name"]
 
     @property
+    def pull_head_ref_name(self):
+        return self.context["head_ref"]
+
+    @property
     def pull_head_sha(self):
         return self.pull_head["sha"]
 
@@ -1426,6 +1555,10 @@ class Init:
     def pull_base(self) -> dict:
         """Pull request's base branch info."""
         return self.pull_payload["base"]
+
+    @property
+    def pull_base_ref_name(self):
+        return self.context["base_ref"]
 
     @property
     def pull_base_sha(self) -> str:
