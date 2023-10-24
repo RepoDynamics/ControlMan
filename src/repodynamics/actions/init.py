@@ -382,6 +382,7 @@ class Init:
         return
 
     def event_workflow_dispatch(self):
+        self.event_type = EventType.DISPATCH
         self.action_website_announcement_update()
         self.action_meta()
         self.action_hooks()
