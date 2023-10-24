@@ -114,18 +114,21 @@ class ChangelogManager:
     def get_entry(self, changelog_id: str) -> tuple[str, str]:
         if changelog_id not in self.changes:
             return "", ""
-        entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
-        entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
-        entry_sections = self.get_sections(changelog_id)
-        entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
+        entry_sections, needs_intro = self.get_sections(changelog_id)
+        if needs_intro:
+            entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
+            entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
+            entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
+        else:
+            entry = entry_sections
         changelog_name = self.meta[changelog_id]["name"]
         return entry, changelog_name
 
-    def get_sections(self, changelog_id: str) -> str:
+    def get_sections(self, changelog_id: str) -> tuple[str, bool]:
         if changelog_id not in self.changes:
-            return ""
+            return "", False
         if isinstance(self.changes[changelog_id], str):
-            return self.changes[changelog_id]
+            return self.changes[changelog_id], True
         changelog_dict = self.changes[changelog_id]
         sorted_sections = [value for key, value in sorted(changelog_dict.items())]
         sections_str = ""
@@ -133,7 +136,7 @@ class ChangelogManager:
             sections_str += f"### {section['title']}\n\n"
             for change in section["changes"]:
                 sections_str += f"#### {change['title']}\n\n{change['details']}\n\n"
-        return sections_str.strip() + "\n"
+        return sections_str.strip() + "\n", False
 
     @property
     def open_changelogs(self) -> tuple[str]:
