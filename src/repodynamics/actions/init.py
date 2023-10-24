@@ -392,6 +392,8 @@ class Init:
         event_handler = {
             "opened": self.event_issues_opened,
         }
+        if self.issue_triggering_action not in event_handler:
+            return
         event_handler[self.issue_triggering_action]()
         return
 

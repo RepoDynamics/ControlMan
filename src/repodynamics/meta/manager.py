@@ -122,13 +122,13 @@ class MetaManager:
         )
 
     def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
-        prefix = {
+        type_prefix = {
             "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
             "sub_type": self._data["label"]["group"].get("sub_type", {}).get("prefix"),
         }
         label = {}
         for label_name in label_names:
-            for label_type, prefix in prefix.items():
+            for label_type, prefix in type_prefix.items():
                 if prefix and label_name.startswith(prefix):
                     if label.get(label_type) is not None:
                         raise ValueError(f"Label '{label_name}' with type {label_type} is a duplicate.")
