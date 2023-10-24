@@ -1,9 +1,20 @@
+from repodynamics.datatype import (
+    PrimaryActionCommit,
+    PrimaryActionCommitType,
+    PrimaryCustomCommit,
+    SecondaryActionCommit,
+    SecondaryActionCommitType,
+    SecondaryCustomCommit,
+    Issue
+)
 
 
 class MetaManager:
 
     def __init__(self, metadata: dict):
         self._data = metadata
+        self._commit_data: dict = {}
+        self._issue_data: dict = {}
         return
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
@@ -109,3 +120,109 @@ class MetaManager:
             f"Could not find issue form with primary type '{label_ids['primary_type']}' "
             f"and sub type '{label_ids['sub_type']}'."
         )
+
+    def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
+        prefix = {
+            "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
+            "sub_type": self._data["label"]["group"].get("sub_type", {}).get("prefix"),
+        }
+        label = {}
+        for label_name in label_names:
+            for label_type, prefix in prefix.items():
+                if prefix and label_name.startswith(prefix):
+                    if label.get(label_type) is not None:
+                        raise ValueError(f"Label '{label_name}' with type {label_type} is a duplicate.")
+                    label[label_type] = label_name
+                    break
+        if "primary_type" not in label:
+            raise ValueError(f"Could not find primary type label in {label_names}.")
+
+        key = (label["primary_type"], label.get("sub_type"))
+
+        if not self._issue_data:
+            self._issue_data = self._initialize_issue_data()
+
+        issue_data = self._issue_data.get(key)
+
+        if not issue_data:
+            raise ValueError(f"Could not find issue type with primary type '{label['primary_type']}' "
+                             f"and sub type '{label.get('sub_type')}'.")
+        return issue_data
+
+    def get_all_conventional_commit_types(self) -> list[str]:
+        if self._commit_data:
+            return list(self._commit_data.keys())
+        self._commit_data = self._initialize_commit_data()
+        return list(self._commit_data.keys())
+
+    def get_commit_type_from_conventional_type(
+        self,
+        conv_type: str
+    ) -> PrimaryActionCommit | PrimaryCustomCommit | SecondaryActionCommit | SecondaryCustomCommit:
+        if self._commit_data:
+            return self._commit_data[conv_type]
+        self._commit_data = self._initialize_commit_data()
+        return self._commit_data[conv_type]
+
+    def _initialize_commit_data(self):
+        commit_type = {}
+        for group_id, group_data in self._data["commit"]["primary_action"].items():
+            commit_type[group_data["type"]] = PrimaryActionCommit(
+                action=PrimaryActionCommitType(group_id),
+                conv_type=group_data["type"],
+            )
+        for group_id, group_data in self._data["commit"]["primary_custom"].items():
+            commit_type[group_data["type"]] = PrimaryCustomCommit(
+                group_id=group_id,
+                conv_type=group_data["type"],
+            )
+        for group_id, group_data in self._data["commit"]["secondary_action"].items():
+            commit_type[group_data["type"]] = SecondaryActionCommit(
+                action=SecondaryActionCommitType(group_id),
+                conv_type=group_data["type"],
+            )
+        for group_id, group_data in self._data["commit"]["secondary_custom"].items():
+            commit_type[group_data["type"]] = SecondaryCustomCommit(
+                conv_type=group_data["type"],
+                changelog_id=group_data["changelog_id"],
+                changelog_section_id=group_data["changelog_section_id"],
+            )
+        return commit_type
+
+    def _initialize_issue_data(self):
+        issue_data = {}
+        for issue in self._data["issue"]["forms"]:
+
+            prim_id = issue["primary_commit_id"]
+
+            prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]
+            prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]
+            prim_label = f"{prim_label_prefix}{prim_label_suffix}"
+
+            type_labels = [prim_label]
+
+            sub_id = issue.get("sub_type")
+            if sub_id:
+                sub_label_prefix = self._data["label"]["group"]["sub_type"]["prefix"]
+                sub_label_suffix = self._data["label"]["group"]["sub_type"]["labels"][sub_id]
+                sub_label = f"{sub_label_prefix}{sub_label_suffix}"
+                type_labels.append(sub_label)
+            else:
+                sub_label = None
+
+            key = (prim_label, sub_label)
+
+            prim_commit = self._data["commit"]["primary_action"].get(prim_id)
+            if prim_commit:
+                commit = PrimaryActionCommit(
+                    action=PrimaryActionCommitType(prim_id),
+                    conv_type=prim_commit["type"],
+                )
+            else:
+                commit = PrimaryCustomCommit(
+                    group_id=prim_id,
+                    conv_type=self._data["commit"]["primary_custom"][prim_id]["type"],
+                )
+
+            issue_data[key] = Issue(group_data=commit, type_labels=type_labels, form=issue)
+        return issue_data
