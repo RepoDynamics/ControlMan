@@ -126,7 +126,7 @@ class ReadmeFileGenerator:
 
     def logo(self) -> html.A:
         style = self._metadata["readme"]["header"]["style"]
-        url = f"{self._metadata['url']['website']['base']}" + "/_static/logo/full_{}.svg"
+        url = f"{self._metadata['path']['dir']['meta']}/ui/logo/full_{{}}.svg"
         picture_tag = html.PICTURE(
             img=html.IMG(
                 src=url.format("light"),
@@ -221,7 +221,7 @@ class ReadmeFileGenerator:
             html.DIV(
                 align="center",
                 content=[
-                    ("&nbsp;" * 2).join(
+                    f"{'&nbsp;' * 2} ".join(
                         [
                             str(badge.as_html_picture(tag_seperator="", content_indent=""))
                             for badge in badges

@@ -375,7 +375,8 @@ class MetadataGenerator:
         url["home"] = base
         url["announcement"] = (
             f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/"
-            f"announcement/announcement.html"
+            f"{self._metadata['branch']['default']['name']}/{self._metadata['path']['dir']['website']}/"
+            "announcement.html"
         )
         for path_id, rel_path in self._metadata["web"]["path"].items():
             url[path_id] = f"{base}/{rel_path}"
