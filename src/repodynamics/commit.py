@@ -7,7 +7,7 @@ from repodynamics.logger import Logger
 class CommitParser:
     def __init__(self, types: list[str], logger: Logger = None):
         self._types = types
-        self._logger = logger
+        self._logger = logger or Logger()
         pattern = rf"""
             ^(?P<typ>{"|".join(types)})    # type
             (?:\((?P<scope>[^\)\n]+)\))?  # optional scope within parentheses
@@ -32,7 +32,7 @@ class CommitParser:
             parsed_footers = {}
             footers = commit_parts["footer"].strip().splitlines()
             for footer in footers:
-                match = re.match(r"^(?P<key>\w+)(: | )(?P<value>.+)$", footer)
+                match = re.match(r"^(?P<key>[\w-]+)(: | )(?P<value>.+)$", footer)
                 if match:
                     footer_list = parsed_footers.setdefault(match.group("key"), [])
                     footer_list.append(match.group("value"))

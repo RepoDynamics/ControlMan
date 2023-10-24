@@ -1147,7 +1147,7 @@ class Init:
         # )
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
         self.logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(types=self.meta.manager.get_all_conventional_commit_types())
+        parser = CommitParser(types=self.meta.manager.get_all_conventional_commit_types(), logger=self.logger)
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
