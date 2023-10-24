@@ -227,7 +227,7 @@ class MetadataGenerator:
                 maintainers.items(), key=sort_key, reverse=True
             )
         ]
-        self._logger.success(f"Set 'maintainers': {json.dumps(maintainers_list)}")
+        self._logger.success("Set 'maintainers'", json.dumps(maintainers_list, indent=3))
         return maintainers_list
 
     def _discussions(self) -> list[dict] | None:

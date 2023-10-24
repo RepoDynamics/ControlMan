@@ -297,6 +297,7 @@ class Init:
         return
 
     def event_pull_request(self):
+        self.event_type = EventType.PULL_MAIN
         branch = self.resolve_branch(self.pull_head_ref_name)
         if branch.type == BranchType.DEV and branch.number == 0:
             return
