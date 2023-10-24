@@ -15,7 +15,7 @@ from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import OutputPath
-from repodynamics.datatype import PrimaryActionCommit
+from repodynamics.datatype import PrimaryActionCommitType
 
 
 class MetadataGenerator:
@@ -601,10 +601,10 @@ class MetadataGenerator:
         elif curr_branch.startswith(dev_prefix) and curr_branch != f"{dev_prefix}0":
             group_labels, _ = self._get_issue_labels(int(curr_branch.removeprefix(dev_prefix)))
             if group_labels["primary_type"] in [
-                PrimaryActionCommit.PACKAGE_MAJOR.value,
-                PrimaryActionCommit.PACKAGE_MINOR.value,
-                PrimaryActionCommit.PACKAGE_PATCH.value,
-                PrimaryActionCommit.PACKAGE_POST.value
+                PrimaryActionCommitType.PACKAGE_MAJOR.value,
+                PrimaryActionCommitType.PACKAGE_MINOR.value,
+                PrimaryActionCommitType.PACKAGE_PATCH.value,
+                PrimaryActionCommitType.PACKAGE_POST.value
             ]:
                 for version_label in group_labels["version"]:
                     base_ver = PEP440SemVer(version_label)
@@ -617,11 +617,11 @@ class MetadataGenerator:
                             f"No release branch found for major version {base_ver.major}, "
                             f"found in branch {curr_branch}."
                         )
-                    if group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MAJOR.value:
+                    if group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_MAJOR.value:
                         ver = curr_base_ver.next_major
-                    elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_MINOR.value:
+                    elif group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_MINOR.value:
                         ver = curr_base_ver.next_minor
-                    elif group_labels["primary_type"] == PrimaryActionCommit.PACKAGE_PATCH.value:
+                    elif group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_PATCH.value:
                         ver = curr_base_ver.next_patch
                     else:
                         ver = curr_base_ver.next_post
