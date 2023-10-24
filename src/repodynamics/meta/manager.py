@@ -181,9 +181,9 @@ class MetaManager:
                 action=SecondaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
-        for group_id, group_data in self._data["commit"]["secondary_custom"].items():
-            commit_type[group_data["type"]] = SecondaryCustomCommit(
-                conv_type=group_data["type"],
+        for conv_type, group_data in self._data["commit"]["secondary_custom"].items():
+            commit_type[conv_type] = SecondaryCustomCommit(
+                conv_type=conv_type,
                 changelog_id=group_data["changelog_id"],
                 changelog_section_id=group_data["changelog_section_id"],
             )
