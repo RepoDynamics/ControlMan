@@ -353,7 +353,7 @@ class Init:
             curr_body += f"# Changelog: {changelog_name}\n\n{entry}\n\n"
         self.api.pull_update(
             number=self.pull_number,
-            title=f"{issue_data.group_data.conv_type}: {self.pull_title}",
+            title=f"{issue_data.group_data.conv_type}: {self.pull_title.removeprefix(f'{issue_data.group_data.conv_type}: ')}",
             body=curr_body,
         )
         return
