@@ -328,7 +328,7 @@ class Git:
         out = self._run(cmd)
 
         pattern = re.compile(
-            rf"{re.escape(marker_start)}\n(.*?)\n(.*?)\n(.*?)\n(.*?){re.escape(marker_commit_end)}\n(.*?)\n\n",
+            rf"{re.escape(marker_start)}\n(.*?)\n(.*?)\n(.*?)\n(.*?){re.escape(marker_commit_end)}\n(.*?)\n(?:\n|$)",
             re.DOTALL
         )
 
