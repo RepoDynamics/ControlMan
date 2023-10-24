@@ -383,6 +383,8 @@ class Init:
 
     def event_workflow_dispatch(self):
         self.action_website_announcement_update()
+        self.action_meta()
+        self.action_hooks()
         return
 
     def event_issue_comment(self):
