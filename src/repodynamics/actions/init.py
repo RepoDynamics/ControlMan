@@ -297,11 +297,11 @@ class Init:
         return
 
     def event_pull_request(self):
-        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
-            self.set_job_run(job_id)
         branch = self.resolve_branch(self.pull_head_ref_name)
         if branch.type == BranchType.DEV and branch.number == 0:
             return
+        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
+            self.set_job_run(job_id)
         self.git.checkout(branch=self.pull_base_ref_name)
         latest_base_hash = self.git.commit_hash_normal()
         base_ver, dist = self.get_latest_version()
@@ -416,6 +416,8 @@ class Init:
         for changelog_data in metadata.get("changelog", {}).values():
             path_changelog_file = Path(changelog_data["path"])
             path_changelog_file.unlink(missing_ok=True)
+        with open(self.meta.input_path.dir_website / "announcement.html", "w") as f:
+            f.write("")
         self.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True)
         self.add_summary(
             name="Init",
