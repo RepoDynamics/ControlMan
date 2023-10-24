@@ -241,6 +241,7 @@ class Init:
             parent_commit_url=self.gh_link.commit(self.hash_before),
         )
         changelog_manager.add_from_commit_body(commit.msg.body)
+        changelog_manager.write_all_changelogs()
         self.commit(amend=True, push=True)
 
         if next_ver:
