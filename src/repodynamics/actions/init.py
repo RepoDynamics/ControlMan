@@ -343,7 +343,7 @@ class Init:
                     change_details=commit.msg.body,
                 )
         entries = changelog_manager.get_all_entries()
-        curr_body = self.pull_body.strip()
+        curr_body = self.pull_body.strip() if self.pull_body else ""
         if curr_body:
             curr_body += "\n\n"
         for entry, changelog_name in entries:
