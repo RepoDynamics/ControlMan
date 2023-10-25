@@ -17,6 +17,7 @@ from repodynamics import hook, _util
 from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
+from repodynamics.meta.files.forms import FormGenerator
 from repodynamics.datatype import (
     Branch,
     BranchType,
@@ -1065,8 +1066,10 @@ class Init:
         ids = []
         for elem in body_elems:
             if elem.get("id"):
-                ids.append(elem["id"])
-                titles.append(elem["attributes"]["label"])
+                pre_process = elem.get("pre_process")
+                if not pre_process or FormGenerator._pre_process_existence(pre_process):
+                    ids.append(elem["id"])
+                    titles.append(elem["attributes"]["label"])
         self.logger.success("Extract titles from issue form", titles)
         pattern = create_pattern(titles)
         self.logger.success("Generate regex pattern for issue body", pattern)
