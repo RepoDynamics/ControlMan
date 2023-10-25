@@ -1084,7 +1084,8 @@ class Init:
             self.logger.error("Could not match the issue body to pattern defined in metadata.")
         # Create a dictionary with titles as keys and matched content as values
         sections = {
-            section_id: content.strip() if content else None for section_id, content in match.groupdict()
+            section_id: content.strip() if content else None
+            for section_id, content in match.groupdict().items()
         }
         return sections
 
