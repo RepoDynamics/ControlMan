@@ -1075,17 +1075,13 @@ class Init:
                 else:
                     optional = True
                 parts.append({"id": elem["id"], "title": elem["attributes"]["label"], "optional": optional})
-        self.logger.success("Extract titles from issue form", parts)
         pattern = create_pattern(parts)
-        self.logger.success("Generate regex pattern for issue body", pattern)
         compiled_pattern = re.compile(pattern, re.S)
         # Search for the pattern in the markdown
         self.logger.success("Retrieve issue body", self.issue_body)
         match = re.search(compiled_pattern, self.issue_body)
         if not match:
-            self.logger.error(
-                "Could not match the issue body to pattern defined in metadata.",
-            )
+            self.logger.error("Could not match the issue body to pattern defined in metadata.")
         # Create a dictionary with titles as keys and matched content as values
         sections = {
             section_id: content.strip() if content else None for section_id, content in match.groupdict()
