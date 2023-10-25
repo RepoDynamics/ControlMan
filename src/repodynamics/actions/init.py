@@ -1056,22 +1056,27 @@ class Init:
         return
 
     def _extract_entries_from_issue_body(self, body_elems: list[dict]):
-        def create_pattern(titles):
-            escaped_titles = [re.escape(title) for title in titles]
-            pattern_parts = [rf'### {escaped_titles[0]}\n(.*?)']
-            for title in escaped_titles[1:]:
-                pattern_parts.append(rf'\n### {title}\n(.*?)')
-            return ''.join(pattern_parts)
-        titles = []
-        ids = []
+        def create_pattern(parts):
+            pattern_sections = []
+            for idx, part in enumerate(parts):
+                pattern_section = rf"### {re.escape(part['title'])}\n(?P<{part['id']}>.*?)"
+                if idx != 0:
+                    pattern_section = f"\n{pattern_section}"
+                if part['optional']:
+                    pattern_section = f"(?:{pattern_section})?"
+                pattern_sections.append(pattern_section)
+            return ''.join(pattern_sections)
+        parts = []
         for elem in body_elems:
             if elem.get("id"):
                 pre_process = elem.get("pre_process")
                 if not pre_process or FormGenerator._pre_process_existence(pre_process):
-                    ids.append(elem["id"])
-                    titles.append(elem["attributes"]["label"])
-        self.logger.success("Extract titles from issue form", titles)
-        pattern = create_pattern(titles)
+                    optional = False
+                else:
+                    optional = True
+                parts.append({"id": elem["id"], "title": elem["attributes"]["label"], "optional": optional})
+        self.logger.success("Extract titles from issue form", parts)
+        pattern = create_pattern(parts)
         self.logger.success("Generate regex pattern for issue body", pattern)
         compiled_pattern = re.compile(pattern, re.S)
         # Search for the pattern in the markdown
@@ -1082,7 +1087,9 @@ class Init:
                 "Could not match the issue body to pattern defined in metadata.",
             )
         # Create a dictionary with titles as keys and matched content as values
-        sections = {id_: content.strip() for id_, content in zip(ids, match.groups())}
+        sections = {
+            section_id: content.strip() if content else None for section_id, content in match.groupdict()
+        }
         return sections
 
     def write_website_announcement(self, announcement: str):
