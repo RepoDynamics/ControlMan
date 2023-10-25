@@ -126,7 +126,7 @@ class Logger:
         self,
         level: Literal["info", "debug", "success", "error", "warning", "attention", "skip", "input"],
         message: str,
-        details: str | list = None,
+        details: str | list | dict = None,
         is_error: bool = False,
         index_stack: int = 3
     ):

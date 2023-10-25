@@ -1024,7 +1024,9 @@ class Init:
         return
 
     def action_post_process_issue(self):
+        self.logger.success("Retrieve issue labels", self.issue_label_names)
         issue_form = self.meta.manager.get_issue_data_from_labels(self.issue_label_names).form
+        self.logger.success("Retrieve issue form", issue_form)
         if "post_process" not in issue_form:
             self.logger.skip(
                 "No post-process action defined in issue form; skip❗",
@@ -1065,9 +1067,12 @@ class Init:
             if elem.get("id"):
                 ids.append(elem["id"])
                 titles.append(elem["attributes"]["label"])
+        self.logger.success("Extract titles from issue form", titles)
         pattern = create_pattern(titles)
+        self.logger.success("Generate regex pattern for issue body", pattern)
         compiled_pattern = re.compile(pattern, re.S)
         # Search for the pattern in the markdown
+        self.logger.success("Retrieve issue body", self.issue_body)
         match = re.search(compiled_pattern, self.issue_body)
         if not match:
             self.logger.error(
