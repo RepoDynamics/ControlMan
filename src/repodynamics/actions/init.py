@@ -1059,7 +1059,8 @@ class Init:
         def create_pattern(parts):
             pattern_sections = []
             for idx, part in enumerate(parts):
-                pattern_section = rf"### {re.escape(part['title'])}\n(?P<{part['id']}>.*?)"
+                pattern_content = f"(?P<{part['id']}>.*)" if part['id'] else "(?:.*)"
+                pattern_section = rf"### {re.escape(part['title'])}\n{pattern_content}"
                 if idx != 0:
                     pattern_section = f"\n{pattern_section}"
                 if part['optional']:
@@ -1068,13 +1069,14 @@ class Init:
             return ''.join(pattern_sections)
         parts = []
         for elem in body_elems:
-            if elem.get("id"):
-                pre_process = elem.get("pre_process")
-                if not pre_process or FormGenerator._pre_process_existence(pre_process):
-                    optional = False
-                else:
-                    optional = True
-                parts.append({"id": elem["id"], "title": elem["attributes"]["label"], "optional": optional})
+            if elem["type"] == "markdown":
+                continue
+            pre_process = elem.get("pre_process")
+            if not pre_process or FormGenerator._pre_process_existence(pre_process):
+                optional = False
+            else:
+                optional = True
+            parts.append({"id": elem.get("id"), "title": elem["attributes"]["label"], "optional": optional})
         pattern = create_pattern(parts)
         compiled_pattern = re.compile(pattern, re.S)
         # Search for the pattern in the markdown
