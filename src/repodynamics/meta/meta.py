@@ -83,8 +83,12 @@ class Meta:
                     json.dumps(metadata, indent=3)
                 )
             else:
-                self._logger.attention(f"No {filename} file found in {path}.")
-        return out[0], out[1]
+                self._logger.error(f"No {filename} file found in {path}.")
+        self._metadata = out[0]
+        self._metadata_ci = out[1]
+        MetaValidator(metadata=self._metadata, logger=self._logger).validate()
+        self._manager = MetaManager(metadata=self._metadata)
+        return self._metadata, self._metadata_ci
 
     def read_metadata_raw(self):
         if self._metadata_raw:
