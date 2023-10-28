@@ -30,6 +30,7 @@ class Meta:
         logger: Optional[Logger] = None,
     ):
         self._logger = logger or Logger()
+        self._logger.h2("Initialize Meta Manager")
         self._path_root = Path(path_root).resolve()
         self._github_token = github_token
 
@@ -38,7 +39,7 @@ class Meta:
             schema=_util.file.datafile("schema/path.yaml"),
             logger=self._logger
         )
-        self._input_path = InputPath(super_paths=super_paths, path_root=path_root, logger=self._logger)
+        self._input_path = InputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
         self._output_path = OutputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
