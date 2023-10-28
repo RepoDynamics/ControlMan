@@ -42,7 +42,7 @@ class MetadataGenerator:
         self._metadata["name"] = self._name()
         self._metadata["authors"] = self._authors()
         self._metadata["discussion"]["categories"] = self._discussions()
-        self._metadata["license"] |= self._license()
+        self._metadata["license"] = self._license()
         self._metadata['keyword_slugs'] = self._keywords()
         self._metadata["url"] = {
             "github": self._urls_github(),
@@ -65,7 +65,7 @@ class MetadataGenerator:
             package["name"] = self._package_name()
 
             trove_classifiers = package.setdefault("trove_classifiers", [])
-            if self._metadata["license"]:
+            if self._metadata["license"].get("trove_classifier"):
                 trove_classifiers.append(self._metadata["license"]["trove_classifier"])
             if self._metadata["package"].get("typed"):
                 trove_classifiers.append("Typing :: Typed")
@@ -182,13 +182,13 @@ class MetadataGenerator:
         return owner_info
 
     def _name(self) -> str:
-        self._logger.h3("Generate 'name' metadata")
-        name = self._metadata.get("name")
-        if not name:
-            name = self._metadata["repo"]["name"].replace("-", " ")
-            self._logger.success(f"Set from repository name: {name}")
+        title = "Process Metadata: 'name'"
+        name = self._metadata["name"]
+        if name:
+            self._logger.skip(title, f"Already set manually in metadata: '{name}'")
             return name
-        self._logger.success(f"Already set in metadata: {name}")
+        name = self._metadata["repo"]["name"].replace("-", " ")
+        self._logger.success(title, f"Set from repository name: {name}")
         return name
 
     def _authors(self) -> list[dict]:
@@ -249,52 +249,64 @@ class MetadataGenerator:
         return discussions_info
 
     def _license(self) -> dict:
-        self._logger.h3("Set 'license' metadata")
+        title = "Process metadata: 'license'"
+        data = self._metadata["license"]
+        if not data:
+            self._logger.skip(title, "No license specified.")
+            return {}
         license_id = self._metadata["license"].get("id")
         if not license_id:
-            self._logger.attention("No license ID specified; skip.")
+            self._logger.skip(title, "License data already set manually in metadata.")
             return self._metadata["license"]
         license_info = self._reader.db['license_id'].get(license_id.lower())
         if not license_info:
-            self._logger.error(f"License ID '{license_id}' not found in database.")
+            self._logger.error(title, f"License ID '{license_id}' not found in database.")
         else:
             license_info = copy.deepcopy(license_info)
             license_info["trove_classifier"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
             filename = license_id.lower().removesuffix('+')
             license_info["text"] = _util.file.datafile(f"license/{filename}.txt").read_text()
             license_info["notice"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
-        self._logger.success(f"License metadata set.", license_info)
+        self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
         return license_info
 
     def _copyright(self) -> dict:
-        self._logger.h3("Generate 'copyright' metadata")
+        title = "Process metadata: 'copyright'"
+        log_details = []
         output = {}
         data = self._metadata["copyright"]
         if not data.get("year_start"):
             output["year_start"] = year_start = datetime.datetime.strptime(
                 self._metadata["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
             ).year
-            self._logger.success(f"'year_start' set from repository creation date: {year_start}")
+            log_details.append(f"- 'copyright.year_start' set from repository creation date: {year_start}")
         else:
             output["year_start"] = year_start = data["year_start"]
-            self._logger.info(f"'year_start' already set: {year_start}")
+            log_details.append(f"- 'copyright.year_start' already set manually in metadata: {year_start}")
         current_year = datetime.date.today().year
         year_range = f"{year_start}{'' if year_start == current_year else f'–{current_year}'}"
         output["year_range"] = year_range
-        self._logger.success(f"'year_range' set: {year_range}")
-        output["owner"] = data.get("owner") or self._metadata["owner"]["name"]
+        log_details.append(f"- 'copyright.year_range' set: {year_range}")
+        if data.get("owner"):
+            output["owner"] = data["owner"]
+            log_details.append(f"- 'copyright.owner' already set manually in metadata: {data['owner']}")
+        else:
+            output["owner"] = self._metadata["owner"]["name"]
+            log_details.append(f"- 'copyright.owner' set from repository owner name: {output['owner']}")
         output["notice"] = f"{year_range} {output['owner']}"
-        self._logger.success(f"'copyright_notice' set: {output['notice']}")
+        log_details.append(f"- 'copyright.notice' set: {output['notice']}")
+        self._logger.success(title, "\n".join(log_details))
         return output
 
     def _keywords(self) -> list:
-        self._logger.h3("Generate 'keywords' metadata")
+        title = "Process Metadata: 'keywords'"
         slugs = []
-        if not self._metadata.get("keywords"):
-            self._logger.attention("No keywords specified; skip.")
+        if not self._metadata["keywords"]:
+            self._logger.skip(title, "No keywords specified.")
             return slugs
         for keyword in self._metadata['keywords']:
             slugs.append(keyword.lower().replace(" ", "-"))
+        self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
 
     def repo_labels(self) -> list[dict[str, str]]:
