@@ -16,28 +16,29 @@ class Git:
     def __init__(
         self,
         path_repo: str | Path = ".",
-        initialize: bool = False,
+        user: tuple[str, str] | None = None,
+        user_scope: Literal['system', 'global', 'local', 'worktree'] = 'global',
         logger: Logger | None = None
     ):
         self._logger = logger or Logger()
-        git_available = _util.shell.run_command(["git", "--version"], raise_command=False, logger=self._logger)
+        self._logger.h2("Initialize Git API")
+        git_available = _util.shell.run_command(
+            ["git", "--version"], raise_command=False, logger=self._logger
+        )
         if not git_available:
             self._logger.error(f"'git' is not installed. Please install 'git' and try again.")
         path_root, err, code = _util.shell.run_command(
             ["git", "-C", str(Path(path_repo).resolve()), "rev-parse", "--show-toplevel"],
             raise_returncode=False,
             raise_stderr=False,
+            logger=self._logger
         )
         if code != 0:
-            if initialize:
-                raise NotImplementedError("Git initialization not implemented.")
-            else:
-                self._logger.error(f"No git repository found at '{path_repo}'.")
+            self._logger.error(f"No git repository found at '{path_repo}'")
         else:
             self._path_root = Path(path_root).resolve()
-        default_username, default_email = self.get_user()
-        if not default_username or default_email:
-            self.set_user(username=self._COMMITTER_USERNAME, email=self._COMMITTER_EMAIL)
+        if user:
+            self.set_user(username=user[0], email=user[1], scope=user_scope)
         return
 
     def push(self, target: str = None, ref: str = None, set_upstream: bool = False, force_with_lease: bool = False) -> str | None:
@@ -259,7 +260,7 @@ class Git:
         username: str | None,
         email: str | None,
         user_type: Literal['user', 'author', 'committer'] = 'user',
-        scope: Optional[Literal['system', 'global', 'local', 'worktree']] = 'global'
+        scope: Literal['system', 'global', 'local', 'worktree'] | None = 'global'
     ):
         """
         Set the git username and email.
