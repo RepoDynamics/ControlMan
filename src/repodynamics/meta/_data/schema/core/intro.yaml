@@ -10,34 +10,39 @@ properties:
   name:
     description: Name of the project
     type: string
-    pattern: ^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$
+    default: ""
+    oneOf:
+      - minLength: 0
+        maxLength: 0
+      - pattern: ^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$
 
   tagline:
     description: A short description, or slogan of the project
     type: string
+    default: ""
 
   description:
     description: A long description of the project
     type: string
+    default: ""
 
   keywords:
     description: Keywords of the project
     type: array
+    default: []
     uniqueItems: true
     items:
       type: string
       maxLength: 50
-      pattern: ^[A-Za-z0-9][A-Za-z0-9\-\s]*$
+      pattern: ^[A-Za-z0-9][A-Za-z0-9\- ]*$
 
   keynotes:
     description: Keynotes for the project
     type: array
+    default: []
     uniqueItems: true
     items:
       type: object
-      required:
-        - title
-        - description
       additionalProperties: false
       properties:
         title:
@@ -46,3 +51,4 @@ properties:
         description:
           description: Description of the keynote
           type: string
+      required: [ title, description ]
