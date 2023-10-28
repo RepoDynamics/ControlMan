@@ -313,6 +313,29 @@ class Issue(NamedTuple):
     form: dict
 
 
+class WorkflowTriggeringAction(Enum):
+    """
+    Triggering actions of events that can trigger a workflow.
+    Each action is only valid for certain events. For example:
+
+    created: issue_comment
+    edited: issue_comment
+    deleted: issue_comment
+    opened: issues, pull_request
+    labeled: issues, pull_request
+    reopened: issues, pull_request
+    synchronize: pull_request
+    closed: issues, pull_request
+    """
+    CREATED = "created"
+    EDITED = "edited"
+    DELETED = "deleted"
+    OPENED = "opened"
+    CLOSED = "closed"
+    LABELED = "labeled"
+    REOPENED = "reopened"
+    SYNCHRONIZE = "synchronize"
+
 class Emoji:
     """Enum of emojis used in the bot."""
     _db = {
