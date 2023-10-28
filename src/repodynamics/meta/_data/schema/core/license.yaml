@@ -7,44 +7,47 @@ additionalProperties: false
 properties:
 
   license:
-    type: object
-    default: {}
+    default: null
     oneOf:
-      - required: [ id ]
-        additionalProperties: false
-        properties:
-          id:
-            description: ID of the project's license
-            enum:
-              - gnu_agpl_v3+
-              - gnu_agpl_v3
-              - gnu_gpl_v3+
-              - gnu_gpl_v3
-              - mozilla_v2
-              - apache_v2
-              - mit
-              - bsd_2_clause
-              - bsd_3_clause
-              - bsl_v1
-              - unlicense
-      - required: [ shortname, fullname, trove_classifier, text, notice ]
-        additionalProperties: false
-        properties:
-            shortname:
-                description: Short name of the project's license
-                type: string
-            fullname:
-                description: Full name of the project's license
-                type: string
-            trove_classifier:
-                description: Trove classifier of the project's license
-                type: string
-            text:
-                description: Full text of the project's license
-                type: string
-            notice:
-                description: Short text of the project's license
-                type: string
+      - type: null
+      - type: object
+        oneOf:
+          - required: [ id ]
+            additionalProperties: false
+            properties:
+              id:
+                description: ID of the project's license
+                enum:
+                  - gnu_agpl_v3+
+                  - gnu_agpl_v3
+                  - gnu_gpl_v3+
+                  - gnu_gpl_v3
+                  - mpl_v2
+                  - apache_v2
+                  - mit
+                  - bsd_2_clause
+                  - bsd_3_clause
+                  - bsl_v1
+                  - unlicense
+          - required: [ shortname, fullname, text, notice ]
+            additionalProperties: false
+            properties:
+                shortname:
+                    description: Short name of the project's license
+                    type: string
+                fullname:
+                    description: Full name of the project's license
+                    type: string
+                trove_classifier:
+                    description: Trove classifier of the project's license
+                    type: string
+                    pattern: "^License :: "
+                text:
+                    description: Full text of the project's license
+                    type: string
+                notice:
+                    description: Short text of the project's license
+                    type: string
   copyright:
     type: object
     default: {}
@@ -55,6 +58,7 @@ properties:
         type: integer
         minimum: 1980
         maximum: 2040
-      notice:
-        description: Notice of the project
+      owner:
+        description: Name of the copyright owner
         type: string
+required: [ license, copyright ]
