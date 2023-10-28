@@ -33,6 +33,7 @@ from repodynamics.datatype import (
     PrimaryCustomCommit,
     SecondaryActionCommit,
     SecondaryCustomCommit,
+    WorkflowTriggeringAction,
     NonConventionalCommit,
     FileChangeType,
     Emoji
@@ -77,16 +78,15 @@ class Init:
         self._website_announcement_msg = website_announcement_msg
 
         self.logger = logger or Logger("github")
-        self.git: Git = Git(logger=self.logger)
+        self.git: Git = Git(
+            path_repo="repo1",
+            user=(self.triggering_actor_username, self.triggering_actor_email),
+            logger=self.logger
+        )
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
         self.api_admin = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
         self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
-        self.meta = Meta(path_root=".", github_token=self._github_token, logger=self.logger)
-
-        self.git.set_user(
-            username=self.triggering_actor_username,
-            email=self.triggering_actor_email,
-        )
+        self.meta = Meta(path_root="repo1", github_token=self._github_token, logger=self.logger)
 
         self.metadata, self.metadata_ci = self.meta.read_metadata_output()
         self.last_ver, self.dist_ver = self.get_latest_version()
@@ -96,6 +96,11 @@ class Init:
         self._tag: str = ""
         self._version: str = ""
         self._fail: bool = False
+        self._internal_config = {
+            "finit": False,
+            "repository": "",
+            "ref": ""
+        }
         self._run_job = {
             "package_build": package_build,
             "package_test_local": package_test,
@@ -124,23 +129,138 @@ class Init:
         return
 
     def run(self):
-        if self.event_name in self.SUPPORTED_EVENTS_NON_MODIFYING:
-            pass
-        elif self.event_name not in self.SUPPORTED_EVENTS_MODIFYING:
-            self.logger.error(f"Event '{self.event_name}' is not supported.")
+        self.logger.h2("Analyze Triggering Event")
+        match self.event_name:
+            case "issue_comment":
+                if self.issue_payload.get("pull_request"):
+                    match self.triggering_action:
+                        case WorkflowTriggeringAction.CREATED:
+                            self.event_comment_pull_created()
+                        case WorkflowTriggeringAction.EDITED:
+                            self.event_comment_pull_edited()
+                        case WorkflowTriggeringAction.DELETED:
+                            self.event_comment_pull_deleted()
+                        case _:
+                            self.logger.error(
+                                "The workflow was triggered by a comment on a pull request "
+                                "(issue_comment event with pull_request payload), "
+                                f"but the triggering action '{self.payload['action']}' is not supported."
+                            )
+                else:
+                    match self.triggering_action:
+                        case WorkflowTriggeringAction.CREATED:
+                            self.event_comment_issue_created()
+                        case WorkflowTriggeringAction.EDITED:
+                            self.event_comment_issue_edited()
+                        case WorkflowTriggeringAction.DELETED:
+                            self.event_comment_issue_deleted()
+                        case _:
+                            self.logger.error(
+                                "The workflow was triggered by a comment on an issue "
+                                "(issue_comment event without pull_request payload), "
+                                f"but the triggering action '{self.payload['action']}' is not supported."
+                            )
+            case "issues":
+                match self.triggering_action:
+                    case WorkflowTriggeringAction.OPENED:
+                        self.event_issue_opened()
+                    case WorkflowTriggeringAction.LABELED:
+                        self.event_issue_labeled()
+                    case _:
+                        self.logger.error(
+                            "The workflow was triggered by an 'issues' event, "
+                            f"but the triggering action '{self.payload['action']}' is not supported."
+                        )
+            case "pull_request":
+                match self.triggering_action:
+                    case WorkflowTriggeringAction.OPENED:
+                        self.event_pull_opened()
+                    case WorkflowTriggeringAction.REOPENED:
+                        self.event_pull_reopened()
+                    case WorkflowTriggeringAction.SYNCHRONIZE:
+                        self.event_pull_synchronize()
+                    case WorkflowTriggeringAction.LABELED:
+                        self.event_pull_labeled()
+                    case _:
+                        self.logger.error(
+                            "The workflow was triggered by a 'pull_request' event, "
+                            f"but the triggering action '{self.payload['action']}' is not supported."
+                        )
+            case "pull_request_target":
+                match self.triggering_action:
+                    case WorkflowTriggeringAction.OPENED:
+                        self.event_pull_target_opened()
+                    case WorkflowTriggeringAction.REOPENED:
+                        self.event_pull_target_reopened()
+                    case WorkflowTriggeringAction.SYNCHRONIZE:
+                        self.event_pull_target_synchronize()
+                    case _:
+                        self.logger.error(
+                            "The workflow was triggered by a 'pull_request_target' event, "
+                            f"but the triggering action '{self.payload['action']}' is not supported."
+                        )
+            case "push":
+                if self.payload["created"]:
+                    triggering_action = "created"
+                elif self.payload["deleted"]:
+                    triggering_action = "deleted"
+                else:
+                    triggering_action = "modified"
+                match (self.ref_type, triggering_action):
+                    case ("tag", "created"):
+                        self.event_push_tag_created()
+                    case ("tag", "deleted"):
+                        self.event_push_tag_deleted()
+                    case ("tag", "modified"):
+                        self.event_push_tag_modified()
+                    case ("branch", "created"):
+                        if self.ref_is_main:
+                            if not self.git.get_tags():
+                                self.event_push_repository_created()
+                            else:
+                                self.event_push_branch_created_main()
+                        else:
+                            self.logger.skip(
+                                "Creation of non-default branch detected; skipping.",
+                            )
+                        self.event_push_branch_created()
+                    case ("branch", "deleted"):
+                        self.event_push_branch_deleted()
+                    case ("branch", "modified"):
+                        if self.ref_is_main:
+                            if not self.git.get_tags():
+                                self.event_first_release()
+                            else:
+                                self.event_push_branch_modified_main()
+                        else:
+                            metadata = self.meta.read_metadata_raw()
+                            branch_group = metadata["branch"]["group"]
+                            if self.ref_name.startswith(branch_group["release"]["prefix"]):
+                                self.event_push_branch_modified_release()
+                            elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
+                                self.event_push_branch_modified_dev()
+                            else:
+                                self.event_push_branch_modified_other()
+            case "schedule":
+                cron = self.payload["schedule"]
+                schedule_type = self.metadata["workflow"]["init"]["schedule"]
+                if cron == schedule_type["sync"]:
+                    self.event_schedule_sync()
+                elif cron == schedule_type["test"]:
+                    self.event_schedule_test()
+                else:
+                    self.logger.error(
+                        f"Unknown cron expression for scheduled workflow: {cron}",
+                        f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
+                        f"{schedule_type}"
+                    )
+            case "workflow_dispatch":
+                self.event_workflow_dispatch()
+            case _:
+                self.logger.error(f"Event '{self.event_name}' is not supported.")
+        return self.finalize()
 
-        event_handler = {
-            "issue_comment": self.event_issue_comment,
-            "issues": self.event_issues,
-            "pull_request_review": self.event_pull_request_review,
-            "pull_request_review_comment": self.event_pull_request_review_comment,
-            "pull_request_target": self.event_pull_request_target,
-            "schedule": self.event_schedule,
-            "workflow_dispatch": self.event_workflow_dispatch,
-            "pull_request": self.event_pull_request,
-            "push": self.event_push,
-        }
-        event_handler[self.event_name]()
+    def finalize(self):
         self.logger.h1("Finalization")
         if self.fail:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
@@ -153,52 +273,76 @@ class Init:
         output["path_log"] = path_logs
         return output, None, summary
 
-    def event_push(self):
-
-        def ref_type() -> Literal["tag", "branch"]:
-            if self.ref.startswith("refs/tags/"):
-                return "tag"
-            if self.ref.startswith("refs/heads/"):
-                return "branch"
-            self.logger.error(f"Invalid ref: {self.context['ref']}")
-
-        def change_type() -> Literal["created", "deleted", "modified"]:
-            if self.payload["created"]:
-                return "created"
-            if self.payload["deleted"]:
-                return "deleted"
-            return "modified"
-
-        event_handler = {
-            ("tag", "created"): self.event_push_tag_created,
-            ("tag", "deleted"): self.event_push_tag_deleted,
-            ("tag", "modified"): self.event_push_tag_modified,
-            ("branch", "created"): self.event_push_branch_created,
-            ("branch", "deleted"): self.event_push_branch_deleted,
-            ("branch", "modified"): self.event_push_branch_modified,
-        }
-        event_handler[(ref_type(), change_type())]()
+    def event_comment_pull_created(self):
         return
 
-    def event_push_branch_modified(self):
-        self.action_file_change_detector()
-        if self.ref_is_main:
-            if not self.git.get_tags():
-                self.event_first_release()
-            else:
-                self.event_push_branch_modified_main()
-        else:
-            metadata = self.meta.read_metadata_raw()
-            branch_group = metadata["branch"]["group"]
-            if self.ref_name.startswith(branch_group["release"]["prefix"]):
-                self.event_push_branch_modified_release()
-            elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
-                self.event_push_branch_modified_dev()
-            else:
-                self.event_push_branch_modified_other()
+    def event_comment_pull_edited(self):
+        return
+
+    def event_comment_pull_deleted(self):
+        return
+
+    def event_comment_issue_created(self):
+        return
+
+    def event_comment_issue_edited(self):
+        return
+
+    def event_comment_issue_deleted(self):
+        return
+
+    def event_issue_opened(self):
+        return
+
+    def event_issue_labeled(self):
+        return
+
+    def event_pull_opened(self):
+        return
+
+    def event_pull_reopened(self):
+        return
+
+    def event_pull_synchronize(self):
+        return
+
+    def event_pull_labeled(self):
+        return
+
+    def event_pull_target_opened(self):
+        return
+
+    def event_pull_target_reopened(self):
+        return
+
+    def event_pull_target_synchronize(self):
+        return
+
+    def event_push_tag_created(self):
+        return
+
+    def event_push_tag_deleted(self):
+        return
+
+    def event_push_tag_modified(self):
+        return
+
+    def event_push_branch_created(self):
+
+        return
+
+    def event_push_branch_deleted(self):
+        return
+
+    def event_workflow_dispatch(self):
+        self.event_type = EventType.DISPATCH
+        self.action_website_announcement_update()
+        self.action_meta()
+        self.action_hooks()
         return
 
     def event_push_branch_modified_main(self):
+        self.action_file_change_detector()
         for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
             self.set_job_run(job_id)
         self.event_type = EventType.PUSH_MAIN
@@ -271,33 +415,6 @@ class Init:
         self.action_hooks()
         return
 
-    def event_push_branch_created(self):
-        if self.ref_is_main:
-            if not self.git.get_tags():
-                self.event_repository_created()
-            else:
-                self.logger.skip(
-                    "Creation of default branch detected while a version tag is present; skipping.",
-                    "This is likely a result of a repository transfer, or renaming of the default branch."
-                )
-        else:
-            self.logger.skip(
-                "Creation of non-default branch detected; skipping.",
-            )
-        return
-
-    def event_push_branch_deleted(self):
-        return
-
-    def event_push_tag_created(self):
-        return
-
-    def event_push_tag_deleted(self):
-        return
-
-    def event_push_tag_modified(self):
-        return
-
     def event_pull_request(self):
         self.event_type = EventType.PULL_MAIN
         branch = self.resolve_branch(self.pull_head_ref_name)
@@ -364,20 +481,6 @@ class Init:
         self.set_job_run("website_rtd_preview")
         return
 
-    def event_schedule(self):
-        cron = self.payload["schedule"]
-        schedule_type = self.metadata["workflow"]["init"]["schedule"]
-        if cron == schedule_type["sync"]:
-            return self.event_schedule_sync()
-        if cron == schedule_type["test"]:
-            return self.event_schedule_test()
-        self.logger.error(
-            f"Unknown cron expression for scheduled workflow: {cron}",
-            f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-            f"{schedule_type}"
-        )
-        return
-
     def event_schedule_sync(self):
         self.action_website_announcement_check()
         self.action_meta()
@@ -386,44 +489,22 @@ class Init:
     def event_schedule_test(self):
         return
 
-    def event_workflow_dispatch(self):
-        self.event_type = EventType.DISPATCH
-        self.action_website_announcement_update()
-        self.action_meta()
-        self.action_hooks()
-        return
-
-    def event_issue_comment(self):
-        return
-
-    def event_issues(self):
-        event_handler = {
-            "opened": self.event_issues_opened,
-        }
-        if self.issue_triggering_action not in event_handler:
-            return
-        event_handler[self.issue_triggering_action]()
-        return
-
     def event_issues_opened(self):
         self.api.issue_comment_create(number=self.issue_number, body="This post tracks the issue.")
         self.action_post_process_issue()
 
         return
 
-    def event_pull_request_review(self):
-        return
-
-    def event_pull_request_review_comment(self):
-        return
-
-    def event_repository_created(self):
+    def event_push_repository_created(self):
+        self.logger.info("Detected event: repository creation")
         shutil.rmtree(self.meta.input_path.dir_source)
         shutil.rmtree(self.meta.input_path.dir_tests)
+        (self.meta.input_path.root / ".path.json").unlink(missing_ok=True)
+        # for path in ("core/license.yaml", ):
+        #     (self.meta.input_path.dir_meta / path).unlink(missing_ok=True)
         for path_dynamic_file in self.meta.output_path.all_files:
             path_dynamic_file.unlink(missing_ok=True)
-        metadata = self.meta.read_metadata_output()[0]
-        for changelog_data in metadata.get("changelog", {}).values():
+        for changelog_data in self.metadata.get("changelog", {}).values():
             path_changelog_file = Path(changelog_data["path"])
             path_changelog_file.unlink(missing_ok=True)
         with open(self.meta.input_path.dir_website / "announcement.html", "w") as f:
@@ -433,6 +514,13 @@ class Init:
             name="Init",
             status="pass",
             oneliner="Repository created from RepoDynamics PyPackIT template.",
+        )
+        return
+
+    def event_push_branch_created_main(self):
+        self.logger.skip(
+            "Creation of default branch detected while a version tag is present; skipping.",
+            "This is likely a result of a repository transfer, or renaming of the default branch."
         )
         return
 
@@ -1328,6 +1416,7 @@ class Init:
     def output(self):
         package_name = self.metadata.get("package", {}).get("name", "")
         out = {
+            "internal": self._internal_config,
             "config": {
                 "fail": self.fail,
                 "checkout": {
@@ -1412,6 +1501,11 @@ class Init:
         return self.context["ref_name"]
 
     @property
+    def ref_type(self) -> Literal['branch', 'tag']:
+        """The type of the ref that triggered the event, either 'branch' or 'tag'."""
+        return self.context["ref_type"]
+
+    @property
     def repo_owner(self) -> str:
         """GitHub username of the repository owner."""
         return self.context["repository_owner"]
@@ -1473,6 +1567,13 @@ class Init:
         if self._hash_latest:
             return self._hash_latest
         return self.hash_after
+
+    @property
+    def triggering_action(self) -> WorkflowTriggeringAction | None:
+        try:
+            return WorkflowTriggeringAction(self.payload["action"])
+        except ValueError:
+            return None
 
     @property
     def issue_triggering_action(self) -> str:
