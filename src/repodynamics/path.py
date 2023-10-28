@@ -13,9 +13,9 @@ class InputPath:
         self._paths = super_paths
         for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
             if not path.is_dir():
-                self._logger.error(f"Input {name} directory '{path}' not found.")
+                self._logger.error(f"Input {name} directory '{path}' not found")
         if self.dir_local.is_file():
-            self._logger.error(f"Input local directory '{self.dir_local}' is a file.")
+            self._logger.error(f"Input local directory '{self.dir_local}' is a file")
         if not self.dir_local_log_repodynamics_action.exists():
             self._logger.info(f"Creating input local directory '{self.dir_local_log_repodynamics_action}'.")
             self.dir_local_log_repodynamics_action.mkdir(parents=True, exist_ok=True)
