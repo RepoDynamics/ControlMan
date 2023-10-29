@@ -37,7 +37,27 @@ properties:
                 description: Description of the label
                 default: Related to this specific version of the package.
             required: [ prefix, color, description ]
-        required: [ version ]
+          target:
+            type: object
+            description: Target branch labels
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the label name
+                type: string
+                default: 'Target: '
+              color:
+                description: Color of the label
+                type: string
+                pattern: ^[0-9a-fA-F]{6}$
+                default: '0366d6'
+              description:
+                type: string
+                maxLength: 100
+                description: Description of the label
+                default: Related to this specific branch of the repository.
+            required: [ prefix, color, description ]
+        required: [ version, target ]
 
       group:
         type: object
@@ -160,6 +180,198 @@ properties:
                         default: |
                           An issue/pull-request about the meta content of the repository.
                 required: [ package_major, package_minor, package_patch, package_post, website, meta ]
+          status:
+            type: object
+            description: Issue/pull status
+            default: { }
+            additionalProperties: false
+            properties:
+              prefix:
+                description: Prefix for the label name
+                type: string
+                default: 'Status: '
+              color:
+                description: Color of the label
+                type: string
+                pattern: ^[0-9a-fA-F]{6}$
+                default: '0366d6'
+              labels:
+                description: Labels for the issue sub-type
+                type: object
+                default: { }
+                additionalProperties: false
+                properties:
+                  triage:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'triage'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue is being triaged.
+                  rejected:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'rejected'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request has been rejected.
+                  duplicate:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'duplicate'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is a duplicate.
+                  invalid:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'invalid'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is invalid.
+                  queued:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'queued'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is queued for processing.
+                  discuss:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'discuss'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request requires more discussion.
+                  need_volunteer:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'need-volunteer'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request requires a volunteer.
+                  in_dev:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'in-development'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is being developed.
+                  in_review:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'in-review'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is being reviewed.
+                  alpha:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'alpha'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is in alpha release.
+                  beta:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'beta'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is in beta release.
+                  rc:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'rc'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request is published as a release candidate.
+                  merged:
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      suffix:
+                        type: string
+                        default: 'merged'
+                      description:
+                        type: string
+                        maxLength: 100
+                        default: The issue/pull-request has been merged into a release branch.
+                required:
+                  - triage
+                  - rejected
+                  - duplicate
+                  - invalid
+                  - queued
+                  - discuss
+                  - need_volunteer
+                  - in_dev
+                  - in_review
+                  - alpha
+                  - beta
+                  - rc
+                  - merged
+            required: [ prefix, color, labels ]
           sub_type:
             type: object
             description: Issue sub types
