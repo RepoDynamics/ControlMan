@@ -85,7 +85,12 @@ class Init:
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
         self.api_admin = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
         self.gh_link = pylinks.site.github.user(self.repo_owner).repo(self.repo_name)
-        self.meta = Meta(path_root="repo1", github_token=self._github_token, logger=self.logger)
+        self.meta = Meta(
+            path_root="repo1",
+            github_token=self._github_token,
+            hash_before=self.hash_before,
+            logger=self.logger
+        )
 
         self.metadata, self.metadata_ci = self.meta.read_metadata_output()
         self.metadata_before: dict = {}
