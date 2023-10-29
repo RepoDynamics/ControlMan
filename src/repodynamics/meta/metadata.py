@@ -114,22 +114,13 @@ class MetadataGenerator:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
 
-        self._metadata["label"]["list"] = self.repo_labels()
+        self._metadata["label"]["compiled"] = self.repo_labels()
         self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
 
         self._metadata["maintainer"]["list"] = self._maintainers()
 
-        self._validate_relationships()
         self._reader.cache_save()
         return self._metadata
-
-    def _validate_relationships(self):
-        issue_ids = [issue["id"] for issue in self._metadata.get("issue", {}).get("forms", [])]
-        for issue_id in self._metadata.get("maintainer", {}).get("issue", {}).keys():
-            if issue_id not in issue_ids:
-                self._logger.error(
-                    f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
-                )
 
     def _repo(self) -> dict:
         self._logger.h3("Generate 'repo' metadata")
@@ -302,18 +293,14 @@ class MetadataGenerator:
         self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
 
-    def repo_labels(self) -> list[dict[str, str]]:
+    def repo_labels(self) -> dict[tuple[str, ...], dict[str, str]]:
         self._logger.h3("Generate metadata: labels")
-        out = []
+        out = {}
         for group_name, group in self._metadata["label"]["group"].items():
             prefix = group["prefix"]
-            suffixes = []
-            for label in group["labels"].values():
+            for label_id, label in group["labels"].items():
                 suffix = label["suffix"]
-                if suffix in suffixes:
-                    self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
-                suffixes.append(suffix)
-                out.append(
+                out[("group", group_name, label_id)] = (
                     {"name": f"{prefix}{suffix}", "description": label["description"], "color": group["color"]}
                 )
         package_versions = self._metadata.get("package", {}).get("releases", {}).get("package_versions", [])
@@ -324,7 +311,13 @@ class MetadataGenerator:
                 "description": version_label_data["description"],
                 "color": version_label_data["color"],
             }
-            out.append(label)
+            out[("auto_group", "version", package_version)] = label
+        for label_id, label_data in self._metadata["label"].get("single").items():
+            out[("single", label_id)] = {
+                "name": label_data["name"],
+                "description": label_data["description"],
+                "color": label_data["color"],
+            }
         return out
 
     def _urls_github(self) -> dict:
