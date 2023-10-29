@@ -190,6 +190,7 @@ class MetaValidator:
                                         f"checkbox options.",
                                     )
                                 break
+        # Verify that identifying labels are defined in 'label.group' metadata
         for primary_type_id, sub_type_id in form_identifying_labels:
             if primary_type_id not in self._data["label"]["group"]["primary_type"]["labels"]:
                 self._logger.error(
@@ -218,6 +219,11 @@ class MetaValidator:
                             f"is ambiguous as it overlaps with the already set name/prefix '{set_label}'.",
                         )
                 labels.append(label)
+        if len(labels) > 1000:
+            self._logger.error(
+                f"Too many labels: {len(labels)}",
+                f"The maximum number of labels allowed by GitHub is 1000.",
+            )
         for label_id, label_data in self._data["label"]["group"].items():
             suffixes = []
             for label_type, suffix_data in label_data["labels"].items():
@@ -229,4 +235,13 @@ class MetaValidator:
                         f"is already used by another earlier label.",
                     )
                 suffixes.append(suffix)
+        return
+
+    def maintainers(self):
+        issue_ids = [issue["id"] for issue in self._data.get("issue", {}).get("forms", [])]
+        for issue_id in self._data.get("maintainer", {}).get("issue", {}).keys():
+            if issue_id not in issue_ids:
+                self._logger.error(
+                    f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
+                )
         return
