@@ -14,6 +14,7 @@ properties:
         description: Configuration for the repository
         type: object
         default: {}
+        additionalProperties: false
         properties:
           description:
             description: Description of the repository
@@ -35,29 +36,30 @@ properties:
                   type: string
                   maxLength: 50
                   pattern: ^[a-z0-9][a-z0-9\-]*$
-          security_and_analysis:
-            description: Security and analysis settings for the repository
-            type: object
-            default: {}
-            properties:
-              secret_scanning:
-                description: Secret scanning settings for the repository
-                type: object
-                default: {}
-                properties:
-                  status:
-                    description: Status of secret scanning for the repository
-                    enum: [ enabled, disabled ]
-                    default: enabled
-              secret_scanning_push_protection:
-                description: Secret scanning push protection settings for the repository
-                type: object
-                default: {}
-                properties:
-                  status:
-                    description: Status of secret scanning push protection for the repository
-                    enum: [ enabled, disabled ]
-                    default: enabled
+          secret_scanning:
+            description: Enable secret scanning for the repository
+            type: boolean
+            default: true
+          secret_scanning_push_protection:
+            description: Enable secret scanning push protection for the repository
+            type: boolean
+            default: true
+          vulnerability_alerts:
+            description: Enable vulnerability alerts for the repository
+            type: boolean
+            default: true
+          automated_security_fixes:
+            description: Enable automated security fixes for the repository
+            type: boolean
+            default: true
+          private_vulnerability_reporting:
+            description: Enable private vulnerability reporting for the repository
+            type: boolean
+            default: true
+          has_discussions:
+            description: Enable discussions for the repository
+            type: boolean
+            default: true
           has_projects:
             type: boolean
             default: false
