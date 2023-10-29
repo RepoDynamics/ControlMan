@@ -536,9 +536,7 @@ class Init:
         return
 
     def event_first_release(self):
-        self.api_admin.activate_pages("workflow")
-        self.action_repo_settings_sync()
-        self.action_repo_labels_sync(init=True)
+
         tag_prefix = self.metadata["tag"]["group"]["version"]["prefix"]
         self._version = "0.0.0"
         self._tag = f"{tag_prefix}{self._version}"
@@ -553,6 +551,9 @@ class Init:
             push=True,
         )
         self.git.create_tag(tag=self._tag, message="First release")
+        self.api_admin.activate_pages("workflow")
+        self.action_repo_settings_sync()
+        self.action_repo_labels_sync(init=True)
         for job_id in [
             "package_build",
             "package_test_local",
@@ -947,18 +948,45 @@ class Init:
         topics = data.pop("topics")
         self.api_admin.repo_update(**data)
         self.api_admin.repo_topics_replace(topics=topics)
+        if not self.api_admin.actions_permissions_workflow_default()['can_approve_pull_request_reviews']:
+            self.api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
         return
+
+    def action_branch_names_sync(self):
+        before = self.metadata_before["branch"]
+        after = self.metadata["branch"]
+        renamed = False
+        if before["default"]["name"] != after["default"]["name"]:
+            self.api_admin.branch_rename(
+                old_name=before["default"]["name"],
+                new_name=after["default"]["name"]
+            )
+            renamed = True
+        branches = self.api_admin.branches
+        branch_names = [branch["name"] for branch in branches]
+        for group_name in ("release", "dev", "ci_pull"):
+            prefix_before = before["group"][group_name]["prefix"]
+            prefix_after = after["group"][group_name]["prefix"]
+            if prefix_before != prefix_after:
+                for branch_name in branch_names:
+                    if branch_name.startswith(prefix_before):
+                        self.api_admin.branch_rename(
+                            old_name=branch_name,
+                            new_name=f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
+                        )
+                        renamed = True
+        return renamed
 
     def action_repo_pages(self):
         if not self.api.info["has_pages"]:
             self.api_admin.pages_create(build_type="workflow")
         custom_url = self.metadata["web"].get("base_url")
         if custom_url:
-            cname = custom_url.removeprefix("https://").removeprefix("http://")
-            https_enforced = custom_url.startswith("https://")
-        else:
-            cname = https_enforced = None
-        self.api_admin.pages_update(cname=cname, https_enforced=https_enforced, build_type="workflow")
+            self.api_admin.pages_update(
+                cname=custom_url.removeprefix("https://").removeprefix("http://"),
+                https_enforced=custom_url.startswith("https://"),
+                build_type="workflow"
+            )
         return
 
     def action_website_announcement_check(self):
