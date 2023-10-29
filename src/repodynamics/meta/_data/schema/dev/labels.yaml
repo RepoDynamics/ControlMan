@@ -35,8 +35,7 @@ properties:
                 type: string
                 maxLength: 100
                 description: Description of the label
-                default: |
-                  The issue/pull request is concerning this specific version of the package.
+                default: Related to this specific version of the package.
             required: [ prefix, color, description ]
         required: [ version ]
 
