@@ -11,6 +11,110 @@ class MetaValidator:
 
     def validate(self):
         self.issue_forms()
+        self.branch_names()
+        self.changelogs()
+        return
+
+    def branch_names(self):
+        """Verify that branch names and prefixes are unique."""
+        branch_names = [self._data["branch"]["default"]["name"]]
+        for group_name, branch_data in self._data["branch"]["group"].items():
+            for branch_name in branch_names:
+                if branch_name.startswith(branch_data["prefix"]):
+                    self._logger.error(
+                        f"Duplicate branch name: {branch_name}",
+                        f"The branch name '{branch_name}' starts with "
+                        f"the prefix of branch group '{group_name}'.",
+                    )
+            branch_names.append(branch_data["prefix"])
+        return
+
+    def changelogs(self):
+        """Verify that changelog paths, names and sections are unique."""
+        changelog_paths = []
+        changelog_names = []
+        for changelog_id, changelog_data in self._data["changelog"].items():
+            if changelog_data["path"] in changelog_paths:
+                self._logger.error(
+                    f"Duplicate changelog path: {changelog_data['path']}",
+                    f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
+                    f"is already used by another earlier changelog.",
+                )
+            changelog_paths.append(changelog_data["path"])
+            if changelog_data["name"] in changelog_names:
+                self._logger.error(
+                    f"Duplicate changelog name: {changelog_data['name']}",
+                    f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
+                    f"is already used by another earlier changelog.",
+                )
+            changelog_names.append(changelog_data["name"])
+            section_ids = []
+            for section in changelog_data["sections"]:
+                if section["id"] in section_ids:
+                    self._logger.error(
+                        f"Duplicate changelog section ID: {section['id']}",
+                        f"The section ID '{section['id']}' set for changelog '{changelog_id}' "
+                        f"is already used by another earlier section.",
+                    )
+                section_ids.append(section["id"])
+        return
+
+    def commits(self):
+        """Verify that commit types are unique, and that subtypes are defined."""
+        commit_types = []
+        for main_type in ("primary_action", "primary_custom"):
+            for commit_id, commit_data in self._data["commit"][main_type].items():
+                if commit_data["type"] in commit_types:
+                    self._logger.error(
+                        f"Duplicate commit type: {commit_data['type']}",
+                        f"The type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
+                        f"is already used by another earlier commit.",
+                    )
+                commit_types.append(commit_data["type"])
+                for subtype_type, subtypes in commit_data["sub_types"]:
+                    for subtype in subtypes:
+                        if subtype not in self._data["commit"]["secondary_custom"]:
+                            self._logger.error(
+                                f"Invalid commit subtype: {subtype}",
+                                f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
+                                f"in 'sub_types.{subtype_type}' is not defined in 'commit.secondary_custom'.",
+                            )
+        for commit_id, commit_data in self._data["commit"]["secondary_action"].items():
+            if commit_data["type"] in commit_types:
+                self._logger.error(
+                    f"Duplicate commit type: {commit_data['type']}",
+                    f"The type '{commit_data['type']}' set for commit 'secondary_action.{commit_id}' "
+                    f"is already used by another earlier commit.",
+                )
+            commit_types.append(commit_data["type"])
+        changelog_sections = {}
+        for commit_type, commit_data in self._data["commit"]["secondary_custom"].items():
+            if commit_type in commit_types:
+                self._logger.error(
+                    f"Duplicate commit type: {commit_type}",
+                    f"The type '{commit_type}' set in 'secondary_custom' "
+                    f"is already used by another earlier commit.",
+                )
+            commit_types.append(commit_type)
+            # Verify that linked changelogs are defined
+            changelog_id = commit_data["changelog_id"]
+            if changelog_id not in self._data["changelog"]:
+                self._logger.error(
+                    f"Invalid commit changelog ID: {changelog_id}",
+                    f"The changelog ID '{changelog_id}' set for commit "
+                    f"'secondary_custom.{commit_type}' is not defined in 'changelog'.",
+                )
+            if changelog_id not in changelog_sections:
+                changelog_sections[changelog_id] = [
+                    section["id"]
+                    for section in self._data["changelog"][changelog_id]["sections"]
+                ]
+            if commit_data["changelog_section_id"] not in changelog_sections[changelog_id]:
+                self._logger.error(
+                    f"Invalid commit changelog section ID: {commit_data['changelog_section_id']}",
+                    f"The changelog section ID '{commit_data['changelog_section_id']}' set for commit "
+                    f"'secondary_custom.{commit_type}' is not defined in 'changelog.{changelog_id}.sections'."
+                )
         return
 
     def issue_forms(self):
@@ -97,4 +201,32 @@ class MetaValidator:
                     f"Unknown issue-form sub_type: {sub_type_id}",
                     f"The ID '{sub_type_id}' does not exist in 'label.group.sub_type.labels'.",
                 )
+        return
+
+    def labels(self):
+        """Verify that label names and prefixes are unique."""
+        labels = []
+        for main_type in ("auto_group", "group", "single"):
+            for label_id, label_data in self._data["label"].get(main_type, {}).items():
+                label = label_data["name"] if main_type == "single" else label_data["prefix"]
+                label_type = "name" if main_type == "single" else "prefix"
+                for set_label in labels:
+                    if set_label.startswith(label) or label.startswith(set_label):
+                        self._logger.error(
+                            f"Ambiguous label {label_type}: {label}",
+                            f"The {label_type} '{label}' set for label '{main_type}.{label_id}' "
+                            f"is ambiguous as it overlaps with the already set name/prefix '{set_label}'.",
+                        )
+                labels.append(label)
+        for label_id, label_data in self._data["label"]["group"].items():
+            suffixes = []
+            for label_type, suffix_data in label_data["labels"].items():
+                suffix = suffix_data["suffix"]
+                if suffix in suffixes:
+                    self._logger.error(
+                        f"Duplicate label suffix: {suffix}",
+                        f"The suffix '{suffix}' set for label 'group.{label_id}.labels.{label_type}' "
+                        f"is already used by another earlier label.",
+                    )
+                suffixes.append(suffix)
         return
