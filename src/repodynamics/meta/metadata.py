@@ -305,12 +305,8 @@ class MetadataGenerator:
     def repo_labels(self) -> list[dict[str, str]]:
         self._logger.h3("Generate metadata: labels")
         out = []
-        prefixes = []
         for group_name, group in self._metadata["label"]["group"].items():
             prefix = group["prefix"]
-            if prefix in prefixes:
-                self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
-            prefixes.append(prefix)
             suffixes = []
             for label in group["labels"].values():
                 suffix = label["suffix"]
