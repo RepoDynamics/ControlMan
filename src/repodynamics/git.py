@@ -514,7 +514,7 @@ class Git:
             return False
         return True
 
-    def file_at_hash(self, commit_hash: str, path: str):
+    def file_at_hash(self, commit_hash: str, path: str | Path):
         return self._run(["git", "show", f"{commit_hash}:{path}"])
 
     def discard_changes(self, path: str | Path = "."):
