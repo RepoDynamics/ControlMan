@@ -23,6 +23,7 @@ class MetadataGenerator:
         self,
         reader: MetaReader,
         output_path: OutputPath,
+        hash_before: str = "",
         logger: Logger = None,
     ):
         if not isinstance(reader, MetaReader):
@@ -32,6 +33,7 @@ class MetadataGenerator:
         self._logger.h2("Generate Metadata")
         self._output_path = output_path
         self._logger.h3("Detect Git Repository")
+        self._hash_before = hash_before
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
         self._metadata["repo"] |= self._repo()
@@ -99,6 +101,7 @@ class MetadataGenerator:
             release_info = self._package_releases()
             package["releases"] = {
                 "per_branch": release_info["per_branch"],
+                "branch_names": release_info["branch_names"],
                 "os_titles": release_info["os_titles"],
                 "python_versions": release_info["python_versions"],
                 "package_versions": release_info["package_versions"],
@@ -303,15 +306,17 @@ class MetadataGenerator:
                 out[("group", group_name, label_id)] = (
                     {"name": f"{prefix}{suffix}", "description": label["description"], "color": group["color"]}
                 )
-        package_versions = self._metadata.get("package", {}).get("releases", {}).get("package_versions", [])
-        version_label_data = self._metadata["label"]["auto_group"]["version"]
-        for package_version in package_versions:
-            label = {
-                "name": f"{version_label_data['prefix']}{package_version}",
-                "description": version_label_data["description"],
-                "color": version_label_data["color"],
-            }
-            out[("auto_group", "version", package_version)] = label
+        release_info = self._metadata.get("package", {}).get("releases", {})
+        for autogroup_name, release_key in (("version", "package_versions"), ("target", "branch_names")):
+            entries = release_info.get(release_key, [])
+            label_data = self._metadata["label"]["auto_group"][autogroup_name]
+            for entry in entries:
+                label = {
+                    "name": f"{label_data['prefix']}{entry}",
+                    "description": label_data["description"],
+                    "color": label_data["color"],
+                }
+                out[("auto_group", autogroup_name, entry)] = label
         for label_id, label_data in self._metadata["label"].get("single").items():
             out[("single", label_id)] = {
                 "name": label_data["name"],
@@ -524,10 +529,17 @@ class MetadataGenerator:
         ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
         self._git.fetch_all_remote_branches()
         curr_branch, other_branches = self._git.get_all_branch_names()
+        if self._hash_before:
+            metadata_old_text = self._git.file_at_hash(
+                commit_hash=self._hash_before, path=self._output_path.metadata.rel_path
+            )
+            source = json.loads(metadata_old_text)
+        else:
+            source = self._metadata
         release_prefix, dev_prefix = allowed_prefixes = tuple(
-            self._metadata["branch"]["group"][group_name]["prefix"] for group_name in ["release", "dev"]
+            source["branch"]["group"][group_name]["prefix"] for group_name in ["release", "dev"]
         )
-        main_branch_name = self._metadata["branch"]["default"]["name"]
+        main_branch_name = source["branch"]["default"]["name"]
         release_branch = {}
         main_branch = {}
         dev_branch = []
@@ -552,8 +564,16 @@ class MetadataGenerator:
             if not branch_metadata.get("package", {}).get("os_titles"):
                 self._logger.warning(f"No operating systems specified for branch '{branch}'; skipping branch.")
                 continue
+            if branch == main_branch_name:
+                branch_name = self._metadata["branch"]["default"]["name"]
+            elif branch.startswith(release_prefix):
+                new_prefix = self._metadata["branch"]["group"]["release"]["prefix"]
+                branch_name = f"{new_prefix}{branch.removeprefix(release_prefix)}"
+            else:
+                new_prefix = self._metadata["branch"]["group"]["dev"]["prefix"]
+                branch_name = f"{new_prefix}{branch.removeprefix(dev_prefix)}"
             release_info = {
-                "branch": branch,
+                "branch": branch_name,
                 "version": str(ver),
                 "python_versions": branch_metadata["package"]["python_versions"],
                 "os_titles": branch_metadata["package"]["os_titles"],
@@ -576,8 +596,13 @@ class MetadataGenerator:
         if curr_branch == main_branch_name or curr_branch.startswith(release_prefix):
             ver = self._get_latest_package_version(ver_tag_prefix)
             if ver:
+                if curr_branch == main_branch_name:
+                    branch_name = self._metadata["branch"]["default"]["name"]
+                elif curr_branch.startswith(release_prefix):
+                    new_prefix = self._metadata["branch"]["group"]["release"]["prefix"]
+                    branch_name = f"{new_prefix}{curr_branch.removeprefix(release_prefix)}"
                 release_info = {
-                    "branch": curr_branch,
+                    "branch": branch_name,
                     "version": str(ver),
                     "python_versions": self._metadata["package"]["python_versions"],
                     "os_titles": self._metadata["package"]["os_titles"],
@@ -621,8 +646,10 @@ class MetadataGenerator:
                         ver = curr_base_ver.next_patch
                     else:
                         ver = curr_base_ver.next_post
+                    new_prefix = self._metadata["branch"]["group"]["dev"]["prefix"]
+                    branch_name = f"{new_prefix}{curr_branch.removeprefix(dev_prefix)}"
                     release_info = {
-                        "branch": curr_branch,
+                        "branch": branch_name,
                         "version": str(ver),
                         "python_versions": self._metadata["package"]["python_versions"],
                         "os_titles": self._metadata["package"]["os_titles"],
@@ -638,7 +665,7 @@ class MetadataGenerator:
                     dev_branch.append(release_info)
         elif curr_branch == f"{dev_prefix}0":
             release_info = {
-                "branch": curr_branch,
+                "branch": self._metadata["branch"]["default"]["name"],
                 "version": "0.0.0",
                 "python_versions": self._metadata["package"]["python_versions"],
                 "os_titles": self._metadata["package"]["os_titles"],
@@ -647,8 +674,9 @@ class MetadataGenerator:
                 "gui_scripts": [script["name"] for script in self._metadata["package"].get("gui_scripts", [])],
             }
             dev_branch.append(release_info)
-        releases = dev_branch + list(release_branch.values()) + ([main_branch] if main_branch else [])
+        releases = dev_branch + ([main_branch] if main_branch else []) + list(release_branch.values())
         releases.sort(key=lambda i: i["version"], reverse=True)
+        all_branch_names = []
         all_python_versions = []
         all_os_titles = []
         all_package_versions = []
@@ -656,6 +684,7 @@ class MetadataGenerator:
         all_cli_scripts = []
         all_gui_scripts = []
         for release in releases:
+            all_branch_names.append(release["branch"])
             all_os_titles.extend(release["os_titles"])
             all_python_versions.extend(release["python_versions"])
             all_package_versions.append(str(release["version"]))
@@ -669,6 +698,7 @@ class MetadataGenerator:
         all_gui_scripts = sorted(set(all_gui_scripts))
         out = {
             "per_branch": releases,
+            "branch_names": all_branch_names,
             "os_titles": all_os_titles,
             "python_versions": all_python_versions,
             "package_versions": all_package_versions,
