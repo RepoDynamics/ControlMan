@@ -27,12 +27,14 @@ class Meta:
         self,
         path_root: str | Path = ".",
         github_token: Optional[str] = None,
+        hash_before: str = "",
         logger: Optional[Logger] = None,
     ):
         self._logger = logger or Logger()
         self._logger.h2("Initialize Meta Manager")
         self._path_root = Path(path_root).resolve()
         self._github_token = github_token
+        self._hash_before = hash_before
 
         super_paths = _util.dict.read(
             path=self._path_root / ".path.json",
@@ -102,7 +104,10 @@ class Meta:
             return self._metadata, self._metadata_ci
         self.read_metadata_raw()
         self._metadata = MetadataGenerator(
-            reader=self._reader, output_path=self.output_path, logger=self._logger
+            reader=self._reader,
+            output_path=self.output_path,
+            hash_before=self._hash_before,
+            logger=self._logger,
         ).generate()
         self._metadata_ci = self._generate_metadata_ci()
         MetaValidator(metadata=self._metadata, logger=self._logger).validate()
