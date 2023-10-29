@@ -95,9 +95,7 @@ class ReadmeFileGenerator:
 
     def body(self):
         data = self._metadata["readme"]["body"]
-        return html.DIV(
-            content=[getattr(self, f'{section["id"]}')(section) for section in data]
-        )
+        return html.DIV(content=[getattr(self, f'{section["id"]}')(section) for section in data])
 
     def footer(self):
         """ """
@@ -137,9 +135,7 @@ class ReadmeFileGenerator:
                 align="center" if style == "vertical" else "left",
             ),
             sources=[
-                html.SOURCE(
-                    media=f"(prefers-color-scheme: {theme})", srcset=url.format(theme)
-                )
+                html.SOURCE(media=f"(prefers-color-scheme: {theme})", srcset=url.format(theme))
                 for theme in ("dark", "light")
             ],
         )
@@ -149,9 +145,7 @@ class ReadmeFileGenerator:
         return logo
 
     def header_body(self):
-        description = html.P(
-            align="justify", content=[self._metadata["description"]]
-        ).style(
+        description = html.P(align="justify", content=[self._metadata["description"]]).style(
             {
                 self._metadata["name"]: {
                     "bold": True,
@@ -177,9 +171,7 @@ class ReadmeFileGenerator:
             with open(path_docs / "index.md") as f:
                 text = f.read()
             toctree = re.findall(r":::{toctree}\s((.|\s)*?)\s:::", text, re.DOTALL)[0][0]
-            top_section_filenames = [
-                entry for entry in toctree.splitlines() if not entry.startswith(":")
-            ]
+            top_section_filenames = [entry for entry in toctree.splitlines() if not entry.startswith(":")]
             top_section_names = []
             for filename in top_section_filenames:
                 with open((path_docs / filename).with_suffix(".md")) as f:
@@ -222,10 +214,7 @@ class ReadmeFileGenerator:
                 align="center",
                 content=[
                     f"{'&nbsp;' * 2} ".join(
-                        [
-                            str(badge.as_html_picture(tag_seperator="", content_indent=""))
-                            for badge in badges
-                        ]
+                        [str(badge.as_html_picture(tag_seperator="", content_indent="")) for badge in badges]
                     )
                 ],
             )
@@ -288,21 +277,15 @@ class ReadmeFileGenerator:
             prs.append(self._github_badges.pr_issue(label=label, raw=True, logo=None))
             issues.append(self._github_badges.pr_issue(label=label, raw=True, pr=False, logo=None))
 
-        prs_div = html.DIV(
-            align="right", content=html.ElementCollection(prs, "\n<br>\n")
-        )
-        iss_div = html.DIV(
-            align="right", content=html.ElementCollection(issues, "\n<br>\n")
-        )
+        prs_div = html.DIV(align="right", content=html.ElementCollection(prs, "\n<br>\n"))
+        iss_div = html.DIV(align="right", content=html.ElementCollection(issues, "\n<br>\n"))
 
         table = html.TABLE(
             content=[
                 html.TR(
                     content=[
                         html.TD(
-                            content=html.ElementCollection(
-                                [pr_button, *prs], seperator="<br>"
-                            ),
+                            content=html.ElementCollection([pr_button, *prs], seperator="<br>"),
                             align="center",
                             valign="top",
                         ),
@@ -415,11 +398,7 @@ class ReadmeFileGenerator:
             text=text,
             style="for-the-badge",
             color={
-                theme: (
-                    self._metadata["color"][color][idx]
-                    if isinstance(color, str)
-                    else color[idx]
-                )
+                theme: (self._metadata["color"][color][idx] if isinstance(color, str) else color[idx])
                 for idx, theme in enumerate(("light", "dark"))
             },
             alt=text,

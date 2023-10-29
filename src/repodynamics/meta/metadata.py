@@ -43,11 +43,8 @@ class MetadataGenerator:
         self._metadata["authors"] = self._authors()
         self._metadata["discussion"]["categories"] = self._discussions()
         self._metadata["license"] = self._license()
-        self._metadata['keyword_slugs'] = self._keywords()
-        self._metadata["url"] = {
-            "github": self._urls_github(),
-            "website": self._urls_website()
-        }
+        self._metadata["keyword_slugs"] = self._keywords()
+        self._metadata["url"] = {"github": self._urls_github(), "website": self._urls_website()}
         self._metadata["copyright"] |= self._copyright()
 
         # if license_info:
@@ -71,10 +68,7 @@ class MetadataGenerator:
                 trove_classifiers.append("Typing :: Typed")
 
             package_urls = self._package_platform_urls()
-            self._metadata["url"] |= {
-                "pypi": package_urls["pypi"],
-                "conda": package_urls["conda"]
-            }
+            self._metadata["url"] |= {"pypi": package_urls["pypi"], "conda": package_urls["conda"]}
 
             # dev_info = self._package_development_status()
             # package |= {
@@ -149,7 +143,7 @@ class MetadataGenerator:
         owner_username, repo_name = repo_address
         self._logger.success(
             "Extract remote GitHub repository address",
-            f"Owner Username: {owner_username}\nRepository Mame: {repo_name}"
+            f"Owner Username: {owner_username}\nRepository Mame: {repo_name}",
         )
         target_repo = self._metadata["repo"]["target"]
         self._logger.input(f"Target repository", target_repo)
@@ -168,7 +162,7 @@ class MetadataGenerator:
             )
         repo = {
             attr: repo_info[attr]
-            for attr in ['id', 'node_id', 'name', 'full_name', 'html_url', 'default_branch', "created_at"]
+            for attr in ["id", "node_id", "name", "full_name", "html_url", "default_branch", "created_at"]
         }
         repo["owner"] = repo_info["owner"]["login"]
         self._reader.cache_set(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}", repo)
@@ -223,9 +217,8 @@ class MetadataGenerator:
                     entry = maintainers.setdefault(reviewer, {"issue": 0, "pull": 0, "discussion": 0})
                     entry["pull"] += 1
         maintainers_list = [
-            {**self._get_user(username.lower()), "roles": roles} for username, roles in sorted(
-                maintainers.items(), key=sort_key, reverse=True
-            )
+            {**self._get_user(username.lower()), "roles": roles}
+            for username, roles in sorted(maintainers.items(), key=sort_key, reverse=True)
         ]
         self._logger.success("Set 'maintainers'", json.dumps(maintainers_list, indent=3))
         return maintainers_list
@@ -258,13 +251,13 @@ class MetadataGenerator:
         if not license_id:
             self._logger.skip(title, "License data already set manually in metadata.")
             return self._metadata["license"]
-        license_info = self._reader.db['license_id'].get(license_id.lower())
+        license_info = self._reader.db["license_id"].get(license_id.lower())
         if not license_info:
             self._logger.error(title, f"License ID '{license_id}' not found in database.")
         else:
             license_info = copy.deepcopy(license_info)
             license_info["trove_classifier"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
-            filename = license_id.lower().removesuffix('+')
+            filename = license_id.lower().removesuffix("+")
             license_info["text"] = _util.file.datafile(f"license/{filename}.txt").read_text()
             license_info["notice"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
         self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
@@ -304,7 +297,7 @@ class MetadataGenerator:
         if not self._metadata["keywords"]:
             self._logger.skip(title, "No keywords specified.")
             return slugs
-        for keyword in self._metadata['keywords']:
+        for keyword in self._metadata["keywords"]:
             slugs.append(keyword.lower().replace(" ", "-"))
         self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
@@ -319,17 +312,13 @@ class MetadataGenerator:
                 self._logger.error(f"Duplicate prefix '{prefix}' in label group '{group_name}'.")
             prefixes.append(prefix)
             suffixes = []
-            for label in group['labels'].values():
-                suffix = label['suffix']
+            for label in group["labels"].values():
+                suffix = label["suffix"]
                 if suffix in suffixes:
                     self._logger.error(f"Duplicate suffix '{suffix}' in label group '{group_name}'.")
                 suffixes.append(suffix)
                 out.append(
-                    {
-                        "name": f"{prefix}{suffix}",
-                        "description": label["description"],
-                        "color": group["color"]
-                    }
+                    {"name": f"{prefix}{suffix}", "description": label["description"], "color": group["color"]}
                 )
         package_versions = self._metadata.get("package", {}).get("releases", {}).get("package_versions", [])
         version_label_data = self._metadata["label"]["auto_group"]["version"]
@@ -337,7 +326,7 @@ class MetadataGenerator:
             label = {
                 "name": f"{version_label_data['prefix']}{package_version}",
                 "description": version_label_data["description"],
-                "color": version_label_data["color"]
+                "color": version_label_data["color"],
             }
             out.append(label)
         return out
@@ -380,12 +369,12 @@ class MetadataGenerator:
 
     def _urls_website(self) -> dict:
         url = {}
-        base = self._metadata["web"].get('base_url')
+        base = self._metadata["web"].get("base_url")
         if not base:
             base = f"https://{self._metadata['owner']['username']}.github.io"
-            if self._metadata['repo']['name'] != f"{self._metadata['owner']['username']}.github.io":
+            if self._metadata["repo"]["name"] != f"{self._metadata['owner']['username']}.github.io":
                 base += f"/{self._metadata['repo']['name']}"
-        url['base'] = base
+        url["base"] = base
         url["home"] = base
         url["announcement"] = (
             f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/"
@@ -397,7 +386,7 @@ class MetadataGenerator:
         return url
 
     def _publications(self) -> list[dict]:
-        if not self._metadata["workflow"]["init"].get('get_owner_publications'):
+        if not self._metadata["workflow"]["init"].get("get_owner_publications"):
             return []
         orcid_id = self._metadata["owner"]["url"].get("orcid")
         if not orcid_id:
@@ -405,16 +394,16 @@ class MetadataGenerator:
                 "The `get_owner_publications` config is enabled, "
                 "but owner's ORCID ID is not set on their GitHub account."
             )
-        dois = self._reader.cache_get(f'publications_orcid_{orcid_id}')
+        dois = self._reader.cache_get(f"publications_orcid_{orcid_id}")
         if not dois:
             dois = pylinks.api.orcid(orcid_id=orcid_id).doi
-            self._reader.cache_set(f'publications_orcid_{orcid_id}', dois)
+            self._reader.cache_set(f"publications_orcid_{orcid_id}", dois)
         publications = []
         for doi in dois:
-            publication_data = self._reader.cache_get(f'doi_{doi}')
+            publication_data = self._reader.cache_get(f"doi_{doi}")
             if not publication_data:
                 publication_data = pylinks.api.doi(doi=doi).curated
-                self._reader.cache_set(f'doi_{doi}', publication_data)
+                self._reader.cache_set(f"doi_{doi}", publication_data)
             publications.append(publication_data)
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
@@ -448,7 +437,7 @@ class MetadataGenerator:
         output = {
             "major_ready": status_code in [5, 6],
             "dev_phase": phase[status_code],
-            "trove_classifier": f"Development Status :: {status_code} - {phase[status_code]}"
+            "trove_classifier": f"Development Status :: {status_code} - {phase[status_code]}",
         }
         self._logger.success(f"Development info: {output}")
         return output
@@ -460,7 +449,9 @@ class MetadataGenerator:
         if len(min_ver) < 3:
             min_ver.extend([0] * (3 - len(min_ver)))
         if min_ver < [3, 8, 0]:
-            self._logger.error(f"'package.python_version_min' cannot be less than 3.8.0, but got {min_ver_str}.")
+            self._logger.error(
+                f"'package.python_version_min' cannot be less than 3.8.0, but got {min_ver_str}."
+            )
         min_ver = tuple(min_ver)
         # Get a list of all Python versions that have been released to date.
         current_python_versions = self._get_released_python3_versions()
@@ -479,9 +470,8 @@ class MetadataGenerator:
             "python_versions_py3x": py3x_format,
             "python_versions_int": compatible_minor_versions,
             "trove_classifiers": [
-                "Programming Language :: Python :: {}".format(postfix)
-                for postfix in ["3 :: Only"] + vers
-            ]
+                "Programming Language :: Python :: {}".format(postfix) for postfix in ["3 :: Only"] + vers
+            ],
         }
         self._logger.success(f"Set package Python versions data: {output}")
         return output
@@ -511,7 +501,9 @@ class MetadataGenerator:
         }
         if not self._metadata["package"].get("operating_systems"):
             self._logger.attention("No operating systems provided.")
-            output["trove_classifiers"].append(trove_classifier_template.format(trove_classifiers_postfix["independent"]))
+            output["trove_classifiers"].append(
+                trove_classifier_template.format(trove_classifiers_postfix["independent"])
+            )
             output["github_runners"].extend(["ubuntu-latest", "macos-latest", "windows-latest"])
             output["os_titles"].extend(list(os_title.values()))
             return output
@@ -556,26 +548,20 @@ class MetadataGenerator:
                 continue
             self._git.checkout(branch)
             ver = self._get_latest_package_version(ver_tag_prefix)
-            if not (ver and ver.release_type != 'dev'):
+            if not (ver and ver.release_type != "dev"):
                 continue
             if branch.startswith(dev_prefix) and ver.is_final_like:
                 # This is a dev branch that has no new pre-release versions since branching
                 continue
             branch_metadata = _util.dict.read(self._output_path.metadata.path)
             if not branch_metadata:
-                self._logger.warning(
-                    f"Failed to read metadata from branch '{branch}'; skipping branch."
-                )
+                self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
                 continue
             if not branch_metadata.get("package", {}).get("python_versions"):
-                self._logger.warning(
-                    f"No Python versions specified for branch '{branch}'; skipping branch."
-                )
+                self._logger.warning(f"No Python versions specified for branch '{branch}'; skipping branch.")
                 continue
             if not branch_metadata.get("package", {}).get("os_titles"):
-                self._logger.warning(
-                    f"No operating systems specified for branch '{branch}'; skipping branch."
-                )
+                self._logger.warning(f"No operating systems specified for branch '{branch}'; skipping branch.")
                 continue
             release_info = {
                 "branch": branch,
@@ -583,8 +569,12 @@ class MetadataGenerator:
                 "python_versions": branch_metadata["package"]["python_versions"],
                 "os_titles": branch_metadata["package"]["os_titles"],
                 "package_managers": ["pip"] + (["conda"] if branch_metadata["package"].get("conda") else []),
-                "cli_scripts": [script["name"] for script in branch_metadata["package"].get("cli_scripts", [])],
-                "gui_scripts": [script["name"] for script in branch_metadata["package"].get("gui_scripts", [])],
+                "cli_scripts": [
+                    script["name"] for script in branch_metadata["package"].get("cli_scripts", [])
+                ],
+                "gui_scripts": [
+                    script["name"] for script in branch_metadata["package"].get("gui_scripts", [])
+                ],
             }
             if branch == main_branch_name:
                 main_branch = release_info
@@ -602,7 +592,8 @@ class MetadataGenerator:
                     "version": str(ver),
                     "python_versions": self._metadata["package"]["python_versions"],
                     "os_titles": self._metadata["package"]["os_titles"],
-                    "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
+                    "package_managers": ["pip"]
+                    + (["conda"] if self._metadata["package"].get("conda") else []),
                     "cli_scripts": [
                         script["name"] for script in self._metadata["package"].get("cli_scripts", [])
                     ],
@@ -620,7 +611,7 @@ class MetadataGenerator:
                 PrimaryActionCommitType.PACKAGE_MAJOR.value,
                 PrimaryActionCommitType.PACKAGE_MINOR.value,
                 PrimaryActionCommitType.PACKAGE_PATCH.value,
-                PrimaryActionCommitType.PACKAGE_POST.value
+                PrimaryActionCommitType.PACKAGE_POST.value,
             ]:
                 for version_label in group_labels["version"]:
                     base_ver = PEP440SemVer(version_label)
@@ -646,7 +637,8 @@ class MetadataGenerator:
                         "version": str(ver),
                         "python_versions": self._metadata["package"]["python_versions"],
                         "os_titles": self._metadata["package"]["os_titles"],
-                        "package_managers": ["pip"] + (["conda"] if self._metadata["package"].get("conda") else []),
+                        "package_managers": ["pip"]
+                        + (["conda"] if self._metadata["package"].get("conda") else []),
                         "cli_scripts": [
                             script["name"] for script in self._metadata["package"].get("cli_scripts", [])
                         ],
@@ -662,12 +654,8 @@ class MetadataGenerator:
                 "python_versions": self._metadata["package"]["python_versions"],
                 "os_titles": self._metadata["package"]["os_titles"],
                 "package_managers": ["pip"],
-                "cli_scripts": [
-                    script["name"] for script in self._metadata["package"].get("cli_scripts", [])
-                ],
-                "gui_scripts": [
-                    script["name"] for script in self._metadata["package"].get("gui_scripts", [])
-                ],
+                "cli_scripts": [script["name"] for script in self._metadata["package"].get("cli_scripts", [])],
+                "gui_scripts": [script["name"] for script in self._metadata["package"].get("gui_scripts", [])],
             }
             dev_branch.append(release_info)
         releases = dev_branch + list(release_branch.values()) + ([main_branch] if main_branch else [])
@@ -723,13 +711,14 @@ class MetadataGenerator:
 
     def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
         label_prefix = {
-            group_id: group_data["prefix"]
-            for group_id, group_data in self._metadata["label"]["group"].items()
+            group_id: group_data["prefix"] for group_id, group_data in self._metadata["label"]["group"].items()
         }
         version_label_prefix = self._metadata["label"]["auto_group"]["version"]["prefix"]
-        labels = self._reader.github.user(self._metadata["repo"]["owner"]).repo(
-            self._metadata["repo"]["name"]
-        ).issue_labels(number=issue_number)
+        labels = (
+            self._reader.github.user(self._metadata["repo"]["owner"])
+            .repo(self._metadata["repo"]["name"])
+            .issue_labels(number=issue_number)
+        )
         out_dict = {}
         out_list = []
         for label in labels:
@@ -766,7 +755,7 @@ class MetadataGenerator:
         user = self._reader.github.user(username=username)
         user_info = user.info
         # Get website and social accounts
-        for key in ['name', 'company', 'location', 'email', 'bio', 'id', 'node_id', 'avatar_url']:
+        for key in ["name", "company", "location", "email", "bio", "id", "node_id", "avatar_url"]:
             output[key] = user_info[key]
         output["url"] = {"website": user_info["blog"], "github": user_info["html_url"]}
         self._logger.info(f"Get social accounts for '{username}' from GitHub API")
@@ -783,9 +772,9 @@ class MetadataGenerator:
                     (r"orcid\.org", "orcid"),
                     (r"researchgate\.net/profile", "researchgate"),
                 ]:
-                    match = re.compile(
-                        r"(?:https?://)?(?:www\.)?({}/[\w\-]+)".format(url)
-                    ).fullmatch(account["url"])
+                    match = re.compile(r"(?:https?://)?(?:www\.)?({}/[\w\-]+)".format(url)).fullmatch(
+                        account["url"]
+                    )
                     if match:
                         output["url"][key] = f"https://{match.group(1)}"
                         self._logger.success(f"Found {key} account for '{username}': {output['url'][key]}")
@@ -798,7 +787,7 @@ class MetadataGenerator:
         return output
 
     def _get_released_python3_versions(self) -> list[tuple[int, int, int]]:
-        release_versions = self._reader.cache_get('python_versions')
+        release_versions = self._reader.cache_get("python_versions")
         if release_versions:
             return [tuple(ver) for ver in release_versions]
         vers = self._reader.github.user("python").repo("cpython").semantic_versions(tag_prefix="v")

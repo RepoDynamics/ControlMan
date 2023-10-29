@@ -14,7 +14,7 @@ class ChangelogManager:
         commit_title: str,
         parent_commit_hash: str,
         parent_commit_url: str,
-        logger: Logger = None
+        logger: Logger = None,
     ):
         self.meta = changelog_metadata
         self.vars = {
@@ -60,7 +60,7 @@ class ChangelogManager:
         return
 
     def add_from_commit_body(self, body: str):
-        heading_pattern = r'^#\s+(.*?)\n'
+        heading_pattern = r"^#\s+(.*?)\n"
         sections = re.split(heading_pattern, body, flags=re.MULTILINE)
         for i in range(1, len(sections), 2):
             heading = sections[i]
@@ -99,7 +99,7 @@ class ChangelogManager:
         else:
             with open(path) as f:
                 text = f.read()
-            parts = re.split(r'^## ', text, maxsplit=1, flags=re.MULTILINE)
+            parts = re.split(r"^## ", text, maxsplit=1, flags=re.MULTILINE)
             if len(parts) == 2:
                 text_before, text_after = parts[0].strip(), f"## {parts[1].strip()}"
             else:

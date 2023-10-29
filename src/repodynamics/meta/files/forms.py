@@ -8,7 +8,6 @@ from repodynamics.datatype import DynamicFile
 
 
 class FormGenerator:
-
     def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._out_db = output_path
@@ -17,11 +16,7 @@ class FormGenerator:
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
         # label_syncer, pr_labeler = self._labels()
-        return (
-            self.issue_forms()
-            + self.discussion_forms()
-            + self.pull_request_templates()
-        )
+        return self.issue_forms() + self.discussion_forms() + self.pull_request_templates()
 
     def issue_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
@@ -35,7 +30,8 @@ class FormGenerator:
                 continue
             info = self._out_db.issue_form(issue["id"], idx + 1)
             form = {
-                key: val for key, val in issue.items()
+                key: val
+                for key, val in issue.items()
                 if key not in ["id", "primary_commit_id", "sub_type", "body", "pre_process", "post_process"]
             }
 
@@ -60,7 +56,7 @@ class FormGenerator:
                         {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                     )
 
-            text = YAML(typ=['rt', 'string']).dumps(form, add_final_eol=True)
+            text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
             out.append((info, text))
             paths.append(info.path)
         dir_issues = self._out_db.dir_issue_forms
@@ -78,7 +74,7 @@ class FormGenerator:
         for discussion in forms:
             info = self._out_db.discussion_form(discussion["slug"])
             form = {key: val for key, val in discussion.items() if key not in ["slug"]}
-            text = YAML(typ=['rt', 'string']).dumps(form, add_final_eol=True)
+            text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
             out.append((info, text))
             paths.append(info.path)
         dir_discussions = self._out_db.dir_discussion_forms
@@ -114,4 +110,3 @@ class FormGenerator:
         if "if_equal" in commands:
             return all([commands["if_equal"][0] == elem for elem in commands["if_equal"][1:]])
         return True
-

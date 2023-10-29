@@ -15,6 +15,7 @@ def datafile(filepath: str, dirname: str = "_data") -> Path:
     dirname: str
         The name of the directory in the package containing the data file.
     """
+
     def recursive_search(path):
         full_filepath = path / dirname / filepath
         if full_filepath.exists():
@@ -24,15 +25,16 @@ def datafile(filepath: str, dirname: str = "_data") -> Path:
                 f"File '{filepath}' not found in '{caller_package_name}' or any of its parent packages."
             )
         return recursive_search(path.parent)
+
     # Get the caller's frame
     caller_frame = inspect.stack()[1]
     # Get the caller's package name from the frame
-    if caller_frame.frame.f_globals['__package__'] is None:
+    if caller_frame.frame.f_globals["__package__"] is None:
         raise ValueError(
             f"Cannot determine the package name of the caller '{caller_frame.frame.f_globals['__name__']}'."
         )
-    caller_package_name = caller_frame.frame.f_globals['__package__']
-    main_package_name = caller_package_name.split('.')[0]
+    caller_package_name = caller_frame.frame.f_globals["__package__"]
+    main_package_name = caller_package_name.split(".")[0]
     path_root = files(main_package_name)
     return recursive_search(files(caller_package_name))
 

@@ -17,7 +17,7 @@ def read(
     raise_missing: bool = False,
     raise_empty: bool = True,
     extension: Optional[Literal["json", "yaml", "toml"]] = None,
-    logger: Optional[Logger] = None
+    logger: Optional[Logger] = None,
 ) -> dict:
     logger = logger or Logger()
     path = Path(path).resolve()
@@ -43,14 +43,11 @@ def read(
                 logger.error(f"Unsupported file extension '{extension}'.")
         if not isinstance(content, dict):
             logger.error(
-                f"Invalid datafile.",
-                f"Expected a dict, but '{path}' had:\n{json.dumps(content, indent=3)}"
+                f"Invalid datafile.", f"Expected a dict, but '{path}' had:\n{json.dumps(content, indent=3)}"
             )
     if schema:
         validate_schema(source=content, schema=schema, logger=logger)
-    logger.success(
-        f"Data file successfully read from '{path}'", json.dumps(content, indent=3)
-    )
+    logger.success(f"Data file successfully read from '{path}'", json.dumps(content, indent=3))
     return content
 
 
@@ -64,9 +61,7 @@ def validate_schema(source: dict | list, schema: str | Path | dict, logger: Opti
     try:
         _JSONSCHEMA_VALIDATOR(schema).validate(source)
     except jsonschema.exceptions.ValidationError as e:
-        logger.error(
-            f"Schema validation failed: {e.message}.", traceback.format_exc()
-        )
+        logger.error(f"Schema validation failed: {e.message}.", traceback.format_exc())
     logger.success(f"Schema validation successful.")
     return
 
@@ -101,9 +96,8 @@ def update_recursive(
     append_list: bool = True,
     append_dict: bool = True,
     raise_on_duplicated: bool = False,
-    logger: Logger = None
+    logger: Logger = None,
 ):
-
     def recursive(source, add, path=".", result=None, logger=None):
         for key, value in add.items():
             fullpath = f"{path}{key}"
@@ -154,6 +148,7 @@ def update_recursive(
                 else:
                     result.append(f"{logger.emoji['skip']} Ignored key '{fullpath}' with type 'dict'")
         return result
+
     logger = logger or Logger()
     log_title = "Update dictionary recursively"
     result = recursive(source, add, result=[], logger=logger)
@@ -166,7 +161,6 @@ def fill_template(templated_data: dict | list | str | bool | int | float, metada
 
 
 class _DictFiller:
-
     def __init__(self, templated_data: dict | list | str | bool | int | float, metadata: dict):
         self._data = templated_data
         self._meta = metadata
@@ -194,7 +188,6 @@ class _DictFiller:
         return value
 
     def _substitute_val(self, match):
-
         def recursive_retrieve(obj, address):
             if len(address) == 0:
                 return obj
@@ -235,12 +228,16 @@ def extend_with_default(validator_class):
                 instance.setdefault(property, subschema["default"])
 
         for error in validate_properties(
-            validator, properties, instance, schema,
+            validator,
+            properties,
+            instance,
+            schema,
         ):
             yield error
 
     return jsonschema.validators.extend(
-        validator_class, {"properties" : set_defaults},
+        validator_class,
+        {"properties": set_defaults},
     )
 
 

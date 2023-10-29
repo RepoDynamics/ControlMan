@@ -36,12 +36,11 @@ from repodynamics.datatype import (
     WorkflowTriggeringAction,
     NonConventionalCommit,
     FileChangeType,
-    Emoji
+    Emoji,
 )
 
 
 class Init:
-
     SUPPORTED_EVENTS_NON_MODIFYING = [
         "issue_comment",
         "issues",
@@ -61,11 +60,11 @@ class Init:
         package_lint: bool = False,
         package_test: bool = False,
         website_build: bool = False,
-        meta_sync: Literal['report', 'amend', 'commit', 'pull', 'none'] = 'none',
-        hooks: Literal['report', 'amend', 'commit', 'pull', 'none'] = 'none',
+        meta_sync: Literal["report", "amend", "commit", "pull", "none"] = "none",
+        hooks: Literal["report", "amend", "commit", "pull", "none"] = "none",
         website_announcement: str = "",
         website_announcement_msg: str = "",
-        logger: Logger | None = None
+        logger: Logger | None = None,
     ):
         self._github_token = context.pop("token")
         self._payload = context.pop("event")
@@ -81,7 +80,7 @@ class Init:
         self.git: Git = Git(
             path_repo="repo1",
             user=(self.triggering_actor_username, self.triggering_actor_email),
-            logger=self.logger
+            logger=self.logger,
         )
         self.api = pylinks.api.github(token=self._github_token).user(self.repo_owner).repo(self.repo_name)
         self.api_admin = pylinks.api.github(token=self._admin_token).user(self.repo_owner).repo(self.repo_name)
@@ -97,11 +96,7 @@ class Init:
         self._tag: str = ""
         self._version: str = ""
         self._fail: bool = False
-        self._internal_config = {
-            "finit": False,
-            "repository": "",
-            "ref": ""
-        }
+        self._internal_config = {"finit": False, "repository": "", "ref": ""}
         self._run_job = {
             "package_build": package_build,
             "package_test_local": package_test,
@@ -253,7 +248,7 @@ class Init:
                     self.logger.error(
                         f"Unknown cron expression for scheduled workflow: {cron}",
                         f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-                        f"{schedule_type}"
+                        f"{schedule_type}",
                     )
             case "workflow_dispatch":
                 self.event_workflow_dispatch()
@@ -266,7 +261,10 @@ class Init:
         if self.fail:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
             for job_id in (
-                "website_deploy", "package_publish_testpypi", "package_publish_pypi", "github_release"
+                "website_deploy",
+                "package_publish_testpypi",
+                "package_publish_pypi",
+                "github_release",
             ):
                 self.set_job_run(job_id, False)
         summary, path_logs = self.assemble_summary()
@@ -329,7 +327,6 @@ class Init:
         return
 
     def event_push_branch_created(self):
-
         return
 
     def event_push_branch_deleted(self):
@@ -343,7 +340,9 @@ class Init:
         return
 
     def event_push_branch_modified_main(self):
-        self.metadata_before = self.git.file_at_hash(commit_hash=self.hash_before, path=self.meta.output_path.metadata.rel_path)
+        self.metadata_before = self.git.file_at_hash(
+            commit_hash=self.hash_before, path=self.meta.output_path.metadata.rel_path
+        )
         self.action_file_change_detector()
         for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
             self.set_job_run(job_id)
@@ -355,7 +354,7 @@ class Init:
         if len(commits) != 1:
             self.logger.error(
                 f"Push event on main branch should only contain a single commit, but found {len(commits)}.",
-                raise_error=False
+                raise_error=False,
             )
             self.fail = True
             return
@@ -363,7 +362,7 @@ class Init:
         if commit.group_data.group not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
             self.logger.error(
                 f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
-                raise_error=False
+                raise_error=False,
             )
             self.fail = True
             return
@@ -371,7 +370,8 @@ class Init:
             return
 
         if commit.group_data.group == CommitGroup.PRIMARY_CUSTOM or commit.group_data.action in [
-            PrimaryActionCommitType.WEBSITE, PrimaryActionCommitType.META
+            PrimaryActionCommitType.WEBSITE,
+            PrimaryActionCommitType.META,
         ]:
             ver_dist = f"{self.last_ver}+{self.dist_ver+1}"
             next_ver = None
@@ -438,7 +438,8 @@ class Init:
         issue_data = self.meta.manager.get_issue_data_from_labels(issue_labels)
 
         if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
-            PrimaryActionCommitType.WEBSITE, PrimaryActionCommitType.META
+            PrimaryActionCommitType.WEBSITE,
+            PrimaryActionCommitType.META,
         ]:
             ver_dist = f"{base_ver}+{dist+1}"
         else:
@@ -511,7 +512,9 @@ class Init:
             path_changelog_file.unlink(missing_ok=True)
         with open(self.meta.input_path.dir_website / "announcement.html", "w") as f:
             f.write("")
-        self.commit(message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True)
+        self.commit(
+            message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True
+        )
         self.add_summary(
             name="Init",
             status="pass",
@@ -522,7 +525,7 @@ class Init:
     def event_push_branch_created_main(self):
         self.logger.skip(
             "Creation of default branch detected while a version tag is present; skipping.",
-            "This is likely a result of a repository transfer, or renaming of the default branch."
+            "This is likely a result of a repository transfer, or renaming of the default branch.",
         )
         return
 
@@ -536,7 +539,7 @@ class Init:
         commit_msg = CommitMsg(
             typ="init",
             title="Initialize package and website",
-            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI."
+            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI.",
         )
         self.commit(
             message=str(commit_msg),
@@ -594,13 +597,13 @@ class Init:
             for path in changed_paths:
                 if path.endswith("/README.md") or path == ".github/_README.md":
                     typ = RepoFileType.README
-                elif path.startswith(f'{input_path.dir_source}/'):
+                elif path.startswith(f"{input_path.dir_source}/"):
                     typ = RepoFileType.PACKAGE
                 elif path in fixed_paths:
                     typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path.dir_website}/'):
+                elif path.startswith(f"{input_path.dir_website}/"):
                     typ = RepoFileType.WEBSITE
-                elif path.startswith(f'{input_path.dir_tests}/'):
+                elif path.startswith(f"{input_path.dir_tests}/"):
                     typ = RepoFileType.TEST
                 elif path.startswith(".github/workflows/"):
                     typ = RepoFileType.WORKFLOW
@@ -611,7 +614,7 @@ class Init:
                     or path.startswith(".github/workflow_requirements")
                 ):
                     typ = RepoFileType.DYNAMIC
-                elif path.startswith(f'{input_path.dir_meta}/'):
+                elif path.startswith(f"{input_path.dir_meta}/"):
                     typ = RepoFileType.META
                 elif path == ".path.json":
                     typ = RepoFileType.SUPERMETA
@@ -642,11 +645,11 @@ class Init:
         summary_details.insert(0, html.ul([oneliner, color_legend]))
         self.add_summary(
             name=name,
-            status="warning" if summary_detail[RepoFileType.SUPERMETA] else (
-                "pass" if changed_groups_str else "skip"
-            ),
+            status="warning"
+            if summary_detail[RepoFileType.SUPERMETA]
+            else ("pass" if changed_groups_str else "skip"),
             oneliner=oneliner,
-            details=html.ElementCollection(summary_details)
+            details=html.ElementCollection(summary_details),
         )
         return
 
@@ -716,12 +719,15 @@ class Init:
             if action in ["pull", "commit", "amend"]:
                 oneliner += " These were resynchronized and applied to "
                 if action == "pull":
-                    link = html.a(href=pull_data['url'], content=pull_data['number'])
+                    link = html.a(href=pull_data["url"], content=pull_data["number"])
                     oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
                 else:
-                    link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
+                    link = html.a(
+                        href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7]
+                    )
                     oneliner += "the current branch " + (
-                        f"in a new commit (hash: {link})" if action == "commit"
+                        f"in a new commit (hash: {link})"
+                        if action == "commit"
                         else f"by amending the latest commit (new hash: {link})"
                     )
         self.add_summary(name=name, status=status, oneliner=oneliner, details=meta_summary)
@@ -769,25 +775,29 @@ class Init:
                     self.logger.success(
                         "Load pre-commit config from metadata.",
                         "The pre-commit config had been changed in this event, and thus "
-                        "the current config file was not valid anymore."
+                        "the current config file was not valid anymore.",
                     )
                     break
             else:
                 self.logger.error(
                     "Could not find pre-commit-config in meta results.",
-                    "This is an internal error that should not happen; please report it on GitHub."
+                    "This is an internal error that should not happen; please report it on GitHub.",
                 )
         else:
             config = self.meta.output_path.pre_commit_config.path
         if action == "pull":
             pr_branch = self.switch_to_ci_branch("hooks")
-        input_action = action if action in ["report", "amend", "commit"] else (
-            "report" if action == "fail" else "commit"
+        input_action = (
+            action if action in ["report", "amend", "commit"] else ("report" if action == "fail" else "commit")
         )
-        commit_msg = CommitMsg(
-            typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
-            title="Apply automatic fixes made by workflow hooks",
-        ) if action in ["commit", "pull"] else ""
+        commit_msg = (
+            CommitMsg(
+                typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
+                title="Apply automatic fixes made by workflow hooks",
+            )
+            if action in ["commit", "pull"]
+            else ""
+        )
         hooks_output = hook.run(
             ref_range=(self.hash_before, self.hash_after),
             action=input_action,
@@ -816,19 +826,24 @@ class Init:
             status = "pass"
 
         if action == "pull" and modified:
-            link = html.a(href=pull_data['url'], content=pull_data['number'])
+            link = html.a(href=pull_data["url"], content=pull_data["number"])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
         if action in ["commit", "amend"] and modified:
             link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
             target = "the current branch " + (
-                f"in a new commit (hash: {link})" if action == "commit"
+                f"in a new commit (hash: {link})"
+                if action == "commit"
                 else f"by amending the latest commit (new hash: {link})"
             )
 
         if passed:
-            oneliner = "All hooks passed without making any modifications." if not modified else (
-                "All hooks passed in the second run. "
-                f"The modifications made during the first run were applied to {target}."
+            oneliner = (
+                "All hooks passed without making any modifications."
+                if not modified
+                else (
+                    "All hooks passed in the second run. "
+                    f"The modifications made during the first run were applied to {target}."
+                )
             )
         elif action in ["fail", "report"]:
             mode = "some failures were auto-fixable" if modified else "failures were not auto-fixable"
@@ -840,12 +855,7 @@ class Init:
             )
         else:
             oneliner = "Some hooks failed (failures were not auto-fixable)."
-        self.add_summary(
-            name=name,
-            status=status,
-            oneliner=oneliner,
-            details=hooks_output["summary"]
-        )
+        self.add_summary(name=name, status=status, oneliner=oneliner, details=hooks_output["summary"])
         return
 
     def action_repo_labels_sync(self, init: bool = False):
@@ -884,26 +894,22 @@ class Init:
                 details=html.ul(
                     [
                         f"❎ No changes were made.",
-                        f"🚫 The announcement file was not found at '{path_announcement_file}'"
+                        f"🚫 The announcement file was not found at '{path_announcement_file}'",
                     ]
-                )
+                ),
             )
             return
         with open(path_announcement_file) as f:
             current_announcement = f.read()
-        (
-            commit_date_relative,
-            commit_date_absolute,
-            commit_date_epoch,
-            commit_details
-        ) = (
+        (commit_date_relative, commit_date_absolute, commit_date_epoch, commit_details) = (
             self.git.log(
                 number=1,
                 simplify_by_decoration=False,
                 pretty=pretty,
                 date=date,
                 paths=str(path_announcement_file),
-            ) for pretty, date in (
+            )
+            for pretty, date in (
                 ("format:%cd", "relative"),
                 ("format:%cd", None),
                 ("format:%cd", "unix"),
@@ -926,13 +932,11 @@ class Init:
                         f"📅 The last announcement was removed {commit_date_relative} on {commit_date_absolute}.\n",
                         last_commit_details_html,
                     ]
-                )
+                ),
             )
             return
 
-        current_date_epoch = int(
-            _util.shell.run_command(["date", "-u", "+%s"], logger=self.logger)
-        )
+        current_date_epoch = int(_util.shell.run_command(["date", "-u", "+%s"], logger=self.logger))
         elapsed_seconds = current_date_epoch - int(commit_date_epoch)
         elapsed_days = elapsed_seconds / (24 * 60 * 60)
         retention_days = self.metadata["web"]["announcement_retention_days"]
@@ -963,7 +967,7 @@ class Init:
                         current_announcement_html,
                         last_commit_details_html,
                     ]
-                )
+                ),
             )
             return
 
@@ -1002,7 +1006,7 @@ class Init:
                     removed_announcement_html,
                     last_commit_details_html,
                 ]
-            )
+            ),
         )
         return
 
@@ -1048,7 +1052,7 @@ class Init:
                     [
                         f"🚫 The 'null' string was passed to delete the current announcement, "
                         f"but the announcement file is already empty.",
-                        html.details(content=old_md, summary="📝 Last Removal Commit Details")
+                        html.details(content=old_md, summary="📝 Last Removal Commit Details"),
                     ]
                 )
             else:
@@ -1056,15 +1060,10 @@ class Init:
                 details_list.extend(
                     [
                         "🚫 The provided announcement was the same as the existing one.",
-                        html.details(content=old_md, summary="📝 Current Announcement Commit Details")
+                        html.details(content=old_md, summary="📝 Current Announcement Commit Details"),
                     ]
                 )
-            self.add_summary(
-                name=name,
-                status="skip",
-                oneliner=oneliner,
-                details=html.ul(details_list)
-            )
+            self.add_summary(name=name, status="skip", oneliner=oneliner, details=html.ul(details_list))
             return
         self.write_website_announcement(announcement)
         new_html = html.details(
@@ -1077,7 +1076,7 @@ class Init:
             details_list.extend(
                 [
                     f"✅ The announcement was manually removed.",
-                    html.details(content=old_md, summary="📝 Removed Announcement Details")
+                    html.details(content=old_md, summary="📝 Removed Announcement Details"),
                 ]
             )
             commit_title = "Manually remove announcement"
@@ -1093,7 +1092,7 @@ class Init:
                 [
                     f"✅ The announcement was manually updated.",
                     new_html,
-                    html.details(content=old_md, summary="📝 Old Announcement Details")
+                    html.details(content=old_md, summary="📝 Old Announcement Details"),
                 ]
             )
             commit_title = "Manually update announcement"
@@ -1106,12 +1105,7 @@ class Init:
             change_body=commit_body,
         )
         details_list.append(f"✅ Changes were applied (commit {html.a(commit_url, commit_hash)}).")
-        self.add_summary(
-            name=name,
-            status="pass",
-            oneliner=oneliner,
-            details=html.ul(details_list)
-        )
+        self.add_summary(name=name, status="pass", oneliner=oneliner, details=html.ul(details_list))
         return
 
     def action_post_process_issue(self):
@@ -1142,21 +1136,24 @@ class Init:
                 else:
                     checked = False
                 if (if_checkbox["is_checked"] and checked) or (not if_checkbox["is_checked"] and not checked):
-                    self.api.issue_add_assignees(number=self.issue_number, assignees=self.issue_author_username)
+                    self.api.issue_add_assignees(
+                        number=self.issue_number, assignees=self.issue_author_username
+                    )
         return
 
     def _extract_entries_from_issue_body(self, body_elems: list[dict]):
         def create_pattern(parts):
             pattern_sections = []
             for idx, part in enumerate(parts):
-                pattern_content = f"(?P<{part['id']}>.*)" if part['id'] else "(?:.*)"
+                pattern_content = f"(?P<{part['id']}>.*)" if part["id"] else "(?:.*)"
                 pattern_section = rf"### {re.escape(part['title'])}\n{pattern_content}"
                 if idx != 0:
                     pattern_section = f"\n{pattern_section}"
-                if part['optional']:
+                if part["optional"]:
                     pattern_section = f"(?:{pattern_section})?"
                 pattern_sections.append(pattern_section)
-            return ''.join(pattern_sections)
+            return "".join(pattern_sections)
+
         parts = []
         for elem in body_elems:
             if elem["type"] == "markdown":
@@ -1207,11 +1204,13 @@ class Init:
                 commit_type=self.metadata["commit"]["primary"]["website"]["type"],
                 commit_title=commit_title,
                 parent_commit_hash=self.hash_after,
-                parent_commit_url=str(self.gh_link.commit(self.hash_after))
+                parent_commit_url=str(self.gh_link.commit(self.hash_after)),
             )
             changelog_manager.add_change(
                 changelog_id=changelog_id,
-                section_id=self.metadata["commit"]["primary"]["website"]["announcement"]["changelog_section_id"],
+                section_id=self.metadata["commit"]["primary"]["website"]["announcement"][
+                    "changelog_section_id"
+                ],
                 change_title=change_title,
                 change_details=change_body,
             )
@@ -1220,9 +1219,9 @@ class Init:
             typ=self.metadata["commit"]["primary"]["website"]["type"],
             title=commit_title,
             body=commit_body,
-            scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"]
+            scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"],
         )
-        commit_hash = self.commit(message=str(commit), stage='all')
+        commit_hash = self.commit(message=str(commit), stage="all")
         commit_link = str(self.gh_link.commit(commit_hash))
         self._hash_latest = commit_hash
         return commit_hash, commit_link
@@ -1304,7 +1303,7 @@ class Init:
             return Branch(type=BranchType.DEV, number=number)
         return Branch(type=BranchType.OTHER)
 
-    def switch_to_ci_branch(self, typ: Literal['hooks', 'meta']):
+    def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
         current_branch = self.git.current_branch_name()
         new_branch_prefix = self.metadata["branch"]["group"]["ci_pull"]["prefix"]
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
@@ -1320,13 +1319,11 @@ class Init:
         github_context, event_payload = (
             html.details(
                 content=md.code_block(
-                    YAML(typ=['rt', 'string']).dumps(dict(sorted(data.items())), add_final_eol=True),
-                    "yaml"
+                    YAML(typ=["rt", "string"]).dumps(dict(sorted(data.items())), add_final_eol=True), "yaml"
                 ),
                 summary=summary,
-            ) for data, summary in (
-                (self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload")
             )
+            for data, summary in ((self.context, "🎬 GitHub Context"), (self.payload, "📥 Event Payload"))
         )
         intro = [f"{Emoji.PLAY} The workflow was triggered by a <code>{self.event_name}</code> event."]
         if self.fail:
@@ -1344,7 +1341,10 @@ class Init:
             ]
         )
         logs = html.ElementCollection(
-            [html.h(2, "🪵 Logs"), html.details(self.logger.file_log, "Log"),]
+            [
+                html.h(2, "🪵 Logs"),
+                html.details(self.logger.file_log, "Log"),
+            ]
         )
         summaries = html.ElementCollection(self.summary_sections)
         path_logs = self.meta.input_path.dir_local_log_repodynamics_action
@@ -1358,7 +1358,7 @@ class Init:
     def add_summary(
         self,
         name: str,
-        status: Literal['pass', 'fail', 'skip', 'warning'],
+        status: Literal["pass", "fail", "skip", "warning"],
         oneliner: str,
         details: str | html.Element | html.ElementCollection | None = None,
     ):
@@ -1370,10 +1370,10 @@ class Init:
     def commit(
         self,
         message: str = "",
-        stage: Literal['all', 'staged', 'unstaged'] = 'all',
+        stage: Literal["all", "staged", "unstaged"] = "all",
         amend: bool = False,
         push: bool = False,
-        set_upstream: bool = False
+        set_upstream: bool = False,
     ):
         commit_hash = self.git.commit(message=message, stage=stage, amend=amend)
         if amend:
@@ -1393,9 +1393,7 @@ class Init:
 
     def push(self, amend: bool = False, set_upstream: bool = False):
         new_hash = self.git.push(
-            target="origin",
-            set_upstream=set_upstream,
-            force_with_lease=self._amended or amend
+            target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
         )
         self._amended = False
         if new_hash and self.git.current_branch_name() == self.ref_name:
@@ -1435,9 +1433,10 @@ class Init:
                     "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
                 },
                 "release": {
-                   "tag_name": self._tag,
-                   "discussion_category_name": "",
-               } | self._release_info
+                    "tag_name": self._tag,
+                    "discussion_category_name": "",
+                }
+                | self._release_info,
             },
             "metadata_ci": self.metadata_ci,
         }
@@ -1503,7 +1502,7 @@ class Init:
         return self.context["ref_name"]
 
     @property
-    def ref_type(self) -> Literal['branch', 'tag']:
+    def ref_type(self) -> Literal["branch", "tag"]:
         """The type of the ref that triggered the event, either 'branch' or 'tag'."""
         return self.context["ref_type"]
 
@@ -1620,8 +1619,17 @@ class Init:
         return self.issue_payload["state"]
 
     @property
-    def issue_author_association(self) -> Literal[
-        "OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "MANNEQUIN", "NONE"
+    def issue_author_association(
+        self,
+    ) -> Literal[
+        "OWNER",
+        "MEMBER",
+        "COLLABORATOR",
+        "CONTRIBUTOR",
+        "FIRST_TIMER",
+        "FIRST_TIME_CONTRIBUTOR",
+        "MANNEQUIN",
+        "NONE",
     ]:
         return self.issue_payload["author_association"]
 
@@ -1721,7 +1729,7 @@ class Init:
     @property
     def pull_is_merged(self) -> bool:
         """Whether the pull request is merged."""
-        return self.pull_state == 'closed' and self.pull_payload["merged"]
+        return self.pull_state == "closed" and self.pull_payload["merged"]
 
     @property
     def issue_comment_triggering_action(self) -> str:
@@ -1754,8 +1762,6 @@ class Init:
         return self.issue_comment_payload["user"]["login"]
 
 
-
-
 def init(
     context: dict,
     admin_token: str = "",
@@ -1767,10 +1773,10 @@ def init(
     hooks: str = "none",
     website_announcement: str = "",
     website_announcement_msg: str = "",
-    logger=None
+    logger=None,
 ):
     for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):
-        if arg not in ['report', 'amend', 'commit', 'pull', 'none', '']:
+        if arg not in ["report", "amend", "commit", "pull", "none", ""]:
             raise ValueError(
                 f"Invalid input argument for '{arg_name}': "
                 f"Expected one of 'report', 'amend', 'commit', 'pull', or 'none', but got '{arg}'."
@@ -1783,8 +1789,8 @@ def init(
         package_lint=package_lint,
         package_test=package_test,
         website_build=website_build,
-        meta_sync=meta_sync or 'none',
-        hooks=hooks or 'none',
+        meta_sync=meta_sync or "none",
+        hooks=hooks or "none",
         website_announcement=website_announcement,
         website_announcement_msg=website_announcement_msg,
         logger=logger,

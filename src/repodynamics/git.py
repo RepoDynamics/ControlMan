@@ -9,7 +9,6 @@ from repodynamics import _util
 
 
 class Git:
-
     _COMMITTER_USERNAME = "RepoDynamicsBot"
     _COMMITTER_EMAIL = "146771514+RepoDynamicsBot@users.noreply.github.com"
 
@@ -17,21 +16,19 @@ class Git:
         self,
         path_repo: str | Path = ".",
         user: tuple[str, str] | None = None,
-        user_scope: Literal['system', 'global', 'local', 'worktree'] = 'global',
-        logger: Logger | None = None
+        user_scope: Literal["system", "global", "local", "worktree"] = "global",
+        logger: Logger | None = None,
     ):
         self._logger = logger or Logger()
         self._logger.h2("Initialize Git API")
-        git_available = _util.shell.run_command(
-            ["git", "--version"], raise_command=False, logger=self._logger
-        )
+        git_available = _util.shell.run_command(["git", "--version"], raise_command=False, logger=self._logger)
         if not git_available:
             self._logger.error(f"'git' is not installed. Please install 'git' and try again.")
         path_root, err, code = _util.shell.run_command(
             ["git", "-C", str(Path(path_repo).resolve()), "rev-parse", "--show-toplevel"],
             raise_returncode=False,
             raise_stderr=False,
-            logger=self._logger
+            logger=self._logger,
         )
         if code != 0:
             self._logger.error(f"No git repository found at '{path_repo}'")
@@ -41,7 +38,9 @@ class Git:
             self.set_user(username=user[0], email=user[1], scope=user_scope)
         return
 
-    def push(self, target: str = None, ref: str = None, set_upstream: bool = False, force_with_lease: bool = False) -> str | None:
+    def push(
+        self, target: str = None, ref: str = None, set_upstream: bool = False, force_with_lease: bool = False
+    ) -> str | None:
         command = ["git", "push"]
         if set_upstream:
             if not target:
@@ -60,7 +59,7 @@ class Git:
     def commit(
         self,
         message: str = "",
-        stage: Literal['all', 'tracked', 'none'] = 'all',
+        stage: Literal["all", "tracked", "none"] = "all",
         amend: bool = False,
     ) -> str | None:
         """
@@ -83,8 +82,8 @@ class Git:
             if msg_line:
                 commit_cmd.extend(["-m", msg_line])
 
-        if stage != 'none':
-            flag = "-A" if stage == 'all' else "-u"
+        if stage != "none":
+            flag = "-A" if stage == "all" else "-u"
             with self._temp_committer():
                 self._run(["git", "add", flag])
         commit_hash = None
@@ -118,7 +117,7 @@ class Git:
             self.push(target=push_target, ref=tag)
         return out
 
-    def has_changes(self, check_type: Literal['staged', 'unstaged', 'all'] = 'all') -> bool:
+    def has_changes(self, check_type: Literal["staged", "unstaged", "all"] = "all") -> bool:
         """Checks for git changes.
 
         Parameters:
@@ -127,11 +126,8 @@ class Git:
         Returns:
         - bool: True if changes are detected, False otherwise.
         """
-        commands = {
-            'staged': ['git', 'diff', '--quiet', '--cached'],
-            'unstaged': ['git', 'diff', '--quiet']
-        }
-        if check_type == 'all':
+        commands = {"staged": ["git", "diff", "--quiet", "--cached"], "unstaged": ["git", "diff", "--quiet"]}
+        if check_type == "all":
             return any(self._run(cmd, raise_=False)[2] != 0 for cmd in commands.values())
         return self._run(commands[check_type], raise_=False)[2] != 0
 
@@ -213,10 +209,7 @@ class Git:
         return self._run(["git", "rev-parse", f"HEAD~{parent}"])
 
     def describe(
-        self,
-        abbrev: int | None = None,
-        first_parent: bool = True,
-        match: str | None = None
+        self, abbrev: int | None = None, first_parent: bool = True, match: str | None = None
     ) -> str | None:
         cmd = ["git", "describe"]
         if abbrev is not None:
@@ -236,7 +229,7 @@ class Git:
         pretty: str | None = "format:%D",
         date: str | None = None,
         revision_range: str | None = None,
-        paths: str | list[str] | None = None
+        paths: str | list[str] | None = None,
     ):
         cmd = ["git", "log"]
         if number:
@@ -259,8 +252,8 @@ class Git:
         self,
         username: str | None,
         email: str | None,
-        user_type: Literal['user', 'author', 'committer'] = 'user',
-        scope: Literal['system', 'global', 'local', 'worktree'] | None = 'global'
+        user_type: Literal["user", "author", "committer"] = "user",
+        scope: Literal["system", "global", "local", "worktree"] | None = "global",
     ):
         """
         Set the git username and email.
@@ -268,10 +261,7 @@ class Git:
         cmd = ["git", "config"]
         if scope:
             cmd.append(f"--{scope}")
-        if not (
-            (username is None or isinstance(username, str))
-            and (email is None or isinstance(email, str))
-        ):
+        if not ((username is None or isinstance(username, str)) and (email is None or isinstance(email, str))):
             raise ValueError("username and email must be either a string or None.")
         for key, val in [("name", username), ("email", email)]:
             if val is None:
@@ -282,8 +272,8 @@ class Git:
 
     def get_user(
         self,
-        user_type: Literal['user', 'author', 'committer'] = 'user',
-        scope: Optional[Literal['system', 'global', 'local', 'worktree']] = None
+        user_type: Literal["user", "author", "committer"] = "user",
+        scope: Optional[Literal["system", "global", "local", "worktree"]] = None,
     ) -> tuple[str | None, str | None]:
         """
         Get the git username and email.
@@ -318,10 +308,7 @@ class Git:
             self._run(["git", "pull", "--all"])
         return
 
-    def get_commits(
-        self,
-        revision_range: str | None = None
-    ) -> list[dict[str, str | list[str]]]:
+    def get_commits(self, revision_range: str | None = None) -> list[dict[str, str | list[str]]]:
         """
         Get a list of commits.
 
@@ -339,7 +326,7 @@ class Git:
         marker_commit_end = "<end of commit message>"
 
         format = f"{marker_start}%n{hash}%n{author}%n{date}%n{commit}%n{marker_commit_end}"
-        cmd = ['git', 'log', f'--pretty=format:{format}', "--name-only"]
+        cmd = ["git", "log", f"--pretty=format:{format}", "--name-only"]
 
         if revision_range:
             cmd.append(revision_range)
@@ -347,7 +334,7 @@ class Git:
 
         pattern = re.compile(
             rf"{re.escape(marker_start)}\n(.*?)\n(.*?)\n(.*?)\n(.*?){re.escape(marker_commit_end)}\n(.*?)(?:\n\n|$)",
-            re.DOTALL
+            re.DOTALL,
         )
 
         matches = pattern.findall(out)
@@ -356,11 +343,11 @@ class Git:
         commits = []
         for match in matches:
             commit_info = {
-                'hash': match[0].strip(),
-                'author': match[1].strip(),
-                'date': match[2].strip(),
-                'msg': match[3].strip(),
-                'files': list(filter(None, match[4].strip().split('\n')))
+                "hash": match[0].strip(),
+                "author": match[1].strip(),
+                "date": match[2].strip(),
+                "msg": match[3].strip(),
+                "files": list(filter(None, match[4].strip().split("\n"))),
             }
             commits.append(commit_info)
 
@@ -470,10 +457,9 @@ class Git:
         fallback_name: bool = True,
         fallback_purpose: bool = True,
     ) -> tuple[str, str] | None:
-
         def extract_repo_name_from_url(url):
             # Regular expression pattern for extracting repo name from GitHub URL
-            pattern = re.compile(r'github\.com[/:]([\w\-]+)/([\w\-.]+?)(?:\.git)?$')
+            pattern = re.compile(r"github\.com[/:]([\w\-]+)/([\w\-.]+?)(?:\.git)?$")
             match = pattern.search(url)
             if not match:
                 self._logger.attention(f"Failed to extract repo name from URL '{url}'.")
@@ -522,9 +508,7 @@ class Git:
         return self._run(["git", "checkout", "--", str(path)])
 
     def stash(
-        self,
-        name: str = "Stashed by RepoDynamics",
-        include: Literal['tracked', 'untracked', 'all'] = 'all'
+        self, name: str = "Stashed by RepoDynamics", include: Literal["tracked", "untracked", "all"] = "all"
     ):
         """Stash changes in the working directory.
 
@@ -543,8 +527,8 @@ class Git:
             - 'all': Stash all files, including ignored files.
         """
         command = ["git", "stash"]
-        if include in ['untracked', 'all']:
-            command.extend(["save", "--include-untracked" if include == 'untracked' else "--all"])
+        if include in ["untracked", "all"]:
+            command.extend(["save", "--include-untracked" if include == "untracked" else "--all"])
         if name:
             command.append(str(name))
         return self._run(command)
@@ -570,7 +554,7 @@ class Git:
             raise_returncode=raise_,
             raise_stderr=raise_stderr,
             logger=self._logger,
-            **kwargs
+            **kwargs,
         )
         return out if raise_ else (out, err, code)
 
@@ -582,15 +566,12 @@ class Git:
                 username=self._COMMITTER_USERNAME,
                 email=self._COMMITTER_EMAIL,
                 user_type="committer",
-                scope="local"
+                scope="local",
             )
         yield
         if committer_username != self._COMMITTER_USERNAME or committer_email != self._COMMITTER_EMAIL:
             self.set_user(
-                username=committer_username,
-                email=committer_email,
-                user_type="committer",
-                scope="local"
+                username=committer_username, email=committer_email, user_type="committer", scope="local"
             )
         return
 
@@ -600,18 +581,8 @@ class Git:
         username = username or self._COMMITTER_USERNAME
         email = email or self._COMMITTER_EMAIL
         if author_username != username or author_email != email:
-            self.set_user(
-                username=username,
-                email=email,
-                user_type="author",
-                scope="local"
-            )
+            self.set_user(username=username, email=email, user_type="author", scope="local")
         yield
         if author_username != username or author_email != email:
-            self.set_user(
-                username=author_username,
-                email=author_email,
-                user_type="author",
-                scope="local"
-            )
+            self.set_user(username=author_username, email=author_email, user_type="author", scope="local")
         return

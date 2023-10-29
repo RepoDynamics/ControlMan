@@ -91,7 +91,6 @@ class InputPath:
 
 
 class OutputPath:
-
     def __init__(self, super_paths: dict, path_root: str | Path, logger: Logger | None = None):
         self._path_root = Path(path_root).resolve()
         self._logger = logger or Logger()
@@ -124,8 +123,15 @@ class OutputPath:
             self.pull_request_template("default"),
             self.website_announcement,
         ]
-        for health_file_name in ['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support']:
-            for target_path in ['.', 'docs', '.github']:
+        for health_file_name in [
+            "code_of_conduct",
+            "codeowners",
+            "contributing",
+            "governance",
+            "security",
+            "support",
+        ]:
+            for target_path in [".", "docs", ".github"]:
                 files.append(self.health_file(health_file_name, target_path))
         return files
 
@@ -185,28 +191,28 @@ class OutputPath:
     @property
     def funding(self) -> DynamicFile:
         filename = "FUNDING.yml"
-        rel_path = f'.github/{filename}'
+        rel_path = f".github/{filename}"
         path = self._path_root / rel_path
         return DynamicFile("funding", DynamicFileType.CONFIG, filename, rel_path, path)
 
     @property
     def pre_commit_config(self) -> DynamicFile:
         filename = ".pre-commit-config.yaml"
-        rel_path = f'.github/{filename}'
+        rel_path = f".github/{filename}"
         path = self._path_root / rel_path
         return DynamicFile("pre-commit-config", DynamicFileType.CONFIG, filename, rel_path, path)
 
     @property
     def read_the_docs_config(self) -> DynamicFile:
         filename = ".readthedocs.yaml"
-        rel_path = f'.github/{filename}'
+        rel_path = f".github/{filename}"
         path = self._path_root / rel_path
         return DynamicFile("read-the-docs-config", DynamicFileType.CONFIG, filename, rel_path, path)
 
     @property
     def issue_template_chooser_config(self) -> DynamicFile:
         filename = "config.yml"
-        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
+        rel_path = f".github/ISSUE_TEMPLATE/{filename}"
         path = self._path_root / rel_path
         return DynamicFile("issue-template-chooser-config", DynamicFileType.CONFIG, filename, rel_path, path)
 
@@ -241,7 +247,7 @@ class OutputPath:
     @property
     def codecov_config(self) -> DynamicFile:
         filename = ".codecov.yml"
-        rel_path = f'.github/{filename}'
+        rel_path = f".github/{filename}"
         path = self._path_root / rel_path
         return DynamicFile("codecov-config", DynamicFileType.CONFIG, filename, rel_path, path)
 
@@ -268,20 +274,20 @@ class OutputPath:
 
     def workflow_requirements(self, name: str) -> DynamicFile:
         filename = f"{name}.txt"
-        rel_path = f'.github/workflow_requirements/{filename}'
+        rel_path = f".github/workflow_requirements/{filename}"
         path = self._path_root / rel_path
         return DynamicFile(f"workflow-requirement-{name}", DynamicFileType.CONFIG, filename, rel_path, path)
 
     def health_file(
         self,
-        name: Literal['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support'],
-        target_path: Literal['.', 'docs', '.github'] = "."
+        name: Literal["code_of_conduct", "codeowners", "contributing", "governance", "security", "support"],
+        target_path: Literal[".", "docs", ".github"] = ".",
     ) -> DynamicFile:
         # Health files are only allowed in the root, docs, and .github directories
         allowed_paths = [".", "docs", ".github"]
         if target_path not in allowed_paths:
             self._logger.error(f"Path '{target_path}' not allowed for health files.")
-        if name not in ['code_of_conduct', 'codeowners', 'contributing', 'governance', 'security', 'support']:
+        if name not in ["code_of_conduct", "codeowners", "contributing", "governance", "security", "support"]:
             self._logger.error(f"Health file '{name}' not recognized.")
         filename = name.upper() + (".md" if name != "codeowners" else "")
         rel_path = ("" if target_path == "." else f"{target_path}/") + filename
@@ -292,7 +298,7 @@ class OutputPath:
 
     def issue_form(self, name: str, priority: int) -> DynamicFile:
         filename = f"{priority:02}_{name}.yaml"
-        rel_path = f'.github/ISSUE_TEMPLATE/{filename}'
+        rel_path = f".github/ISSUE_TEMPLATE/{filename}"
         path = self._path_root / rel_path
         return DynamicFile(f"issue-form-{name}", DynamicFileType.FORM, filename, rel_path, path)
 
@@ -301,34 +307,44 @@ class OutputPath:
         rel_path = str(path.relative_to(self._path_root))
         return DynamicFile(f"issue-form-outdated-{filename}", DynamicFileType.FORM, filename, rel_path, path)
 
-    def pull_request_template(self, name: str | Literal['default']) -> DynamicFile:
+    def pull_request_template(self, name: str | Literal["default"]) -> DynamicFile:
         filename = "PULL_REQUEST_TEMPLATE.md" if name == "default" else f"{name}.md"
-        rel_path = f'.github/{filename}' if name == "default" else f'.github/PULL_REQUEST_TEMPLATE/{filename}'
+        rel_path = f".github/{filename}" if name == "default" else f".github/PULL_REQUEST_TEMPLATE/{filename}"
         path = self._path_root / rel_path
         return DynamicFile(f"pull-request-template-{name}", DynamicFileType.FORM, filename, rel_path, path)
 
     def pull_request_template_outdated(self, path: Path) -> DynamicFile:
         filename = path.name
         rel_path = str(path.relative_to(self._path_root))
-        return DynamicFile(f"pull-request-template-outdated-{filename}", DynamicFileType.FORM, filename, rel_path, path)
+        return DynamicFile(
+            f"pull-request-template-outdated-{filename}", DynamicFileType.FORM, filename, rel_path, path
+        )
 
     def discussion_form(self, name: str) -> DynamicFile:
         filename = f"{name}.yaml"
-        rel_path = f'.github/DISCUSSION_TEMPLATE/{filename}'
+        rel_path = f".github/DISCUSSION_TEMPLATE/{filename}"
         path = self._path_root / rel_path
         return DynamicFile(f"discussion-form-{name}", DynamicFileType.FORM, filename, rel_path, path)
 
     def discussion_form_outdated(self, path: Path) -> DynamicFile:
         filename = path.name
         rel_path = str(path.relative_to(self._path_root))
-        return DynamicFile(f"discussion-form-outdated-{filename}", DynamicFileType.FORM, filename, rel_path, path)
+        return DynamicFile(
+            f"discussion-form-outdated-{filename}", DynamicFileType.FORM, filename, rel_path, path
+        )
 
     def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> DynamicFile:
         filename = package_name
         rel_path = str(new_path.relative_to(self._path_root))
         alt_paths = [old_path] if old_path else None
         return DynamicFile(
-            "package-dir", DynamicFileType.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
+            "package-dir",
+            DynamicFileType.PACKAGE,
+            filename,
+            rel_path,
+            new_path,
+            alt_paths=alt_paths,
+            is_dir=True,
         )
 
     def python_file(self, path: Path):
@@ -341,7 +357,13 @@ class OutputPath:
         rel_path = str(new_path.relative_to(self._path_root))
         alt_paths = [old_path] if old_path else None
         return DynamicFile(
-            "test-package-dir", DynamicFileType.PACKAGE, filename, rel_path, new_path, alt_paths=alt_paths, is_dir=True
+            "test-package-dir",
+            DynamicFileType.PACKAGE,
+            filename,
+            rel_path,
+            new_path,
+            alt_paths=alt_paths,
+            is_dir=True,
         )
 
     def package_init(self, package_name: str) -> DynamicFile:

@@ -37,7 +37,7 @@ class Meta:
         super_paths = _util.dict.read(
             path=self._path_root / ".path.json",
             schema=_util.file.datafile("schema/path.yaml"),
-            logger=self._logger
+            logger=self._logger,
         )
         self._input_path = InputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
         self._output_path = OutputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
@@ -74,15 +74,12 @@ class Meta:
         out = []
         for filename, path in (
             ("main metadata, ", self._output_path.metadata.path),
-            ("CI metadata, ", self._output_path.metadata_ci.path)
+            ("CI metadata, ", self._output_path.metadata_ci.path),
         ):
             metadata = _util.dict.read(path, logger=self._logger, raise_empty=False)
             out.append(metadata)
             if metadata:
-                self._logger.success(
-                    f"Loaded {filename} file from {path}.",
-                    json.dumps(metadata, indent=3)
-                )
+                self._logger.success(f"Loaded {filename} file from {path}.", json.dumps(metadata, indent=3))
             else:
                 self._logger.error(f"No {filename} file found in {path}.")
         self._metadata = out[0]
@@ -95,9 +92,7 @@ class Meta:
         if self._metadata_raw:
             return self._metadata_raw
         self._reader = MetaReader(
-            input_path=self._input_path,
-            github_token=self._github_token,
-            logger=self._logger
+            input_path=self._input_path, github_token=self._github_token, logger=self._logger
         )
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
@@ -143,7 +138,7 @@ class Meta:
                 package_config=self._reader.package_config,
                 test_package_config=self._reader.test_package_config,
                 output_path=self.output_path,
-                logger=self._logger
+                logger=self._logger,
             ).generate()
 
         generated_files += ReadmeFileGenerator(
@@ -187,4 +182,3 @@ class Meta:
                 "cibw_matrix_python": pkg.get("cibw_matrix_python", []),
             }
         return out
-

@@ -5,12 +5,11 @@ from repodynamics.datatype import (
     SecondaryActionCommit,
     SecondaryActionCommitType,
     SecondaryCustomCommit,
-    Issue
+    Issue,
 )
 
 
 class MetaManager:
-
     def __init__(self, metadata: dict):
         self._data = metadata
         self._commit_data: dict = {}
@@ -37,7 +36,7 @@ class MetaManager:
         out = {
             "name": f"{group['prefix']}{label['suffix']}",
             "color": group["color"],
-            "description": label["description"]
+            "description": label["description"],
         }
         return out
 
@@ -145,8 +144,10 @@ class MetaManager:
         issue_data = self._issue_data.get(key)
 
         if not issue_data:
-            raise ValueError(f"Could not find issue type with primary type '{label['primary_type']}' "
-                             f"and sub type '{label.get('sub_type')}'.")
+            raise ValueError(
+                f"Could not find issue type with primary type '{label['primary_type']}' "
+                f"and sub type '{label.get('sub_type')}'."
+            )
         return issue_data
 
     def get_all_conventional_commit_types(self) -> list[str]:
@@ -156,8 +157,7 @@ class MetaManager:
         return list(self._commit_data.keys())
 
     def get_commit_type_from_conventional_type(
-        self,
-        conv_type: str
+        self, conv_type: str
     ) -> PrimaryActionCommit | PrimaryCustomCommit | SecondaryActionCommit | SecondaryCustomCommit:
         if self._commit_data:
             return self._commit_data[conv_type]
@@ -192,7 +192,6 @@ class MetaManager:
     def _initialize_issue_data(self):
         issue_data = {}
         for issue in self._data["issue"]["forms"]:
-
             prim_id = issue["primary_commit_id"]
 
             prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]

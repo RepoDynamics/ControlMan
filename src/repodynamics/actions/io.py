@@ -11,11 +11,11 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
     """
     Parse inputs from environment variables.
     """
+
     def _default_args(func):
         signature = inspect.signature(func)
         return {
-            k: v.default for k, v in signature.parameters.items()
-            if v.default is not inspect.Parameter.empty
+            k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty
         }
 
     logger.h2("Read Inputs")
@@ -85,13 +85,12 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
 
 
 def output(kwargs: dict, logger, env: bool = False) -> None:
-
     def format_output(name, val):
         if isinstance(val, str):
-            if '\n' in val:
+            if "\n" in val:
                 with open("/dev/urandom", "rb") as f:
                     random_bytes = f.read(15)
-                random_delimeter = base64.b64encode(random_bytes).decode('utf-8')
+                random_delimeter = base64.b64encode(random_bytes).decode("utf-8")
                 return f"{name}<<{random_delimeter}\n{val}\n{random_delimeter}"
         elif isinstance(val, (dict, list, tuple, bool, int)):
             val = json.dumps(val)
@@ -104,7 +103,7 @@ def output(kwargs: dict, logger, env: bool = False) -> None:
     with open(os.environ["GITHUB_ENV" if env else "GITHUB_OUTPUT"], "a") as fh:
         for idx, (name, value) in enumerate(kwargs.items()):
             logs = []
-            name = name.replace('_', '-') if not env else name.upper()
+            name = name.replace("_", "-") if not env else name.upper()
             title = f"Write '{name}' ({type(value).__name__})"
             value_formatted = format_output(name, value)
             print(value_formatted, file=fh)

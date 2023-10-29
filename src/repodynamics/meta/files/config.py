@@ -101,7 +101,7 @@ class ConfigFileGenerator:
                 # Other cases are not possible because of the schema
             else:
                 output[funding_platform] = users
-        output_str = YAML(typ=['rt', 'string']).dumps(output, add_final_eol=True)
+        output_str = YAML(typ=["rt", "string"]).dumps(output, add_final_eol=True)
         self._logger.success(f"Generated 'FUNDING.yml' file.", output_str)
         return [(info, output_str)]
 
@@ -119,7 +119,7 @@ class ConfigFileGenerator:
         if not config:
             self._logger.skip("'pre_commit' not set in metadata.")
             return [(info, "")]
-        text = YAML(typ=['rt', 'string']).dumps(config, add_final_eol=True)
+        text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
         return [(info, text)]
 
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
@@ -128,9 +128,8 @@ class ConfigFileGenerator:
         if not config:
             self._logger.skip("'readthedocs' not set in metadata.")
             return [(info, "")]
-        text = YAML(typ=['rt', 'string']).dumps(
-            {key: val for key, val in config.items() if key != "name"},
-            add_final_eol=True
+        text = YAML(typ=["rt", "string"]).dumps(
+            {key: val for key, val in config.items() if key != "name"}, add_final_eol=True
         )
         return [(info, text)]
 
@@ -140,7 +139,7 @@ class ConfigFileGenerator:
         if not config:
             self._logger.skip("'codecov' not set in metadata.")
             return [(info, "")]
-        text = YAML(typ=['rt', 'string']).dumps(config, add_final_eol=True)
+        text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
         try:
             # Validate the config file
             # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
@@ -158,14 +157,15 @@ class ConfigFileGenerator:
         file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
         if self._meta["issue"].get("contact_links"):
             file["contact_links"] = self._meta["issue"]["contact_links"]
-        text = YAML(typ=['rt', 'string']).dumps(file, add_final_eol=True)
+        text = YAML(typ=["rt", "string"]).dumps(file, add_final_eol=True)
         return [(info, text)]
 
     def gitignore(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.gitignore
         local_dir = self._meta["path"]["dir"]["local"]
         text = "\n".join(
-            self._meta.get("repo", {}).get("gitignore", []) + [
+            self._meta.get("repo", {}).get("gitignore", [])
+            + [
                 f"{local_dir}/**",
                 f"!{local_dir}/**/",
                 f"!{local_dir}/**/README.md",
@@ -179,10 +179,12 @@ class ConfigFileGenerator:
         text = ""
         attributes = self._meta.get("repo", {}).get("gitattributes", [])
         max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
-        max_len_attr = max([max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes])
+        max_len_attr = max(
+            [max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes]
+        )
         for attribute in attributes:
             pattern = list(attribute.keys())[0]
             attrs = list(attribute.values())[0]
             attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs)
-            text += f'{pattern: <{max_len_pattern}}    {attrs_str}\n'
+            text += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
         return [(info, text)]

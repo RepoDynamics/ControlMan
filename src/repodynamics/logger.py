@@ -8,7 +8,6 @@ from ruamel.yaml import YAML
 
 
 class Logger:
-
     def __init__(
         self,
         output: Optional[Literal["console", "github"]] = None,
@@ -43,7 +42,7 @@ class Logger:
             "error": color_error,
             "warning": color_warning,
             "attention": color_attention,
-            "input": color_info
+            "input": color_info,
         }
         self._path_log = None
         if path_output:
@@ -58,7 +57,7 @@ class Logger:
             "error": "⛔",
             "warning": "❗",
             "attention": "⚠️",
-            "input": "📥"
+            "input": "📥",
         }
         self._heading_spec = {
             1: {
@@ -77,7 +76,7 @@ class Logger:
             4: {
                 "styles": {"text_color": "black", "background_color": self._color_h4},
                 "line_length": 35,
-            }
+            },
         }
         self._log_console: str = ""
         self._log_file: str = ""
@@ -104,8 +103,8 @@ class Logger:
 
     def _h(self, level: Literal[1, 2, 3, 4], title: str):
         spec = self._heading_spec[level]
-        style = sgr.style(**spec['styles'])
-        console = sgr.format(title.center(spec['line_length']), style)
+        style = sgr.style(**spec["styles"])
+        console = sgr.format(title.center(spec["line_length"]), style)
         file = f"{'#' * level} {title}\n"
         self._print(console, file)
         return
@@ -128,7 +127,7 @@ class Logger:
         message: str,
         details: str | list | dict = None,
         is_error: bool = False,
-        index_stack: int = 3
+        index_stack: int = 3,
     ):
         fully_qualified_name = self._get_fully_qualified_name_of_original_caller(index_stack)
         msg = sgr.format(message, sgr.style(text_color=self._color[level]))
@@ -138,7 +137,7 @@ class Logger:
             if isinstance(details, list):
                 details = "\n".join(details)
             elif isinstance(details, dict):
-                details = YAML(typ=['rt', 'string']).dumps(details)
+                details = YAML(typ=["rt", "string"]).dumps(details)
             else:
                 details = str(details)
             details_ += details

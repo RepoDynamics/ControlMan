@@ -17,12 +17,7 @@ import tomlkit
 
 
 class MetaReader:
-    def __init__(
-        self,
-        input_path: InputPath,
-        github_token: Optional[str] = None,
-        logger: Logger = None
-    ):
+    def __init__(self, input_path: InputPath, github_token: Optional[str] = None, logger: Logger = None):
         self.logger = logger or Logger()
         self.logger.h2("Process Meta Source Files")
         self._github_token = github_token
@@ -74,13 +69,9 @@ class MetaReader:
             return None
         timestamp = item.get("timestamp")
         if timestamp and self._is_expired(timestamp):
-            self.logger.skip(
-                log_title, f"Item found with expired timestamp '{timestamp}:\n{item['data']}."
-            )
+            self.logger.skip(log_title, f"Item found with expired timestamp '{timestamp}:\n{item['data']}.")
             return None
-        self.logger.success(
-            log_title, f"Item found with valid timestamp '{timestamp}':\n{item['data']}."
-        )
+        self.logger.success(log_title, f"Item found with valid timestamp '{timestamp}':\n{item['data']}.")
         return item["data"]
 
     def cache_set(self, key, value):
@@ -101,7 +92,7 @@ class MetaReader:
         extensions = _util.dict.read(
             path=self._input_path.meta_core_extensions,
             schema=self._get_schema("core/extensions"),
-            logger=self.logger
+            logger=self.logger,
         )
         if not extensions["extensions"]:
             return extensions, None
@@ -112,7 +103,7 @@ class MetaReader:
 
     def _get_local_extensions(self, extensions: list[dict]) -> tuple[Path, bool]:
         self.logger.h3("Get Local Extensions")
-        extention_defs = json.dumps(extensions).encode('utf-8')
+        extention_defs = json.dumps(extensions).encode("utf-8")
         hash = hashlib.md5(extention_defs).hexdigest()
         self.logger.info(f"Looking for non-expired local extensions with hash '{hash}'.")
         dir_pattern = re.compile(
@@ -135,7 +126,7 @@ class MetaReader:
         for idx, extension in enumerate(extensions):
             self.logger.h4(f"Download Extension {idx + 1}")
             self.logger.info(f"Input: {extension}")
-            repo_owner, repo_name = extension['repo'].split("/")
+            repo_owner, repo_name = extension["repo"].split("/")
             dir_path = download_path / f"{idx + 1 :03}"
             rel_dl_path = Path(extension["type"])
             if extension["type"] == "package/build":
@@ -147,11 +138,15 @@ class MetaReader:
                 rel_dl_path = rel_dl_path.with_suffix(".yaml")
             full_dl_path = dir_path / rel_dl_path
             try:
-                extension_filepath = self.github.user(repo_owner).repo(repo_name).download_file(
-                    path=extension['path'],
-                    ref=extension.get('ref'),
-                    download_path=full_dl_path.parent,
-                    download_filename=full_dl_path.name,
+                extension_filepath = (
+                    self.github.user(repo_owner)
+                    .repo(repo_name)
+                    .download_file(
+                        path=extension["path"],
+                        ref=extension.get("ref"),
+                        download_path=full_dl_path.parent,
+                        download_filename=full_dl_path.name,
+                    )
                 )
             except WebAPIPersistentStatusCodeError as e:
                 self.logger.error(f"Error downloading extension data:", str(e))
@@ -170,7 +165,9 @@ class MetaReader:
             cache = {}
             return cache
         cache = self._read_datafile(self._input_path.local_api_cache)
-        self.logger.success(f"API cache loaded from '{self._input_path.local_api_cache}'", json.dumps(cache, indent=3))
+        self.logger.success(
+            f"API cache loaded from '{self._input_path.local_api_cache}'", json.dumps(cache, indent=3)
+        )
         return cache
 
     def _get_local_config(self):
@@ -214,11 +211,7 @@ class MetaReader:
         for entry in data:
             section = self._read_single_file(rel_path=entry)
             self._recursive_update(
-                source=metadata,
-                add=section,
-                append_list=False,
-                append_dict=True,
-                raise_on_duplicated=True
+                source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
             )
         self.logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
         return metadata
@@ -239,9 +232,9 @@ class MetaReader:
                 self._recursive_update(
                     source=section,
                     add=section_extension,
-                    append_list=extension['append_list'],
-                    append_dict=extension['append_dict'],
-                    raise_on_duplicated=extension['raise_duplicate']
+                    append_list=extension["append_list"],
+                    append_dict=extension["append_dict"],
+                    raise_on_duplicated=extension["raise_duplicate"],
                 )
         self._validate_datafile(source=section, schema=rel_path)
         return section
@@ -256,13 +249,10 @@ class MetaReader:
             for path_file in paths_config_files:
                 config_section = self._read_datafile(path_file)
                 self._recursive_update(
-                    config,
-                    config_section,
-                    append_list=True,
-                    append_dict=True,
-                    raise_on_duplicated=True
+                    config, config_section, append_list=True, append_dict=True, raise_on_duplicated=True
                 )
             return config
+
         toml_dict = read_package_toml(self._input_path.dir_meta)
         for idx, extension in enumerate(self._extensions["extensions"]):
             if extension["type"] == "package/tools":
@@ -270,9 +260,9 @@ class MetaReader:
                 self._recursive_update(
                     toml_dict,
                     extension_config,
-                    append_list=extension['append_list'],
-                    append_dict=extension['append_dict'],
-                    raise_on_duplicated=extension['raise_duplicate'],
+                    append_list=extension["append_list"],
+                    append_dict=extension["append_dict"],
+                    raise_on_duplicated=extension["raise_duplicate"],
                 )
         self._validate_datafile(source=toml_dict, schema="package/tools")
         return toml_dict
@@ -287,7 +277,7 @@ class MetaReader:
     def _get_schema(schema: str):
         return _util.file.datafile(f"schema/{schema}.yaml")
 
-    def _is_expired(self, timestamp: str, typ: Literal['api', 'extensions'] = 'api') -> bool:
+    def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
             days=self._local_config["meta_cache_retention_days"][typ]
         )
@@ -313,6 +303,6 @@ class MetaReader:
             append_list=append_list,
             append_dict=append_dict,
             raise_on_duplicated=raise_on_duplicated,
-            logger=self.logger
+            logger=self.logger,
         )
         return

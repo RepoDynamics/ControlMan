@@ -10,14 +10,14 @@ from repodynamics.actions._db import action_color
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", type=str, nargs='+', help="Name of the action to run.")
+    parser.add_argument("action", type=str, nargs="+", help="Name of the action to run.")
     action = parser.parse_args().action
     logger = Logger("github")
     if len(action) > 2:
         logger.error(f"Expected 2 arguments, but got {action}")
     if len(action) == 1:
         action.append(action[0])
-    action = [arg.replace('-', '_') for arg in action]
+    action = [arg.replace("-", "_") for arg in action]
     module_name, function_name = action
     action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
     action = getattr(action_module, function_name)

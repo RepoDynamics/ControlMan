@@ -6,15 +6,9 @@ from repodynamics import meta
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=str, help="Path to the root directory.", required=False)
-    parser.add_argument(
-        "--pathfile", type=str, help="Path to the paths metadata file.", required=False
-    )
-    parser.add_argument(
-        "--cachefile", type=str, help="Path for the cache metadata file.", required=False
-    )
-    parser.add_argument(
-        "--output", type=str, help="Path for the output metadata file.", required=False
-    )
+    parser.add_argument("--pathfile", type=str, help="Path to the paths metadata file.", required=False)
+    parser.add_argument("--cachefile", type=str, help="Path for the cache metadata file.", required=False)
+    parser.add_argument("--output", type=str, help="Path for the output metadata file.", required=False)
     parser.add_argument(
         "--update_cache",
         action=argparse.BooleanOptionalAction,
@@ -35,21 +29,12 @@ if __name__ == "__main__":
     main()
 
 
-
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=str, help="Path to the root directory.", required=False)
-    parser.add_argument(
-        "--pathfile", type=str, help="Path to the paths metadata file.", required=False
-    )
-    parser.add_argument(
-        "--cachefile", type=str, help="Path for the cache metadata file.", required=False
-    )
-    parser.add_argument(
-        "--output", type=str, help="Path for the output metadata file.", required=False
-    )
+    parser.add_argument("--pathfile", type=str, help="Path to the paths metadata file.", required=False)
+    parser.add_argument("--cachefile", type=str, help="Path for the cache metadata file.", required=False)
+    parser.add_argument("--output", type=str, help="Path for the output metadata file.", required=False)
     parser.add_argument(
         "--update_cache",
         action=argparse.BooleanOptionalAction,
@@ -95,9 +80,6 @@ path = (
 path.parent.mkdir(parents=True, exist_ok=True)
 
 
-
-
-
 import argparse
 
 from . import readme
@@ -118,18 +100,10 @@ def update_pyproject(self):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--root", type=str, help="Path to the root directory.", required=False
-    )
-    parser.add_argument(
-        "--pathfile", type=str, help="Path to the paths metadata file.", required=False
-    )
-    parser.add_argument(
-        "--cachefile", type=str, help="Path for the cache metadata file.", required=False
-    )
-    parser.add_argument(
-        "--output", type=str, help="Path for the output metadata file.", required=False
-    )
+    parser.add_argument("--root", type=str, help="Path to the root directory.", required=False)
+    parser.add_argument("--pathfile", type=str, help="Path to the paths metadata file.", required=False)
+    parser.add_argument("--cachefile", type=str, help="Path for the cache metadata file.", required=False)
+    parser.add_argument("--output", type=str, help="Path for the output metadata file.", required=False)
     parser.add_argument(
         "--output_pretty",
         type=str,
@@ -159,7 +133,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-

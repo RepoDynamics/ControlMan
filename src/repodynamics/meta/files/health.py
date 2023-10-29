@@ -43,5 +43,5 @@ class HealthFileGenerator:
             pattern = list(entry.keys())[0]
             reviewers_list = entry[pattern]
             reviewers = " ".join([f"@{reviewer.removeprefix('@')}" for reviewer in reviewers_list])
-            text += f'{pattern: <{max_len}}   {reviewers}\n'
+            text += f"{pattern: <{max_len}}   {reviewers}\n"
         return text

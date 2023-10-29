@@ -137,9 +137,7 @@ class CommitMsg:
         elif isinstance(footer, dict):
             self.footer = footer
         else:
-            raise TypeError(
-                f"Argument 'footer' must be a dict, but got {type(footer)}: {footer}"
-            )
+            raise TypeError(f"Argument 'footer' must be a dict, but got {type(footer)}: {footer}")
         return
 
     @property
@@ -327,6 +325,7 @@ class WorkflowTriggeringAction(Enum):
     synchronize: pull_request
     closed: issues, pull_request
     """
+
     CREATED = "created"
     EDITED = "edited"
     DELETED = "deleted"
@@ -336,8 +335,10 @@ class WorkflowTriggeringAction(Enum):
     REOPENED = "reopened"
     SYNCHRONIZE = "synchronize"
 
+
 class Emoji:
     """Enum of emojis used in the bot."""
+
     _db = {
         "PASS": "✅",
         "SKIP": "❎",

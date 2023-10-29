@@ -28,7 +28,7 @@ class PackageFileGenerator:
         package_config: tomlkit.TOMLDocument,
         test_package_config: tomlkit.TOMLDocument,
         output_path: OutputPath,
-        logger: Logger = None
+        logger: Logger = None,
     ):
         self._logger = logger or Logger()
         self._meta = metadata
@@ -56,7 +56,8 @@ class PackageFileGenerator:
         info = self._out_db.package_typing_marker(package_name=self._meta["package"]["name"])
         text = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
-            if self._meta["package"].get("typed") else ""
+            if self._meta["package"].get("typed")
+            else ""
         )
         return [(info, text)]
 
@@ -77,28 +78,26 @@ class PackageFileGenerator:
         self._logger.h4("Update path: package")
         package_name = self._meta["package"]["name"]
         name = package_name if not tests else f"{package_name}_tests"
-        sub_path = self._meta["path"]["dir"]["source"] if not tests else f'{self._meta["path"]["dir"]["tests"]}/src'
+        sub_path = (
+            self._meta["path"]["dir"]["source"] if not tests else f'{self._meta["path"]["dir"]["tests"]}/src'
+        )
         path = self._out_db.root / sub_path / name
         func = self._out_db.package_tests_dir if tests else self._out_db.package_dir
         if path.exists():
             self._logger.skip(f"Package path exists", f"{path}")
             out = [(func(name, path, path), "")]
             return out
-        self._logger.info(
-            f"Package path '{path}' does not exist; looking for package directory."
+        self._logger.info(f"Package path '{path}' does not exist; looking for package directory.")
+        package_dirs = (
+            [
+                subdir
+                for subdir in [content for content in path.parent.iterdir() if content.is_dir()]
+                if "__init__.py"
+                in [sub_content.name for sub_content in subdir.iterdir() if sub_content.is_file()]
+            ]
+            if path.parent.is_dir()
+            else []
         )
-        package_dirs = [
-            subdir
-            for subdir in [
-                content for content in path.parent.iterdir() if content.is_dir()
-            ]
-            if "__init__.py"
-            in [
-                sub_content.name
-                for sub_content in subdir.iterdir()
-                if sub_content.is_file()
-            ]
-        ] if path.parent.is_dir() else []
         count_dirs = len(package_dirs)
         if count_dirs > 1:
             self._logger.error(
@@ -114,15 +113,11 @@ class PackageFileGenerator:
             package_old_name = package_dirs[0].name
             for filepath in self._out_db.root.glob("**/*.py") if not tests else path.glob("**/*.py"):
                 new_content = self.rename_imports(
-                    module_content=path.read_text(),
-                    old_name=package_old_name,
-                    new_name=name
+                    module_content=path.read_text(), old_name=package_old_name, new_name=name
                 )
                 out.append((self._out_db.python_file(filepath), new_content))
             return out
-        self._logger.success(
-            f"No package directory found in '{path}'; creating one."
-        )
+        self._logger.success(f"No package directory found in '{path}'; creating one.")
         out = [(func(name, old_path=None, new_path=path), "")]
         if tests:
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
@@ -145,7 +140,9 @@ class PackageFileGenerator:
         docstring = f'"""{docstring_text}\n"""\n'
 
         package_dir_info = self._package_dir_output[0][0]
-        current_dir_path = package_dir_info.alt_paths[0] if package_dir_info.alt_paths else package_dir_info.path
+        current_dir_path = (
+            package_dir_info.alt_paths[0] if package_dir_info.alt_paths else package_dir_info.path
+        )
         filepath = current_dir_path / "__init__.py"
         if filepath.is_file():
             with open(filepath, "r") as f:
@@ -160,7 +157,7 @@ __version__ = __version_details__["version"]"""
             text = f"{docstring}\n\n{file_content}".strip() + "\n"
         else:
             # Replace the existing docstring with the new one
-            text = re.sub(pattern, rf'\1{docstring}', file_content)
+            text = re.sub(pattern, rf"\1{docstring}", file_content)
         info = self._out_db.package_init(self._meta["package"]["name"])
         return [(info, text)]
 
@@ -192,7 +189,7 @@ __version__ = __version_details__["version"]"""
             "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
             "license": (
                 "inline_table",
-                {"file": self._out_db.license.rel_path} if self._meta.get("license") else None
+                {"file": self._out_db.license.rel_path} if self._meta.get("license") else None,
             ),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
@@ -249,8 +246,7 @@ __version__ = __version_details__["version"]"""
         return (
             {
                 entry_group["group_name"]: {
-                    entry_point["name"]: entry_point["ref"]
-                    for entry_point in entry_group["entry_points"]
+                    entry_point["name"]: entry_point["ref"] for entry_point in entry_group["entry_points"]
                 }
                 for entry_group in self._meta["package"]["entry_points"]
             }
@@ -268,7 +264,8 @@ __version__ = __version_details__["version"]"""
         """
         people = []
         target_people = (
-            self._meta.get("maintainer", {}).get("list", []) if role == "maintainers"
+            self._meta.get("maintainer", {}).get("list", [])
+            if role == "maintainers"
             else self._meta.get("authors", [])
         )
         for person in target_people:
@@ -307,8 +304,8 @@ __version__ = __version_details__["version"]"""
         """
         # Regular expression patterns to match the old name in import statements
         patterns = [
-            rf'^\s*from\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*\s+import',
-            rf'^\s*import\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*'
+            rf"^\s*from\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*\s+import",
+            rf"^\s*import\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*",
         ]
         updated_module_content = module_content
         for pattern in patterns:
@@ -316,7 +313,6 @@ __version__ = __version_details__["version"]"""
             regex = re.compile(pattern, flags=re.MULTILINE)
             # Replace the old name with the new name wherever it matches
             updated_module_content = regex.sub(
-                lambda match: match.group(0).replace(old_name, new_name, 1),
-                updated_module_content
+                lambda match: match.group(0).replace(old_name, new_name, 1), updated_module_content
             )
         return updated_module_content

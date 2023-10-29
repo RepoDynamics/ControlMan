@@ -16,11 +16,9 @@ def update(
     path_root: str | Path = ".",
     action: Literal["report", "apply", "amend", "commit"] = "report",
     github_token: Optional[str] = None,
-    logger: Logger = None
+    logger: Logger = None,
 ) -> dict:
-
-
     writer = MetaWriter(path_root=path_root, logger=logger)
     output = writer.write(generated_files, action=action)
-    output['metadata'] = metadata
+    output["metadata"] = metadata
     return output
