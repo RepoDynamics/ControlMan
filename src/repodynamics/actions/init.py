@@ -89,6 +89,7 @@ class Init:
         self.meta = Meta(path_root="repo1", github_token=self._github_token, logger=self.logger)
 
         self.metadata, self.metadata_ci = self.meta.read_metadata_output()
+        self.metadata_before: dict = {}
         self.last_ver, self.dist_ver = self.get_latest_version()
 
         self.changed_files: dict[RepoFileType, list[str]] = {}
@@ -342,6 +343,7 @@ class Init:
         return
 
     def event_push_branch_modified_main(self):
+        self.metadata_before = self.git.file_at_hash(commit_hash=self.hash_before, path=self.meta.output_path.metadata.rel_path)
         self.action_file_change_detector()
         for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
             self.set_job_run(job_id)
