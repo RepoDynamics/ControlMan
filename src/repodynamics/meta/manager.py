@@ -6,6 +6,7 @@ from repodynamics.datatype import (
     SecondaryActionCommitType,
     SecondaryCustomCommit,
     Issue,
+    IssueStatus,
 )
 
 
@@ -14,6 +15,7 @@ class MetaManager:
         self._data = metadata
         self._commit_data: dict = {}
         self._issue_data: dict = {}
+        self._version_to_branch_map: dict[str, str] = {}
         return
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
@@ -163,6 +165,27 @@ class MetaManager:
             return self._commit_data[conv_type]
         self._commit_data = self._initialize_commit_data()
         return self._commit_data[conv_type]
+
+    def get_branch_from_version(self, version: str) -> str:
+        if self._version_to_branch_map:
+            return self._version_to_branch_map[version]
+        if not self._data.get("package"):
+            raise ValueError("No package metadata found.")
+        self._version_to_branch_map = {
+            release["version"]: release["branch"]
+            for release in self._data["package"]["releases"]["per_branch"]
+        }
+        return self._version_to_branch_map[version]
+
+    def get_issue_status_from_status_label(self, label_name: str):
+        status_prefix = self._data["label"]["group"]["status"]["prefix"]
+        if not label_name.startswith(status_prefix):
+            raise ValueError(f"Label '{label_name}' is not a status label.")
+        status = label_name.removeprefix(status_prefix)
+        for status_label_id, status_label_info in self._data["label"]["group"]["status"]["labels"].items():
+            if status_label_info["suffix"] == status:
+                return IssueStatus(status_label_id)
+        raise ValueError(f"Unknown status label suffix '{status}'.")
 
     def _initialize_commit_data(self):
         commit_type = {}
