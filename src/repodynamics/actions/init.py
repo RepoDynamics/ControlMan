@@ -37,6 +37,7 @@ from repodynamics.datatype import (
     NonConventionalCommit,
     FileChangeType,
     Emoji,
+    IssueStatus,
 )
 
 
@@ -299,6 +300,37 @@ class Init:
         return
 
     def event_issue_labeled(self):
+        label = self.payload["label"]["name"]
+        if label.startswith(self.metadata["label"]["group"]["status"]["prefix"]):
+            status = self.meta.manager.get_issue_status_from_status_label(label)
+            if status == IssueStatus.IN_DEV:
+                target_label_prefix = self.metadata["label"]["auto_group"]["target"]["prefix"]
+                dev_branch_prefix = self.metadata["branch"]["group"]["dev"]["prefix"]
+                branches = self.api.branches
+                branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
+                for issue_label in self.issue_labels:
+                    if issue_label["name"].startswith(target_label_prefix):
+                        base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
+                        if base_branch_name.startswith(dev_branch_prefix):
+                            pass
+                        else:
+                            new_branch = self.api.branch_create_linked(
+                                issue_id=self.issue_payload["node_id"],
+                                base_sha=branch_sha[base_branch_name],
+                                name=f"{dev_branch_prefix}{self.issue_number}/{base_branch_name}",
+                            )
+                            pull_data = self.api.pull_create(
+                                head=new_branch["name"],
+                                base=base_branch_name,
+                                title=self.issue_title,
+                                body=f"This is a draft pull request for the issue #{self.issue_number}.",
+                                maintainer_can_modify=True,
+                                draft=True
+                            )
+                            self.api.issue_labels_set(
+                                number=pull_data["number"],
+                                labels=[label["name"] for label in self.issue_labels]
+                            )
         return
 
     def event_pull_opened(self):
@@ -1223,12 +1255,30 @@ class Init:
         self.logger.success("Retrieve issue labels", self.issue_label_names)
         issue_form = self.meta.manager.get_issue_data_from_labels(self.issue_label_names).form
         self.logger.success("Retrieve issue form", issue_form)
+        issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
+        labels = []
+        branch_label_prefix = self.metadata["label"]["auto_group"]["target"]["prefix"]
+        if "branch" in issue_entries:
+            branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
+            for branch in branches:
+                labels.append(f"{branch_label_prefix}{branch}")
+        elif "version" in issue_entries:
+            versions = [version.strip() for version in issue_entries["version"].split(",")]
+            version_label_prefix = self.metadata["label"]["auto_group"]["version"]["prefix"]
+            for version in versions:
+                labels.append(f"{version_label_prefix}{version}")
+                branch = self.meta.manager.get_branch_from_version(version)
+                labels.append(f"{branch_label_prefix}{branch}")
+        else:
+            self.logger.error(
+                "Could not match branch or version in issue body to pattern defined in metadata.",
+            )
+        self.api.issue_labels_add(self.issue_number, labels)
         if "post_process" not in issue_form:
             self.logger.skip(
                 "No post-process action defined in issue form; skip❗",
             )
             return
-        issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         post_body = issue_form["post_process"].get("body")
         if post_body:
             new_body = post_body.format(**issue_entries)
@@ -1401,6 +1451,16 @@ class Init:
                 distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
                 return max_version, distance
         self.logger.error(f"No version tags found with prefix '{ver_tag_prefix}'.")
+
+    def categorize_labels(self, label_names: list[str]):
+        label_dict = {
+            label_data["name"]: label_key
+            for label_key, label_data in self.metadata["label"]["compiled"].items()
+        }
+        out = {}
+        for label in label_names:
+            out[label] = label_dict[label]
+        return out
 
     def resolve_branch(self, branch_name: str) -> Branch:
         if branch_name == self.default_branch:
