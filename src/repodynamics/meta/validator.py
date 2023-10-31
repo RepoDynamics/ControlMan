@@ -155,6 +155,12 @@ class MetaValidator:
                         f"The element number {elem_idx} has a label that is already used by another earlier element.",
                     )
                 element_labels.append(elem["attributes"]["label"])
+            if not any(element_id in ("version", "branch") for element_id in element_ids):
+                self._logger.error(
+                    f"Missing issue-form body-element: version or branch",
+                    f"The issue-form number {form_idx} is missing a body-element "
+                    f"with ID 'version' or 'branch'.",
+                )
             form_post_process = form.get("post_process")
             if form_post_process:
                 if form_post_process.get("body"):
