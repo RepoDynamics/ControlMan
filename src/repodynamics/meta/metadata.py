@@ -345,8 +345,8 @@ class MetadataGenerator:
         }
         # Discussions
         url["discussions"]["new"] = {
-            discussion["slug"]: f"{url['discussions']['home']}/new?category={discussion['slug']}"
-            for discussion in self._metadata.get("discussion", {}).get("forms", [])
+            slug: f"{url['discussions']['home']}/new?category={slug}"
+            for slug in self._metadata["discussion"]["form"]
         }
 
         # Security
