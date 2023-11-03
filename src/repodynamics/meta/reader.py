@@ -91,7 +91,7 @@ class MetaReader:
     def _read_extensions(self) -> tuple[dict, Path | None]:
         extensions = _util.dict.read(
             path=self._input_path.meta_core_extensions,
-            schema=self._get_schema("core/extensions"),
+            schema=self._get_schema("extensions"),
             logger=self.logger,
         )
         if not extensions["extensions"]:
