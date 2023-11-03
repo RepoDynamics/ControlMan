@@ -336,6 +336,22 @@ class WorkflowTriggeringAction(Enum):
     SYNCHRONIZE = "synchronize"
 
 
+class IssueStatus(Enum):
+    TRIAGE = "triage"
+    REJECTED = "rejected"
+    DUPLICATE = "duplicate"
+    INVALID = "invalid"
+    QUEUED = "queued"
+    DISCUSS = "discuss"
+    NEED_VOLUNTEER = "need_volunteer"
+    IN_DEV = "in_dev"
+    IN_REVIEW = "in_review"
+    ALPHA = "alpha"
+    BETA = "beta"
+    RC = "rc"
+    MERGED = "merged"
+
+
 class Emoji:
     """Enum of emojis used in the bot."""
 
