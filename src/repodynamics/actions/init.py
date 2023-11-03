@@ -132,134 +132,140 @@ class Init:
 
     def run(self):
         self.logger.h2("Analyze Triggering Event")
-        match self.event_name:
-            case "issue_comment":
-                if self.issue_payload.get("pull_request"):
-                    match self.triggering_action:
-                        case WorkflowTriggeringAction.CREATED:
-                            self.event_comment_pull_created()
-                        case WorkflowTriggeringAction.EDITED:
-                            self.event_comment_pull_edited()
-                        case WorkflowTriggeringAction.DELETED:
-                            self.event_comment_pull_deleted()
-                        case _:
-                            self.logger.error(
-                                "The workflow was triggered by a comment on a pull request "
-                                "(issue_comment event with pull_request payload), "
-                                f"but the triggering action '{self.payload['action']}' is not supported."
-                            )
-                else:
-                    match self.triggering_action:
-                        case WorkflowTriggeringAction.CREATED:
-                            self.event_comment_issue_created()
-                        case WorkflowTriggeringAction.EDITED:
-                            self.event_comment_issue_edited()
-                        case WorkflowTriggeringAction.DELETED:
-                            self.event_comment_issue_deleted()
-                        case _:
-                            self.logger.error(
-                                "The workflow was triggered by a comment on an issue "
-                                "(issue_comment event without pull_request payload), "
-                                f"but the triggering action '{self.payload['action']}' is not supported."
-                            )
-            case "issues":
-                match self.triggering_action:
-                    case WorkflowTriggeringAction.OPENED:
-                        self.event_issue_opened()
-                    case WorkflowTriggeringAction.LABELED:
-                        self.event_issue_labeled()
-                    case _:
-                        self.logger.error(
-                            "The workflow was triggered by an 'issues' event, "
-                            f"but the triggering action '{self.payload['action']}' is not supported."
-                        )
-            case "pull_request":
-                match self.triggering_action:
-                    case WorkflowTriggeringAction.OPENED:
-                        self.event_pull_opened()
-                    case WorkflowTriggeringAction.REOPENED:
-                        self.event_pull_reopened()
-                    case WorkflowTriggeringAction.SYNCHRONIZE:
-                        self.event_pull_synchronize()
-                    case WorkflowTriggeringAction.LABELED:
-                        self.event_pull_labeled()
-                    case _:
-                        self.logger.error(
-                            "The workflow was triggered by a 'pull_request' event, "
-                            f"but the triggering action '{self.payload['action']}' is not supported."
-                        )
-            case "pull_request_target":
-                match self.triggering_action:
-                    case WorkflowTriggeringAction.OPENED:
-                        self.event_pull_target_opened()
-                    case WorkflowTriggeringAction.REOPENED:
-                        self.event_pull_target_reopened()
-                    case WorkflowTriggeringAction.SYNCHRONIZE:
-                        self.event_pull_target_synchronize()
-                    case _:
-                        self.logger.error(
-                            "The workflow was triggered by a 'pull_request_target' event, "
-                            f"but the triggering action '{self.payload['action']}' is not supported."
-                        )
-            case "push":
-                if self.payload["created"]:
-                    triggering_action = "created"
-                elif self.payload["deleted"]:
-                    triggering_action = "deleted"
-                else:
-                    triggering_action = "modified"
-                match (self.ref_type, triggering_action):
-                    case ("tag", "created"):
-                        self.event_push_tag_created()
-                    case ("tag", "deleted"):
-                        self.event_push_tag_deleted()
-                    case ("tag", "modified"):
-                        self.event_push_tag_modified()
-                    case ("branch", "created"):
-                        if self.ref_is_main:
-                            if not self.git.get_tags():
-                                self.event_push_repository_created()
-                            else:
-                                self.event_push_branch_created_main()
-                        else:
-                            self.logger.skip(
-                                "Creation of non-default branch detected; skipping.",
-                            )
-                        self.event_push_branch_created()
-                    case ("branch", "deleted"):
-                        self.event_push_branch_deleted()
-                    case ("branch", "modified"):
-                        if self.ref_is_main:
-                            if not self.git.get_tags():
-                                self.event_first_release()
-                            else:
-                                self.event_push_branch_modified_main()
-                        else:
-                            metadata = self.meta.read_metadata_raw()
-                            branch_group = metadata["branch"]["group"]
-                            if self.ref_name.startswith(branch_group["release"]["prefix"]):
-                                self.event_push_branch_modified_release()
-                            elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
-                                self.event_push_branch_modified_dev()
-                            else:
-                                self.event_push_branch_modified_other()
-            case "schedule":
-                cron = self.payload["schedule"]
-                schedule_type = self.metadata["workflow"]["init"]["schedule"]
-                if cron == schedule_type["sync"]:
-                    self.event_schedule_sync()
-                elif cron == schedule_type["test"]:
-                    self.event_schedule_test()
+        event_name = self.event_name
+        if event_name == "issue_comment":
+            is_pull = self.issue_payload.get("pull_request")
+            action = self.triggering_action
+            if is_pull:
+                if action == WorkflowTriggeringAction.CREATED:
+                    self.event_comment_pull_created()
+                elif action == WorkflowTriggeringAction.EDITED:
+                    self.event_comment_pull_edited()
+                elif action == WorkflowTriggeringAction.DELETED:
+                    self.event_comment_pull_deleted()
                 else:
                     self.logger.error(
-                        f"Unknown cron expression for scheduled workflow: {cron}",
-                        f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-                        f"{schedule_type}",
+                        "The workflow was triggered by a comment on a pull request "
+                        "(issue_comment event with pull_request payload), "
+                        f"but the triggering action '{self.payload['action']}' is not supported."
                     )
-            case "workflow_dispatch":
-                self.event_workflow_dispatch()
-            case _:
-                self.logger.error(f"Event '{self.event_name}' is not supported.")
+            else:
+                if action == WorkflowTriggeringAction.CREATED:
+                    self.event_comment_issue_created()
+                elif action == WorkflowTriggeringAction.EDITED:
+                    self.event_comment_issue_edited()
+                elif action == WorkflowTriggeringAction.DELETED:
+                    self.event_comment_issue_deleted()
+                else:
+                    self.logger.error(
+                        "The workflow was triggered by a comment on an issue "
+                        "(issue_comment event without pull_request payload), "
+                        f"but the triggering action '{self.payload['action']}' is not supported."
+                    )
+        elif event_name == "issues":
+            action = self.triggering_action
+            if action == WorkflowTriggeringAction.OPENED:
+                self.event_issue_opened()
+            elif action == WorkflowTriggeringAction.LABELED:
+                self.event_issue_labeled()
+            else:
+                self.logger.error(
+                    "The workflow was triggered by an 'issues' event, "
+                    f"but the triggering action '{self.payload['action']}' is not supported."
+                )
+        elif event_name == "pull_request":
+            action = self.triggering_action
+            if action == WorkflowTriggeringAction.OPENED:
+                self.event_pull_opened()
+            elif action == WorkflowTriggeringAction.REOPENED:
+                self.event_pull_reopened()
+            elif action == WorkflowTriggeringAction.SYNCHRONIZE:
+                self.event_pull_synchronize()
+            elif action == WorkflowTriggeringAction.LABELED:
+                self.event_pull_labeled()
+            else:
+                self.logger.error(
+                    "The workflow was triggered by a 'pull_request' event, "
+                    f"but the triggering action '{self.payload['action']}' is not supported."
+                )
+        elif event_name == "pull_request_target":
+            action = self.triggering_action
+            if action == WorkflowTriggeringAction.OPENED:
+                self.event_pull_target_opened()
+            elif action == WorkflowTriggeringAction.REOPENED:
+                self.event_pull_target_reopened()
+            elif action == WorkflowTriggeringAction.SYNCHRONIZE:
+                self.event_pull_target_synchronize()
+            else:
+                self.logger.error(
+                    "The workflow was triggered by a 'pull_request_target' event, "
+                    f"but the triggering action '{self.payload['action']}' is not supported."
+                )
+        elif event_name == "push":
+            if self.payload["created"]:
+                triggering_action = "created"
+            elif self.payload["deleted"]:
+                triggering_action = "deleted"
+            else:
+                triggering_action = "modified"
+            case = (self.ref_type, triggering_action)
+            if case == ("tag", "created"):
+                self.event_push_tag_created()
+            elif case == ("tag", "deleted"):
+                self.event_push_tag_deleted()
+            elif case == ("tag", "modified"):
+                self.event_push_tag_modified()
+            elif case == ("branch", "created"):
+                if self.ref_is_main:
+                    if not self.git.get_tags():
+                        self.event_push_repository_created()
+                    else:
+                        self.event_push_branch_created_main()
+                else:
+                    self.logger.skip(
+                        "Creation of non-default branch detected; skipping.",
+                    )
+                self.event_push_branch_created()
+            elif case == ("branch", "deleted"):
+                self.event_push_branch_deleted()
+            elif case == ("branch", "modified"):
+                if self.ref_is_main:
+                    if not self.git.get_tags():
+                        self.event_first_release()
+                    else:
+                        self.event_push_branch_modified_main()
+                else:
+                    metadata = self.meta.read_metadata_raw()
+                    branch_group = metadata["branch"]["group"]
+                    if self.ref_name.startswith(branch_group["release"]["prefix"]):
+                        self.event_push_branch_modified_release()
+                    elif self.ref_name.startswith(branch_group["dev"]["prefix"]):
+                        self.event_push_branch_modified_dev()
+                    else:
+                        self.event_push_branch_modified_other()
+            else:
+                self.logger.error(
+                    f"Unknown ref type '{self.ref_type}' and triggering action '{triggering_action}'",
+                    "Valid ref types are 'tag' and 'branch'. "
+                    "Valid triggering actions are 'created', 'deleted', and 'modified'.",
+                )
+        elif event_name == "schedule":
+            cron = self.payload["schedule"]
+            schedule_type = self.metadata["workflow"]["init"]["schedule"]
+            if cron == schedule_type["sync"]:
+                self.event_schedule_sync()
+            elif cron == schedule_type["test"]:
+                self.event_schedule_test()
+            else:
+                self.logger.error(
+                    f"Unknown cron expression for scheduled workflow: {cron}",
+                    f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
+                    f"{schedule_type}",
+                )
+        elif event_name == "workflow_dispatch":
+            self.event_workflow_dispatch()
+        else:
+            self.logger.error(f"Event '{self.event_name}' is not supported.")
         return self.finalize()
 
     def finalize(self):
