@@ -188,6 +188,12 @@ class OutputPath:
         path = self._path_root / rel_path
         return DynamicFile("readme-pypi", DynamicFileType.README, filename, rel_path, path)
 
+    def readme_dir(self, dir_path: str):
+        filename = "README.md" if dir_path not in ["docs", ".github"] else "_README.md"
+        rel_path = f"{dir_path}/{filename}"
+        path = self._path_root / rel_path
+        return DynamicFile(f"readme-dir-{dir_path}", DynamicFileType.README, filename, rel_path, path)
+
     @property
     def funding(self) -> DynamicFile:
         filename = "FUNDING.yml"

@@ -13,6 +13,7 @@ from markitup import html
 import repodynamics
 from repodynamics.path import InputPath, OutputPath
 from repodynamics.datatype import DynamicFile
+from repodynamics.logger import Logger
 
 from readme_renderer.markdown import render
 
@@ -28,7 +29,7 @@ def render_pypi_readme(markdown_str: str):
 class ReadmeFileGenerator:
     def __init__(self, metadata: dict, input_path: InputPath, output_path: OutputPath, logger=None):
         self._metadata = metadata
-
+        self._logger = logger or Logger()
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
         # )
@@ -71,7 +72,14 @@ class ReadmeFileGenerator:
         #     ]
         # )
         file_content = self.header()
-        return [(self._out_db.readme_main, str(file_content))]
+        return self.generate_dir_readmes() + [(self._out_db.readme_main, str(file_content))]
+
+    def generate_dir_readmes(self):
+        out = []
+        for dir_path, readme in self._metadata["readme"]["dir"].items():
+            info = self._out_db.readme_dir(dir_path)
+            out.append((info, readme))
+        return out
 
     def header(self):
         top_menu, bottom_menu = self.menu()

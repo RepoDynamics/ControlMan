@@ -8,8 +8,32 @@ properties:
   readme:
     description: Readme for the project
     type: object
+    default: {}
+    additionalProperties: false
     properties:
-      header:
+      repo:
+        description: Main README file of the repository
         type: object
-      body:
+        default: {}
+        additionalProperties: false
+        properties:
+          header:
+            type: object
+          body:
+            type: object
+      package:
+        description: README file of the package used for PyPI/TestPyPI/conda
         type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          header:
+            type: object
+          body:
+            type: object
+      dir:
+        description: Directory README files
+        type: object
+        default: {}
+        additionalProperties:
+          type: string
