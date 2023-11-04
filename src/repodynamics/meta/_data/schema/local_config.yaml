@@ -6,18 +6,27 @@ description: Local configuration for the project
 type: object
 properties:
 
-  meta_cache_retention_days:
-    description: Number of days to keep cache data for meta content.
+  repodynamics:
     type: object
     default: {}
     additionalProperties: false
     properties:
-      api:
-        type: integer
-        minimum: 0
-        default: 1
-      extensions:
-        type: integer
-        minimum: 0
-        default: 1
-
+      config:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          cache_retention_days:
+            description: Number of days to keep cache data for meta content.
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              api:
+                type: integer
+                minimum: 0
+                default: 1
+              extensions:
+                type: integer
+                minimum: 0
+                default: 1
