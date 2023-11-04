@@ -162,7 +162,7 @@ class ConfigFileGenerator:
 
     def gitignore(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.gitignore
-        local_dir = self._meta["path"]["dir"]["local"]
+        local_dir = self._meta["path"]["dir"]["local"]["root"]
         text = "\n".join(
             self._meta.get("repo", {}).get("gitignore", [])
             + [

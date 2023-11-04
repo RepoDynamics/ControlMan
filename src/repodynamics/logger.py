@@ -46,8 +46,10 @@ class Logger:
         }
         self._path_log = None
         if path_output:
+            path_output = Path(path_output)
+            path_output.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
-            self._path_log = Path(path_output) / ".local" / "meta" / "reports" / f"{timestamp}.md"
+            self._path_log = path_output / f"{timestamp}.md"
             self._path_log.touch()
         self.emoji = {
             "info": "ℹ️",
