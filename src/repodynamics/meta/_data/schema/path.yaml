@@ -18,14 +18,65 @@ properties:
       source:
         type: string
         default: src
-      local:
-        type: string
-        default: .local
       tests:
         type: string
         default: tests
       website:
         type: string
         default: docs/website
+      local:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          root:
+            type: string
+            default: .local
+          cache:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              root:
+                type: string
+                default: cache
+              repodynamics:
+                type: string
+                default: repodynamics
+              mypy:
+                type: string
+                default: mypy
+              ruff:
+                type: string
+                default: ruff
+              pytest:
+                type: string
+                default: pytest
+              coverage:
+                type: string
+                default: coverage
+          report:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              root:
+                type: string
+                default: report
+              repodynamics:
+                type: string
+                default: repodynamics
+              coverage:
+                type: string
+                default: coverage
+              mypy:
+                type: string
+                default: mypy
+              pylint:
+                type: string
+                default: pylint
+              pytest:
+                type: string
+                default: pytest
     required: [ meta, source, local, tests, website ]
 required: [ dir ]

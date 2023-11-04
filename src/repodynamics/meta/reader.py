@@ -110,6 +110,12 @@ class MetaReader:
             r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
             r"([a-fA-F0-9]{32})$"
         )
+        new_path = self._input_path.dir_local_meta_extensions / f"{self._now}__{hash}"
+        if not self._input_path.dir_local_meta_extensions.is_dir():
+            self.logger.info(
+                f"Local extensions directory not found at '{self._input_path.dir_local_meta_extensions}'."
+            )
+            return new_path, False
         for path in self._input_path.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
@@ -117,11 +123,11 @@ class MetaReader:
                     self.logger.success(f"Found non-expired local extensions at '{path}'.")
                     return path, True
         self.logger.info(f"No non-expired local extensions found.")
-        new_path = self._input_path.dir_local_meta_extensions / f"{self._now}__{hash}"
         return new_path, False
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
         self.logger.h3("Download Meta Extensions")
+        self._input_path.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
         _util.file.delete_dir_content(self._input_path.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
             self.logger.h4(f"Download Extension {idx + 1}")
@@ -172,8 +178,12 @@ class MetaReader:
 
     def _get_local_config(self):
         self.logger.h3("Read Local Config")
+        source_path = (
+            self._input_path.local_config if self._input_path.local_config.is_file()
+            else self._input_path.dir_meta / "config.yaml"
+        )
         local_config = self._read_datafile(
-            source=self._input_path.local_config,
+            source=source_path,
             schema=self._get_schema("local_config"),
         )
         self.logger.success("Local config set.", json.dumps(local_config, indent=3))
@@ -279,7 +289,7 @@ class MetaReader:
 
     def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
-            days=self._local_config["meta_cache_retention_days"][typ]
+            days=self._local_config["repodynamics"]["config"]["cache_retention_days"][typ]
         )
         if exp_date <= datetime.datetime.now():
             return True

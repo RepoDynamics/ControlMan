@@ -1524,7 +1524,7 @@ class Init:
             ]
         )
         summaries = html.ElementCollection(self.summary_sections)
-        path_logs = self.meta.input_path.dir_local_log_repodynamics_action
+        path_logs = self.meta.input_path.dir_local_report_repodynamics
         path_logs.mkdir(parents=True, exist_ok=True)
         with open(path_logs / "log.html", "w") as f:
             f.write(str(logs))

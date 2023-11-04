@@ -10,15 +10,25 @@ class InputPath:
     def __init__(self, super_paths: dict, path_root: str | Path = ".", logger: Logger | None = None):
         self._logger = logger or Logger()
         self._path_root = Path(path_root).resolve()
+        dir_local_root = super_paths["dir"]["local"]["root"]
+        for local_dir in ("cache", "report"):
+            super_paths["dir"]["local"][local_dir]["root"] = (
+                f'{dir_local_root}/{super_paths["dir"]["local"][local_dir]["root"]}'
+            )
+            for key, sub_dir in super_paths["dir"]["local"][local_dir].items():
+                if key != "root":
+                    full_rel_path = f'{super_paths["dir"]["local"][local_dir]["root"]}/{sub_dir}'
+                    super_paths["dir"]["local"][local_dir][key] = full_rel_path
+                    fullpath = self._path_root / full_rel_path
+                    if fullpath.is_file():
+                        self._logger.error(f"Input local directory '{fullpath}' is a file")
+                    if not fullpath.exists():
+                        self._logger.info(f"Creating input local directory '{fullpath}'.")
+                        fullpath.mkdir(parents=True, exist_ok=True)
         self._paths = super_paths
         for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
             if not path.is_dir():
                 self._logger.error(f"Input {name} directory '{path}' not found")
-        if self.dir_local.is_file():
-            self._logger.error(f"Input local directory '{self.dir_local}' is a file")
-        if not self.dir_local_log_repodynamics_action.exists():
-            self._logger.info(f"Creating input local directory '{self.dir_local_log_repodynamics_action}'.")
-            self.dir_local_log_repodynamics_action.mkdir(parents=True, exist_ok=True)
         return
 
     @property
@@ -51,23 +61,27 @@ class InputPath:
 
     @property
     def dir_local(self):
-        return self._path_root / self._paths["dir"]["local"]
+        return self._path_root / self._paths["dir"]["local"]["root"]
 
     @property
-    def dir_local_log(self):
-        return self.dir_local / "log"
+    def dir_local_cache(self):
+        return self._path_root / self._paths["dir"]["local"]["cache"]["root"]
 
     @property
-    def dir_local_log_repodynamics_action(self):
-        return self.dir_local_log / "repodynamics"
+    def dir_local_report(self):
+        return self._path_root / self._paths["dir"]["local"]["report"]["root"]
 
     @property
-    def dir_local_meta(self):
-        return self.dir_local / "meta"
+    def dir_local_report_repodynamics(self):
+        return self._path_root / self._paths["dir"]["local"]["report"]["repodynamics"]
+
+    @property
+    def dir_local_cache_repodynamics(self):
+        return self._path_root / self._paths["dir"]["local"]["cache"]["repodynamics"]
 
     @property
     def dir_local_meta_extensions(self):
-        return self.dir_local_meta / "extensions"
+        return self.dir_local_cache_repodynamics / "extensions"
 
     @property
     def dir_meta_package_config_build(self):
@@ -83,7 +97,7 @@ class InputPath:
 
     @property
     def local_api_cache(self):
-        return self.dir_local_meta / "api_cache.yaml"
+        return self.dir_local_cache_repodynamics / "api_cache.yaml"
 
     @property
     def meta_core_extensions(self):
