@@ -1,16 +1,13 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_dev_changelogs
-description: Changelog templates for the project
-
+title: Changelog Configurations
+description: Project's changelog templates and paths
 type: object
 additionalProperties: false
 properties:
-
   changelog:
     type: object
     default: {}
     properties:
-
       package_public:
         type: object
         default: {}
@@ -108,31 +105,25 @@ properties:
       $ref: "#/definitions/changelog_schema"
     required: [package_public]
 
-
 definitions:
   changelog_schema:
     type: object
     additionalProperties: false
     properties:
-
       name:
         type: string
         minLength: 1
-
       path:
         type: string
         minLength: 1
-
       title:
         type: string
         minLength: 1
         default: "Changelog"
-
       intro:
         type: string
         minLength: 1
         default: ""
-
       entry:
         type: object
         default: {}
@@ -150,7 +141,6 @@ definitions:
               - Commit Title: {commit_title}
               - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
         required: [title, intro]
-
       sections:
         type: array
         minItems: 1
@@ -166,5 +156,3 @@ definitions:
               type: string
           required: [id, title, description]
     required: [name, title, path, intro, entry, sections]
-
-
