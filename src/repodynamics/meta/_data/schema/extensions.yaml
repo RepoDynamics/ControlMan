@@ -1,12 +1,11 @@
-
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_core_extensions
-description: Meta extension declarations
-
+title: Meta Extensions
+description: Extension declarations for meta content
 type: object
 additionalProperties: false
 properties:
   extensions:
+    description: The single root key of the main object
     type: array
     default: []
     uniqueItems: true
@@ -28,10 +27,14 @@ properties:
             - dev/issues
             - dev/labels
             - dev/maintainers
+            - dev/pulls
             - dev/repo
             - dev/tags
             - dev/workflows
             - package/build
+            - package/build_tests
+            - package/conda
+            - package/dev_config
             - package/docs
             - package/entry_points
             - package/metadata
