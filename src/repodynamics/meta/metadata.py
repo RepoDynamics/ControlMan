@@ -42,7 +42,7 @@ class MetadataGenerator:
 
     def generate(self) -> dict:
         self._metadata["name"] = self._name()
-        self._metadata["authors"] = self._authors()
+        self._metadata["author"]["entries"] = self._authors()
         self._metadata["discussion"]["categories"] = self._discussions()
         self._metadata["license"] = self._license()
         self._metadata["keyword_slugs"] = self._keywords()
@@ -182,11 +182,11 @@ class MetadataGenerator:
     def _authors(self) -> list[dict]:
         self._logger.h3("Generate 'authors' metadata")
         authors = []
-        if not self._metadata.get("authors"):
+        if not self._metadata["author"]["entries"]:
             authors.append(self._metadata["owner"])
             self._logger.success(f"Set from owner: {json.dumps(self._metadata['authors'])}")
             return authors
-        for author in self._metadata["authors"]:
+        for author in self._metadata["author"]["entries"]:
             authors.append(author | self._get_user(author["username"].lower()))
             self._logger.debug(f"Set author '{author['username']}': {json.dumps(author)}")
         return authors
