@@ -1,7 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_dev_tags
+title: Tag Configurations
 description: Repository tags settings
-
 type: object
 additionalProperties: false
 properties:
@@ -14,16 +13,19 @@ properties:
         type: object
         description: Tag groups
         default: {}
+        additionalProperties: false
         properties:
           version:
             type: object
-            description: SemVer tags
+            description: Version tags
             default: {}
+            additionalProperties: false
             properties:
               prefix:
-                description: Prefix for the tag name
+                description: Prefix of all version tags
                 type: string
-                default: vers/
+                default: ver/
             required: [ prefix ]
         required: [ version ]
     required: [ group ]
+required: [ tag ]
