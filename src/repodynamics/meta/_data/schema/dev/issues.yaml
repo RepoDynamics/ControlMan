@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_dev_issues
-description: GitHub issues settings for the project
+title: Issue Configurations
+description: GitHub Issues settings and templates
 
 type: object
 additionalProperties: false
