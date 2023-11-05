@@ -551,6 +551,7 @@ class Init:
         self.logger.info("Detected event: repository creation")
         shutil.rmtree(self.meta.input_path.dir_source)
         shutil.rmtree(self.meta.input_path.dir_tests)
+        shutil.rmtree(self.meta.input_path.dir_local)
         (self.meta.input_path.root / ".path.json").unlink(missing_ok=True)
         # for path in ("core/license.yaml", ):
         #     (self.meta.input_path.dir_meta / path).unlink(missing_ok=True)
