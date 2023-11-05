@@ -1,7 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_dev_branches
-description: Repository branches settings
-
+title: Branch Configuration
+description: Names, prefixes, and protection rules for different branch types
 type: object
 additionalProperties: false
 properties:
@@ -10,7 +9,6 @@ properties:
     default: {}
     additionalProperties: false
     properties:
-
       default:
         description: Default branch
         type: object
@@ -21,6 +19,7 @@ properties:
             type: string
             default: main
           protection_rules:
+            description: Branch protection rules
             type: object
             default: {}
             additionalProperties: false
@@ -30,10 +29,8 @@ properties:
                 default: false
               allow_force_push:
                 type: boolean
-                default: true
-
+                default: false
         required: [ name ]
-
       group:
         type: object
         description: Branch groups
@@ -47,10 +44,19 @@ properties:
               prefix:
                 description: Prefix for the branch name
                 type: string
-                default: release/
+                default: release/v
               protection_rules:
                 description: Branch protection rules
                 type: object
+                default: { }
+                additionalProperties: false
+                properties:
+                  allow_deletion:
+                    type: boolean
+                    default: false
+                  allow_force_push:
+                    type: boolean
+                    default: false
             required: [ prefix ]
           dev:
             type: object
@@ -64,6 +70,15 @@ properties:
               protection_rules:
                 description: Branch protection rules
                 type: object
+                default: { }
+                additionalProperties: false
+                properties:
+                  allow_deletion:
+                    type: boolean
+                    default: true
+                  allow_force_push:
+                    type: boolean
+                    default: true
             required: [ prefix ]
           ci_pull:
             type: object
@@ -77,6 +92,16 @@ properties:
               protection_rules:
                 description: Branch protection rules
                 type: object
+                default: { }
+                additionalProperties: false
+                properties:
+                  allow_deletion:
+                    type: boolean
+                    default: true
+                  allow_force_push:
+                    type: boolean
+                    default: true
             required: [ prefix ]
         required: [ release, dev, ci_pull ]
     required: [ default, group ]
+required: [ branch ]
