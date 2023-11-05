@@ -184,7 +184,7 @@ class MetaReader:
         )
         local_config = self._read_datafile(
             source=source_path,
-            schema=self._get_schema("local_config"),
+            schema=self._get_schema("config"),
         )
         self.logger.success("Local config set.", json.dumps(local_config, indent=3))
         return local_config
@@ -289,7 +289,7 @@ class MetaReader:
 
     def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
-            days=self._local_config["repodynamics"]["config"]["cache_retention_days"][typ]
+            days=self._local_config["repodynamics"]["cache_retention_days"][typ]
         )
         if exp_date <= datetime.datetime.now():
             return True
