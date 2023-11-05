@@ -1,11 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_core_license
-description: License information for the project
-
+title: Project License and Copyright
+description: License and copyright information for the project
 type: object
 additionalProperties: false
 properties:
-
   license:
     default: null
     oneOf:
