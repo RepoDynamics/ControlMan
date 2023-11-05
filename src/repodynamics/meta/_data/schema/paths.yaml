@@ -1,0 +1,99 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Repository Paths
+description: Paths to key directories in the repository
+type: object
+default: {}
+additionalProperties: false
+properties:
+  path:
+    description: The single root object of the file
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      dir:
+        description: Paths to directories in the repository
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          source:
+            type: string
+            default: src
+          tests:
+            type: string
+            default: tests
+          website:
+            type: string
+            default: docs/website
+          local:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              root:
+                type: string
+                default: .local
+              cache:
+                type: object
+                default: {}
+                additionalProperties:
+                  type: string
+                properties:
+                  root:
+                    type: string
+                    default: cache
+                  repodynamics:
+                    type: string
+                    default: repodynamics
+                  coverage:
+                    type: string
+                    default: coverage
+                  mypy:
+                    type: string
+                    default: mypy
+                  pylint:
+                    type: string
+                    default: pylint
+                  pytest:
+                    type: string
+                    default: pytest
+                  ruff:
+                    type: string
+                    default: ruff
+                required: [ root, repodynamics, coverage, mypy, pylint, pytest, ruff ]
+              report:
+                type: object
+                default: {}
+                additionalProperties: false
+                properties:
+                  root:
+                    type: string
+                    default: report
+                  repodynamics:
+                    type: string
+                    default: repodynamics
+                  coverage:
+                    type: string
+                    default: coverage
+                  mypy:
+                    type: string
+                    default: mypy
+                  pylint:
+                    type: string
+                    default: pylint
+                  pytest:
+                    type: string
+                    default: pytest
+                  ruff:
+                    type: string
+                    default: ruff
+                required: [ root, repodynamics, coverage, mypy, pylint, pytest, ruff ]
+            required: [ root, cache, report ]
+        required: [ source, local, tests, website ]
+      file:
+        type: object
+        default: {}
+        additionalProperties: false
+    required: [ dir, file ]
+required: [ path ]
