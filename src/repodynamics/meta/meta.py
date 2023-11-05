@@ -36,13 +36,16 @@ class Meta:
         self._github_token = github_token
         self._hash_before = hash_before
 
-        super_paths = _util.dict.read(
-            path=self._path_root / ".path.json",
-            schema=_util.file.datafile("schema/path.yaml"),
+        pathfile = self._path_root / ".github" / ".repodynamics_meta_path.txt"
+        rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
+
+        paths = _util.dict.read(
+            path=self._path_root / rel_path_meta / "paths.yaml",
+            schema=_util.file.datafile("schema/paths.yaml"),
             logger=self._logger,
         )
-        self._input_path = InputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
-        self._output_path = OutputPath(super_paths=super_paths, path_root=self._path_root, logger=self._logger)
+        self._input_path = InputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
+        self._output_path = OutputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
         self._manager: MetaManager | None = None
