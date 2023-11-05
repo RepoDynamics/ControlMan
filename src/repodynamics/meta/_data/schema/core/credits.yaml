@@ -1,11 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_core_credits
-description: Credits for the project.
-
+title: Project Credits
+description: Information about the authors and funding of the project
 type: object
 additionalProperties: false
 properties:
-
   author:
     description: Authors of the project
     type: object
@@ -30,7 +28,6 @@ properties:
               description: Abbreviation of the role
               type: string
           required: [ title, description, abbreviation ]
-
       entries:
         type: array
         default: []
@@ -51,7 +48,6 @@ properties:
               items:
                 type: string
           required: [ username ]
-
   funding:
     description: Funding sources for the project
     type: object
