@@ -500,8 +500,9 @@ class Git:
             return False
         return True
 
-    def file_at_hash(self, commit_hash: str, path: str | Path):
-        return self._run(["git", "show", f"{commit_hash}:{path}"])
+    def file_at_hash(self, commit_hash: str, path: str | Path, raise_missing: bool = True):
+        out, err, code = self._run(["git", "show", f"{commit_hash}:{path}"], raise_=raise_missing)
+        return
 
     def discard_changes(self, path: str | Path = "."):
         """Revert all uncommitted changes in the specified path, back to the state of the last commit."""
