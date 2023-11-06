@@ -38,12 +38,12 @@ class Meta:
 
         pathfile = self._path_root / ".github" / ".repodynamics_meta_path.txt"
         rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
-
         paths = _util.dict.read(
             path=self._path_root / rel_path_meta / "paths.yaml",
             schema=_util.file.datafile("schema/paths.yaml"),
             logger=self._logger,
         )
+        paths["dir"]["meta"] = rel_path_meta
         self._input_path = InputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
         self._output_path = OutputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
 
@@ -51,7 +51,6 @@ class Meta:
         self._manager: MetaManager | None = None
         self._metadata_raw: dict = {}
         self._metadata: dict = {}
-        self._metadata_ci: dict = {}
         self._generated_files: list[tuple[DynamicFile, str]] = []
         self._writer: MetaWriter | None = None
         self._results: list[tuple[DynamicFile, Diff]] = []
@@ -75,24 +74,6 @@ class Meta:
         self._manager = MetaManager(metadata=metadata_full)
         return self._manager
 
-    def read_metadata_output(self) -> tuple[dict, dict]:
-        out = []
-        for filename, path in (
-            ("main metadata, ", self._output_path.metadata.path),
-            ("CI metadata, ", self._output_path.metadata_ci.path),
-        ):
-            metadata = _util.dict.read(path, logger=self._logger, raise_empty=False)
-            out.append(metadata)
-            if metadata:
-                self._logger.success(f"Loaded {filename} file from {path}.", json.dumps(metadata, indent=3))
-            else:
-                self._logger.error(f"No {filename} file found in {path}.")
-        self._metadata = out[0]
-        self._metadata_ci = out[1]
-        MetaValidator(metadata=self._metadata, logger=self._logger).validate()
-        self._manager = MetaManager(metadata=self._metadata)
-        return self._metadata, self._metadata_ci
-
     def read_metadata_raw(self):
         if self._metadata_raw:
             return self._metadata_raw
@@ -104,7 +85,7 @@ class Meta:
 
     def read_metadata_full(self):
         if self._metadata:
-            return self._metadata, self._metadata_ci
+            return self._metadata
         self.read_metadata_raw()
         self._metadata = MetadataGenerator(
             reader=self._reader,
@@ -112,19 +93,17 @@ class Meta:
             hash_before=self._hash_before,
             logger=self._logger,
         ).generate()
-        self._metadata_ci = self._generate_metadata_ci()
         MetaValidator(metadata=self._metadata, logger=self._logger).validate()
-        return self._metadata, self._metadata_ci
+        return self._metadata
 
     def generate_files(self) -> list[tuple[DynamicFile, str]]:
         if self._generated_files:
             return self._generated_files
-        metadata, metadata_ci = self.read_metadata_full()
+        metadata = self.read_metadata_full()
         self._logger.h2("Generate Files")
 
         generated_files = [
             (self.output_path.metadata, json.dumps(metadata)),
-            (self.output_path.metadata_ci, json.dumps(metadata_ci)),
             (self.output_path.license, metadata["license"].get("text", "")),
         ]
 
@@ -169,24 +148,3 @@ class Meta:
             self.compare_files()
         self._writer.apply(self._results)
         return
-
-    def _generate_metadata_ci(self) -> dict:
-        out = {}
-        metadata = self._metadata
-        out["path"] = metadata["path"]
-        out["web"] = {
-            "readthedocs": {"name": metadata["web"].get("readthedocs", {}).get("name")},
-        }
-        out["url"] = {"website": {"base": metadata["url"]["website"]["base"]}}
-        if metadata.get("package"):
-            pkg = metadata["package"]
-            out["package"] = {
-                "name": pkg["name"],
-                "github_runners": pkg["github_runners"],
-                "python_versions": pkg["python_versions"],
-                "python_version_max": pkg["python_version_max"],
-                "pure_python": pkg["pure_python"],
-                "cibw_matrix_platform": pkg.get("cibw_matrix_platform", []),
-                "cibw_matrix_python": pkg.get("cibw_matrix_python", []),
-            }
-        return out
