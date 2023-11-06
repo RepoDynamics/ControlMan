@@ -4,7 +4,7 @@ description: Base configurations for RepoDynamics
 type: object
 properties:
   repodynamics:
-    description: The single root object of the file
+    description: The single root key of this file
     type: object
     default: {}
     additionalProperties: false
