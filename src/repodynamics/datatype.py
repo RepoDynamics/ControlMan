@@ -17,15 +17,17 @@ class EventType(Enum):
 
 
 class BranchType(Enum):
-    MAIN = "Default"
-    RELEASE = "Release"
-    DEV = "Development"
-    OTHER = "Other"
+    DEFAULT = "default"
+    RELEASE = "release"
+    DEV = "dev"
+    CI_PULL = "ci_pull"
+    OTHER = "other"
 
 
 class Branch(NamedTuple):
     type: BranchType
-    number: int | None = None
+    prefix: str | None = None
+    suffix: str | int | None = None
 
 
 class RepoFileType(Enum):
@@ -54,11 +56,14 @@ class DynamicFileType(Enum):
 class DynamicFile(NamedTuple):
     id: str
     category: DynamicFileType
-    filename: str
     rel_path: str
     path: Path
     alt_paths: list[Path] | None = None
     is_dir: bool = False
+
+    @property
+    def filename(self) -> str:
+        return self.path.name
 
 
 class _FileStatus(NamedTuple):
