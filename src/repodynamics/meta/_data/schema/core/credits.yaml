@@ -39,7 +39,9 @@ properties:
             username:
               description: GitHub username of the author
               type: string
-              pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+              oneOf:
+                - pattern: ^\${{ *owner\.username *}}$
+                - pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
             roles:
               description: Roles of the author
               type: array
