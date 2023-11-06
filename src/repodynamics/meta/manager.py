@@ -1,4 +1,6 @@
 from repodynamics.datatype import (
+    BranchType,
+    Branch,
     PrimaryActionCommit,
     PrimaryActionCommitType,
     PrimaryCustomCommit,
@@ -17,6 +19,41 @@ class MetaManager:
         self._issue_data: dict = {}
         self._version_to_branch_map: dict[str, str] = {}
         return
+
+    @property
+    def dict(self) -> dict:
+        return self._data
+
+    @property
+    def branch(self) -> dict:
+        return self._data["branch"]
+
+    @property
+    def branch__group(self) -> dict:
+        return self.branch["group"]
+
+    @property
+    def workflow__init__schedule(self) -> dict[str, str]:
+        return self._data["workflow"]["init"]["schedule"]
+
+    @property
+    def workflow__init__schedule__test(self) -> str:
+        return self.workflow__init__schedule["test"]
+
+    @property
+    def workflow__init__schedule__sync(self) -> str:
+        return self.workflow__init__schedule["sync"]
+
+    def get_branch_info_from_name(self, branch_name: str) -> Branch:
+        if branch_name == self.branch["default"]["name"]:
+            return Branch(type=BranchType.DEFAULT)
+        for group_name, group_data in self.branch__group.items():
+            prefix = group_data["prefix"]
+            if branch_name.startswith(prefix):
+                suffix_raw = branch_name.removeprefix(prefix)
+                suffix = suffix_raw if group_name == "ci_pull" else int(suffix_raw)
+                return Branch(type=BranchType(group_name), prefix=prefix, suffix=suffix)
+        return Branch(type=BranchType.OTHER)
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
         """
