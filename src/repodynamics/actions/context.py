@@ -278,6 +278,14 @@ class ContextManager:
         return self.pull_state == "closed" and self.pull_payload["merged"]
 
     @property
+    def push_commit_head(self) -> dict:
+        return self.payload["head_commit"]
+
+    @property
+    def push_commit_head_message(self) -> str:
+        return self.push_commit_head["message"]
+
+    @property
     def issue_comment_triggering_action(self) -> str:
         """Comment action type that triggered the event; one of 'created', 'deleted', 'edited'."""
         return self.payload["action"]
