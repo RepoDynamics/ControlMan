@@ -97,12 +97,10 @@ class Init:
             hash_before=self.context.hash_before,
             logger=self.logger
         )
-
+        self.tags_on_main = self.git.get_tags()
         self.metadata_main = meta.read_from_json_file(path_root="repo_self", logger=self.logger)
         self.metadata_branch: dict = {}
         self.metadata_branch_before: dict = {}
-
-        self.last_ver_main, self.dist_ver_main = self.get_latest_version()
 
         self.changed_files: dict[RepoFileType, list[str]] = {}
         self._amended: bool = False
@@ -266,7 +264,7 @@ class Init:
     def event_push_branch_created(self):
         branch = self.resolve_branch()
         if branch.type == BranchType.DEFAULT:
-            if not self.last_ver_main:
+            if not self.tags_on_main:
                 self.event_push_repository_created()
             else:
                 self.logger.skip(
@@ -330,6 +328,11 @@ class Init:
 
     def event_push_branch_modified_default(self):
         self.metadata_branch = self.meta_main.read_metadata_full()
+        if not self.tags_on_main:
+            head_commit_msg = self.context.push_commit_head_message
+            if head_commit_msg == "init":
+                return self.event_first_release()
+            return self.event_push_branch_modified_default_init_phase()
 
         self.metadata_branch_before = meta.read_from_json_string(
             content=self.git.file_at_hash(
@@ -342,6 +345,41 @@ class Init:
             self.event_first_release()
         else:
             self.event_push_branch_modified_main()
+
+    def event_push_branch_modified_default_init_phase(self):
+        
+
+    def event_first_release(self):
+        tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
+        self._version = "0.0.0"
+        self._tag = f"{tag_prefix}{self._version}"
+        commit_msg = CommitMsg(
+            typ="init",
+            title="Initialize package and website",
+            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI.",
+        )
+        self.commit(
+            message=str(commit_msg),
+            amend=True,
+            push=True,
+        )
+        self.git.create_tag(tag=self._tag, message="First release")
+        self.gh_api_admin.activate_pages("workflow")
+        self.action_repo_settings_sync()
+        self.action_repo_labels_sync(init=True)
+        for job_id in [
+            "package_build",
+            "package_test_local",
+            "package_lint",
+            "website_build",
+            "website_deploy",
+            "package_publish_testpypi",
+            "package_publish_pypi",
+            "package_test_testpypi",
+            "package_test_pypi",
+        ]:
+            self.set_job_run(job_id)
+        return
 
     def event_push_branch_modified_main(self):
         self.event_type = EventType.PUSH_MAIN
@@ -601,41 +639,6 @@ class Init:
         self.gh_api.issue_comment_create(number=self.issue_number, body="This post tracks the issue.")
         self.action_post_process_issue()
 
-        return
-
-
-
-    def event_first_release(self):
-
-        tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
-        self._version = "0.0.0"
-        self._tag = f"{tag_prefix}{self._version}"
-        commit_msg = CommitMsg(
-            typ="init",
-            title="Initialize package and website",
-            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI.",
-        )
-        self.commit(
-            message=str(commit_msg),
-            amend=True,
-            push=True,
-        )
-        self.git.create_tag(tag=self._tag, message="First release")
-        self.gh_api_admin.activate_pages("workflow")
-        self.action_repo_settings_sync()
-        self.action_repo_labels_sync(init=True)
-        for job_id in [
-            "package_build",
-            "package_test_local",
-            "package_lint",
-            "website_build",
-            "website_deploy",
-            "package_publish_testpypi",
-            "package_publish_pypi",
-            "package_test_testpypi",
-            "package_test_pypi",
-        ]:
-            self.set_job_run(job_id)
         return
 
     def get_commits(self) -> list[Commit]:
