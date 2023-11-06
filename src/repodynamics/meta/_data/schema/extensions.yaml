@@ -1,5 +1,5 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Meta Extensions
+title: Meta Content Extensions
 description: Extension declarations for meta content
 type: object
 additionalProperties: false
@@ -12,10 +12,8 @@ properties:
     items:
       type: object
       additionalProperties: false
-      required: [ type, repo, path ]
       properties:
         type:
-          type: string
           enum:
             - core/credits
             - core/intro
@@ -60,4 +58,5 @@ properties:
         raise_duplicate:
           type: boolean
           default: false
-required: [extensions]
+      required: [ type, repo, path, append_list, append_dict, raise_duplicate ]
+required: [ extensions ]
