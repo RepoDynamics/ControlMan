@@ -250,10 +250,19 @@ class MetadataGenerator:
             self._logger.error(title, f"License ID '{license_id}' not found in database.")
         else:
             license_info = copy.deepcopy(license_info)
-            license_info["trove_classifier"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
+            license_info["shortname"] = data.get("shortname") or license_info["shortname"]
+            license_info["fullname"] = data.get("fullname") or license_info["fullname"]
+            license_info["trove_classifier"] = (
+                data.get("trove_classifier")
+                or f"License :: OSI Approved :: {license_info['trove_classifier']}"
+            )
             filename = license_id.lower().removesuffix("+")
-            license_info["text"] = _util.file.datafile(f"license/{filename}.txt").read_text()
-            license_info["notice"] = _util.file.datafile(f"license/{filename}_notice.txt").read_text()
+            license_info["text"] = (
+                data.get("text") or _util.file.datafile(f"license/{filename}.txt").read_text()
+            )
+            license_info["notice"] = (
+                data.get("notice") or _util.file.datafile(f"license/{filename}_notice.txt").read_text()
+            )
         self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
         return license_info
 
@@ -262,6 +271,7 @@ class MetadataGenerator:
         log_details = []
         output = {}
         data = self._metadata["copyright"]
+        current_year = datetime.date.today().year
         if not data.get("year_start"):
             output["year_start"] = year_start = datetime.datetime.strptime(
                 self._metadata["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
@@ -269,8 +279,13 @@ class MetadataGenerator:
             log_details.append(f"- 'copyright.year_start' set from repository creation date: {year_start}")
         else:
             output["year_start"] = year_start = data["year_start"]
+            if year_start > current_year:
+                self._logger.error(
+                    title,
+                    f"'year_start' cannot be greater than current year ({current_year}), "
+                    f"but got {year_start}.",
+                )
             log_details.append(f"- 'copyright.year_start' already set manually in metadata: {year_start}")
-        current_year = datetime.date.today().year
         year_range = f"{year_start}{'' if year_start == current_year else f'–{current_year}'}"
         output["year_range"] = year_range
         log_details.append(f"- 'copyright.year_range' set: {year_range}")
