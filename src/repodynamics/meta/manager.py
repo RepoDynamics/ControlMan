@@ -33,6 +33,14 @@ class MetaManager:
         return self.branch["group"]
 
     @property
+    def label__compiled(self) -> dict:
+        return self._data["label"]["compiled"]
+
+    @property
+    def repo__config(self) -> dict:
+        return self._data["repo"]["config"]
+
+    @property
     def workflow__init__schedule(self) -> dict[str, str]:
         return self._data["workflow"]["init"]["schedule"]
 
@@ -43,6 +51,14 @@ class MetaManager:
     @property
     def workflow__init__schedule__sync(self) -> str:
         return self.workflow__init__schedule["sync"]
+
+    @property
+    def web(self) -> dict:
+        return self._data["web"]
+
+    @property
+    def web__base_url(self) -> str | None:
+        return self.web.get("base_url", None)
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch["default"]["name"]:
