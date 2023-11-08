@@ -53,6 +53,7 @@ properties:
   funding:
     description: Funding sources for the project
     type: object
+    default: {}
     additionalProperties: false
     properties:
       community_bridge:
