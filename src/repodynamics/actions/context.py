@@ -116,11 +116,17 @@ class ContextManager:
         return self.sha
 
     @property
-    def triggering_action(self) -> WorkflowTriggeringAction | None:
+    def triggering_action(self) -> WorkflowTriggeringAction | str:
+        if self.event_name == "push":
+            if self.payload["created"]:
+                return WorkflowTriggeringAction.CREATED
+            if self.payload["deleted"]:
+                return WorkflowTriggeringAction.DELETED
+            return WorkflowTriggeringAction.EDITED
         try:
             return WorkflowTriggeringAction(self.payload.get("action"))
         except ValueError:
-            return None
+            return self.payload.get("action")
 
     @property
     def issue_triggering_action(self) -> str:
