@@ -7,6 +7,7 @@ class EventType(Enum):
     PUSH_MAIN = "push_main"
     PUSH_RELEASE = "push_release"
     PUSH_DEV = "push_dev"
+    PUSH_CI_PULL = "push_ci_pull"
     PUSH_OTHER = "push_other"
     PULL_MAIN = "pull_main"
     PULL_RELEASE = "pull_release"
@@ -340,6 +341,25 @@ class WorkflowTriggeringAction(Enum):
     REOPENED = "reopened"
     SYNCHRONIZE = "synchronize"
 
+
+class InitCheckAction(Enum):
+    NONE = "none"
+    FAIL = "fail"
+    REPORT = "report"
+    PULL = "pull"
+    COMMIT = "commit"
+    AMEND = "amend"
+
+
+class WorkflowDispatchInput(NamedTuple):
+    meta: InitCheckAction
+    hooks: InitCheckAction
+    package_build: bool
+    package_lint: bool
+    package_test: bool
+    website_build: bool
+    website_announcement: str
+    website_announcement_msg: str
 
 class IssueStatus(Enum):
     TRIAGE = "triage"
