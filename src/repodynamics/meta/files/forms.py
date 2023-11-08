@@ -5,10 +5,11 @@ from ruamel.yaml import YAML
 from repodynamics.logger import Logger
 from repodynamics.path import OutputPath
 from repodynamics.datatype import DynamicFile
+from repodynamics.meta.manager import MetaManager
 
 
 class FormGenerator:
-    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
+    def __init__(self, metadata: MetaManager, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._out_db = output_path
         self._meta = metadata
@@ -21,7 +22,7 @@ class FormGenerator:
     def issue_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
         issues = self._meta["issue"]["forms"]
-        issue_maintainers = self._meta.get("maintainer", {}).get("issue", {})
+        issue_maintainers = self._meta["maintainer"].get("issue", {})
         paths = []
         label_meta = self._meta["label"]["group"]
         for idx, issue in enumerate(issues):
