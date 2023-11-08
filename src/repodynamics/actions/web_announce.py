@@ -1,36 +1,57 @@
+from pathlib import Path
 from markitup import html, md
+
+from repodynamics.actions.context import ContextManager
+from repodynamics.actions.state_manager import StateManager
+from repodynamics.meta.manager import MetaManager
+from repodynamics import _util
+from repodynamics.git import Git
+from repodynamics.logger import Logger
+from repodynamics.actions._changelog import ChangelogManager
 
 
 class WebAnnouncement:
 
-    def __init__(self, release):
-        self.release = release
+    def __init__(
+        self,
+        metadata_main: MetaManager,
+        context_manager: ContextManager,
+        state_manager: StateManager,
+        git: Git,
+        logger: Logger | None = None,
+    ):
+        self._metadata = metadata_main
+        self._context = context_manager
+        self._state = state_manager
+        self._git = git
+        self._logger = logger or Logger()
 
-    def action_website_announcement_check(self):
+        self._path_announcement_file = Path(self._metadata.dict["path"]["file"]["website_announcement"])
+        return
+
+    def check_expiry(self):
         name = "Website Announcement Expiry Check"
-        path_announcement_file = Path(self.metadata["path"]["file"]["website_announcement"])
-        if not path_announcement_file.exists():
-            self.add_summary(
+        current_announcement = self._read()
+        if current_announcement is None:
+            self._state.add_summary(
                 name=name,
                 status="skip",
                 oneliner="Announcement file does not exist❗",
                 details=html.ul(
                     [
                         f"❎ No changes were made.",
-                        f"🚫 The announcement file was not found at '{path_announcement_file}'",
+                        f"🚫 The announcement file was not found at '{self._path_announcement_file}'",
                     ]
                 ),
             )
             return
-        with open(path_announcement_file) as f:
-            current_announcement = f.read()
         (commit_date_relative, commit_date_absolute, commit_date_epoch, commit_details) = (
-            self.git.log(
+            self._git.log(
                 number=1,
                 simplify_by_decoration=False,
                 pretty=pretty,
                 date=date,
-                paths=str(path_announcement_file),
+                paths=str(self._path_announcement_file),
             )
             for pretty, date in (
                 ("format:%cd", "relative"),
@@ -44,29 +65,27 @@ class WebAnnouncement:
                 content=md.code_block(commit_details),
                 summary="📝 Removal Commit Details",
             )
-            self.add_summary(
+            self._state.add_summary(
                 name=name,
                 status="skip",
                 oneliner="📭 No announcement to check.",
                 details=html.ul(
                     [
                         f"❎ No changes were made."
-                        f"📭 The announcement file at '{path_announcement_file}' is empty.\n",
+                        f"📭 The announcement file at '{self._path_announcement_file}' is empty.\n",
                         f"📅 The last announcement was removed {commit_date_relative} on {commit_date_absolute}.\n",
                         last_commit_details_html,
                     ]
                 ),
             )
             return
-
-        current_date_epoch = int(_util.shell.run_command(["date", "-u", "+%s"], logger=self.logger))
+        current_date_epoch = int(_util.shell.run_command(["date", "-u", "+%s"], logger=self._logger))
         elapsed_seconds = current_date_epoch - int(commit_date_epoch)
         elapsed_days = elapsed_seconds / (24 * 60 * 60)
-        retention_days = self.metadata["web"]["announcement_retention_days"]
+        retention_days = self._metadata.web["announcement_retention_days"]
         retention_seconds = retention_days * 24 * 60 * 60
         remaining_seconds = retention_seconds - elapsed_seconds
         remaining_days = retention_days - elapsed_days
-
         if remaining_seconds > 0:
             current_announcement_html = html.details(
                 content=md.code_block(current_announcement, "html"),
@@ -76,7 +95,7 @@ class WebAnnouncement:
                 content=md.code_block(commit_details),
                 summary="📝 Current Announcement Commit Details",
             )
-            self.add_summary(
+            self._state.add_summary(
                 name=name,
                 status="skip",
                 oneliner=f"📬 Announcement is still valid for another {remaining_days:.2f} days.",
@@ -93,16 +112,15 @@ class WebAnnouncement:
                 ),
             )
             return
-
-        with open(path_announcement_file, "w") as f:
-            f.write("")
+        # Remove the expired announcement
+        self._write("")
         commit_title = "Remove expired announcement"
         commit_body = (
             f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
             f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"
             f"{current_announcement}"
         )
-        commit_hash, commit_link = self.commit_website_announcement(
+        commit_hash, commit_link = self._commit(
             commit_title=commit_title,
             commit_body=commit_body,
             change_title=commit_title,
@@ -116,7 +134,7 @@ class WebAnnouncement:
             content=md.code_block(commit_details),
             summary="📝 Removed Announcement Commit Details",
         )
-        self.add_summary(
+        self._state.add_summary(
             name=name,
             status="pass",
             oneliner="🗑 Announcement was expired and thus removed.",
@@ -133,7 +151,7 @@ class WebAnnouncement:
         )
         return
 
-    def action_website_announcement_update(self):
+    def update(self):
         name = "Website Announcement Manual Update"
         self.logger.h1(name)
         if not self.ref_is_main:
@@ -154,13 +172,13 @@ class WebAnnouncement:
             )
             self.logger.skip("No announcement was provided.")
             return
-        old_announcement = self.read_website_announcement().strip()
-        old_announcement_details = self.git.log(
+        old_announcement = self._read().strip()
+        old_announcement_details = self._git.log(
             number=1,
             simplify_by_decoration=False,
             pretty=None,
             date=None,
-            paths=self.metadata["path"]["file"]["website_announcement"],
+            paths=self._metadata["path"]["file"]["website_announcement"],
         )
         old_md = md.code_block(old_announcement_details)
 
@@ -188,7 +206,7 @@ class WebAnnouncement:
                 )
             self.add_summary(name=name, status="skip", oneliner=oneliner, details=html.ul(details_list))
             return
-        self.write_website_announcement(announcement)
+        self._write(announcement)
         new_html = html.details(
             content=md.code_block(announcement, "html"),
             summary="📣 New Announcement",
@@ -221,7 +239,7 @@ class WebAnnouncement:
             commit_title = "Manually update announcement"
             commit_body = f"New announcement:\n\n{announcement}\n\nRemoved announcement:\n\n{old_announcement}"
 
-        commit_hash, commit_url = self.commit_website_announcement(
+        commit_hash, commit_url = self._commit(
             commit_title=commit_title,
             commit_body=commit_body,
             change_title=commit_title,
@@ -231,37 +249,39 @@ class WebAnnouncement:
         self.add_summary(name=name, status="pass", oneliner=oneliner, details=html.ul(details_list))
         return
 
-    def write_website_announcement(self, announcement: str):
+    def _write(self, announcement: str):
         if announcement:
             announcement = f"{announcement.strip()}\n"
-        with open(self.metadata["path"]["file"]["website_announcement"], "w") as f:
+        with open(self._path_announcement_file, "w") as f:
             f.write(announcement)
         return
 
-    def read_website_announcement(self) -> str:
-        with open(self.metadata["path"]["file"]["website_announcement"]) as f:
+    def _read(self) -> str | None:
+        if not self._path_announcement_file.is_file():
+            return None
+        with open(self._path_announcement_file) as f:
             return f.read()
 
-    def commit_website_announcement(
+    def _commit(
         self,
         commit_title: str,
         commit_body: str,
         change_title: str,
         change_body: str,
     ):
-        changelog_id = self.metadata["commit"]["primary"]["website"]["announcement"].get("changelog_id")
+        changelog_id = self._metadata.dict["commit"]["primary"]["website"]["announcement"].get("changelog_id")
         if changelog_id:
             changelog_manager = ChangelogManager(
-                changelog_metadata=self.metadata["changelog"],
+                changelog_metadata=self._metadata.dict["changelog"],
                 ver_dist=f"{self.last_ver}+{self.dist_ver}",
-                commit_type=self.metadata["commit"]["primary"]["website"]["type"],
+                commit_type=self._metadata["commit"]["primary"]["website"]["type"],
                 commit_title=commit_title,
-                parent_commit_hash=self.hash_after,
+                parent_commit_hash=self._state.hash_latest,
                 parent_commit_url=str(self.gh_link.commit(self.hash_after)),
             )
             changelog_manager.add_change(
                 changelog_id=changelog_id,
-                section_id=self.metadata["commit"]["primary"]["website"]["announcement"][
+                section_id=self._metadata["commit"]["primary"]["website"]["announcement"][
                     "changelog_section_id"
                 ],
                 change_title=change_title,
@@ -269,10 +289,10 @@ class WebAnnouncement:
             )
             changelog_manager.write_all_changelogs()
         commit = CommitMsg(
-            typ=self.metadata["commit"]["primary"]["website"]["type"],
+            typ=self._metadata["commit"]["primary"]["website"]["type"],
             title=commit_title,
             body=commit_body,
-            scope=self.metadata["commit"]["primary"]["website"]["announcement"]["scope"],
+            scope=self._metadata["commit"]["primary"]["website"]["announcement"]["scope"],
         )
         commit_hash = self.commit(message=str(commit), stage="all")
         commit_link = str(self.gh_link.commit(commit_hash))
