@@ -48,9 +48,8 @@ class Meta:
         self._output_path = OutputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
-        self._manager: MetaManager | None = None
         self._metadata_raw: dict = {}
-        self._metadata: dict = {}
+        self._metadata: MetaManager | None = None
         self._generated_files: list[tuple[DynamicFile, str]] = []
         self._writer: MetaWriter | None = None
         self._results: list[tuple[DynamicFile, Diff]] = []
@@ -66,15 +65,7 @@ class Meta:
     def output_path(self) -> OutputPath:
         return self._output_path
 
-    @property
-    def manager(self) -> MetaManager:
-        if self._manager:
-            return self._manager
-        metadata_full, _ = self.read_metadata_full()
-        self._manager = MetaManager(metadata=metadata_full)
-        return self._manager
-
-    def read_metadata_raw(self):
+    def read_metadata_raw(self) -> dict:
         if self._metadata_raw:
             return self._metadata_raw
         self._reader = MetaReader(
@@ -83,17 +74,18 @@ class Meta:
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
 
-    def read_metadata_full(self):
+    def read_metadata_full(self) -> MetaManager:
         if self._metadata:
             return self._metadata
         self.read_metadata_raw()
-        self._metadata = MetadataGenerator(
+        metadata_dict = MetadataGenerator(
             reader=self._reader,
             output_path=self.output_path,
             hash_before=self._hash_before,
             logger=self._logger,
         ).generate()
-        MetaValidator(metadata=self._metadata, logger=self._logger).validate()
+        MetaValidator(metadata=metadata_dict, logger=self._logger).validate()
+        self._metadata = MetaManager(metadata=metadata_dict)
         return self._metadata
 
     def generate_files(self) -> list[tuple[DynamicFile, str]]:
@@ -103,7 +95,7 @@ class Meta:
         self._logger.h2("Generate Files")
 
         generated_files = [
-            (self.output_path.metadata, json.dumps(metadata)),
+            (self.output_path.metadata, json.dumps(metadata.dict)),
             (self.output_path.license, metadata["license"].get("text", "")),
         ]
 
@@ -135,7 +127,9 @@ class Meta:
         self._generated_files = generated_files
         return self._generated_files
 
-    def compare_files(self):
+    def compare_files(self) -> tuple[
+        list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str
+    ]:
         if self._results:
             return self._results, self._changes, self._summary
         updates = self.generate_files()
@@ -143,7 +137,7 @@ class Meta:
         self._results, self._changes, self._summary = self._writer.compare(updates)
         return self._results, self._changes, self._summary
 
-    def apply_changes(self):
+    def apply_changes(self) -> None:
         if not self._results:
             self.compare_files()
         self._writer.apply(self._results)
