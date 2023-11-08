@@ -5,10 +5,11 @@ from repodynamics.meta.reader import MetaReader
 from repodynamics.logger import Logger
 from repodynamics.path import OutputPath
 from repodynamics.datatype import DynamicFile
+from repodynamics.meta.manager import MetaManager
 
 
 class HealthFileGenerator:
-    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
+    def __init__(self, metadata: MetaManager, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
         self._out_db = output_path
@@ -33,7 +34,7 @@ class HealthFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        codeowners = self._meta.get("maintainer", {}).get("pull", {}).get("reviewer", {}).get("by_path")
+        codeowners = self._meta["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
         if not codeowners:
             return ""
         # Get the maximum length of patterns to align the columns when writing the file
