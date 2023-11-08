@@ -500,9 +500,13 @@ class Git:
             return False
         return True
 
-    def file_at_hash(self, commit_hash: str, path: str | Path, raise_missing: bool = True):
+    def file_at_hash(self, commit_hash: str, path: str | Path, raise_missing: bool = True) -> str | None:
         out, err, code = self._run(["git", "show", f"{commit_hash}:{path}"], raise_=raise_missing)
-        return
+        if err or code != 0:
+            if raise_missing:
+                self._logger.error(f"Failed to get file '{path}' at commit '{commit_hash}'.", details=err)
+            return None
+        return out
 
     def discard_changes(self, path: str | Path = "."):
         """Revert all uncommitted changes in the specified path, back to the state of the last commit."""
