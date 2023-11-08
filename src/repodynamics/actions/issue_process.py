@@ -3,7 +3,7 @@ class IssuePostProcessorAction:
 
     def action_post_process_issue(self):
         self.logger.success("Retrieve issue labels", self.issue_label_names)
-        issue_form = self.meta.manager.get_issue_data_from_labels(self.issue_label_names).form
+        issue_form = self.metadata_main.get_issue_data_from_labels(self.issue_label_names).form
         self.logger.success("Retrieve issue form", issue_form)
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
@@ -17,7 +17,7 @@ class IssuePostProcessorAction:
             version_label_prefix = self.metadata["label"]["auto_group"]["version"]["prefix"]
             for version in versions:
                 labels.append(f"{version_label_prefix}{version}")
-                branch = self.meta.manager.get_branch_from_version(version)
+                branch = self.metadata_main.get_branch_from_version(version)
                 labels.append(f"{branch_label_prefix}{branch}")
         else:
             self.logger.error(
