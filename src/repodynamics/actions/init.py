@@ -93,6 +93,8 @@ class Init:
             logger=self.logger,
         )
 
+        self.state: StateManager | None = None
+
         self.metadata_branch: dict = {}
         self.metadata_branch_before: dict = {}
         self.changed_files: dict[RepoFileType, list[str]] = {}
@@ -121,7 +123,7 @@ class Init:
                 if action == WorkflowTriggeringAction.EDITED:
                     if branch.type == BranchType.DEFAULT:
                         if not self.tags_on_main:
-                            # The repository has just been created from the template
+                            # The repository is in the initialization phase
                             head_commit_msg = self.context.push_commit_head_message
                             if head_commit_msg == "init":
                                 # User is signaling the end of initialization phase
@@ -332,6 +334,16 @@ class Init:
         return
 
     def event_push_branch_modified_default_init_phase(self):
+        self.metadata_main = self.meta_main.read_metadata_full()
+        self.state = StateManager(
+            metadata_main=self.metadata_main,
+            metadata_branch=self.metadata_main,
+            context_manager=self.context,
+            git=self.git,
+            logger=self.logger,
+        )
+        self._action_repo_config
+        self._action_meta(action=InitCheckAction.AMEND, meta=self.meta_main, state=self.state)
 
         return
 
@@ -475,9 +487,9 @@ class Init:
         return
 
     def event_issue_labeled(self):
-        label = self.payload["label"]["name"]
-        if label.startswith(self.metadata_main["label"]["group"]["status"]["prefix"]):
-            status = self.meta_main.manager.get_issue_status_from_status_label(label)
+        label = self.context.payload["label"]["name"]
+        if label.startswith(self.metadata_main.dict["label"]["group"]["status"]["prefix"]):
+            status = self.metadata_main.get_issue_status_from_status_label(label)
             if status == IssueStatus.IN_DEV:
                 target_label_prefix = self.metadata_main["label"]["auto_group"]["target"]["prefix"]
                 dev_branch_prefix = self.metadata_main["branch"]["group"]["dev"]["prefix"]
@@ -564,7 +576,7 @@ class Init:
 
         branch = self.resolve_branch(self.pull_head_ref_name)
         issue_labels = [label["name"] for label in self.gh_api.issue_labels(number=branch.suffix)]
-        issue_data = self.meta_main.manager.get_issue_data_from_labels(issue_labels)
+        issue_data = self.metadata_main.get_issue_data_from_labels(issue_labels)
 
         if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
             PrimaryActionCommitType.WEBSITE,
@@ -654,14 +666,14 @@ class Init:
         # )
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
         self.logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(types=self.meta_main.manager.get_all_conventional_commit_types(), logger=self.logger)
+        parser = CommitParser(types=self.metadata_main.get_all_conventional_commit_types(), logger=self.logger)
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
             if not conv_msg:
                 parsed_commits.append(Commit(**commit, group_data=NonConventionalCommit()))
             else:
-                group = self.meta_main.manager.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
+                group = self.metadata_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 commit["msg"] = conv_msg
                 parsed_commits.append(Commit(**commit, group_data=group))
             # elif conv_msg.type in primary_action_types:
