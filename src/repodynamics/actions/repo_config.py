@@ -1,18 +1,38 @@
+from pylinks.api.github import Repo
+from repodynamics.logger import Logger
+from repodynamics.meta.manager import MetaManager
 
 
 class RepoConfigAction:
 
-    def action_repo_labels_sync(self, init: bool = False):
+    def __init__(
+        self,
+        workflow_api: Repo,
+        admin_api: Repo,
+        metadata: MetaManager,
+        metadata_before: MetaManager | None = None,
+        logger: Logger | None = None
+    ):
+        self.api = workflow_api
+        self.api_admin = admin_api
+        self.metadata = metadata
+        self.metadata_before = metadata_before
+        self.logger = logger or Logger()
+        return
+
+    def replace_repo_labels(self):
+        for label in self.api.labels:
+            self.api.label_delete(label["name"])
+        for label in self.metadata.label__compiled.values():
+            self.api.label_create(**label)
+        return
+
+    def update_repo_labels(self, init: bool = False):
         name = "Repository Labels Synchronizer"
         self.logger.h1(name)
         current_labels = self.api.labels
         new_labels = self.metadata["label"]["compiled"]
-        if init:
-            for label in current_labels:
-                self.api.label_delete(label["name"])
-            for label in new_labels.values():
-                self.api.label_create(**label)
-            return
+
         old_labels = self.metadata_before["label"]["compiled"]
         old_labels_not_versions = {}
         old_labels_versions = {}
@@ -75,8 +95,8 @@ class RepoConfigAction:
             )
         return
 
-    def action_repo_settings_sync(self):
-        data = self.metadata["repo"]["config"] | {
+    def update_repo_settings(self):
+        data = self.metadata.repo__config | {
             "has_issues": True,
             "allow_squash_merge": True,
             "squash_merge_commit_title": "PR_TITLE",
@@ -89,16 +109,18 @@ class RepoConfigAction:
             self.api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
         return
 
-    def action_branch_names_sync(self):
-        before = self.metadata_before["branch"]
-        after = self.metadata["branch"]
-        renamed = False
+    def update_branch_names(self) -> dict:
+        if not self.metadata_before:
+            self.logger.error("Cannot update branch names as no previous metadata is available.")
+        before = self.metadata_before.branch
+        after = self.metadata.branch
+        old_to_new_map = {}
         if before["default"]["name"] != after["default"]["name"]:
             self.api_admin.branch_rename(
                 old_name=before["default"]["name"],
                 new_name=after["default"]["name"]
             )
-            renamed = True
+            old_to_new_map[before["default"]["name"]] = after["default"]["name"]
         branches = self.api_admin.branches
         branch_names = [branch["name"] for branch in branches]
         for group_name in ("release", "dev", "ci_pull"):
@@ -107,21 +129,19 @@ class RepoConfigAction:
             if prefix_before != prefix_after:
                 for branch_name in branch_names:
                     if branch_name.startswith(prefix_before):
-                        self.api_admin.branch_rename(
-                            old_name=branch_name,
-                            new_name=f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
-                        )
-                        renamed = True
-        return renamed
+                        new_name = f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
+                        self.api_admin.branch_rename(old_name=branch_name, new_name=new_name)
+                        old_to_new_map[branch_name] = new_name
+        return old_to_new_map
 
-    def action_repo_pages(self):
+    def update_pages_settings(self) -> None:
+        """Activate GitHub Pages (source: workflow) if not activated, update custom domain."""
         if not self.api.info["has_pages"]:
             self.api_admin.pages_create(build_type="workflow")
-        custom_url = self.metadata["web"].get("base_url")
-        if custom_url:
-            self.api_admin.pages_update(
-                cname=custom_url.removeprefix("https://").removeprefix("http://"),
-                https_enforced=custom_url.startswith("https://"),
-                build_type="workflow"
-            )
+        cname = self.metadata.web__base_url
+        self.api_admin.pages_update(
+            cname=cname.removeprefix("https://").removeprefix("http://") if cname else None,
+            https_enforced=cname.startswith("https://") if cname else True,
+            build_type="workflow"
+        )
         return
