@@ -8,10 +8,11 @@ from pylinks.http import WebAPIError
 from repodynamics.logger import Logger
 from repodynamics.path import OutputPath
 from repodynamics.datatype import DynamicFile
+from repodynamics.meta.manager import MetaManager
 
 
 class ConfigFileGenerator:
-    def __init__(self, metadata: dict, output_path: OutputPath, logger: Logger = None):
+    def __init__(self, metadata: MetaManager, output_path: OutputPath, logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
         self._out_db = output_path
@@ -84,7 +85,7 @@ class ConfigFileGenerator:
         """
         self._logger.h3("Generate File: FUNDING.yml")
         info = self._out_db.funding
-        funding = self._meta.get("funding")
+        funding = self._meta["funding"]
         if not funding:
             self._logger.skip("'funding' not set in metadata; skipping.")
             return [(info, "")]
@@ -106,7 +107,7 @@ class ConfigFileGenerator:
         return [(info, output_str)]
 
     def workflow_requirements(self) -> list[tuple[DynamicFile, str]]:
-        tools = self._meta.get("workflow", {}).get("tool", {})
+        tools = self._meta["workflow"]["tool"]
         out = []
         for tool_name, tool_spec in tools.items():
             text = "\n".join(tool_spec["pip_spec"])
@@ -115,7 +116,7 @@ class ConfigFileGenerator:
 
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.pre_commit_config
-        config = self._meta.get("workflow", {}).get("pre_commit")
+        config = self._meta["workflow"].get("pre_commit")
         if not config:
             self._logger.skip("'pre_commit' not set in metadata.")
             return [(info, "")]
@@ -124,7 +125,7 @@ class ConfigFileGenerator:
 
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.read_the_docs_config
-        config = self._meta.get("web", {}).get("readthedocs")
+        config = self._meta["web"].get("readthedocs")
         if not config:
             self._logger.skip("'readthedocs' not set in metadata.")
             return [(info, "")]
@@ -135,7 +136,7 @@ class ConfigFileGenerator:
 
     def codecov_config(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.codecov_config
-        config = self._meta.get("workflow", {}).get("codecov")
+        config = self._meta["workflow"].get("codecov")
         if not config:
             self._logger.skip("'codecov' not set in metadata.")
             return [(info, "")]
@@ -164,7 +165,7 @@ class ConfigFileGenerator:
         info = self._out_db.gitignore
         local_dir = self._meta["path"]["dir"]["local"]["root"]
         text = "\n".join(
-            self._meta.get("repo", {}).get("gitignore", [])
+            self._meta["repo"].get("gitignore", [])
             + [
                 f"{local_dir}/**",
                 f"!{local_dir}/**/",
@@ -177,7 +178,7 @@ class ConfigFileGenerator:
     def gitattributes(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.gitattributes
         text = ""
-        attributes = self._meta.get("repo", {}).get("gitattributes", [])
+        attributes = self._meta["repo"].get("gitattributes", [])
         max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
         max_len_attr = max(
             [max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes]
