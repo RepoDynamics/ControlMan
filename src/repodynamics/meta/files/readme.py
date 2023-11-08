@@ -10,12 +10,13 @@ from typing import Literal, Optional, Sequence
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
+from readme_renderer.markdown import render
+
 import repodynamics
 from repodynamics.path import InputPath, OutputPath
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
-
-from readme_renderer.markdown import render
+from repodynamics.meta.manager import MetaManager
 
 
 def render_pypi_readme(markdown_str: str):
@@ -27,7 +28,7 @@ def render_pypi_readme(markdown_str: str):
 
 
 class ReadmeFileGenerator:
-    def __init__(self, metadata: dict, input_path: InputPath, output_path: OutputPath, logger=None):
+    def __init__(self, metadata: MetaManager, input_path: InputPath, output_path: OutputPath, logger=None):
         self._metadata = metadata
         self._logger = logger or Logger()
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
