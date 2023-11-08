@@ -20,6 +20,9 @@ class MetaManager:
         self._version_to_branch_map: dict[str, str] = {}
         return
 
+    def __getitem__(self, item):
+        return self._data[item]
+
     @property
     def dict(self) -> dict:
         return self._data
