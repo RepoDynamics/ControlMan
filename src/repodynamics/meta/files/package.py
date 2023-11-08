@@ -19,12 +19,13 @@ from repodynamics.meta.reader import MetaReader
 from repodynamics import _util
 from repodynamics.path import OutputPath
 from repodynamics.datatype import DynamicFile
+from repodynamics.meta.manager import MetaManager
 
 
 class PackageFileGenerator:
     def __init__(
         self,
-        metadata: dict,
+        metadata: MetaManager,
         package_config: tomlkit.TOMLDocument,
         test_package_config: tomlkit.TOMLDocument,
         output_path: OutputPath,
@@ -122,7 +123,7 @@ class PackageFileGenerator:
         if tests:
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
                 filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
-                text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta)
+                text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta.dict)
                 out.append((self._out_db.python_file((path / testsuite_filename).with_suffix(".py")), text))
         return out
 
@@ -168,7 +169,7 @@ __version__ = __version_details__["version"]"""
 
     def pyproject(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.package_pyproject
-        pyproject = _util.dict.fill_template(self._pyproject, metadata=self._meta)
+        pyproject = _util.dict.fill_template(self._pyproject, metadata=self._meta.dict)
         project = pyproject.setdefault("project", {})
         for key, val in self.pyproject_project().items():
             if key not in project:
@@ -177,23 +178,23 @@ __version__ = __version_details__["version"]"""
 
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.test_package_pyproject
-        pyproject = _util.dict.fill_template(self._pyproject_test, metadata=self._meta)
+        pyproject = _util.dict.fill_template(self._pyproject_test, metadata=self._meta.dict)
         return [(info, tomlkit.dumps(pyproject))]
 
     def pyproject_project(self) -> dict:
         data_type = {
             "name": ("str", self._meta["package"]["name"]),
             "dynamic": ("array", ["version"]),
-            "description": ("str", self._meta.get("tagline")),
+            "description": ("str", self._meta.dict.get("tagline")),
             "readme": ("str", self._out_db.readme_pypi.rel_path),
             "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
             "license": (
                 "inline_table",
-                {"file": self._out_db.license.rel_path} if self._meta.get("license") else None,
+                {"file": self._out_db.license.rel_path} if self._meta["license"] else None,
             ),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
-            "keywords": ("array", self._meta.get("keywords")),
+            "keywords": ("array", self._meta.dict.get("keywords")),
             "classifiers": ("array", self._meta["package"].get("trove_classifiers")),
             "urls": ("table", self._meta["package"].get("urls")),
             "scripts": ("table", self.pyproject_project_scripts),
@@ -264,9 +265,9 @@ __version__ = __version_details__["version"]"""
         """
         people = []
         target_people = (
-            self._meta.get("maintainer", {}).get("list", [])
+            self._meta["maintainer"].get("list", [])
             if role == "maintainers"
-            else self._meta.get("authors", [])
+            else self._meta["author"]["entries"]
         )
         for person in target_people:
             if not person["name"]:
