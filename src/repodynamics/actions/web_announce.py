@@ -26,7 +26,7 @@ class WebAnnouncement:
         self._git = git
         self._logger = logger or Logger()
 
-        self._path_announcement_file = Path(self._metadata.dict["path"]["file"]["website_announcement"])
+        self._path_announcement_file = Path(self._metadata["path"]["file"]["website_announcement"])
         return
 
     def check_expiry(self):
@@ -269,10 +269,10 @@ class WebAnnouncement:
         change_title: str,
         change_body: str,
     ):
-        changelog_id = self._metadata.dict["commit"]["primary"]["website"]["announcement"].get("changelog_id")
+        changelog_id = self._metadata["commit"]["primary"]["website"]["announcement"].get("changelog_id")
         if changelog_id:
             changelog_manager = ChangelogManager(
-                changelog_metadata=self._metadata.dict["changelog"],
+                changelog_metadata=self._metadata["changelog"],
                 ver_dist=f"{self.last_ver}+{self.dist_ver}",
                 commit_type=self._metadata["commit"]["primary"]["website"]["type"],
                 commit_title=commit_title,
