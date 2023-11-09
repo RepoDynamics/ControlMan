@@ -3,13 +3,13 @@ import copy
 from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
-from repodynamics.path import OutputPath
+from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
 from repodynamics.meta.manager import MetaManager
 
 
 class FormGenerator:
-    def __init__(self, metadata: MetaManager, output_path: OutputPath, logger: Logger = None):
+    def __init__(self, metadata: MetaManager, output_path: PathFinder, logger: Logger = None):
         self._logger = logger or Logger()
         self._out_db = output_path
         self._meta = metadata
