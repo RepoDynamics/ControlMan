@@ -176,15 +176,13 @@ class _DictFiller:
                 return self._substitute_val(match_whole_str.group(1))
             return re.sub(r"\${{([\w\.\:\-\[\] ]+?)}}", lambda x: str(self._substitute_val(x.group(1))), value)
         if isinstance(value, list):
-            for idx, elem in enumerate(value):
-                value[idx] = self._recursive_subst(elem)
+            return [self._recursive_subst(elem) for elem in value]
         elif isinstance(value, dict):
+            new_dict = {}
             for key, val in value.items():
                 key_filled = self._recursive_subst(key)
-                if key_filled == key:
-                    value[key] = self._recursive_subst(val)
-                else:
-                    value[key_filled] = self._recursive_subst(value.pop(key))
+                new_dict[key_filled] = self._recursive_subst(val)
+            return new_dict
         return value
 
     def _substitute_val(self, match):
