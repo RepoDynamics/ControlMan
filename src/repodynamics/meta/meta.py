@@ -1,8 +1,7 @@
-from typing import Literal, Optional, Sequence, Callable
+from typing import Optional
 from pathlib import Path
 import json
 
-from ruamel.yaml import YAML
 
 from repodynamics.logger import Logger
 from repodynamics.meta.metadata import MetadataGenerator
@@ -10,9 +9,8 @@ from repodynamics.meta.reader import MetaReader
 from repodynamics.meta.writer import MetaWriter
 from repodynamics.meta.manager import MetaManager
 from repodynamics.meta.validator import MetaValidator
-from repodynamics.path import InputPath, OutputPath
+from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile, Diff
-from repodynamics import _util
 from repodynamics.datatype import DynamicFileType
 
 from repodynamics.meta.files.config import ConfigFileGenerator
@@ -36,16 +34,7 @@ class Meta:
         self._github_token = github_token
         self._hash_before = hash_before
 
-        pathfile = self._path_root / ".github" / ".repodynamics_meta_path.txt"
-        rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
-        paths = _util.dict.read(
-            path=self._path_root / rel_path_meta / "paths.yaml",
-            schema=_util.file.datafile("schema/paths.yaml"),
-            logger=self._logger,
-        )
-        paths["dir"]["meta"] = rel_path_meta
-        self._input_path = InputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
-        self._output_path = OutputPath(super_paths=paths, path_root=self._path_root, logger=self._logger)
+        self._pathfinder = PathFinder(path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
         self._metadata_raw: dict = {}
@@ -58,18 +47,14 @@ class Meta:
         return
 
     @property
-    def input_path(self) -> InputPath:
-        return self._input_path
-
-    @property
-    def output_path(self) -> OutputPath:
-        return self._output_path
+    def paths(self) -> PathFinder:
+        return self._pathfinder
 
     def read_metadata_raw(self) -> dict:
         if self._metadata_raw:
             return self._metadata_raw
         self._reader = MetaReader(
-            input_path=self._input_path, github_token=self._github_token, logger=self._logger
+            paths=self.paths, github_token=self._github_token, logger=self._logger
         )
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
@@ -80,7 +65,7 @@ class Meta:
         self.read_metadata_raw()
         metadata_dict = MetadataGenerator(
             reader=self._reader,
-            output_path=self.output_path,
+            output_path=self.paths,
             hash_before=self._hash_before,
             logger=self._logger,
         ).generate()
@@ -95,20 +80,20 @@ class Meta:
         self._logger.h2("Generate Files")
 
         generated_files = [
-            (self.output_path.metadata, json.dumps(metadata.dict)),
-            (self.output_path.license, metadata["license"].get("text", "")),
+            (self.paths.metadata, json.dumps(metadata.as_dict)),
+            (self.paths.license, metadata["license"].get("text", "")),
         ]
 
         generated_files += ConfigFileGenerator(
-            metadata=metadata, output_path=self.output_path, logger=self._logger
+            metadata=metadata, output_path=self.paths, logger=self._logger
         ).generate()
 
         generated_files += FormGenerator(
-            metadata=metadata, output_path=self.output_path, logger=self._logger
+            metadata=metadata, output_path=self.paths, logger=self._logger
         ).generate()
 
         generated_files += HealthFileGenerator(
-            metadata=metadata, output_path=self.output_path, logger=self._logger
+            metadata=metadata, output_path=self.paths, logger=self._logger
         ).generate()
 
         if "package" in self._metadata:
@@ -116,12 +101,12 @@ class Meta:
                 metadata=metadata,
                 package_config=self._reader.package_config,
                 test_package_config=self._reader.test_package_config,
-                output_path=self.output_path,
+                output_path=self.paths,
                 logger=self._logger,
             ).generate()
 
         generated_files += ReadmeFileGenerator(
-            metadata=metadata, input_path=self._input_path, output_path=self.output_path, logger=self._logger
+            metadata=metadata, paths=self.paths, logger=self._logger
         ).generate()
 
         self._generated_files = generated_files
