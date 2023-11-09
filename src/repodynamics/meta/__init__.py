@@ -11,11 +11,25 @@ from repodynamics.meta import files
 from repodynamics.path import RelativePath
 from repodynamics.meta.writer import MetaWriter
 from repodynamics import _util
+from repodynamics.git import Git
 
 
-def read_from_json_file(path_root: str | Path = ".", logger: Logger | None = None) -> MetaManager:
+def read_from_json_file(
+    path_root: str | Path = ".",
+    commit_hash: str = "",
+    git: Git | None = None,
+    logger: Logger | None = None
+) -> MetaManager | None:
     logger = logger or Logger()
     path_root = Path(path_root).resolve()
+    if commit_hash:
+        git = git or Git(path_repo=path_root)
+        content = git.file_at_hash(
+            commit_hash=commit_hash,
+            path=RelativePath.file_metadata,
+            raise_missing=False,
+        )
+        return read_from_json_string(content=content, logger=logger) if content else None
     path_json = path_root / RelativePath.file_metadata
     metadata = _util.dict.read(path_json, logger=logger, raise_empty=True)
     MetaValidator(metadata=metadata, logger=logger).validate()
