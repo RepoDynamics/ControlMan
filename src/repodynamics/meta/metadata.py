@@ -14,7 +14,7 @@ from repodynamics import git
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
-from repodynamics.path import OutputPath
+from repodynamics.path import PathFinder
 from repodynamics.datatype import PrimaryActionCommitType
 
 
@@ -22,7 +22,7 @@ class MetadataGenerator:
     def __init__(
         self,
         reader: MetaReader,
-        output_path: OutputPath,
+        output_path: PathFinder,
         hash_before: str = "",
         logger: Logger = None,
     ):
@@ -184,7 +184,7 @@ class MetadataGenerator:
         authors = []
         if not self._metadata["author"]["entries"]:
             authors.append(self._metadata["owner"])
-            self._logger.success(f"Set from owner: {json.dumps(self._metadata['authors'])}")
+            self._logger.success(f"Set from owner: {json.dumps(authors)}")
             return authors
         for author in self._metadata["author"]["entries"]:
             authors.append(author | self._get_user(author["username"].lower()))
