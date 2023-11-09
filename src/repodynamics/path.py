@@ -6,33 +6,64 @@ from repodynamics.logger import Logger
 from repodynamics.datatype import DynamicFile, DynamicFileType
 
 
-class InputPath:
-    def __init__(self, super_paths: dict, path_root: str | Path = ".", logger: Logger | None = None):
-        self._logger = logger or Logger()
+class RelativePath:
+    file_metadata = ".github/.metadata.json"
+    file_license = "LICENSE"
+    file_readme_main = "README.md"
+    file_funding = ".github/FUNDING.yml"
+    file_pre_commit_config = ".github/.pre-commit-config.yaml"
+    file_readthedocs_config = ".github/.readthedocs.yaml"
+    file_issue_template_chooser_config = ".github/ISSUE_TEMPLATE/config.yml"
+    file_python_pyproject = "pyproject.toml"
+    file_python_requirements = "requirements.txt"
+    file_python_manifest = "MANIFEST.in"
+    file_codecov_config = ".github/.codecov.yml"
+    file_gitignore = ".gitignore"
+    file_gitattributes = ".gitattributes"
+    file_path_meta = ".github/.repodynamics_meta_path.txt"
+    dir_github = ".github/"
+    dir_github_workflows = ".github/workflows/"
+    dir_github_workflow_requirements = ".github/workflow_requirements/"
+    dir_github_issue_template = ".github/ISSUE_TEMPLATE/"
+    dir_github_pull_request_template = ".github/PULL_REQUEST_TEMPLATE/"
+    dir_github_discussion_template = ".github/DISCUSSION_TEMPLATE/"
+
+
+class PathFinder:
+    def __init__(self, path_root: str | Path, logger: Logger | None = None):
         self._path_root = Path(path_root).resolve()
-        dir_local_root = super_paths["dir"]["local"]["root"]
+        self._logger = logger or Logger()
+        pathfile = self._path_root / RelativePath.file_path_meta
+        rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
+        paths = _util.dict.read(
+            path=self._path_root / rel_path_meta / "paths.yaml",
+            schema=_util.file.datafile("schema/paths.yaml"),
+            logger=self._logger,
+        )["path"]
+        paths["dir"]["meta"] = rel_path_meta
+        dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
-            super_paths["dir"]["local"][local_dir]["root"] = (
-                f'{dir_local_root}/{super_paths["dir"]["local"][local_dir]["root"]}'
+            paths["dir"]["local"][local_dir]["root"] = (
+                f'{dir_local_root}/{paths["dir"]["local"][local_dir]["root"]}'
             )
-            for key, sub_dir in super_paths["dir"]["local"][local_dir].items():
+            for key, sub_dir in paths["dir"]["local"][local_dir].items():
                 if key != "root":
-                    full_rel_path = f'{super_paths["dir"]["local"][local_dir]["root"]}/{sub_dir}'
-                    super_paths["dir"]["local"][local_dir][key] = full_rel_path
+                    full_rel_path = f'{paths["dir"]["local"][local_dir]["root"]}/{sub_dir}'
+                    paths["dir"]["local"][local_dir][key] = full_rel_path
                     fullpath = self._path_root / full_rel_path
                     if fullpath.is_file():
                         self._logger.error(f"Input local directory '{fullpath}' is a file")
                     if not fullpath.exists():
                         self._logger.info(f"Creating input local directory '{fullpath}'.")
                         fullpath.mkdir(parents=True, exist_ok=True)
-        self._paths = super_paths
+        self._paths = paths
         for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
             if not path.is_dir():
                 self._logger.error(f"Input {name} directory '{path}' not found")
         return
 
     @property
-    def paths(self) -> dict:
+    def paths_dict(self) -> dict:
         return self._paths
 
     @property
@@ -44,20 +75,36 @@ class InputPath:
         return self._path_root / ".github"
 
     @property
+    def dir_source_rel(self) -> str:
+        return f'{self._paths["dir"]["source"]}/'
+
+    @property
     def dir_source(self):
-        return self._path_root / self._paths["dir"]["source"]
+        return self._path_root / self.dir_source_rel
+
+    @property
+    def dir_tests_rel(self) -> str:
+        return f'{self._paths["dir"]["tests"]}/'
 
     @property
     def dir_tests(self):
-        return self._path_root / self._paths["dir"]["tests"]
+        return self._path_root / self.dir_tests_rel
+
+    @property
+    def dir_meta_rel(self) -> str:
+        return f'{self._paths["dir"]["meta"]}/'
 
     @property
     def dir_meta(self):
-        return self._path_root / self._paths["dir"]["meta"]
+        return self._path_root / self.dir_meta_rel
+
+    @property
+    def dir_website_rel(self) -> str:
+        return f'{self._paths["dir"]["website"]}/'
 
     @property
     def dir_website(self):
-        return self._path_root / self._paths["dir"]["website"]
+        return self._path_root / self.dir_website_rel
 
     @property
     def dir_local(self):
@@ -92,44 +139,16 @@ class InputPath:
         return self.dir_meta / "package" / "config_tools"
 
     @property
-    def local_config(self) -> Path:
-        return self.dir_local / "config.yaml"
+    def dir_issue_forms(self):
+        return self._path_root / ".github/ISSUE_TEMPLATE/"
 
     @property
-    def local_api_cache(self):
-        return self.dir_local_cache_repodynamics / "api_cache.yaml"
+    def dir_pull_request_templates(self):
+        return self._path_root / ".github/PULL_REQUEST_TEMPLATE/"
 
     @property
-    def meta_core_extensions(self):
-        return self.dir_meta / "core" / "extensions.yaml"
-
-
-class RelativePath:
-    file_metadata = ".github/.metadata.json"
-    file_license = "LICENSE"
-    file_readme_main = "README.md"
-    file_funding = ".github/FUNDING.yml"
-    file_pre_commit_config = ".github/.pre-commit-config.yaml"
-    file_readthedocs_config = ".github/.readthedocs.yaml"
-    file_issue_template_chooser_config = ".github/ISSUE_TEMPLATE/config.yml"
-    file_python_pyproject = "pyproject.toml"
-    file_python_requirements = "requirements.txt"
-    file_python_manifest = "MANIFEST.in"
-    file_codecov_config = ".github/.codecov.yml"
-    file_gitignore = ".gitignore"
-    file_gitattributes = ".gitattributes"
-
-
-class OutputPath:
-    def __init__(self, super_paths: dict, path_root: str | Path, logger: Logger | None = None):
-        self._path_root = Path(path_root).resolve()
-        self._logger = logger or Logger()
-        self._paths = super_paths
-        return
-
-    @property
-    def root(self):
-        return self._path_root
+    def dir_discussion_forms(self):
+        return self._path_root / ".github/DISCUSSION_TEMPLATE/"
 
     @property
     def fixed_files(self) -> list[DynamicFile]:
@@ -181,6 +200,18 @@ class OutputPath:
         files.remove(self._path_root / ".github/PULL_REQUEST_TEMPLATE/README.md")
         files.extend(list((self._path_root / ".github/DISCUSSION_TEMPLATE").glob("*.yaml")))
         return files
+
+    @property
+    def file_local_config(self) -> Path:
+        return self.dir_local / "config.yaml"
+
+    @property
+    def file_local_api_cache(self):
+        return self.dir_local_cache_repodynamics / "api_cache.yaml"
+
+    @property
+    def file_meta_core_extensions(self):
+        return self.dir_meta / "core" / "extensions.yaml"
 
     @property
     def metadata(self) -> DynamicFile:
@@ -389,14 +420,3 @@ class OutputPath:
         path = self._path_root / rel_path
         return DynamicFile("package-typing-marker", DynamicFileType.PACKAGE, rel_path, path)
 
-    @property
-    def dir_issue_forms(self):
-        return self._path_root / ".github/ISSUE_TEMPLATE/"
-
-    @property
-    def dir_pull_request_templates(self):
-        return self._path_root / ".github/PULL_REQUEST_TEMPLATE/"
-
-    @property
-    def dir_discussion_forms(self):
-        return self._path_root / ".github/DISCUSSION_TEMPLATE/"
