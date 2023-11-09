@@ -24,8 +24,16 @@ class MetaManager:
         return self._data[item]
 
     @property
-    def dict(self) -> dict:
+    def as_dict(self) -> dict:
         return self._data
+
+    @property
+    def tagline(self) -> str:
+        return self._data.get("tagline", "")
+
+    @property
+    def keywords(self) -> list[str]:
+        return self._data.get("keywords", [])
 
     @property
     def branch(self) -> dict:
@@ -34,6 +42,10 @@ class MetaManager:
     @property
     def branch__group(self) -> dict:
         return self.branch["group"]
+
+    @property
+    def changelog(self) -> dict:
+        return self._data.get("changelog", {})
 
     @property
     def label__compiled(self) -> dict:
@@ -62,6 +74,10 @@ class MetaManager:
     @property
     def web__base_url(self) -> str | None:
         return self.web.get("base_url", None)
+
+    @property
+    def package(self) -> dict:
+        return self._data.get("package", {})
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch["default"]["name"]:
