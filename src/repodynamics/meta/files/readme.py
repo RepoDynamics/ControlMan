@@ -13,7 +13,7 @@ from markitup import html
 from readme_renderer.markdown import render
 
 import repodynamics
-from repodynamics.path import InputPath, OutputPath
+from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -28,7 +28,7 @@ def render_pypi_readme(markdown_str: str):
 
 
 class ReadmeFileGenerator:
-    def __init__(self, metadata: MetaManager, input_path: InputPath, output_path: OutputPath, logger=None):
+    def __init__(self, metadata: MetaManager, paths: PathFinder, logger=None):
         self._metadata = metadata
         self._logger = logger or Logger()
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
@@ -39,8 +39,7 @@ class ReadmeFileGenerator:
         #     repo=self.github["repo"],
         #     branch=self.github["branch"],
         # )
-        self._input_path = input_path
-        self._out_db = output_path
+        self._pathfinder = paths
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
@@ -73,12 +72,12 @@ class ReadmeFileGenerator:
         #     ]
         # )
         file_content = self.header()
-        return self.generate_dir_readmes() + [(self._out_db.readme_main, str(file_content))]
+        return self.generate_dir_readmes() + [(self._pathfinder.readme_main, str(file_content))]
 
     def generate_dir_readmes(self):
         out = []
         for dir_path, readme in self._metadata["readme"]["dir"].items():
-            info = self._out_db.readme_dir(dir_path)
+            info = self._pathfinder.readme_dir(dir_path)
             out.append((info, readme))
         return out
 
@@ -199,7 +198,7 @@ class ReadmeFileGenerator:
                 if item.get("include_in_readme")
             ]
 
-        path_docs = self._input_path.dir_website / "source"
+        path_docs = self._pathfinder.dir_website / "source"
         top_data = get_top_data()
         bottom_data = get_bottom_data()
         colors = [
