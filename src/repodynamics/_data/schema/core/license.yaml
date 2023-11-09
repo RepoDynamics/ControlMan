@@ -5,45 +5,45 @@ type: object
 additionalProperties: false
 properties:
   license:
+    type:
+      - "null"
+      - object
     default: null
+    additionalProperties: false
+    properties:
+      id:
+        description: ID of the project's license
+        enum:
+          - gnu_agpl_v3+
+          - gnu_agpl_v3
+          - gnu_gpl_v3+
+          - gnu_gpl_v3
+          - mpl_v2
+          - apache_v2
+          - mit
+          - bsd_2_clause
+          - bsd_3_clause
+          - bsl_v1
+          - unlicense
+      shortname:
+        description: Short name of the project's license
+        type: string
+      fullname:
+        description: Full name of the project's license
+        type: string
+      trove_classifier:
+        description: Trove classifier of the project's license
+        type: string
+        pattern: "^License :: "
+      text:
+        description: Full text of the project's license
+        type: string
+      notice:
+        description: Short text of the project's license
+        type: string
     oneOf:
-      - type: null
-      - type: object
-        additionalProperties: false
-        properties:
-          id:
-            description: ID of the project's license
-            enum:
-              - gnu_agpl_v3+
-              - gnu_agpl_v3
-              - gnu_gpl_v3+
-              - gnu_gpl_v3
-              - mpl_v2
-              - apache_v2
-              - mit
-              - bsd_2_clause
-              - bsd_3_clause
-              - bsl_v1
-              - unlicense
-          shortname:
-            description: Short name of the project's license
-            type: string
-          fullname:
-            description: Full name of the project's license
-            type: string
-          trove_classifier:
-            description: Trove classifier of the project's license
-            type: string
-            pattern: "^License :: "
-          text:
-            description: Full text of the project's license
-            type: string
-          notice:
-            description: Short text of the project's license
-            type: string
-        oneOf:
-          - required: [ id ]
-          - required: [ shortname, fullname, text, notice ]
+      - required: [ id ]
+      - required: [ shortname, fullname, text, notice ]
   copyright:
     type: object
     default: {}
