@@ -1,26 +1,35 @@
 from pathlib import Path
 import json
 from typing import Literal, NamedTuple
-import re
 import datetime
 from enum import Enum
 import shutil
 
+from markitup import html, md
 import pylinks
 
 from repodynamics import meta
 from repodynamics.logger import Logger
 from repodynamics.git import Git
-from repodynamics.meta.meta import Meta
+from repodynamics.meta.manager import MetaManager
 from repodynamics import hook, _util
 from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
-from repodynamics.meta.files.forms import FormGenerator
 from repodynamics.actions.repo_config import RepoConfigAction
-from repodynamics.actions.context import ContextManager
-from repodynamics.actions.meta import MetaAction
-from repodynamics.actions.state_manager import StateManager
+from repodynamics.actions.context_manager import ContextManager
+from repodynamics.meta.meta import Meta
+from repodynamics.path import RelativePath
+
+from repodynamics.actions.events.issue_comment import IssueCommentEventHandler
+from repodynamics.actions.events.issues import IssuesEventHandler
+from repodynamics.actions.events.pull_request import PullRequestEventHandler
+from repodynamics.actions.events.pull_request_target import PullRequestTargetEventHandler
+from repodynamics.actions.events.push import PushEventHandler
+from repodynamics.actions.events.schedule import ScheduleEventHandler
+from repodynamics.actions.events.workflow_dispatch import WorkflowDispatchEventHandler
+
+
 from repodynamics.datatype import (
     Branch,
     BranchType,
@@ -46,600 +55,534 @@ from repodynamics.datatype import (
 )
 
 
-class Init:
+class EventHandler:
 
     def __init__(
         self,
-        context: dict,
+        context_manager: ContextManager,
         admin_token: str,
-        dispatch_inputs: WorkflowDispatchInput,
-        logger: Logger | None = None,
+        metadata_main: MetaManager | None = None,
+        logger: Logger | None = None
     ):
-        self.context = ContextManager(github_context=context)
-        self._dispatch_inputs = dispatch_inputs
-        self.logger = logger or Logger("github")
-        self.gh_api_admin = pylinks.api.github(
-            token=admin_token
-        ).user(self.context.repo_owner).repo(self.context.repo_name)
-        self.gh_api = pylinks.api.github(
-            token=self.context.github_token
-        ).user(self.context.repo_owner).repo(self.context.repo_name)
-        self.gh_link = pylinks.site.github.user(self.context.repo_owner).repo(self.context.repo_name)
-        self.git: Git = Git(
+        self._context = context_manager
+        self._metadata_main = metadata_main
+        self._logger = logger or Logger()
+
+        repo_user = self._context.github.repo_owner
+        repo_name = self._context.github.repo_name
+        self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
+        self._gh_api = pylinks.api.github(token=self._context.github.token).user(repo_user).repo(repo_name)
+        self._gh_link = pylinks.site.github.user(repo_user).repo(repo_name)
+        self._git_self: Git = Git(
             path_repo="repo_self",
-            user=(self.context.triggering_actor_username, self.context.triggering_actor_email),
-            logger=self.logger,
+            user=(self._context.payload.sender_username, self._context.payload.sender_email),
+            logger=self._logger,
         )
-        self.meta_main = Meta(
-            path_root="repo_self",
-            github_token=self.context.github_token,
-            hash_before=self.context.hash_before,
-            logger=self.logger
-        )
-        self.metadata_main = meta.read_from_json_file(path_root="repo_self", logger=self.logger)
-        self.tags_on_main = self.git.get_tags()
-
-        self._action_repo_config = RepoConfigAction(
-            workflow_api=self.gh_api,
-            admin_api=self.gh_api_admin,
-            metadata=self.metadata_main,
-            logger=self.logger,
-        )
-        self._action_meta = MetaAction(
-            context_manager=self.context,
-            gh_link=self.gh_link,
-            gh_api=self.gh_api,
-            git=self.git,
-            logger=self.logger,
-        )
-
-        self.state: StateManager | None = None
-
-        self.metadata_branch: dict = {}
-        self.metadata_branch_before: dict = {}
-        self.changed_files: dict[RepoFileType, list[str]] = {}
-
-        self.meta_results = []
-        self.meta_changes = {}
-        self.event_type: EventType | None = None
-        return
-
-    def run(self):
-        self.run_event()
-        return self.finalize()
-
-    def run_event(self) -> None:
-        self.logger.h2("Analyze Triggering Event")
-        event_name = self.context.event_name
-        action = self.context.triggering_action
-        action_name = action.value if isinstance(action, WorkflowTriggeringAction) else action
-        action_err_msg = f"Unsupported triggering action for '{event_name}' event."
-        action_err_details_sub = f"but the triggering action '{action_name}' is not supported."
-        action_err_details = f"The workflow was triggered by an event of type '{event_name}', {action_err_details_sub}"
-
-        if event_name == "push":
-            if self.context.ref_type == "branch":
-                branch = self.resolve_branch()
-                if action == WorkflowTriggeringAction.EDITED:
-                    if branch.type == BranchType.DEFAULT:
-                        if not self.tags_on_main:
-                            # The repository is in the initialization phase
-                            head_commit_msg = self.context.push_commit_head_message
-                            if head_commit_msg == "init":
-                                # User is signaling the end of initialization phase
-                                return self.event_first_release()
-                            # User is still setting up the repository (still in initialization phase)
-                            return self.event_push_branch_modified_default_init_phase()
-                        metadata_before = self.git.file_at_hash(
-                            commit_hash=self.context.hash_before,
-                            path=self.meta_main.output_path.metadata.rel_path
-                        )
-                        if not metadata_before:
-                            return self.event_push_existing_repository_initialized()
-                        return self.event_push_branch_modified_main()
-                    elif branch.type == BranchType.RELEASE:
-                        return self.event_push_branch_edited_release()
-                    elif branch.type == BranchType.DEV:
-                        return self.event_push_branch_edited_dev()
-                    elif branch.type == BranchType.CI_PULL:
-                        return self.event_push_branch_edited_ci_pull()
-                    else:
-                        return self.event_push_branch_edited_other()
-                elif action == WorkflowTriggeringAction.CREATED:
-                    if branch.type == BranchType.DEFAULT:
-                        if not self.tags_on_main:
-                            self.event_push_repository_created()
-                        else:
-                            self.logger.skip(
-                                "Creation of default branch detected while a version tag is present; skipping.",
-                                "This is likely a result of a repository transfer, or renaming of the default branch.",
-                            )
-                    else:
-                        self.logger.skip(
-                            "Creation of non-default branch detected; skipping.",
-                        )
-                elif action == WorkflowTriggeringAction.DELETED:
-                    return self.event_push_branch_deleted()
-                else:
-                    return self.logger.error(action_err_msg, action_err_details)
-            elif self.context.ref_type == "tag":
-                if action == WorkflowTriggeringAction.CREATED:
-                    return self.event_push_tag_created()
-                elif action == WorkflowTriggeringAction.DELETED:
-                    return self.event_push_tag_deleted()
-                elif action == WorkflowTriggeringAction.EDITED:
-                    return self.event_push_tag_edited()
-                else:
-                    return self.logger.error(action_err_msg, action_err_details)
-            else:
-                self.logger.error(
-                    f"Unsupported reference type for '{event_name}' event.",
-                    f"The workflow was triggered by an '{event_name}' event, "
-                    f"but the reference type '{self.context.ref_type}' is not supported.",
-                )
-        elif event_name == "pull_request":
-            if action == WorkflowTriggeringAction.OPENED:
-                self.event_pull_opened()
-            elif action == WorkflowTriggeringAction.REOPENED:
-                self.event_pull_reopened()
-            elif action == WorkflowTriggeringAction.SYNCHRONIZE:
-                self.event_pull_synchronize()
-            elif action == WorkflowTriggeringAction.LABELED:
-                self.event_pull_labeled()
-            else:
-                self.logger.error(action_err_msg, action_err_details)
-        elif event_name == "pull_request_target":
-            if action == WorkflowTriggeringAction.OPENED:
-                self.event_pull_target_opened()
-            elif action == WorkflowTriggeringAction.REOPENED:
-                self.event_pull_target_reopened()
-            elif action == WorkflowTriggeringAction.SYNCHRONIZE:
-                self.event_pull_target_synchronize()
-            else:
-                self.logger.error(action_err_msg, action_err_details)
-        elif event_name == "issue_comment":
-            is_pull = self.context.issue_payload.get("pull_request")
-            if is_pull:
-                if action == WorkflowTriggeringAction.CREATED:
-                    self.event_comment_pull_created()
-                elif action == WorkflowTriggeringAction.EDITED:
-                    self.event_comment_pull_edited()
-                elif action == WorkflowTriggeringAction.DELETED:
-                    self.event_comment_pull_deleted()
-                else:
-                    self.logger.error(action_err_msg, action_err_details)
-            else:
-                if action == WorkflowTriggeringAction.CREATED:
-                    self.event_comment_issue_created()
-                elif action == WorkflowTriggeringAction.EDITED:
-                    self.event_comment_issue_edited()
-                elif action == WorkflowTriggeringAction.DELETED:
-                    self.event_comment_issue_deleted()
-                else:
-                    self.logger.error(action_err_msg, action_err_details)
-        elif event_name == "issues":
-            if action == WorkflowTriggeringAction.OPENED:
-                self.event_issue_opened()
-            elif action == WorkflowTriggeringAction.LABELED:
-                self.event_issue_labeled()
-            else:
-                self.logger.error(action_err_msg, action_err_details)
-        elif event_name == "schedule":
-            cron = self.context.payload["schedule"]
-            if cron == self.metadata_main.workflow__init__schedule__sync:
-                self.event_schedule_sync()
-            elif cron == self.metadata_main.workflow__init__schedule__test:
-                self.event_schedule_test()
-            else:
-                self.logger.error(
-                    f"Unknown cron expression for scheduled workflow: {cron}",
-                    f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-                    f"{self.metadata_main.workflow__init__schedule}",
-                )
-        elif event_name == "workflow_dispatch":
-            self.event_workflow_dispatch()
+        if self._context.github.event_name == "pull_request" and not self._context.payload.internal:
+            self._git_target: Git = Git(
+                path_repo="repo_fork",
+                user=(self._context.payload.sender_username, self._context.payload.sender_email),
+                logger=self._logger,
+            )
         else:
-            self.logger.error(f"Event '{self.context.event_name}' is not supported.")
+            self._git_target = self._git_self
+        self._meta: Meta | None = None
+        self._summary_oneliners: list[str] = []
+        self._summary_sections: list[str | html.ElementCollection | html.Element] = []
+        self._amended: bool = False
+        self._tag: str = ""
+        self._version: str = ""
+        self._failed = False
+        self._hash_latest: str = ""
         return
 
-    def finalize(self):
-        self.logger.h1("Finalization")
-        if self.fail:
-            # Just to be safe, disable publish/deploy/release jobs if fail is True
-            for job_id in (
-                "website_deploy",
-                "package_publish_testpypi",
-                "package_publish_pypi",
-                "github_release",
-            ):
-                self.set_job_run(job_id, False)
-        summary, path_logs = self.assemble_summary()
-        output = self.output
-        output["path_log"] = path_logs
-        return output, None, summary
-
-    def event_push_repository_created(self):
-        self.logger.info("Detected event: repository creation")
-        shutil.rmtree(self.meta_main.input_path.dir_source)
-        shutil.rmtree(self.meta_main.input_path.dir_tests)
-        shutil.rmtree(self.meta_main.input_path.dir_local)
-        for item in self.meta_main.input_path.dir_meta.iterdir():
-            if item.is_dir():
-                if item.name not in ("__examples__", "__new__"):
-                    shutil.rmtree(item)
+    def _action_meta(self, action: InitCheckAction):
+        name = "Meta Sync"
+        self._logger.h1(name)
+        self._logger.input(f"Action: {action.value}")
+        if action == "none":
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="Meta synchronization is disabled for this event type❗",
+            )
+            self._logger.skip("Meta synchronization is disabled for this event type; skip❗")
+            return
+        if action == "pull":
+            pr_branch = self.switch_to_ci_branch("meta")
+        meta_results, meta_changes, meta_summary = self._meta.compare_files()
+        meta_changes_any = any(any(change.values()) for change in meta_changes.values())
+        # Push/amend/pull if changes are made and action is not 'fail' or 'report'
+        if action not in ["fail", "report"] and meta_changes_any:
+            self._meta.apply_changes()
+            if action == "amend":
+                self.commit(stage="all", amend=True, push=True)
             else:
-                item.unlink()
-        path_meta_new = self.meta_main.input_path.dir_meta / "__new__"
-        for item in path_meta_new.iterdir():
-            item.rename(self.meta_main.input_path.dir_meta / item.name)
-        path_meta_new.rmdir()
-        (self.meta_main.input_path.dir_github / ".repodynamics_meta_path.txt").unlink(missing_ok=True)
-        for path_dynamic_file in self.meta_main.output_path.all_files:
-            path_dynamic_file.unlink(missing_ok=True)
-        for changelog_data in self.metadata_main.dict.get("changelog", {}).values():
-            path_changelog_file = self.meta_main.input_path.root / changelog_data["path"]
-            path_changelog_file.unlink(missing_ok=True)
-        with open(self.meta_main.input_path.dir_website / "announcement.html", "w") as f:
-            f.write("")
-        self.commit(
-            message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True
-        )
+                commit_msg = CommitMsg(
+                    typ=self._metadata_main["commit"]["secondary_action"]["meta_sync"]["type"],
+                    title="Sync dynamic files with meta content",
+                )
+                self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == "pull")
+            if action == "pull":
+                pull_data = self._gh_api.pull_create(
+                    head=self._git_self.current_branch_name(),
+                    base=self._context.github.ref_name,
+                    title=commit_msg.summary,
+                    body=commit_msg.body,
+                )
+                self.switch_to_original_branch()
+        if not meta_changes_any:
+            oneliner = "All dynamic files are in sync with meta content."
+            self._logger.success(oneliner)
+        else:
+            oneliner = "Some dynamic files were out of sync with meta content."
+            if action in ["pull", "commit", "amend"]:
+                oneliner += " These were resynchronized and applied to "
+                if action == "pull":
+                    link = html.a(href=pull_data["url"], content=pull_data["number"])
+                    oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
+                else:
+                    link = html.a(
+                        href=str(self._gh_link.commit(self.hash_latest)),
+                        content=self.hash_latest[:7]
+                    )
+                    oneliner += "the current branch " + (
+                        f"in a new commit (hash: {link})"
+                        if action == "commit"
+                        else f"by amending the latest commit (new hash: {link})"
+                    )
         self.add_summary(
-            name="Init",
-            status="pass",
-            oneliner="Repository created from RepoDynamics PyPackIT template.",
+            name=name,
+            status="fail" if meta_changes_any and action in ["fail", "report", "pull"] else "pass",
+            oneliner=oneliner,
+            details=meta_summary
         )
         return
 
-    def check_for_version_tags(self):
-        tags_lists = self.git.get_tags()
-        if not tags_lists:
-            return False, False
-        ver_tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
-        for tags_list in tags_lists:
-            ver_tags = []
-            for tag in tags_list:
-                if tag.startswith(ver_tag_prefix):
-                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
-            if ver_tags:
-                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
-                distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
-                return max_version, distance
-        return
-
-    def event_push_branch_edited_default(self):
-        self.metadata_branch = self.meta_main.read_metadata_full()
-        if not self.tags_on_main:
-            # The repository has just been created from the template
-            head_commit_msg = self.context.push_commit_head_message
-            if head_commit_msg == "init":
-                # User is signaling the end of initialization phase
-                return self.event_first_release()
-            # User is still setting up the repository (still in initialization phase)
-            return self.event_push_branch_modified_default_init_phase()
-        metadata_before = self.git.file_at_hash(
-            commit_hash=self.context.hash_before,
-            path=self.meta_main.output_path.metadata.rel_path
-        )
-        if not metadata_before:
-            return self.event_push_existing_repository_initialized()
-        self.metadata_branch_before = meta.read_from_json_string(
-            content=metadata_before,
-            logger=self.logger
-        )
-        self.event_push_branch_modified_main()
-        return
-
-    def event_push_existing_repository_initialized(self):
-        return
-
-    def event_push_branch_modified_default_init_phase(self):
-        self.metadata_main = self.meta_main.read_metadata_full()
-        self.state = StateManager(
-            metadata_main=self.metadata_main,
-            metadata_branch=self.metadata_main,
-            context_manager=self.context,
-            git=self.git,
-            logger=self.logger,
-        )
-        self._action_repo_config
-        self._action_meta(action=InitCheckAction.AMEND, meta=self.meta_main, state=self.state)
-
-        return
-
-    def event_first_release(self):
-        commit_msg = CommitMsg(
-            typ="init",
-            title="Initialize package and website",
-            body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI.",
-        )
-        self.commit(
-            message=str(commit_msg),
-            amend=True,
-            push=True,
-        )
-        self.state_manager.tag_version(ver="0.0.0", msg="First release")
-
-        self.gh_api_admin.activate_pages("workflow")
-        self.action_repo_settings_sync()
-        self.action_repo_labels_sync(init=True)
-        for job_id in [
-            "package_build",
-            "package_test_local",
-            "package_lint",
-            "website_build",
-            "website_deploy",
-            "package_publish_testpypi",
-            "package_publish_pypi",
-            "package_test_testpypi",
-            "package_test_pypi",
-        ]:
-            self.set_job_run(job_id)
-        return
-
-    def event_push_branch_modified_main(self):
-        self.metadata_branch_before = self.git.file_at_hash(
-            commit_hash=self.hash_before, path=self.meta_main.output_path.metadata.rel_path
-        )
-        self.action_repo_labels_sync()
-
-        self.action_file_change_detector()
-        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
-            self.set_job_run(job_id)
-
-        self.action_meta()
-        self.action_hooks()
-        self.last_ver_main, self.dist_ver_main = self.get_latest_version()
-        commits = self.get_commits()
-        if len(commits) != 1:
-            self.logger.error(
-                f"Push event on main branch should only contain a single commit, but found {len(commits)}.",
-                raise_error=False,
+    def _action_hooks(self, action: InitCheckAction):
+        name = "Workflow Hooks"
+        self._logger.h1(name)
+        self._logger.input(f"Action: {action.value}")
+        if action == "none":
+            self.add_summary(
+                name=name,
+                status="skip",
+                oneliner="Hooks are disabled for this event type❗",
             )
-            self.fail = True
+            self._logger.skip("Hooks are disabled for this event type; skip❗")
             return
-        commit = commits[0]
-        if commit.group_data.group not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
-            self.logger.error(
-                f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
-                raise_error=False,
+        if not self.metadata["workflow"].get("pre_commit"):
+            oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
+            self.fail = True
+            self.add_summary(
+                name=name,
+                status="fail",
+                oneliner=oneliner,
             )
-            self.fail = True
-            return
-        if self.fail:
+            self._logger.error(oneliner, raise_error=False)
             return
 
-        if commit.group_data.group == CommitGroup.PRIMARY_CUSTOM or commit.group_data.action in [
-            PrimaryActionCommitType.WEBSITE,
-            PrimaryActionCommitType.META,
-        ]:
-            ver_dist = f"{self.last_ver_main}+{self.dist_ver_main + 1}"
-            next_ver = None
-        else:
-            next_ver = self.get_next_version(self.last_ver_main, commit.group_data.action)
-            ver_dist = str(next_ver)
-
-        changelog_manager = ChangelogManager(
-            changelog_metadata=self.metadata_main["changelog"],
-            ver_dist=ver_dist,
-            commit_type=commit.group_data.conv_type,
-            commit_title=commit.msg.title,
-            parent_commit_hash=self.hash_before,
-            parent_commit_url=self.gh_link.commit(self.hash_before),
-        )
-        changelog_manager.add_from_commit_body(commit.msg.body)
-        changelog_manager.write_all_changelogs()
-        self.commit(amend=True, push=True)
-
-        if next_ver:
-            self.tag_version(ver=next_ver)
-            for job_id in ("package_publish_testpypi", "package_publish_pypi", "github_release"):
-                self.set_job_run(job_id)
-            self._release_info["body"] = changelog_manager.get_entry("package_public")[0]
-            self._release_info["name"] = f"{self.metadata_main['name']} {next_ver}"
-
-        if commit.group_data.group == CommitGroup.PRIMARY_ACTION:
-            self.set_job_run("website_deploy")
-        return
-
-    def event_push_branch_edited_release(self):
-        self.event_type = EventType.PUSH_RELEASE
-        return
-
-    def event_push_branch_edited_dev(self):
-        self.event_type = EventType.PUSH_DEV
-        self.action_meta()
-        self.action_hooks()
-        return
-
-    def event_push_branch_edited_other(self):
-        self.event_type = EventType.PUSH_OTHER
-        self.action_meta()
-        self.action_hooks()
-        return
-
-    def event_push_branch_deleted(self):
-        return
-
-    def event_comment_pull_created(self):
-        return
-
-    def event_comment_pull_edited(self):
-        return
-
-    def event_comment_pull_deleted(self):
-        return
-
-    def event_comment_issue_created(self):
-        action_err_details = "The workflow was triggered by a comment on " + (
-            "a pull request ('issue_comment' event with 'pull_request' payload)"
-            if is_pull else "an issue ('issue_comment' event without 'pull_request' payload)"
-        ) + f", {action_err_details_sub}"
-        return
-
-    def event_comment_issue_edited(self):
-        return
-
-    def event_comment_issue_deleted(self):
-        return
-
-    def event_issue_opened(self):
-        return
-
-    def event_issue_labeled(self):
-        label = self.context.payload["label"]["name"]
-        if label.startswith(self.metadata_main.dict["label"]["group"]["status"]["prefix"]):
-            status = self.metadata_main.get_issue_status_from_status_label(label)
-            if status == IssueStatus.IN_DEV:
-                target_label_prefix = self.metadata_main["label"]["auto_group"]["target"]["prefix"]
-                dev_branch_prefix = self.metadata_main["branch"]["group"]["dev"]["prefix"]
-                branches = self.gh_api.branches
-                branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
-                for issue_label in self.issue_labels:
-                    if issue_label["name"].startswith(target_label_prefix):
-                        base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
-                        if base_branch_name.startswith(dev_branch_prefix):
-                            pass
-                        else:
-                            new_branch = self.gh_api.branch_create_linked(
-                                issue_id=self.issue_payload["node_id"],
-                                base_sha=branch_sha[base_branch_name],
-                                name=f"{dev_branch_prefix}{self.issue_number}/{base_branch_name}",
-                            )
-                            pull_data = self.gh_api.pull_create(
-                                head=new_branch["name"],
-                                base=base_branch_name,
-                                title=self.issue_title,
-                                body=f"This is a draft pull request for the issue #{self.issue_number}.",
-                                maintainer_can_modify=True,
-                                draft=True
-                            )
-                            self.gh_api.issue_labels_set(
-                                number=pull_data["number"],
-                                labels=[label["name"] for label in self.issue_labels]
-                            )
-        return
-
-    def event_pull_opened(self):
-        return
-
-    def event_pull_reopened(self):
-        return
-
-    def event_pull_synchronize(self):
-        return
-
-    def event_pull_labeled(self):
-        return
-
-    def event_pull_target_opened(self):
-        return
-
-    def event_pull_target_reopened(self):
-        return
-
-    def event_pull_target_synchronize(self):
-        return
-
-    def event_push_tag_created(self):
-        return
-
-    def event_push_tag_deleted(self):
-        return
-
-    def event_push_tag_edited(self):
-        return
-
-    def event_workflow_dispatch(self):
-        if self.context.ref_is_main:
-            self.state
-        self.action_website_announcement_update()
-        self._action_meta(action=self._dispatch_inputs.meta)
-        self.action_hooks()
-        return
-
-    def event_pull_request(self):
-        self.event_type = EventType.PULL_MAIN
-        branch = self.resolve_branch(self.pull_head_ref_name)
-        if branch.type == BranchType.DEV and branch.suffix == 0:
-            return
-        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
-            self.set_job_run(job_id)
-        self.git.checkout(branch=self.pull_base_ref_name)
-        latest_base_hash = self.git.commit_hash_normal()
-        base_ver, dist = self.get_latest_version()
-        self.git.checkout(branch=self.pull_head_ref_name)
-
-        self.action_file_change_detector()
-        self.action_meta()
-        self.action_hooks()
-
-        branch = self.resolve_branch(self.pull_head_ref_name)
-        issue_labels = [label["name"] for label in self.gh_api.issue_labels(number=branch.suffix)]
-        issue_data = self.metadata_main.get_issue_data_from_labels(issue_labels)
-
-        if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
-            PrimaryActionCommitType.WEBSITE,
-            PrimaryActionCommitType.META,
-        ]:
-            ver_dist = f"{base_ver}+{dist+1}"
-        else:
-            ver_dist = str(self.get_next_version(base_ver, issue_data.group_data.action))
-
-        changelog_manager = ChangelogManager(
-            changelog_metadata=self.metadata_main["changelog"],
-            ver_dist=ver_dist,
-            commit_type=issue_data.group_data.conv_type,
-            commit_title=self.pull_title,
-            parent_commit_hash=latest_base_hash,
-            parent_commit_url=self.gh_link.commit(latest_base_hash),
-            logger=self.logger,
-        )
-
-        commits = self.get_commits()
-        self.logger.success(f"Found {len(commits)} commits.")
-        for commit in commits:
-            self.logger.info(f"Processing commit: {commit}")
-            if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
-                changelog_manager.add_change(
-                    changelog_id=commit.group_data.changelog_id,
-                    section_id=commit.group_data.changelog_section_id,
-                    change_title=commit.msg.title,
-                    change_details=commit.msg.body,
+        if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
+            for result in self.meta_results:
+                if result[0].id == "pre-commit-config":
+                    config = result[1].after
+                    self._logger.success(
+                        "Load pre-commit config from metadata.",
+                        "The pre-commit config had been changed in this event, and thus "
+                        "the current config file was not valid anymore.",
+                    )
+                    break
+            else:
+                self._logger.error(
+                    "Could not find pre-commit-config in meta results.",
+                    "This is an internal error that should not happen; please report it on GitHub.",
                 )
-        entries = changelog_manager.get_all_entries()
-        self.logger.success(f"Found {len(entries)} changelog entries.", str(entries))
-        curr_body = self.pull_body.strip() if self.pull_body else ""
-        if curr_body:
-            curr_body += "\n\n"
-        for entry, changelog_name in entries:
-            curr_body += f"# Changelog: {changelog_name}\n\n{entry}\n\n"
-        self.gh_api.pull_update(
-            number=self.pull_number,
-            title=f"{issue_data.group_data.conv_type}: {self.pull_title.removeprefix(f'{issue_data.group_data.conv_type}: ')}",
-            body=curr_body,
+        else:
+            config = self.meta.paths.pre_commit_config.path
+        if action == "pull":
+            pr_branch = self.switch_to_ci_branch("hooks")
+        input_action = (
+            action if action in ["report", "amend", "commit"] else ("report" if action == "fail" else "commit")
+        )
+        commit_msg = (
+            CommitMsg(
+                typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
+                title="Apply automatic fixes made by workflow hooks",
+            )
+            if action in ["commit", "pull"]
+            else ""
+        )
+        hooks_output = hook.run(
+            ref_range=(self.hash_before, self.hash_after),
+            action=input_action,
+            commit_message=str(commit_msg),
+            config=config,
+            git=self.git,
+            logger=self._logger,
+        )
+        passed = hooks_output["passed"]
+        modified = hooks_output["modified"]
+        # Push/amend/pull if changes are made and action is not 'fail' or 'report'
+        if action not in ["fail", "report"] and modified:
+            self.push(amend=action == "amend", set_upstream=action == "pull")
+            if action == "pull":
+                pull_data = self.api.pull_create(
+                    head=self.git.current_branch_name(),
+                    base=self.ref_name,
+                    title=commit_msg.summary,
+                    body=commit_msg.body,
+                )
+                self.switch_to_original_branch()
+        if not passed or (action == "pull" and modified):
+            self.fail = True
+            status = "fail"
+        else:
+            status = "pass"
+        if action == "pull" and modified:
+            link = html.a(href=pull_data["url"], content=pull_data["number"])
+            target = f"branch '{pr_branch}' and a pull request ({link}) was created"
+        if action in ["commit", "amend"] and modified:
+            link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
+            target = "the current branch " + (
+                f"in a new commit (hash: {link})"
+                if action == "commit"
+                else f"by amending the latest commit (new hash: {link})"
+            )
+        if passed:
+            oneliner = (
+                "All hooks passed without making any modifications."
+                if not modified
+                else (
+                    "All hooks passed in the second run. "
+                    f"The modifications made during the first run were applied to {target}."
+                )
+            )
+        elif action in ["fail", "report"]:
+            mode = "some failures were auto-fixable" if modified else "failures were not auto-fixable"
+            oneliner = f"Some hooks failed ({mode})."
+        elif modified:
+            oneliner = (
+                "Some hooks failed even after the second run. "
+                f"The modifications made during the first run were still applied to {target}."
+            )
+        else:
+            oneliner = "Some hooks failed (failures were not auto-fixable)."
+        self.add_summary(name=name, status=status, oneliner=oneliner, details=hooks_output["summary"])
+        return
+
+    def commit(
+        self,
+        message: str = "",
+        stage: Literal["all", "staged", "unstaged"] = "all",
+        amend: bool = False,
+        push: bool = False,
+        set_upstream: bool = False,
+    ):
+        commit_hash = self._git_self.commit(message=message, stage=stage, amend=amend)
+        if amend:
+            self._amended = True
+        if push:
+            commit_hash = self.push(set_upstream=set_upstream)
+        return commit_hash
+
+    def push(self, amend: bool = False, set_upstream: bool = False):
+        new_hash = self._git_self.push(
+            target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
+        )
+        self._amended = False
+        if new_hash and self._git_self.current_branch_name() == self._context.github.ref_name:
+            self._hash_latest = new_hash
+        return new_hash
+
+    def tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
+        tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
+        tag = f"{tag_prefix}{ver}"
+        if not msg:
+            msg = f"Release version {ver}"
+        self._git_self.create_tag(tag=tag, message=msg)
+        self._tag = tag
+        self._version = str(ver)
+        return
+
+    def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
+        current_branch = self._git_self.current_branch_name()
+        new_branch_prefix = self._metadata_main.branch__group["ci_pull"]["prefix"]
+        new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
+        self._git_self.checkout(branch=new_branch_name, reset=True)
+        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
+        return new_branch_name
+
+    def switch_to_original_branch(self):
+        self._git_self.checkout(branch=self._context.github.ref_name)
+        return
+
+    @property
+    def hash_latest(self) -> str:
+        """The SHA hash of the most recent commit on the branch,
+        including commits made during the workflow run.
+        """
+        return self._hash_latest if self._hash_latest else self._context.hash_after
+
+    def add_summary(
+        self,
+        name: str,
+        status: Literal["pass", "fail", "skip", "warning"],
+        oneliner: str,
+        details: str | html.Element | html.ElementCollection | None = None,
+    ):
+        if status == "fail":
+            self._failed = True
+        self._summary_oneliners.append(f"{Emoji[status]}&nbsp;<b>{name}</b>: {oneliner}")
+        if details:
+            self._summary_sections.append(f"<h2>{name}</h2>\n\n{details}\n\n")
+        return
+
+    def create_output(
+        self,
+        metadata: MetaManager,
+        run_package_build: bool = False,
+        run_package_lint: bool = False,
+        run_package_test_local: bool = False,
+        run_website_build: bool = False,
+        run_website_deploy: bool = False,
+        run_website_rtd_preview: bool = False,
+        run_package_publish_testpypi: bool = False,
+        run_package_publish_pypi: bool = False,
+        run_package_test_testpypi: bool = False,
+        run_package_test_pypi: bool = False,
+        run_github_release: bool = False,
+        version: str | PEP440SemVer = "",
+        failed: bool = False,
+    ):
+        package = metadata.package
+        package_name = package.get("name", "")
+        out = {
+            "config": {
+                "fail": failed,
+                "checkout": {
+                    "ref": self.hash_latest,
+                    "ref_before": self._context.hash_before,
+                    "repository": self._context.target_repo_fullname,
+                },
+                "run": {
+                    "package_build": run_package_build,
+                    "package_test_local": run_package_test_local,
+                    "package_lint": run_package_lint,
+                    "website_build": run_website_build,
+                    "website_deploy": run_website_deploy,
+                    "website_rtd_preview": run_website_rtd_preview,
+                    "package_publish_testpypi": run_package_publish_testpypi,
+                    "package_publish_pypi": run_package_publish_pypi,
+                    "package_test_testpypi": run_package_test_testpypi or run_package_publish_testpypi,
+                    "package_test_pypi": run_package_test_pypi or run_package_publish_pypi,
+                    "github_release": run_github_release,
+                },
+                "package": {
+                    "version": self._version or version,
+                    "upload_url_testpypi": "https://test.pypi.org/legacy/",
+                    "upload_url_pypi": "https://upload.pypi.org/legacy/",
+                    "download_url_testpypi": f"https://test.pypi.org/project/{package_name}/{self._version}",
+                    "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
+                },
+                "release": {
+                    "name": "",
+                    "body": "",
+                    "prerelease": False,
+                    "make_latest": "legacy",
+                    "tag_name": self._tag,
+                    "discussion_category_name": "",
+                },
+            },
+            "metadata_ci": {
+                "path": metadata["path"],
+                "web": {
+                    "readthedocs": {"name": metadata["web"].get("readthedocs", {}).get("name")},
+                },
+                "url": {"website": {"base": metadata["url"]["website"]["base"]}},
+                "package": {
+                    "name": package_name,
+                    "github_runners": package.get("github_runners", []),
+                    "python_versions": package.get("python_versions", []),
+                    "python_version_max": package.get("python_version_max", ""),
+                    "pure_python": package.get("pure_python", True),
+                    "cibw_matrix_platform": package.get("cibw_matrix_platform", []),
+                    "cibw_matrix_python": package.get("cibw_matrix_python", []),
+                }
+            },
+        }
+
+    def assemble_summary(self) -> tuple[str, str]:
+        github_context, event_payload = (
+            html.details(content=md.code_block(str(data), lang="yaml"), summary=summary)
+            for data, summary in (
+                (self._context.github, "🎬 GitHub Context"),
+                (self._context.payload, "📥 Event Payload")
+            )
+        )
+        intro = [
+            f"{Emoji.PLAY} The workflow was triggered by a <code>{self._context.event_name}</code> event."
+        ]
+        if self._failed:
+            intro.append(f"{Emoji.FAIL} The workflow failed.")
+        else:
+            intro.append(f"{Emoji.PASS} The workflow passed.")
+        intro = html.ul(intro)
+        summary = html.ElementCollection(
+            [
+                html.h(1, "Workflow Report"),
+                intro,
+                html.ul([github_context, event_payload]),
+                html.h(2, "🏁 Summary"),
+                html.ul(self._summary_oneliners),
+            ]
+        )
+        logs = html.ElementCollection(
+            [
+                html.h(2, "🪵 Logs"),
+                html.details(self._logger.file_log, "Log"),
+            ]
+        )
+        summaries = html.ElementCollection(self._summary_sections)
+        path_logs = self._meta_main.input_path.dir_local_report_repodynamics
+        path_logs.mkdir(parents=True, exist_ok=True)
+        with open(path_logs / "log.html", "w") as f:
+            f.write(str(logs))
+        with open(path_logs / "report.html", "w") as f:
+            f.write(str(summaries))
+        return str(summary), str(path_logs)
+
+    def resolve_branch(self, branch_name: str | None = None) -> Branch:
+        if not branch_name:
+            branch_name = self._context.github.ref_name
+        if branch_name == self._context.payload.repository_default_branch:
+            return Branch(type=BranchType.DEFAULT)
+        return self._metadata.get_branch_info_from_name(branch_name=branch_name)
+
+
+class NonModifyingEventHandler(EventHandler):
+
+    def __init__(
+        self,
+        context_manager: ContextManager,
+        admin_token: str,
+        logger: Logger | None = None
+    ):
+        super().__init__(
+            context_manager=context_manager,
+            admin_token=admin_token,
+            metadata_main=meta.read_from_json_file(path_root="repo_self", logger=logger),
+            logger=logger
         )
         return
 
-    def event_pull_request_target(self):
-        self.set_job_run("website_rtd_preview")
+
+class ModifyingEventHandler(EventHandler):
+
+    def __init__(
+        self,
+        context_manager: ContextManager,
+        admin_token: str,
+        logger: Logger | None = None
+    ):
+        super().__init__(
+            context_manager=context_manager,
+            admin_token=admin_token,
+            logger=logger
+        )
         return
 
-    def event_schedule_sync(self):
-        self.event_type = EventType.SCHEDULE
-        self.action_website_announcement_check()
-        self.action_meta()
-        return
-
-    def event_schedule_test(self):
-        self.event_type = EventType.SCHEDULE
-        return
-
-    def event_issues_opened(self):
-        self.gh_api.issue_comment_create(number=self.issue_number, body="This post tracks the issue.")
-        self.action_post_process_issue()
-
-        return
+    def _action_file_change_detector(self) -> dict[RepoFileType, list[str]]:
+        name = "File Change Detector"
+        self._logger.h1(name)
+        change_type_map = {
+            "added": FileChangeType.CREATED,
+            "deleted": FileChangeType.REMOVED,
+            "modified": FileChangeType.MODIFIED,
+            "unmerged": FileChangeType.UNMERGED,
+            "unknown": FileChangeType.UNKNOWN,
+            "broken": FileChangeType.BROKEN,
+            "copied_to": FileChangeType.CREATED,
+            "renamed_from": FileChangeType.REMOVED,
+            "renamed_to": FileChangeType.CREATED,
+            "copied_modified_to": FileChangeType.CREATED,
+            "renamed_modified_from": FileChangeType.REMOVED,
+            "renamed_modified_to": FileChangeType.CREATED,
+        }
+        summary_detail = {file_type: [] for file_type in RepoFileType}
+        change_group = {file_type: [] for file_type in RepoFileType}
+        changes = self._git_target.changed_files(
+            ref_start=self._context.hash_before, ref_end=self._context.hash_after
+        )
+        self._logger.success("Detected changed files", json.dumps(changes, indent=3))
+        fixed_paths = [outfile.rel_path for outfile in self._meta.paths.fixed_files]
+        for change_type, changed_paths in changes.items():
+            # if change_type in ["unknown", "broken"]:
+            #     self.logger.warning(
+            #         f"Found {change_type} files",
+            #         f"Running 'git diff' revealed {change_type} changes at: {changed_paths}. "
+            #         "These files will be ignored."
+            #     )
+            #     continue
+            if change_type.startswith("copied") and change_type.endswith("from"):
+                continue
+            for path in changed_paths:
+                if path == "README.md" or path == ".github/_README.md" or path.endswith("/README.md"):
+                    typ = RepoFileType.README
+                elif path.startswith(self._meta.paths.dir_source_rel):
+                    typ = RepoFileType.PACKAGE
+                elif path in fixed_paths:
+                    typ = RepoFileType.DYNAMIC
+                elif path.startswith(self._meta.paths.dir_website_rel):
+                    typ = RepoFileType.WEBSITE
+                elif path.startswith(self._meta.paths.dir_tests_rel):
+                    typ = RepoFileType.TEST
+                elif path.startswith(RelativePath.dir_github_workflows):
+                    typ = RepoFileType.WORKFLOW
+                elif (
+                    path.startswith(RelativePath.dir_github_discussion_template)
+                    or path.startswith(RelativePath.dir_github_issue_template)
+                    or path.startswith(RelativePath.dir_github_pull_request_template)
+                    or path.startswith(RelativePath.dir_github_workflow_requirements)
+                ):
+                    typ = RepoFileType.DYNAMIC
+                elif path == RelativePath.file_path_meta:
+                    typ = RepoFileType.SUPERMETA
+                elif path == f"{self._meta.paths.dir_meta_rel}paths.yaml":
+                    typ = RepoFileType.SUPERMETA
+                elif path.startswith(self._meta.paths.dir_meta_rel):
+                    typ = RepoFileType.META
+                else:
+                    typ = RepoFileType.OTHER
+                summary_detail[typ].append(f"{change_type_map[change_type].value.emoji} {path}")
+                change_group[typ].append(path)
+        summary_details = []
+        changed_groups_str = ""
+        for file_type, summaries in summary_detail.items():
+            if summaries:
+                summary_details.append(html.h(3, file_type.value.title))
+                summary_details.append(html.ul(summaries))
+                changed_groups_str += f", {file_type.value}"
+        if changed_groups_str:
+            oneliner = f"Found changes in following groups: {changed_groups_str[2:]}."
+            if summary_detail[RepoFileType.SUPERMETA]:
+                oneliner = (
+                    f"This event modified SuperMeta files; "
+                    f"make sure to double-check that everything is correct❗ {oneliner}"
+                )
+        else:
+            oneliner = "No changes were found."
+        legend = [f"{status.value.emoji}  {status.value.title}" for status in FileChangeType]
+        color_legend = html.details(content=html.ul(legend), summary="Color Legend")
+        summary_details.insert(0, html.ul([oneliner, color_legend]))
+        self.add_summary(
+            name=name,
+            status="warning"
+            if summary_detail[RepoFileType.SUPERMETA]
+            else ("pass" if changed_groups_str else "skip"),
+            oneliner=oneliner,
+            details=html.ElementCollection(summary_details),
+        )
+        return change_group
 
     def get_commits(self) -> list[Commit]:
         # primary_action = {}
@@ -665,8 +608,8 @@ class Init:
         #     + list(self.metadata["commit"]["secondary_custom"].keys())
         # )
         commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
-        self.logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(types=self.metadata_main.get_all_conventional_commit_types(), logger=self.logger)
+        self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
+        parser = CommitParser(types=self.metadata_main.get_all_conventional_commit_types(), logger=self._logger)
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
@@ -689,6 +632,63 @@ class Init:
             # else:
             #     parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
         return parsed_commits
+
+
+
+
+class Init:
+
+    def __init__(
+        self,
+        context: dict,
+        admin_token: str,
+        logger: Logger | None = None,
+    ):
+        self.state: StateManager | None = None
+        self.metadata_branch: dict = {}
+        self.metadata_branch_before: dict = {}
+        self.changed_files: dict[RepoFileType, list[str]] = {}
+        return
+
+    def run(self):
+        self.run_event()
+        return self.finalize()
+
+    def run_event(self) -> None:
+        self.logger.h2("Analyze Triggering Event")
+        return
+
+    def finalize(self):
+        self.logger.h1("Finalization")
+        if self.fail:
+            # Just to be safe, disable publish/deploy/release jobs if fail is True
+            for job_id in (
+                "website_deploy",
+                "package_publish_testpypi",
+                "package_publish_pypi",
+                "github_release",
+            ):
+                self.set_job_run(job_id, False)
+        summary, path_logs = self.assemble_summary()
+        output = self.output
+        output["path_log"] = path_logs
+        return output, None, summary
+
+    def check_for_version_tags(self):
+        tags_lists = self.git.get_tags()
+        if not tags_lists:
+            return False, False
+        ver_tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
+        for tags_list in tags_lists:
+            ver_tags = []
+            for tag in tags_list:
+                if tag.startswith(ver_tag_prefix):
+                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
+            if ver_tags:
+                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
+                distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
+                return max_version, distance
+        return
 
     def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
         tags_lists = self.git.get_tags()
@@ -716,13 +716,6 @@ class Init:
             out[label] = label_dict[label]
         return out
 
-    def resolve_branch(self, branch_name: str | None = None) -> Branch:
-        if not branch_name:
-            branch_name = self.context.ref_name
-        if branch_name == self.context.default_branch:
-            return Branch(type=BranchType.DEFAULT)
-        return self.metadata_main.get_branch_info_from_name(branch_name=branch_name)
-
     @staticmethod
     def get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
         if action == PrimaryActionCommitType.PACKAGE_MAJOR:
@@ -749,25 +742,36 @@ def init(
     website_announcement_msg: str = "",
     logger=None,
 ):
-    for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):
-        if arg not in ["report", "amend", "commit", "pull", "none", ""]:
-            raise ValueError(
-                f"Invalid input argument for '{arg_name}': "
-                f"Expected one of 'report', 'amend', 'commit', 'pull', or 'none', but got '{arg}'."
-            )
-    dispatch_inputs = WorkflowDispatchInput(
-        package_build=package_build,
-        package_lint=package_lint,
-        package_test=package_test,
-        website_build=website_build,
-        meta=InitCheckAction(meta_sync or "none"),
-        hooks=InitCheckAction(hooks or "none"),
-        website_announcement=website_announcement,
-        website_announcement_msg=website_announcement_msg,
-    )
-    return Init(
-        context=context,
-        admin_token=admin_token,
-        dispatch_inputs=dispatch_inputs,
-        logger=logger,
-    ).run()
+    context_manager = ContextManager(github_context=context)
+    event_name = context_manager.github.event_name
+    if event_name == "issues":
+        event_manager = IssuesEventHandler(context_manager=context_manager)
+    elif event_name == "issue_comment":
+        event_manager = IssueCommentEventHandler(context_manager=context_manager)
+    elif event_name == "pull_request":
+        event_manager = PullRequestEventHandler(context_manager=context_manager)
+    elif event_name == "pull_request_target":
+        event_manager = PullRequestTargetEventHandler(context_manager=context_manager)
+    elif event_name == "push":
+        event_manager = PushEventHandler(
+            context_manager=context_manager,
+            admin_token=admin_token,
+            logger=logger,
+        )
+    elif event_name == "schedule":
+        event_manager = ScheduleEventHandler(context_manager=context_manager)
+    elif event_name == "workflow_dispatch":
+        event_manager = WorkflowDispatchEventHandler(
+            context_manager=context_manager,
+            package_build=package_build,
+            package_lint=package_lint,
+            package_test=package_test,
+            website_build=website_build,
+            meta_sync=meta_sync,
+            hooks=hooks,
+            website_announcement=website_announcement,
+            website_announcement_msg=website_announcement_msg,
+        )
+    else:
+        logger.error(f"Event '{event_name}' is not supported.")
+    return event_manager.run()
