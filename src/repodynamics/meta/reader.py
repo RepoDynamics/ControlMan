@@ -12,21 +12,21 @@ from pylinks import api
 from pylinks.http import WebAPIPersistentStatusCodeError
 from repodynamics import _util
 from repodynamics.logger import Logger
-from repodynamics.path import InputPath
+from repodynamics.path import PathFinder
 import tomlkit
 
 
 class MetaReader:
-    def __init__(self, input_path: InputPath, github_token: Optional[str] = None, logger: Logger = None):
+    def __init__(self, paths: PathFinder, github_token: Optional[str] = None, logger: Logger = None):
         self.logger = logger or Logger()
         self.logger.h2("Process Meta Source Files")
         self._github_token = github_token
-        self._input_path = input_path
+        self._pathfinder = paths
         self._local_config = self._get_local_config()
 
         self._extensions, self._path_extensions = self._read_extensions()
         self._metadata: dict = self._read_raw_metadata()
-        self._metadata["path"] = self._input_path.paths
+        self._metadata["path"] = self._pathfinder.paths_dict
         self._metadata["path"]["file"] = {
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
         }
@@ -83,14 +83,16 @@ class MetaReader:
         return
 
     def cache_save(self):
-        with open(self._input_path.local_api_cache, "w") as f:
+        path = self._pathfinder.file_local_api_cache
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
             YAML(typ="safe").dump(self._cache, f)
-        self.logger.success(f"Cache file saved at {self._input_path.local_api_cache}.")
+        self.logger.success(f"Cache file saved at {self._pathfinder.file_local_api_cache}.")
         return
 
     def _read_extensions(self) -> tuple[dict, Path | None]:
         extensions = _util.dict.read(
-            path=self._input_path.meta_core_extensions,
+            path=self._pathfinder.file_meta_core_extensions,
             schema=self._get_schema("extensions"),
             logger=self.logger,
         )
@@ -110,13 +112,13 @@ class MetaReader:
             r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
             r"([a-fA-F0-9]{32})$"
         )
-        new_path = self._input_path.dir_local_meta_extensions / f"{self._now}__{hash}"
-        if not self._input_path.dir_local_meta_extensions.is_dir():
+        new_path = self._pathfinder.dir_local_meta_extensions / f"{self._now}__{hash}"
+        if not self._pathfinder.dir_local_meta_extensions.is_dir():
             self.logger.info(
-                f"Local extensions directory not found at '{self._input_path.dir_local_meta_extensions}'."
+                f"Local extensions directory not found at '{self._pathfinder.dir_local_meta_extensions}'."
             )
             return new_path, False
-        for path in self._input_path.dir_local_meta_extensions.iterdir():
+        for path in self._pathfinder.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
                 if match and match.group(2) == hash and not self._is_expired(match.group(1), typ="extensions"):
@@ -127,8 +129,8 @@ class MetaReader:
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
         self.logger.h3("Download Meta Extensions")
-        self._input_path.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
-        _util.file.delete_dir_content(self._input_path.dir_local_meta_extensions, exclude=["README.md"])
+        self._pathfinder.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
+        _util.file.delete_dir_content(self._pathfinder.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
             self.logger.h4(f"Download Extension {idx + 1}")
             self.logger.info(f"Input: {extension}")
@@ -166,21 +168,21 @@ class MetaReader:
 
     def _initialize_api_cache(self):
         self.logger.h3("Initialize Cache")
-        if not self._input_path.local_api_cache.is_file():
-            self.logger.info(f"API cache file not found at '{self._input_path.local_api_cache}'.")
+        if not self._pathfinder.file_local_api_cache.is_file():
+            self.logger.info(f"API cache file not found at '{self._pathfinder.file_local_api_cache}'.")
             cache = {}
             return cache
-        cache = self._read_datafile(self._input_path.local_api_cache)
+        cache = self._read_datafile(self._pathfinder.file_local_api_cache)
         self.logger.success(
-            f"API cache loaded from '{self._input_path.local_api_cache}'", json.dumps(cache, indent=3)
+            f"API cache loaded from '{self._pathfinder.file_local_api_cache}'", json.dumps(cache, indent=3)
         )
         return cache
 
     def _get_local_config(self):
         self.logger.h3("Read Local Config")
         source_path = (
-            self._input_path.local_config if self._input_path.local_config.is_file()
-            else self._input_path.dir_meta / "config.yaml"
+            self._pathfinder.file_local_config if self._pathfinder.file_local_config.is_file()
+            else self._pathfinder.dir_meta / "config.yaml"
         )
         local_config = self._read_datafile(
             source=source_path,
@@ -233,7 +235,7 @@ class MetaReader:
         return build
 
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
-        section = self._read_datafile(self._input_path.dir_meta / f"{rel_path}.{ext}")
+        section = self._read_datafile(self._pathfinder.dir_meta / f"{rel_path}.{ext}")
         for idx, extension in enumerate(self._extensions["extensions"]):
             if extension["type"] == rel_path:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
@@ -263,7 +265,7 @@ class MetaReader:
                 )
             return config
 
-        toml_dict = read_package_toml(self._input_path.dir_meta)
+        toml_dict = read_package_toml(self._pathfinder.dir_meta)
         for idx, extension in enumerate(self._extensions["extensions"]):
             if extension["type"] == "package/tools":
                 extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
