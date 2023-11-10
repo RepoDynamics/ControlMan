@@ -102,7 +102,7 @@ class ReadmeFileGenerator:
         )
 
     def body(self):
-        data = self._metadata["readme"]["body"]
+        data = self._metadata["readme"]["repo"]["body"]
         return html.DIV(content=[getattr(self, f'{section["id"]}')(section) for section in data])
 
     def footer(self):
@@ -131,7 +131,7 @@ class ReadmeFileGenerator:
         return elements
 
     def logo(self) -> html.A:
-        style = self._metadata["readme"]["header"]["style"]
+        style = self._metadata["readme"]["repo"]["header"]["style"]
         url = f"{self._metadata['path']['dir']['meta']}/ui/logo/full_{{}}.svg"
         picture_tag = html.PICTURE(
             img=html.IMG(
@@ -148,7 +148,7 @@ class ReadmeFileGenerator:
             ],
         )
         logo = html.A(href=self._metadata["url"]["website"]["home"], content=[picture_tag])
-        if self._metadata["readme"]["header"]["style"] == "horizontal":
+        if self._metadata["readme"]["repo"]["header"]["style"] == "horizontal":
             logo.content.elements.append(self.spacer(width="10px", height="300px", align="left"))
         return logo
 
@@ -193,7 +193,7 @@ class ReadmeFileGenerator:
         def get_bottom_data():
             return [
                 {"text": item["title"], "link": item["path"]}
-                for group in self._metadata.get("web", {}).get("quicklinks")
+                for group in self._metadata["web"].get("quicklinks")
                 for item in group
                 if item.get("include_in_readme")
             ]
@@ -230,7 +230,7 @@ class ReadmeFileGenerator:
         ]
         menu_bottom.content.elements.insert(0, html.HR(width="100%"))
         menu_bottom.content.elements.append(html.HR(width="80%"))
-        if self._metadata["readme"]["header"]["style"] == "vertical":
+        if self._metadata["readme"]["repo"]["header"]["style"] == "vertical":
             menu_top.content.elements.insert(0, html.HR(width="80%"))
             menu_top.content.elements.append(html.HR(width="100%"))
         else:
