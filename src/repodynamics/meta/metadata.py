@@ -24,6 +24,7 @@ class MetadataGenerator:
         reader: MetaReader,
         output_path: PathFinder,
         hash_before: str = "",
+        future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
         if not isinstance(reader, MetaReader):
@@ -34,6 +35,7 @@ class MetadataGenerator:
         self._output_path = output_path
         self._logger.h3("Detect Git Repository")
         self._hash_before = hash_before
+        self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
         self._metadata["repo"] |= self._repo()
@@ -541,9 +543,6 @@ class MetadataGenerator:
 
     def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
         self._logger.h3("Process metadata: package.releases")
-        ver_tag_prefix = self._metadata["tag"]["group"]["version"]["prefix"]
-        self._git.fetch_all_remote_branches()
-        curr_branch, other_branches = self._git.get_all_branch_names()
         if self._hash_before:
             metadata_old_text = self._git.file_at_hash(
                 commit_hash=self._hash_before, path=self._output_path.metadata.rel_path
@@ -551,25 +550,29 @@ class MetadataGenerator:
             source = json.loads(metadata_old_text)
         else:
             source = self._metadata
-        release_prefix, dev_prefix = allowed_prefixes = tuple(
-            source["branch"]["group"][group_name]["prefix"] for group_name in ["release", "dev"]
+        release_prefix, pre_release_prefix = allowed_prefixes = tuple(
+            source["branch"]["group"][group_name]["prefix"] for group_name in ["release", "pre_release"]
         )
         main_branch_name = source["branch"]["default"]["name"]
-        release_branch = {}
-        main_branch = {}
-        dev_branch = []
+        branch_pattern = re.compile(rf"^({release_prefix}|{pre_release_prefix}|{main_branch_name})")
+        releases: list[dict] = []
+        self._git.fetch_remote_branches_by_pattern(branch_pattern=branch_pattern)
+        curr_branch, other_branches = self._git.get_all_branch_names()
+        ver_tag_prefix = source["tag"]["group"]["version"]["prefix"]
+        branches = other_branches + [curr_branch]
         self._git.stash()
-        for branch in other_branches:
+        for branch in branches:
             if not (branch.startswith(allowed_prefixes) or branch == main_branch_name):
                 continue
             self._git.checkout(branch)
-            ver = self._get_latest_package_version(ver_tag_prefix)
-            if not (ver and ver.release_type != "dev"):
+            if self._future_versions.get(branch):
+                ver = PEP440SemVer(str(self._future_versions[branch]))
+            else:
+                ver = self._git.get_latest_version(tag_prefix=ver_tag_prefix)
+            if not ver:
+                self._logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
-            if branch.startswith(dev_prefix) and ver.is_final_like:
-                # This is a dev branch that has no new pre-release versions since branching
-                continue
-            branch_metadata = _util.dict.read(self._output_path.metadata.path)
+            branch_metadata = _util.dict.read(self._output_path.metadata.path) if branch != curr_branch else self._metadata
             if not branch_metadata:
                 self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
                 continue
@@ -585,8 +588,8 @@ class MetadataGenerator:
                 new_prefix = self._metadata["branch"]["group"]["release"]["prefix"]
                 branch_name = f"{new_prefix}{branch.removeprefix(release_prefix)}"
             else:
-                new_prefix = self._metadata["branch"]["group"]["dev"]["prefix"]
-                branch_name = f"{new_prefix}{branch.removeprefix(dev_prefix)}"
+                new_prefix = self._metadata["branch"]["group"]["pre_release"]["prefix"]
+                branch_name = f"{new_prefix}{branch.removeprefix(pre_release_prefix)}"
             release_info = {
                 "branch": branch_name,
                 "version": str(ver),
@@ -600,96 +603,9 @@ class MetadataGenerator:
                     script["name"] for script in branch_metadata["package"].get("gui_scripts", [])
                 ],
             }
-            if branch == main_branch_name:
-                main_branch = release_info
-            elif branch.startswith(release_prefix):
-                release_branch[int(branch.removeprefix(release_prefix))] = release_info
-            elif branch.startswith(dev_prefix):
-                dev_branch.append(release_info)
+            releases.append(release_info)
         self._git.checkout(curr_branch)
         self._git.stash_pop()
-        if curr_branch == main_branch_name or curr_branch.startswith(release_prefix):
-            ver = self._get_latest_package_version(ver_tag_prefix)
-            if ver:
-                if curr_branch == main_branch_name:
-                    branch_name = self._metadata["branch"]["default"]["name"]
-                elif curr_branch.startswith(release_prefix):
-                    new_prefix = self._metadata["branch"]["group"]["release"]["prefix"]
-                    branch_name = f"{new_prefix}{curr_branch.removeprefix(release_prefix)}"
-                release_info = {
-                    "branch": branch_name,
-                    "version": str(ver),
-                    "python_versions": self._metadata["package"]["python_versions"],
-                    "os_titles": self._metadata["package"]["os_titles"],
-                    "package_managers": ["pip"]
-                    + (["conda"] if self._metadata["package"].get("conda") else []),
-                    "cli_scripts": [
-                        script["name"] for script in self._metadata["package"].get("cli_scripts", [])
-                    ],
-                    "gui_scripts": [
-                        script["name"] for script in self._metadata["package"].get("gui_scripts", [])
-                    ],
-                }
-                if curr_branch == main_branch_name:
-                    main_branch = release_info
-                else:
-                    release_branch[int(curr_branch.removeprefix(release_prefix))] = release_info
-        elif curr_branch.startswith(dev_prefix) and curr_branch != f"{dev_prefix}0":
-            group_labels, _ = self._get_issue_labels(int(curr_branch.removeprefix(dev_prefix)))
-            if group_labels["primary_type"] in [
-                PrimaryActionCommitType.PACKAGE_MAJOR.value,
-                PrimaryActionCommitType.PACKAGE_MINOR.value,
-                PrimaryActionCommitType.PACKAGE_PATCH.value,
-                PrimaryActionCommitType.PACKAGE_POST.value,
-            ]:
-                for version_label in group_labels["version"]:
-                    base_ver = PEP440SemVer(version_label)
-                    if base_ver.major in release_branch:
-                        curr_base_ver = release_branch[base_ver.major]["version"]
-                    elif base_ver.major == main_branch["version"].major:
-                        curr_base_ver = main_branch["version"]
-                    else:
-                        self._logger.error(
-                            f"No release branch found for major version {base_ver.major}, "
-                            f"found in branch {curr_branch}."
-                        )
-                    if group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_MAJOR.value:
-                        ver = curr_base_ver.next_major
-                    elif group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_MINOR.value:
-                        ver = curr_base_ver.next_minor
-                    elif group_labels["primary_type"] == PrimaryActionCommitType.PACKAGE_PATCH.value:
-                        ver = curr_base_ver.next_patch
-                    else:
-                        ver = curr_base_ver.next_post
-                    new_prefix = self._metadata["branch"]["group"]["dev"]["prefix"]
-                    branch_name = f"{new_prefix}{curr_branch.removeprefix(dev_prefix)}"
-                    release_info = {
-                        "branch": branch_name,
-                        "version": str(ver),
-                        "python_versions": self._metadata["package"]["python_versions"],
-                        "os_titles": self._metadata["package"]["os_titles"],
-                        "package_managers": ["pip"]
-                        + (["conda"] if self._metadata["package"].get("conda") else []),
-                        "cli_scripts": [
-                            script["name"] for script in self._metadata["package"].get("cli_scripts", [])
-                        ],
-                        "gui_scripts": [
-                            script["name"] for script in self._metadata["package"].get("gui_scripts", [])
-                        ],
-                    }
-                    dev_branch.append(release_info)
-        elif curr_branch == f"{dev_prefix}0":
-            release_info = {
-                "branch": self._metadata["branch"]["default"]["name"],
-                "version": "0.0.0",
-                "python_versions": self._metadata["package"]["python_versions"],
-                "os_titles": self._metadata["package"]["os_titles"],
-                "package_managers": ["pip"],
-                "cli_scripts": [script["name"] for script in self._metadata["package"].get("cli_scripts", [])],
-                "gui_scripts": [script["name"] for script in self._metadata["package"].get("gui_scripts", [])],
-            }
-            dev_branch.append(release_info)
-        releases = dev_branch + ([main_branch] if main_branch else []) + list(release_branch.values())
         releases.sort(key=lambda i: i["version"], reverse=True)
         all_branch_names = []
         all_python_versions = []
@@ -728,20 +644,6 @@ class MetadataGenerator:
         if all_gui_scripts:
             out["interfaces"].append("GUI")
         return out
-
-    def _get_latest_package_version(self, ver_tag_prefix: str) -> PEP440SemVer | None:
-        tags_lists = self._git.get_tags()
-        if not tags_lists:
-            return None
-        for tags_list in tags_lists:
-            ver_tags = []
-            for tag in tags_list:
-                if tag.startswith(ver_tag_prefix):
-                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
-            if ver_tags:
-                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
-                return max_version
-        return
 
     def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
         label_prefix = {
