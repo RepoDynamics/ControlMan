@@ -100,7 +100,7 @@ class GitHubContext:
 
         This is functionally equivalent to the GITHUB_TOKEN secret.
         """
-        return self._context["token"]
+        return self._token
 
 
 class EventPayload:
