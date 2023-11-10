@@ -11,7 +11,10 @@ class RelativePath:
     file_license = "LICENSE"
     file_readme_main = "README.md"
     file_funding = ".github/FUNDING.yml"
-    file_pre_commit_config = ".github/.pre-commit-config.yaml"
+    file_pre_commit_config_main = ".github/.pre-commit-config-main.yaml"
+    file_pre_commit_config_release = ".github/.pre-commit-config-release.yaml"
+    file_pre_commit_config_dev = ".github/.pre-commit-config-dev.yaml"
+    file_pre_commit_config_other = ".github/.pre-commit-config-other.yaml"
     file_readthedocs_config = ".github/.readthedocs.yaml"
     file_issue_template_chooser_config = ".github/ISSUE_TEMPLATE/config.yml"
     file_python_pyproject = "pyproject.toml"
@@ -158,7 +161,6 @@ class PathFinder:
             self.readme_main,
             self.readme_pypi,
             self.funding,
-            self.pre_commit_config,
             self.read_the_docs_config,
             self.issue_template_chooser_config,
             self.package_pyproject,
@@ -181,6 +183,8 @@ class PathFinder:
         ]:
             for target_path in [".", "docs", ".github"]:
                 files.append(self.health_file(health_file_name, target_path))
+        for pre_commit_config_type in ["main", "release", "dev", "other"]:
+            files.append(self.pre_commit_config(pre_commit_config_type))
         return files
 
     @property
@@ -250,11 +254,10 @@ class PathFinder:
         path = self._path_root / rel_path
         return DynamicFile("funding", DynamicFileType.CONFIG, rel_path, path)
 
-    @property
-    def pre_commit_config(self) -> DynamicFile:
-        rel_path = RelativePath.file_pre_commit_config
+    def pre_commit_config(self, branch_type: Literal['main', 'release', 'dev', 'other']) -> DynamicFile:
+        rel_path = getattr(RelativePath, f"file_pre_commit_config_{branch_type}")
         path = self._path_root / rel_path
-        return DynamicFile("pre-commit-config", DynamicFileType.CONFIG, rel_path, path)
+        return DynamicFile(f"pre-commit-config-{branch_type}", DynamicFileType.CONFIG, rel_path, path)
 
     @property
     def read_the_docs_config(self) -> DynamicFile:
