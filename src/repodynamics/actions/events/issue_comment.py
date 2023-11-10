@@ -1,10 +1,10 @@
-from repodynamics.actions.init import NonModifyingEventHandler
+from repodynamics.actions.events._base import NonModifyingEventHandler
 
 
 class IssueCommentEventHandler(NonModifyingEventHandler):
 
     def run(self):
-        is_pull = self.context.issue_payload.get("pull_request")
+        is_pull = self._context.payload.get("pull_request")
         if is_pull:
             if action == WorkflowTriggeringAction.CREATED:
                 self.event_comment_pull_created()
