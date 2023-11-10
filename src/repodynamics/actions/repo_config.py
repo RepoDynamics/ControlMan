@@ -20,12 +20,7 @@ class RepoConfigAction:
         self.logger = logger or Logger()
         return
 
-    def replace_repo_labels(self):
-        for label in self.api.labels:
-            self.api.label_delete(label["name"])
-        for label in self.metadata.label__compiled.values():
-            self.api.label_create(**label)
-        return
+
 
     def update_repo_labels(self, init: bool = False):
         name = "Repository Labels Synchronizer"
@@ -95,53 +90,6 @@ class RepoConfigAction:
             )
         return
 
-    def update_repo_settings(self):
-        data = self.metadata.repo__config | {
-            "has_issues": True,
-            "allow_squash_merge": True,
-            "squash_merge_commit_title": "PR_TITLE",
-            "squash_merge_commit_message": "PR_BODY",
-        }
-        topics = data.pop("topics")
-        self.api_admin.repo_update(**data)
-        self.api_admin.repo_topics_replace(topics=topics)
-        if not self.api_admin.actions_permissions_workflow_default()['can_approve_pull_request_reviews']:
-            self.api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
-        return
 
-    def update_branch_names(self) -> dict:
-        if not self.metadata_before:
-            self.logger.error("Cannot update branch names as no previous metadata is available.")
-        before = self.metadata_before.branch
-        after = self.metadata.branch
-        old_to_new_map = {}
-        if before["default"]["name"] != after["default"]["name"]:
-            self.api_admin.branch_rename(
-                old_name=before["default"]["name"],
-                new_name=after["default"]["name"]
-            )
-            old_to_new_map[before["default"]["name"]] = after["default"]["name"]
-        branches = self.api_admin.branches
-        branch_names = [branch["name"] for branch in branches]
-        for group_name in ("release", "dev", "ci_pull"):
-            prefix_before = before["group"][group_name]["prefix"]
-            prefix_after = after["group"][group_name]["prefix"]
-            if prefix_before != prefix_after:
-                for branch_name in branch_names:
-                    if branch_name.startswith(prefix_before):
-                        new_name = f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
-                        self.api_admin.branch_rename(old_name=branch_name, new_name=new_name)
-                        old_to_new_map[branch_name] = new_name
-        return old_to_new_map
 
-    def update_pages_settings(self) -> None:
-        """Activate GitHub Pages (source: workflow) if not activated, update custom domain."""
-        if not self.api.info["has_pages"]:
-            self.api_admin.pages_create(build_type="workflow")
-        cname = self.metadata.web__base_url
-        self.api_admin.pages_update(
-            cname=cname.removeprefix("https://").removeprefix("http://") if cname else None,
-            https_enforced=cname.startswith("https://") if cname else True,
-            build_type="workflow"
-        )
-        return
+
