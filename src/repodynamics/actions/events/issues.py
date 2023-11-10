@@ -7,7 +7,7 @@ from repodynamics.datatype import WorkflowTriggeringAction, IssueStatus
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.actions import _helpers
-from repodynamics.actions.init import NonModifyingEventHandler
+from repodynamics.actions.events._base import NonModifyingEventHandler
 from repodynamics.meta.files.forms import FormGenerator
 
 
