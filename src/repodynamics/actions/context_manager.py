@@ -409,6 +409,10 @@ class ContextManager:
         return self.payload.head_repo_fullname if self.github.event_name == "pull_request" else self.github.repo_fullname
 
     @property
+    def target_branch_name(self) -> str:
+        return self.github.base_ref if self.github.event_name == "pull_request" else self.github.ref_name
+
+    @property
     def ref_is_main(self) -> bool:
         return self.github.ref == f"refs/heads/{self.payload.repository_default_branch}"
 
