@@ -115,13 +115,17 @@ class ConfigFileGenerator:
         return out
 
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.pre_commit_config
-        config = self._meta["workflow"].get("pre_commit")
-        if not config:
-            self._logger.skip("'pre_commit' not set in metadata.")
-            return [(info, "")]
-        text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
-        return [(info, text)]
+        out = []
+        for config_type in ("main", "release", "dev", "other"):
+            info = self._out_db.pre_commit_config(config_type)
+            config = self._meta["workflow"]["pre_commit"].get(config_type)
+            if not config:
+                self._logger.skip("'pre_commit' not set in metadata.")
+                out.append((info, ""))
+            else:
+                text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
+                out.append((info, text))
+        return out
 
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
         info = self._out_db.read_the_docs_config
