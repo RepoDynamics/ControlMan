@@ -21,12 +21,12 @@ class IssuesEventHandler(NonModifyingEventHandler):
         self._payload: IssuesPayload = self._context.payload
         return
 
-    def run(self):
-        action = self._context.payload.action
+    def run_event(self):
+        action = self._payload.action
         if action == WorkflowTriggeringAction.OPENED:
-            self.event_issue_opened()
+            self._run_opened()
         elif action == WorkflowTriggeringAction.LABELED:
-            self.event_issue_labeled()
+            self._run_labeled()
         else:
             _helpers.error_unsupported_triggering_action(
                 event_name=self._context.github.event_name,
@@ -35,7 +35,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
             )
         return
 
-    def event_issue_opened(self):
+    def _run_opened(self):
         self._gh_api.issue_comment_create(
             number=self._payload.number,
             body="This post tracks the issue."
@@ -43,57 +43,61 @@ class IssuesEventHandler(NonModifyingEventHandler):
         self._post_process_issue()
         return
 
-    def event_issue_labeled(self):
-        label = self._payload.label["name"]
-        if label.startswith(self._metadata["label"]["group"]["status"]["prefix"]):
-            status = self._metadata.get_issue_status_from_status_label(label)
-            if status == IssueStatus.IN_DEV:
-                target_label_prefix = self._metadata["label"]["auto_group"]["target"]["prefix"]
-                dev_branch_prefix = self._metadata["branch"]["group"]["dev"]["prefix"]
-                branches = self._gh_api.branches
-                branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
-                for issue_label in self._payload.labels:
-                    if issue_label["name"].startswith(target_label_prefix):
-                        base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
-                        if base_branch_name.startswith(dev_branch_prefix):
-                            pass
-                        else:
-                            new_branch = self._gh_api.branch_create_linked(
-                                issue_id=self._payload.node_id,
-                                base_sha=branch_sha[base_branch_name],
-                                name=f"{dev_branch_prefix}{self._payload.number}/{base_branch_name}",
-                            )
-                            pull_data = self._gh_api.pull_create(
-                                head=new_branch["name"],
-                                base=base_branch_name,
-                                title=self._payload.title,
-                                body=f"This is a draft pull request for the issue #{self._payload.number}.",
-                                maintainer_can_modify=True,
-                                draft=True
-                            )
-                            self._gh_api.issue_labels_set(
-                                number=pull_data["number"],
-                                labels=self._payload.label_names
-                            )
+    def _run_labeled(self):
+        if self._payload.label["name"].startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
+            self._run_labeled_status()
+        return
+
+    def _run_labeled_status(self):
+        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
+        if status == IssueStatus.IN_DEV:
+            self._run_labeled_status_in_dev()
+        return
+
+    def _run_labeled_status_in_dev(self):
+        target_label_prefix = self._metadata_main["label"]["auto_group"]["target"]["prefix"]
+        dev_branch_prefix = self._metadata_main["branch"]["group"]["dev"]["prefix"]
+        branches = self._gh_api.branches
+        branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
+        for issue_label in self._payload.labels:
+            if issue_label["name"].startswith(target_label_prefix):
+                base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
+                new_branch = self._gh_api.branch_create_linked(
+                    issue_id=self._payload.node_id,
+                    base_sha=branch_sha[base_branch_name],
+                    name=f"{dev_branch_prefix}{self._payload.number}/{base_branch_name}",
+                )
+                pull_data = self._gh_api.pull_create(
+                    head=new_branch["name"],
+                    base=base_branch_name,
+                    title=self._payload.title,
+                    body=f"This is a draft pull request for the issue #{self._payload.number}.",
+                    maintainer_can_modify=True,
+                    draft=True
+                )
+                self._gh_api.issue_labels_set(
+                    number=pull_data["number"],
+                    labels=self._payload.label_names
+                )
         return
 
     def _post_process_issue(self):
         self._logger.success("Retrieve issue labels", self._payload.label_names)
-        issue_form = self._metadata.get_issue_data_from_labels(self._payload.label_names).form
+        issue_form = self._metadata_main.get_issue_data_from_labels(self._payload.label_names).form
         self._logger.success("Retrieve issue form", issue_form)
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
-        branch_label_prefix = self._metadata["label"]["auto_group"]["target"]["prefix"]
+        branch_label_prefix = self._metadata_main["label"]["auto_group"]["target"]["prefix"]
         if "branch" in issue_entries:
             branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
             for branch in branches:
                 labels.append(f"{branch_label_prefix}{branch}")
         elif "version" in issue_entries:
             versions = [version.strip() for version in issue_entries["version"].split(",")]
-            version_label_prefix = self._metadata["label"]["auto_group"]["version"]["prefix"]
+            version_label_prefix = self._metadata_main["label"]["auto_group"]["version"]["prefix"]
             for version in versions:
                 labels.append(f"{version_label_prefix}{version}")
-                branch = self._metadata.get_branch_from_version(version)
+                branch = self._metadata_main.get_branch_from_version(version)
                 labels.append(f"{branch_label_prefix}{branch}")
         else:
             self._logger.error(
