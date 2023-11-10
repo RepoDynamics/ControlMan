@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 import json
 
+from ruamel.yaml import YAML
 from markitup import html, md, sgr
 
 from repodynamics.logger import Logger
@@ -14,7 +15,7 @@ class PreCommitHooks:
     def __init__(
         self,
         path_root: str = ".",
-        config: str = Path(".github/.pre-commit-config.yaml"),
+        config: dict | str | Path = Path(".github/.pre-commit-config.yaml"),
         git: Git = None,
         logger: Logger = None,
     ):
@@ -121,11 +122,15 @@ class PreCommitHooks:
     def _run_hooks(self) -> dict[str, dict]:
         scope = ["--from-ref", self._from_ref, "--to-ref", self._to_ref] if self._from_ref else ["--all-files"]
 
-        if isinstance(self._config, str):
+        if isinstance(self._config, (str, dict)):
             temp = True
             path = self._path_root.parent / ".__temporary_pre_commit_config__.yaml"
             with open(path, "w") as f:
-                f.write(self._config)
+                config = (
+                    self._config if isinstance(self._config, str)
+                    else YAML(typ=["rt", "string"]).dumps(self._config, add_final_eol=True)
+                )
+                f.write(config)
             self._logger.success(
                 "Write temporary pre-commit config file.", f"Path: {path}\nContent:\n{self._config}"
             )
@@ -268,7 +273,7 @@ def run(
     action: Literal["report", "amend", "commit"] = "amend",
     commit_message: str = "",
     path_root: str = ".",
-    config: str | Path = Path(".github/.pre-commit-config.yaml"),
+    config: dict | str | Path = Path(".github/.pre-commit-config.yaml"),
     git: Git | None = None,
     logger: Logger = None,
 ):
