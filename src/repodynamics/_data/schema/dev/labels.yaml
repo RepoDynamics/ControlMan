@@ -370,7 +370,7 @@ properties:
                   - alpha
                   - beta
                   - rc
-                  - merged
+                  - final
             required: [ prefix, color, labels ]
           sub_type:
             type: object
