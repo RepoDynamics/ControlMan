@@ -1,5 +1,5 @@
 from repodynamics.datatype import WorkflowDispatchInput
-from repodynamics.actions.init import NonModifyingEventHandler
+from repodynamics.actions.events._base import NonModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager
 from repodynamics.datatype import InitCheckAction
 
