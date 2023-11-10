@@ -1,7 +1,7 @@
 from typing import NamedTuple
 from pathlib import Path
 from enum import Enum
-
+from repodynamics.version import PEP440SemVer
 
 class EventType(Enum):
     PUSH_MAIN = "push_main"
@@ -18,8 +18,9 @@ class EventType(Enum):
 
 
 class BranchType(Enum):
-    DEFAULT = "default"
+    DEFAULT = "main"
     RELEASE = "release"
+    PRE_RELEASE = "pre_release"
     DEV = "dev"
     CI_PULL = "ci_pull"
     OTHER = "other"
@@ -27,8 +28,8 @@ class BranchType(Enum):
 
 class Branch(NamedTuple):
     type: BranchType
-    prefix: str | None = None
-    suffix: str | int | None = None
+    prefix: str
+    suffix: str | int | PEP440SemVer | tuple[int, str] | None = None
 
 
 class RepoFileType(Enum):
@@ -330,6 +331,7 @@ class WorkflowTriggeringAction(Enum):
     reopened: issues, pull_request
     synchronize: pull_request
     closed: issues, pull_request
+    ready_for_review: pull_request
     """
 
     CREATED = "created"
@@ -340,6 +342,7 @@ class WorkflowTriggeringAction(Enum):
     LABELED = "labeled"
     REOPENED = "reopened"
     SYNCHRONIZE = "synchronize"
+    READY_FOR_REVIEW = "ready_for_review"
 
 
 class InitCheckAction(Enum):
