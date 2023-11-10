@@ -61,11 +61,12 @@ class EventHandler:
         self,
         context_manager: ContextManager,
         admin_token: str,
-        metadata_main: MetaManager | None = None,
         logger: Logger | None = None
     ):
         self._context = context_manager
-        self._metadata_main = metadata_main
+        self._metadata_main: MetaManager | None = meta.read_from_json_file(
+            path_root="repo_self", logger=logger
+        )
         self._logger = logger or Logger()
 
         repo_user = self._context.github.repo_owner
@@ -87,6 +88,9 @@ class EventHandler:
         else:
             self._git_target = self._git_self
         self._meta: Meta | None = None
+        self._metadata_branch: MetaManager | None = None
+        self._branch: Branch | None = None
+        self._event_type: EventType | None = None
         self._summary_oneliners: list[str] = []
         self._summary_sections: list[str | html.ElementCollection | html.Element] = []
         self._amended: bool = False
@@ -94,11 +98,48 @@ class EventHandler:
         self._version: str = ""
         self._failed = False
         self._hash_latest: str = ""
+        self._job_run_flag: dict[str, bool] = {
+            job_id: False for job_id in [
+                "package_build",
+                "package_test_local",
+                "package_lint",
+                "website_build",
+                "website_deploy",
+                "website_rtd_preview",
+                "package_publish_testpypi",
+                "package_publish_pypi",
+                "package_test_testpypi",
+                "package_test_pypi",
+                "github_release",
+            ]
+        }
+        self._release_info: dict = {
+            "name": "",
+            "body": "",
+            "prerelease": False,
+            "make_latest": "legacy",
+            "discussion_category_name": "",
+        }
         return
 
-    def _action_meta(self, action: InitCheckAction):
+    def run(self):
+        self.run_event()
+        return self._finalize()
+
+    def run_event(self) -> None:
+        ...
+
+    def _finalize(self):
+        self._logger.h1("Finalization")
+        summary = self.assemble_summary()
+        output = self.output
+        return output, None, summary
+
+    def _action_meta(self, action: InitCheckAction | None = None):
         name = "Meta Sync"
         self._logger.h1(name)
+        if not action:
+            action = self._metadata_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
         self._logger.input(f"Action: {action.value}")
         if action == "none":
             self.add_summary(
@@ -110,6 +151,7 @@ class EventHandler:
             return
         if action == "pull":
             pr_branch = self.switch_to_ci_branch("meta")
+        self._metadata_branch = self._meta.read_metadata_full()
         meta_results, meta_changes, meta_summary = self._meta.compare_files()
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
@@ -125,8 +167,8 @@ class EventHandler:
                 self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == "pull")
             if action == "pull":
                 pull_data = self._gh_api.pull_create(
-                    head=self._git_self.current_branch_name(),
-                    base=self._context.github.ref_name,
+                    head=pr_branch,
+                    base=self._context.target_branch_name,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
@@ -159,10 +201,12 @@ class EventHandler:
         )
         return
 
-    def _action_hooks(self, action: InitCheckAction):
+    def _action_hooks(self, action: InitCheckAction | None = None):
         name = "Workflow Hooks"
         self._logger.h1(name)
         self._logger.input(f"Action: {action.value}")
+        if not action:
+            action = self._metadata_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
         if action == "none":
             self.add_summary(
                 name=name,
@@ -171,9 +215,9 @@ class EventHandler:
             )
             self._logger.skip("Hooks are disabled for this event type; skip❗")
             return
-        if not self.metadata["workflow"].get("pre_commit"):
+        config = self._metadata_main["workflow"]["pre_commit"].get(self._branch.type.value)
+        if not config:
             oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
-            self.fail = True
             self.add_summary(
                 name=name,
                 status="fail",
@@ -181,24 +225,23 @@ class EventHandler:
             )
             self._logger.error(oneliner, raise_error=False)
             return
-
-        if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
-            for result in self.meta_results:
-                if result[0].id == "pre-commit-config":
-                    config = result[1].after
-                    self._logger.success(
-                        "Load pre-commit config from metadata.",
-                        "The pre-commit config had been changed in this event, and thus "
-                        "the current config file was not valid anymore.",
-                    )
-                    break
-            else:
-                self._logger.error(
-                    "Could not find pre-commit-config in meta results.",
-                    "This is an internal error that should not happen; please report it on GitHub.",
-                )
-        else:
-            config = self.meta.paths.pre_commit_config.path
+        # if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
+        #     for result in self.meta_results:
+        #         if result[0].id == "pre-commit-config":
+        #             config = result[1].after
+        #             self._logger.success(
+        #                 "Load pre-commit config from metadata.",
+        #                 "The pre-commit config had been changed in this event, and thus "
+        #                 "the current config file was not valid anymore.",
+        #             )
+        #             break
+        #     else:
+        #         self._logger.error(
+        #             "Could not find pre-commit-config in meta results.",
+        #             "This is an internal error that should not happen; please report it on GitHub.",
+        #         )
+        # else:
+        #     config = self.meta.paths.pre_commit_config.path
         if action == "pull":
             pr_branch = self.switch_to_ci_branch("hooks")
         input_action = (
@@ -206,18 +249,19 @@ class EventHandler:
         )
         commit_msg = (
             CommitMsg(
-                typ=self.metadata["commit"]["secondary_action"]["hook_fix"]["type"],
+                typ=self._metadata_main["commit"]["secondary_action"]["hook_fix"]["type"],
                 title="Apply automatic fixes made by workflow hooks",
             )
             if action in ["commit", "pull"]
             else ""
         )
         hooks_output = hook.run(
-            ref_range=(self.hash_before, self.hash_after),
-            action=input_action,
+            ref_range=(self._context.hash_before, self.hash_latest),
+            action=input_action.value,
             commit_message=str(commit_msg),
+            path_root=self._meta.paths.root,
             config=config,
-            git=self.git,
+            git=self._git_target,
             logger=self._logger,
         )
         passed = hooks_output["passed"]
@@ -226,23 +270,18 @@ class EventHandler:
         if action not in ["fail", "report"] and modified:
             self.push(amend=action == "amend", set_upstream=action == "pull")
             if action == "pull":
-                pull_data = self.api.pull_create(
-                    head=self.git.current_branch_name(),
-                    base=self.ref_name,
+                pull_data = self._gh_api.pull_create(
+                    head=pr_branch,
+                    base=self._context.target_branch_name,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
-        if not passed or (action == "pull" and modified):
-            self.fail = True
-            status = "fail"
-        else:
-            status = "pass"
         if action == "pull" and modified:
             link = html.a(href=pull_data["url"], content=pull_data["number"])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
         if action in ["commit", "amend"] and modified:
-            link = html.a(href=str(self.gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
+            link = html.a(href=str(self._gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
             target = "the current branch " + (
                 f"in a new commit (hash: {link})"
                 if action == "commit"
@@ -267,7 +306,12 @@ class EventHandler:
             )
         else:
             oneliner = "Some hooks failed (failures were not auto-fixable)."
-        self.add_summary(name=name, status=status, oneliner=oneliner, details=hooks_output["summary"])
+        self.add_summary(
+            name=name,
+            status="fail" if not passed or (action == "pull" and modified) else "pass",
+            oneliner=oneliner,
+            details=hooks_output["summary"]
+        )
         return
 
     def commit(
@@ -278,7 +322,7 @@ class EventHandler:
         push: bool = False,
         set_upstream: bool = False,
     ):
-        commit_hash = self._git_self.commit(message=message, stage=stage, amend=amend)
+        commit_hash = self._git_target.commit(message=message, stage=stage, amend=amend)
         if amend:
             self._amended = True
         if push:
@@ -286,34 +330,36 @@ class EventHandler:
         return commit_hash
 
     def push(self, amend: bool = False, set_upstream: bool = False):
-        new_hash = self._git_self.push(
+        new_hash = self._git_target.push(
             target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
         )
         self._amended = False
-        if new_hash and self._git_self.current_branch_name() == self._context.github.ref_name:
+        if new_hash and self._git_target.current_branch_name() == self._context.github.ref_name:
             self._hash_latest = new_hash
         return new_hash
 
-    def tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
+    def _tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
         tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
         tag = f"{tag_prefix}{ver}"
         if not msg:
             msg = f"Release version {ver}"
-        self._git_self.create_tag(tag=tag, message=msg)
+        self._git_target.create_tag(tag=tag, message=msg)
         self._tag = tag
         self._version = str(ver)
         return
 
     def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
-        current_branch = self._git_self.current_branch_name()
+        current_branch = self._git_target.current_branch_name()
         new_branch_prefix = self._metadata_main.branch__group["ci_pull"]["prefix"]
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
-        self._git_self.checkout(branch=new_branch_name, reset=True)
+        self._git_target.stash()
+        self._git_target.checkout(branch=new_branch_name, reset=True)
         self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
         return new_branch_name
 
     def switch_to_original_branch(self):
-        self._git_self.checkout(branch=self._context.github.ref_name)
+        self._git_target.checkout(branch=self._context.github.ref_name)
+        self._git_target.stash_pop()
         return
 
     @property
@@ -337,61 +383,116 @@ class EventHandler:
             self._summary_sections.append(f"<h2>{name}</h2>\n\n{details}\n\n")
         return
 
-    def create_output(
+    def _set_job_run(
         self,
-        metadata: MetaManager,
-        run_package_build: bool = False,
-        run_package_lint: bool = False,
-        run_package_test_local: bool = False,
-        run_website_build: bool = False,
-        run_website_deploy: bool = False,
-        run_website_rtd_preview: bool = False,
-        run_package_publish_testpypi: bool = False,
-        run_package_publish_pypi: bool = False,
-        run_package_test_testpypi: bool = False,
-        run_package_test_pypi: bool = False,
-        run_github_release: bool = False,
-        version: str | PEP440SemVer = "",
-        failed: bool = False,
+        package_build: bool | None = None,
+        package_lint: bool | None = None,
+        package_test_local: bool | None = None,
+        website_build: bool | None = None,
+        website_deploy: bool | None = None,
+        website_rtd_preview: bool | None = None,
+        package_publish_testpypi: bool | None = None,
+        package_publish_pypi: bool | None = None,
+        package_test_testpypi: bool | None = None,
+        package_test_pypi: bool | None = None,
+        github_release: bool | None = None,
+    ) -> None:
+        data = locals()
+        data.pop("self")
+        for key, val in data.items():
+            if val is not None:
+                self._job_run_flag[key] = val
+        return
+
+    def _set_release(
+        self,
+        name: str | None = None,
+        body: str | None = None,
+        prerelease: bool | None = None,
+        make_latest: Literal["legacy", "latest", "none"] | None = None,
+        discussion_category_name: str | None = None,
     ):
+        data = locals()
+        data.pop("self")
+        for key, val in data.items():
+            if val is not None:
+                self._release_info[key] = val
+        return
+
+    def _get_latest_version(
+        self,
+        repo: Literal["self", "fork"] = "self",
+        branch: str | None = None,
+        dev_only: bool = False,
+    ) -> tuple[PEP440SemVer | None, int | None]:
+        git = self._git_self if repo == "self" else self._git_target
+        ver_tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
+        if branch:
+            git.stash()
+            curr_branch = git.current_branch_name()
+            git.checkout(branch=branch)
+        latest_version = git.get_latest_version(tag_prefix=ver_tag_prefix, dev_only=dev_only)
+        if not latest_version:
+            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
+            return None, None
+        distance = git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}")
+        if branch:
+            git.checkout(branch=curr_branch)
+            git.stash_pop()
+        return latest_version, distance
+
+    @staticmethod
+    def _get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
+        if action == PrimaryActionCommitType.PACKAGE_MAJOR:
+            if version.major == 0:
+                return version.next_minor
+            return version.next_major
+        if action == PrimaryActionCommitType.PACKAGE_MINOR:
+            return version.next_minor
+        if action == PrimaryActionCommitType.PACKAGE_PATCH:
+            return version.next_patch
+        if action == PrimaryActionCommitType.PACKAGE_POST:
+            return version.next_post
+        return version
+
+    @property
+    def output(self) -> dict:
+        metadata = self._metadata_branch or self._metadata_main
         package = metadata.package
         package_name = package.get("name", "")
+        if self._failed:
+            # Just to be safe, disable publish/deploy/release jobs if fail is True
+            self._set_job_run(
+                website_deploy=False,
+                package_publish_testpypi=False,
+                package_publish_pypi=False,
+                github_release=False,
+            )
+        for job_id, dependent_job_id in (
+            ("package_publish_testpypi", "package_test_testpypi"),
+            ("package_publish_pypi", "package_test_pypi"),
+        ):
+            if self._job_run_flag[job_id]:
+                self._job_run_flag[dependent_job_id] = True
+        if self._job_run_flag["package_publish_testpypi"] or self._job_run_flag["package_publish_pypi"]:
+            self._job_run_flag["package_build"] = True
         out = {
             "config": {
-                "fail": failed,
+                "fail": self._failed,
                 "checkout": {
                     "ref": self.hash_latest,
                     "ref_before": self._context.hash_before,
                     "repository": self._context.target_repo_fullname,
                 },
-                "run": {
-                    "package_build": run_package_build,
-                    "package_test_local": run_package_test_local,
-                    "package_lint": run_package_lint,
-                    "website_build": run_website_build,
-                    "website_deploy": run_website_deploy,
-                    "website_rtd_preview": run_website_rtd_preview,
-                    "package_publish_testpypi": run_package_publish_testpypi,
-                    "package_publish_pypi": run_package_publish_pypi,
-                    "package_test_testpypi": run_package_test_testpypi or run_package_publish_testpypi,
-                    "package_test_pypi": run_package_test_pypi or run_package_publish_pypi,
-                    "github_release": run_github_release,
-                },
+                "run": self._job_run_flag,
                 "package": {
-                    "version": self._version or version,
+                    "version": self._version,
                     "upload_url_testpypi": "https://test.pypi.org/legacy/",
                     "upload_url_pypi": "https://upload.pypi.org/legacy/",
                     "download_url_testpypi": f"https://test.pypi.org/project/{package_name}/{self._version}",
                     "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
                 },
-                "release": {
-                    "name": "",
-                    "body": "",
-                    "prerelease": False,
-                    "make_latest": "legacy",
-                    "tag_name": self._tag,
-                    "discussion_category_name": "",
-                },
+                "release": self._release_info | {"tag_name": self._tag}
             },
             "metadata_ci": {
                 "path": metadata["path"],
@@ -410,8 +511,9 @@ class EventHandler:
                 }
             },
         }
+        return out
 
-    def assemble_summary(self) -> tuple[str, str]:
+    def assemble_summary(self) -> str:
         github_context, event_payload = (
             html.details(content=md.code_block(str(data), lang="yaml"), summary=summary)
             for data, summary in (
@@ -420,7 +522,7 @@ class EventHandler:
             )
         )
         intro = [
-            f"{Emoji.PLAY} The workflow was triggered by a <code>{self._context.event_name}</code> event."
+            f"{Emoji.PLAY} The workflow was triggered by a <code>{self._context.github.event_name}</code> event."
         ]
         if self._failed:
             intro.append(f"{Emoji.FAIL} The workflow failed.")
@@ -443,13 +545,13 @@ class EventHandler:
             ]
         )
         summaries = html.ElementCollection(self._summary_sections)
-        path_logs = self._meta_main.input_path.dir_local_report_repodynamics
-        path_logs.mkdir(parents=True, exist_ok=True)
-        with open(path_logs / "log.html", "w") as f:
+        path = Path("./repodynamics")
+        path.mkdir(exist_ok=True)
+        with open(path / "log.html", "w") as f:
             f.write(str(logs))
-        with open(path_logs / "report.html", "w") as f:
+        with open(path / "report.html", "w") as f:
             f.write(str(summaries))
-        return str(summary), str(path_logs)
+        return str(summary)
 
     def resolve_branch(self, branch_name: str | None = None) -> Branch:
         if not branch_name:
@@ -464,13 +566,12 @@ class NonModifyingEventHandler(EventHandler):
     def __init__(
         self,
         context_manager: ContextManager,
-        admin_token: str,
+        admin_token: str = "",
         logger: Logger | None = None
     ):
         super().__init__(
             context_manager=context_manager,
             admin_token=admin_token,
-            metadata_main=meta.read_from_json_file(path_root="repo_self", logger=logger),
             logger=logger
         )
         return
@@ -526,12 +627,12 @@ class ModifyingEventHandler(EventHandler):
             if change_type.startswith("copied") and change_type.endswith("from"):
                 continue
             for path in changed_paths:
-                if path == "README.md" or path == ".github/_README.md" or path.endswith("/README.md"):
+                if path in fixed_paths:
+                    typ = RepoFileType.DYNAMIC
+                elif path == ".github/_README.md" or path.endswith("/README.md"):
                     typ = RepoFileType.README
                 elif path.startswith(self._meta.paths.dir_source_rel):
                     typ = RepoFileType.PACKAGE
-                elif path in fixed_paths:
-                    typ = RepoFileType.DYNAMIC
                 elif path.startswith(self._meta.paths.dir_website_rel):
                     typ = RepoFileType.WEBSITE
                 elif path.startswith(self._meta.paths.dir_tests_rel):
@@ -584,7 +685,7 @@ class ModifyingEventHandler(EventHandler):
         )
         return change_group
 
-    def get_commits(self) -> list[Commit]:
+    def _get_commits(self) -> list[Commit]:
         # primary_action = {}
         # primary_action_types = []
         # for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
@@ -607,16 +708,18 @@ class ModifyingEventHandler(EventHandler):
         #     + primary_custom_types
         #     + list(self.metadata["commit"]["secondary_custom"].keys())
         # )
-        commits = self.git.get_commits(f"{self.hash_before}..{self.hash_after}")
+        commits = self._git_target.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(types=self.metadata_main.get_all_conventional_commit_types(), logger=self._logger)
+        parser = CommitParser(
+            types=self._metadata_main.get_all_conventional_commit_types(), logger=self._logger
+        )
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
             if not conv_msg:
                 parsed_commits.append(Commit(**commit, group_data=NonConventionalCommit()))
             else:
-                group = self.metadata_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
+                group = self._metadata_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 commit["msg"] = conv_msg
                 parsed_commits.append(Commit(**commit, group_data=group))
             # elif conv_msg.type in primary_action_types:
@@ -650,62 +753,6 @@ class Init:
         self.changed_files: dict[RepoFileType, list[str]] = {}
         return
 
-    def run(self):
-        self.run_event()
-        return self.finalize()
-
-    def run_event(self) -> None:
-        self.logger.h2("Analyze Triggering Event")
-        return
-
-    def finalize(self):
-        self.logger.h1("Finalization")
-        if self.fail:
-            # Just to be safe, disable publish/deploy/release jobs if fail is True
-            for job_id in (
-                "website_deploy",
-                "package_publish_testpypi",
-                "package_publish_pypi",
-                "github_release",
-            ):
-                self.set_job_run(job_id, False)
-        summary, path_logs = self.assemble_summary()
-        output = self.output
-        output["path_log"] = path_logs
-        return output, None, summary
-
-    def check_for_version_tags(self):
-        tags_lists = self.git.get_tags()
-        if not tags_lists:
-            return False, False
-        ver_tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
-        for tags_list in tags_lists:
-            ver_tags = []
-            for tag in tags_list:
-                if tag.startswith(ver_tag_prefix):
-                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
-            if ver_tags:
-                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
-                distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
-                return max_version, distance
-        return
-
-    def get_latest_version(self) -> tuple[PEP440SemVer | None, int | None]:
-        tags_lists = self.git.get_tags()
-        if not tags_lists:
-            return None, None
-        ver_tag_prefix = self.metadata_main["tag"]["group"]["version"]["prefix"]
-        for tags_list in tags_lists:
-            ver_tags = []
-            for tag in tags_list:
-                if tag.startswith(ver_tag_prefix):
-                    ver_tags.append(tag.removeprefix(ver_tag_prefix))
-            if ver_tags:
-                max_version = max(PEP440SemVer(ver_tag) for ver_tag in ver_tags)
-                distance = self.git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{max_version.input}")
-                return max_version, distance
-        self.logger.error(f"No version tags found with prefix '{ver_tag_prefix}'.")
-
     def categorize_labels(self, label_names: list[str]):
         label_dict = {
             label_data["name"]: label_key
@@ -716,17 +763,7 @@ class Init:
             out[label] = label_dict[label]
         return out
 
-    @staticmethod
-    def get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
-        if action == PrimaryActionCommitType.PACKAGE_MAJOR:
-            return version.next_major
-        if action == PrimaryActionCommitType.PACKAGE_MINOR:
-            return version.next_minor
-        if action == PrimaryActionCommitType.PACKAGE_PATCH:
-            return version.next_patch
-        if action == PrimaryActionCommitType.PACKAGE_POST:
-            return version.next_post
-        return version
+
 
 
 def init(
@@ -745,7 +782,9 @@ def init(
     context_manager = ContextManager(github_context=context)
     event_name = context_manager.github.event_name
     if event_name == "issues":
-        event_manager = IssuesEventHandler(context_manager=context_manager)
+        event_manager = IssuesEventHandler(
+            context_manager=context_manager, logger=logger
+        )
     elif event_name == "issue_comment":
         event_manager = IssueCommentEventHandler(context_manager=context_manager)
     elif event_name == "pull_request":
