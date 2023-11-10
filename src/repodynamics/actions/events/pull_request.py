@@ -1,4 +1,4 @@
-from repodynamics.actions.init import ModifyingEventHandler
+from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager
 from repodynamics.datatype import WorkflowTriggeringAction, EventType, PrimaryActionCommitType, CommitGroup, BranchType
 from repodynamics.logger import Logger
