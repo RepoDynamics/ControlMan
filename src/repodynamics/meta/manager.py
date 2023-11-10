@@ -10,6 +10,7 @@ from repodynamics.datatype import (
     Issue,
     IssueStatus,
 )
+from repodynamics.version import PEP440SemVer
 
 
 class MetaManager:
@@ -81,14 +82,22 @@ class MetaManager:
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch["default"]["name"]:
-            return Branch(type=BranchType.DEFAULT)
+            return Branch(type=BranchType.DEFAULT, prefix=branch_name)
         for group_name, group_data in self.branch__group.items():
             prefix = group_data["prefix"]
             if branch_name.startswith(prefix):
                 suffix_raw = branch_name.removeprefix(prefix)
-                suffix = suffix_raw if group_name == "ci_pull" else int(suffix_raw)
+                if group_name == "release":
+                    suffix = int(suffix_raw)
+                elif group_name == "pre_release":
+                    suffix = PEP440SemVer(suffix_raw)
+                elif group_name == "dev":
+                    issue_num, target_branch = suffix_raw.split("/", 1)
+                    suffix = (int(issue_num), target_branch)
+                else:
+                    suffix = suffix_raw
                 return Branch(type=BranchType(group_name), prefix=prefix, suffix=suffix)
-        return Branch(type=BranchType.OTHER)
+        return Branch(type=BranchType.OTHER, prefix=branch_name)
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
         """
