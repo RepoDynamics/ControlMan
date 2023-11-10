@@ -2,7 +2,7 @@ import shutil
 
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.context_manager import ContextManager
-from repodynamics.actions.init import ModifyingEventHandler
+from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     WorkflowTriggeringAction, EventType, BranchType, Branch, InitCheckAction, CommitMsg, RepoFileType,
@@ -213,7 +213,7 @@ class PushEventHandler(ModifyingEventHandler):
         for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
             self.set_job_run(job_id)
 
-        self.action_meta(action=action = metadata_raw["workflow"]["init"]["meta_check_action"][self.event_type.value])
+        self.action_meta(action=metadata_raw["workflow"]["init"]["meta_check_action"][self.event_type.value])
         self._action_hooks()
         self.last_ver_main, self.dist_ver_main = self._get_latest_version()
         commits = self._get_commits()
@@ -469,8 +469,8 @@ class PushEventHandler(ModifyingEventHandler):
     def _config_repo_labels_reset(self):
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
-        for label in self._metadata_main.label__compiled.values():
-            self._gh_api.label_create(**label)
+        for label_name, label_data in self._metadata_main.label__compiled.items():
+            self._gh_api.label_create(name=label_name, description=label_data["description"], color=label_data["color"])
         return
 
     def _config_repo_branch_names(self) -> dict:
