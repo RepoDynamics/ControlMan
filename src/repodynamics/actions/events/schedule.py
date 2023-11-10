@@ -1,4 +1,4 @@
-from repodynamics.actions.init import EventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.actions.context_manager import ContextManager
 
 
