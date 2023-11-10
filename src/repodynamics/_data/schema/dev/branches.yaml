@@ -58,6 +58,28 @@ properties:
                     type: boolean
                     default: false
             required: [ prefix ]
+          pre_release:
+            type: object
+            description: Pre-release branch
+            default: { }
+            properties:
+              prefix:
+                description: Prefix for the branch name
+                type: string
+                default: pre-release/v
+              protection_rules:
+                description: Branch protection rules
+                type: object
+                default: { }
+                additionalProperties: false
+                properties:
+                  allow_deletion:
+                    type: boolean
+                    default: false
+                  allow_force_push:
+                    type: boolean
+                    default: false
+            required: [ prefix ]
           dev:
             type: object
             description: Development branch
