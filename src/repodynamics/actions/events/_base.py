@@ -130,9 +130,11 @@ class EventHandler:
         name = "Meta Sync"
         self._logger.h1(name)
         if not action:
-            action = self._metadata_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
+            action = InitCheckAction(
+                self._metadata_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
+            )
         self._logger.input(f"Action: {action.value}")
-        if action == "none":
+        if action == InitCheckAction.NONE:
             self.add_summary(
                 name=name,
                 status="skip",
@@ -140,23 +142,23 @@ class EventHandler:
             )
             self._logger.skip("Meta synchronization is disabled for this event type; skip❗")
             return
-        if action == "pull":
+        if action == InitCheckAction.PULL:
             pr_branch = self.switch_to_ci_branch("meta")
         self._metadata_branch = self._meta.read_metadata_full()
         meta_results, meta_changes, meta_summary = self._meta.compare_files()
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
-        if action not in ["fail", "report"] and meta_changes_any:
+        if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and meta_changes_any:
             self._meta.apply_changes()
-            if action == "amend":
+            if action == InitCheckAction.AMEND:
                 self.commit(stage="all", amend=True, push=True)
             else:
                 commit_msg = CommitMsg(
                     typ=self._metadata_main["commit"]["secondary_action"]["meta_sync"]["type"],
                     title="Sync dynamic files with meta content",
                 )
-                self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == "pull")
-            if action == "pull":
+                self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == InitCheckAction.PULL)
+            if action == InitCheckAction.PULL:
                 pull_data = self._gh_api.pull_create(
                     head=pr_branch,
                     base=self._context.target_branch_name,
@@ -169,9 +171,9 @@ class EventHandler:
             self._logger.success(oneliner)
         else:
             oneliner = "Some dynamic files were out of sync with meta content."
-            if action in ["pull", "commit", "amend"]:
+            if action in [InitCheckAction.PULL, InitCheckAction.COMMIT, InitCheckAction.AMEND]:
                 oneliner += " These were resynchronized and applied to "
-                if action == "pull":
+                if action == InitCheckAction.PULL:
                     link = html.a(href=pull_data["url"], content=pull_data["number"])
                     oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
                 else:
@@ -181,12 +183,12 @@ class EventHandler:
                     )
                     oneliner += "the current branch " + (
                         f"in a new commit (hash: {link})"
-                        if action == "commit"
+                        if action == InitCheckAction.COMMIT
                         else f"by amending the latest commit (new hash: {link})"
                     )
         self.add_summary(
             name=name,
-            status="fail" if meta_changes_any and action in ["fail", "report", "pull"] else "pass",
+            status="fail" if meta_changes_any and action in [InitCheckAction.FAIL, InitCheckAction.REPORT, InitCheckAction.PULL] else "pass",
             oneliner=oneliner,
             details=meta_summary
         )
@@ -195,10 +197,12 @@ class EventHandler:
     def _action_hooks(self, action: InitCheckAction | None = None):
         name = "Workflow Hooks"
         self._logger.h1(name)
-        self._logger.input(f"Action: {action.value}")
         if not action:
-            action = self._metadata_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
-        if action == "none":
+            action = InitCheckAction(
+                self._metadata_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
+            )
+        self._logger.input(f"Action: {action.value}")
+        if action == InitCheckAction.NONE:
             self.add_summary(
                 name=name,
                 status="skip",
@@ -233,18 +237,18 @@ class EventHandler:
         #         )
         # else:
         #     config = self.meta.paths.pre_commit_config.path
-        if action == "pull":
+        if action == InitCheckAction.PULL:
             pr_branch = self.switch_to_ci_branch("hooks")
         input_action = (
-            action if action in ["report", "amend", "commit"] else ("report" if action == "fail" else "commit")
+            action if action in [InitCheckAction.REPORT, InitCheckAction.AMEND, InitCheckAction.COMMIT]
+            else (InitCheckAction.REPORT if action == InitCheckAction.FAIL else InitCheckAction.COMMIT)
         )
         commit_msg = (
             CommitMsg(
                 typ=self._metadata_main["commit"]["secondary_action"]["hook_fix"]["type"],
                 title="Apply automatic fixes made by workflow hooks",
             )
-            if action in ["commit", "pull"]
-            else ""
+            if action in [InitCheckAction.COMMIT, InitCheckAction.PULL] else ""
         )
         hooks_output = hook.run(
             ref_range=(self._context.hash_before, self.hash_latest),
@@ -258,9 +262,9 @@ class EventHandler:
         passed = hooks_output["passed"]
         modified = hooks_output["modified"]
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
-        if action not in ["fail", "report"] and modified:
-            self.push(amend=action == "amend", set_upstream=action == "pull")
-            if action == "pull":
+        if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and modified:
+            self.push(amend=action == InitCheckAction.AMEND, set_upstream=action == InitCheckAction.PULL)
+            if action == InitCheckAction.PULL:
                 pull_data = self._gh_api.pull_create(
                     head=pr_branch,
                     base=self._context.target_branch_name,
@@ -268,14 +272,14 @@ class EventHandler:
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
-        if action == "pull" and modified:
+        if action == InitCheckAction.PULL and modified:
             link = html.a(href=pull_data["url"], content=pull_data["number"])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
-        if action in ["commit", "amend"] and modified:
+        if action in [InitCheckAction.COMMIT, InitCheckAction.AMEND] and modified:
             link = html.a(href=str(self._gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
             target = "the current branch " + (
                 f"in a new commit (hash: {link})"
-                if action == "commit"
+                if action == InitCheckAction.COMMIT
                 else f"by amending the latest commit (new hash: {link})"
             )
         if passed:
@@ -287,7 +291,7 @@ class EventHandler:
                     f"The modifications made during the first run were applied to {target}."
                 )
             )
-        elif action in ["fail", "report"]:
+        elif action in [InitCheckAction.FAIL, InitCheckAction.REPORT]:
             mode = "some failures were auto-fixable" if modified else "failures were not auto-fixable"
             oneliner = f"Some hooks failed ({mode})."
         elif modified:
@@ -299,7 +303,7 @@ class EventHandler:
             oneliner = "Some hooks failed (failures were not auto-fixable)."
         self.add_summary(
             name=name,
-            status="fail" if not passed or (action == "pull" and modified) else "pass",
+            status="fail" if not passed or (action == InitCheckAction.PULL and modified) else "pass",
             oneliner=oneliner,
             details=hooks_output["summary"]
         )
