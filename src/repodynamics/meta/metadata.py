@@ -313,30 +313,37 @@ class MetadataGenerator:
         self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
 
-    def repo_labels(self) -> dict[tuple[str, ...], dict[str, str]]:
+    def repo_labels(self) -> dict[str, dict[str, str]]:
         self._logger.h3("Generate metadata: labels")
         out = {}
         for group_name, group in self._metadata["label"]["group"].items():
             prefix = group["prefix"]
             for label_id, label in group["labels"].items():
                 suffix = label["suffix"]
-                out[("group", group_name, label_id)] = (
-                    {"name": f"{prefix}{suffix}", "description": label["description"], "color": group["color"]}
-                )
+                out[f"{prefix}{suffix}"] = {
+                    "type": "group",
+                    "group_name": group_name,
+                    "id": label_id,
+                    "description": label["description"],
+                    "color": group["color"]
+                }
         release_info = self._metadata.get("package", {}).get("releases", {})
         for autogroup_name, release_key in (("version", "package_versions"), ("target", "branch_names")):
             entries = release_info.get(release_key, [])
             label_data = self._metadata["label"]["auto_group"][autogroup_name]
             for entry in entries:
-                label = {
-                    "name": f"{label_data['prefix']}{entry}",
+                out[f"{label_data['prefix']}{entry}"] = {
+                    "type": "auto_group",
+                    "group_name": autogroup_name,
+                    "id": entry,
                     "description": label_data["description"],
                     "color": label_data["color"],
                 }
-                out[("auto_group", autogroup_name, entry)] = label
         for label_id, label_data in self._metadata["label"].get("single").items():
-            out[("single", label_id)] = {
-                "name": label_data["name"],
+            out[label_data["name"]] = {
+                "type": "single",
+                "group_name": None,
+                "id": label_id,
                 "description": label_data["description"],
                 "color": label_data["color"],
             }
