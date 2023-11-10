@@ -40,6 +40,6 @@ class CommitParser:
                 # Sometimes GitHub adds a second horizontal line after the original footer; skip it
                 if footer and not re.fullmatch("-{3,}", footer):
                     # Otherwise, the footer is invalid
-                    self._logger.error(f"Invalid footer: {footer}")
+                    self._logger.warning(f"Invalid footer: {footer}")
             commit_parts["footer"] = parsed_footers
         return CommitMsg(**commit_parts)
