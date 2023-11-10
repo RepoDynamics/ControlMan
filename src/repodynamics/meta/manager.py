@@ -24,6 +24,9 @@ class MetaManager:
     def __getitem__(self, item):
         return self._data[item]
 
+    def __contains__(self, item):
+        return item in self._data
+
     @property
     def as_dict(self) -> dict:
         return self._data
