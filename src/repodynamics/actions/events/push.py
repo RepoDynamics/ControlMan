@@ -1,5 +1,7 @@
 import shutil
 
+from pylinks.http import WebAPIError
+
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.context_manager import ContextManager
 from repodynamics.actions.events._base import ModifyingEventHandler
@@ -459,11 +461,18 @@ class PushEventHandler(ModifyingEventHandler):
         if not self._gh_api.info["has_pages"]:
             self._gh_api_admin.pages_create(build_type="workflow")
         cname = self._metadata_main.web__base_url
-        self._gh_api_admin.pages_update(
-            cname=cname.removeprefix("https://").removeprefix("http://") if cname else None,
-            https_enforced=cname.startswith("https://") if cname else True,
-            build_type="workflow"
-        )
+        try:
+            self._gh_api_admin.pages_update(
+                cname=cname.removeprefix("https://").removeprefix("http://") if cname else "",
+                build_type="workflow"
+            )
+        except WebAPIError as e:
+            self._logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
+        if cname:
+            try:
+                self._gh_api_admin.pages_update(https_enforced=cname.startswith("https://"))
+            except WebAPIError as e:
+                self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
         return
 
     def _config_repo_labels_reset(self):
