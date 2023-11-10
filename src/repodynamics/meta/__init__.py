@@ -31,7 +31,9 @@ def read_from_json_file(
         )
         return read_from_json_string(content=content, logger=logger) if content else None
     path_json = path_root / RelativePath.file_metadata
-    metadata = _util.dict.read(path_json, logger=logger, raise_empty=True)
+    metadata = _util.dict.read(path_json, logger=logger, raise_empty=False)
+    if not metadata:
+        return None
     MetaValidator(metadata=metadata, logger=logger).validate()
     return MetaManager(metadata=metadata)
 
