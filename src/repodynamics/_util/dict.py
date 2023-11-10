@@ -174,7 +174,11 @@ class _DictFiller:
             match_whole_str = re.match(r"^\${{([\w\.\:\-\[\] ]+)}}$", value)
             if match_whole_str:
                 return self._substitute_val(match_whole_str.group(1))
-            return re.sub(r"\${{([\w\.\:\-\[\] ]+?)}}", lambda x: str(self._substitute_val(x.group(1))), value)
+            return re.sub(
+                r"\${{([\w\.\:\-\[\] ]+?)}}",
+                lambda x: str(self._substitute_val(x.group(1))),
+                value
+            )
         if isinstance(value, list):
             return [self._recursive_subst(elem) for elem in value]
         elif isinstance(value, dict):
@@ -188,7 +192,7 @@ class _DictFiller:
     def _substitute_val(self, match):
         def recursive_retrieve(obj, address):
             if len(address) == 0:
-                return obj
+                return self._recursive_subst(obj)
             curr_add = address.pop(0)
             try:
                 next_layer = obj[curr_add]
