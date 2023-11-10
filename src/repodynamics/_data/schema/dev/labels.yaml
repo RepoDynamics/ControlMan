@@ -345,14 +345,14 @@ properties:
                         type: string
                         maxLength: 100
                         default: The issue/pull-request is published as a release candidate.
-                  merged:
+                  final:
                     type: object
                     default: { }
                     additionalProperties: false
                     properties:
                       suffix:
                         type: string
-                        default: 'merged'
+                        default: 'final'
                       description:
                         type: string
                         maxLength: 100
