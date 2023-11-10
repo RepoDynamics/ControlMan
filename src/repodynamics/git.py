@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from repodynamics.logger import Logger
 from repodynamics import _util
+from repodynamics.version import PEP440SemVer
 
 
 class Git:
@@ -292,20 +293,49 @@ class Git:
                 self._logger.error(f"Failed to get {user_type}.{key}.", details=err, exit_code=code)
         return tuple(user)
 
-    def fetch_all_remote_branches(self):
-        curr_branch, other_branches = self.get_all_branch_names()
-        local_branches = [curr_branch] + other_branches
+    def fetch_remote_branches_by_pattern(
+        self,
+        branch_pattern: re.Pattern | None = None,
+        remote_name: str = "origin",
+        exists_ok: bool = False,
+        not_fast_forward_ok: bool = False,
+    ):
         remote_branches = self._run(["git", "branch", "-r"]).splitlines()
+        branch_names = []
         for remote_branch in remote_branches:
             remote_branch = remote_branch.strip()
-            if " -> " in remote_branch:
-                continue
-            remote_branch = remote_branch.removeprefix("origin/")
-            if remote_branch in local_branches:
-                continue
-            self._run(["git", "branch", "--track", remote_branch, f"origin/{remote_branch}"])
-            self._run(["git", "fetch", "--all"])
-            self._run(["git", "pull", "--all"])
+            if remote_branch.startswith(f"{remote_name}/") and " -> " not in remote_branch:
+                remote_branch = remote_branch.removeprefix(f"{remote_name}/")
+                if not branch_pattern or branch_pattern.match(remote_branch):
+                    branch_names.append(remote_branch)
+        return self.fetch_remote_branches_by_name(
+            branch_names=branch_names,
+            remote_name=remote_name,
+            exists_ok=exists_ok,
+            not_fast_forward_ok=not_fast_forward_ok,
+        )
+
+    def fetch_remote_branches_by_name(
+        self,
+        branch_names: str | list[str],
+        remote_name: str = "origin",
+        exists_ok: bool = False,
+        not_fast_forward_ok: bool = False,
+    ):
+        if isinstance(branch_names, str):
+            branch_names = [branch_names]
+        if not exists_ok:
+            curr_branch, other_branches = self.get_all_branch_names()
+            local_branches = [curr_branch] + other_branches
+            branch_names = [branch_name for branch_name in branch_names if branch_name not in local_branches]
+        refspecs = [
+            f"{'+' if not_fast_forward_ok else ''}{branch_name}:{branch_name}" for branch_name in branch_names
+        ]
+        self._run(["git", "fetch", remote_name, *refspecs])
+        for branch_name in branch_names:
+            self._run(["git", "branch", "--track", branch_name, f"{remote_name}/{branch_name}"])
+        # self._run(["git", "fetch", "--all"])
+        # self._run(["git", "pull", "--all"])
         return
 
     def get_commits(self, revision_range: str | None = None) -> list[dict[str, str | list[str]]]:
@@ -350,7 +380,6 @@ class Git:
                 "files": list(filter(None, match[4].strip().split("\n"))),
             }
             commits.append(commit_info)
-
         return commits
 
     def current_branch_name(self) -> str:
@@ -416,6 +445,25 @@ class Git:
                         sub_list_added = True
                     tags[-1].append(tag)
         return tags
+
+    def get_latest_version(self, tag_prefix: str, dev_only: bool = False) -> PEP440SemVer | None:
+        tags_lists = self.get_tags()
+        if not tags_lists:
+            return
+        for tags_list in tags_lists:
+            ver_tags = []
+            for tag in tags_list:
+                if tag.startswith(tag_prefix):
+                    ver_tags.append(PEP440SemVer(tag.removeprefix(tag_prefix)))
+            if ver_tags:
+                if dev_only:
+                    ver_tags = sorted(ver_tags, reverse=True)
+                    for ver_tag in ver_tags:
+                        if ver_tag.release_type == "dev":
+                            return ver_tag
+                else:
+                    return max(ver_tags)
+        return
 
     @property
     def remotes(self) -> dict:
