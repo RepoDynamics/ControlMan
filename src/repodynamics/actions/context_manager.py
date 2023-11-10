@@ -383,6 +383,7 @@ class ContextManager:
     def __init__(self, github_context: dict):
         payload_manager = {
             "issues": IssuesPayload,
+            "push": PushPayload,
             "issue_comment": IssueCommentPayload,
             "pull_request": PullRequestPayload,
         }
