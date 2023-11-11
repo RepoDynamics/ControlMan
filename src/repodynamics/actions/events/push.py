@@ -120,7 +120,7 @@ class PushEventHandler(ModifyingEventHandler):
         self._git_target.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
         self._git_target.checkout(self._context.github.ref_name)
         self._meta = Meta(
-            path_root="repo_target",
+            path_root="repo_self",
             github_token=self._context.github.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
