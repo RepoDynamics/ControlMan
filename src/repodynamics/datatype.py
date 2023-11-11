@@ -379,7 +379,7 @@ class IssueStatus(Enum):
     ALPHA = "alpha"
     BETA = "beta"
     RC = "rc"
-    MERGED = "merged"
+    FINAL = "final"
 
 
 class Emoji:
