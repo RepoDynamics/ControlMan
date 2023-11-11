@@ -201,7 +201,9 @@ class PushEventHandler(ModifyingEventHandler):
         self.commit(message="init: Create repository from RepoDynamics PyPackIT template")
         self._git_target.branch_delete(self._context.github.ref_name, force=True)
         self._git_target.branch_rename(self._context.github.ref_name, force=True)
-        self._git_target.push(target="origin", ref=self._context.github.ref_name, force_with_lease=True)
+        self._hash_latest = self._git_target.push(
+            target="origin", ref=self._context.github.ref_name, force_with_lease=True
+        )
         self._tag_version(ver="0.0.0", msg="Initial release")
         self._set_job_run(
             package_publish_testpypi=True,
