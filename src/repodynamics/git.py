@@ -91,7 +91,7 @@ class Git:
             with self._temp_committer():
                 self._run(["git", "add", flag])
         commit_hash = None
-        if self.has_changes(check_type="staged"):
+        if allow_empty or self.has_changes(check_type="staged"):
             with self._temp_committer():
                 out, err, code = self._run(commit_cmd, raise_=False)
             if code != 0:
