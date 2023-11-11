@@ -138,7 +138,7 @@ class PackageFileGenerator:
             width=self._meta["package"].get("dev_config", {}).get("max_line_length", 100),
             replace_whitespace=False,
         )
-        docstring = f'"""{docstring_text}\n"""\n'
+        docstring = f'"""{docstring_text}\n"""  # noqa: D400\n'
 
         package_dir_info = self._package_dir_output[0][0]
         current_dir_path = (
@@ -151,7 +151,7 @@ class PackageFileGenerator:
         else:
             file_content = """__version_details__ = {"version": "0.0.0"}
 __version__ = __version_details__["version"]"""
-        pattern = re.compile(r'^((?:[\t ]*#.*\n|[\t ]*\n)*)("""(?:.|\n)*?"""(?:\n|$))', re.MULTILINE)
+        pattern = re.compile(r'^((?:[\t ]*#.*\n|[\t ]*\n)*)("""(?:.|\n)*?"""(?:[ \t]*#.*)?(?:\n|$))', re.MULTILINE)
         match = pattern.match(file_content)
         if not match:
             # If no docstring found, add the new docstring at the beginning of the file
