@@ -332,13 +332,22 @@ class PullRequestPayload(EventPayload):
         return self.head_repo_fullname == self.repository["full_name"]
 
     @property
-    def merged(self) -> bool:
-        """Whether the pull request is merged."""
-        return self.state == "closed" and self._pull_request["merged"]
+    def label(self) -> dict | None:
+        """
+        The label that was added or removed from the issue.
+
+        This is only available for the 'labeled' and 'unlabeled' events.
+        """
+        return self._payload.get("label")
 
     @property
     def label_names(self) -> list[str]:
         return [label["name"] for label in self._pull_request["labels"]]
+
+    @property
+    def merged(self) -> bool:
+        """Whether the pull request is merged."""
+        return self.state == "closed" and self._pull_request["merged"]
 
 
 class PushPayload(EventPayload):
