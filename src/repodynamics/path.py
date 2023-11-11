@@ -46,9 +46,9 @@ class PathFinder:
         paths["dir"]["meta"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
-            paths["dir"]["local"][local_dir]["root"] = (
-                f'{dir_local_root}/{paths["dir"]["local"][local_dir]["root"]}'
-            )
+            paths["dir"]["local"][local_dir][
+                "root"
+            ] = f'{dir_local_root}/{paths["dir"]["local"][local_dir]["root"]}'
             for key, sub_dir in paths["dir"]["local"][local_dir].items():
                 if key != "root":
                     full_rel_path = f'{paths["dir"]["local"][local_dir]["root"]}/{sub_dir}'
@@ -254,7 +254,7 @@ class PathFinder:
         path = self._path_root / rel_path
         return DynamicFile("funding", DynamicFileType.CONFIG, rel_path, path)
 
-    def pre_commit_config(self, branch_type: Literal['main', 'release', 'dev', 'other']) -> DynamicFile:
+    def pre_commit_config(self, branch_type: Literal["main", "release", "dev", "other"]) -> DynamicFile:
         rel_path = getattr(RelativePath, f"file_pre_commit_config_{branch_type}")
         path = self._path_root / rel_path
         return DynamicFile(f"pre-commit-config-{branch_type}", DynamicFileType.CONFIG, rel_path, path)
@@ -365,9 +365,7 @@ class PathFinder:
     def pull_request_template_outdated(self, path: Path) -> DynamicFile:
         filename = path.name
         rel_path = str(path.relative_to(self._path_root))
-        return DynamicFile(
-            f"pull-request-template-outdated-{filename}", DynamicFileType.FORM, rel_path, path
-        )
+        return DynamicFile(f"pull-request-template-outdated-{filename}", DynamicFileType.FORM, rel_path, path)
 
     def discussion_form(self, name: str) -> DynamicFile:
         filename = f"{name}.yaml"
@@ -422,4 +420,3 @@ class PathFinder:
         rel_path = f'{self._paths["dir"]["source"]}/{package_name}/{filename}'
         path = self._path_root / rel_path
         return DynamicFile("package-typing-marker", DynamicFileType.PACKAGE, rel_path, path)
-

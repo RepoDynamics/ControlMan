@@ -7,8 +7,15 @@ from repodynamics.actions.context_manager import ContextManager
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
-    WorkflowTriggeringAction, EventType, BranchType, Branch, InitCheckAction, CommitMsg, RepoFileType,
-    CommitGroup, PrimaryActionCommitType
+    WorkflowTriggeringAction,
+    EventType,
+    BranchType,
+    Branch,
+    InitCheckAction,
+    CommitMsg,
+    RepoFileType,
+    CommitGroup,
+    PrimaryActionCommitType,
 )
 from repodynamics.meta.meta import Meta
 from repodynamics import _util
@@ -18,7 +25,6 @@ from repodynamics.version import PEP440SemVer
 
 
 class PushEventHandler(ModifyingEventHandler):
-
     def __init__(
         self,
         context_manager: ContextManager,
@@ -52,9 +58,7 @@ class PushEventHandler(ModifyingEventHandler):
         elif action == WorkflowTriggeringAction.DELETED:
             self._run_branch_deleted()
         else:
-            _helpers.error_unsupported_triggering_action(
-                event_name="push", action=action, logger=self._logger
-            )
+            _helpers.error_unsupported_triggering_action(event_name="push", action=action, logger=self._logger)
         return
 
     def _run_branch_created(self):
@@ -74,11 +78,7 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
-        meta = Meta(
-            path_root="repo_self",
-            github_token=self._context.github.token,
-            logger=self._logger
-        )
+        meta = Meta(path_root="repo_self", github_token=self._context.github.token, logger=self._logger)
         metadata = read_from_json_file(path_root="repo_self", logger=self._logger)
         shutil.rmtree(meta.paths.dir_source)
         shutil.rmtree(meta.paths.dir_tests)
@@ -123,7 +123,7 @@ class PushEventHandler(ModifyingEventHandler):
             path_root="repo_target",
             github_token=self._context.github.token,
             hash_before=self._context.hash_before,
-            logger=self._logger
+            logger=self._logger,
         )
         if self._branch.type == BranchType.RELEASE:
             self._event_type = EventType.PUSH_RELEASE
@@ -150,7 +150,7 @@ class PushEventHandler(ModifyingEventHandler):
             path_root="repo_self",
             commit_hash=self._context.hash_before,
             git=self._git_self,
-            logger=self._logger
+            logger=self._logger,
         )
         if not self._metadata_main_before:
             return self._run_existing_repository_initialized()
@@ -161,13 +161,13 @@ class PushEventHandler(ModifyingEventHandler):
             path_root="repo_self",
             commit_hash=self._context.hash_before,
             git=self._git_self,
-            logger=self._logger
+            logger=self._logger,
         )
         self._meta = Meta(
             path_root="repo_self",
             github_token=self._context.github.token,
             future_versions={self._branch.prefix: "0.0.0"},
-            logger=self._logger
+            logger=self._logger,
         )
         self._metadata_main = self._metadata_branch = self._meta.read_metadata_full()
         self._config_repo()
@@ -213,7 +213,6 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def _run_branch_edited_main_normal(self):
-
         self.action_repo_labels_sync()
 
         self.action_file_change_detector()
@@ -334,7 +333,8 @@ class PushEventHandler(ModifyingEventHandler):
                 package_publish_testpypi=True,
             )
         elif any(
-            filepath in changed_file_groups[RepoFileType.DYNAMIC] for filepath in (
+            filepath in changed_file_groups[RepoFileType.DYNAMIC]
+            for filepath in (
                 RelativePath.file_python_pyproject,
                 RelativePath.file_python_manifest,
             )
@@ -346,10 +346,13 @@ class PushEventHandler(ModifyingEventHandler):
                 package_publish_testpypi=True,
             )
         if self._job_run_flag["package_publish_testpypi"]:
-            issue_labels = [label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])]
+            issue_labels = [
+                label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])
+            ]
             final_commit_type = self._metadata_main.get_issue_data_from_labels(issue_labels).group_data
             if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
-                PrimaryActionCommitType.WEBSITE, PrimaryActionCommitType.META
+                PrimaryActionCommitType.WEBSITE,
+                PrimaryActionCommitType.META,
             ):
                 self._set_job_run(package_publish_testpypi=False)
                 return
@@ -410,7 +413,8 @@ class PushEventHandler(ModifyingEventHandler):
                 website_build=True,
             )
         elif any(
-            filepath in changed_file_groups[RepoFileType.DYNAMIC] for filepath in (
+            filepath in changed_file_groups[RepoFileType.DYNAMIC]
+            for filepath in (
                 RelativePath.file_python_pyproject,
                 RelativePath.file_python_manifest,
             )
@@ -434,9 +438,7 @@ class PushEventHandler(ModifyingEventHandler):
         elif action == WorkflowTriggeringAction.EDITED:
             self._run_tag_edited()
         else:
-            _helpers.error_unsupported_triggering_action(
-                event_name="push", action=action, logger=self._logger
-            )
+            _helpers.error_unsupported_triggering_action(event_name="push", action=action, logger=self._logger)
 
     def _run_tag_created(self):
         return
@@ -457,7 +459,7 @@ class PushEventHandler(ModifyingEventHandler):
         topics = data.pop("topics")
         self._gh_api_admin.repo_update(**data)
         self._gh_api_admin.repo_topics_replace(topics=topics)
-        if not self._gh_api_admin.actions_permissions_workflow_default()['can_approve_pull_request_reviews']:
+        if not self._gh_api_admin.actions_permissions_workflow_default()["can_approve_pull_request_reviews"]:
             self._gh_api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
         return
 
@@ -469,7 +471,7 @@ class PushEventHandler(ModifyingEventHandler):
         try:
             self._gh_api_admin.pages_update(
                 cname=cname.removeprefix("https://").removeprefix("http://") if cname else "",
-                build_type="workflow"
+                build_type="workflow",
             )
         except WebAPIError as e:
             self._logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
@@ -484,7 +486,9 @@ class PushEventHandler(ModifyingEventHandler):
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
         for label_name, label_data in self._metadata_main.label__compiled.items():
-            self._gh_api.label_create(name=label_name, description=label_data["description"], color=label_data["color"])
+            self._gh_api.label_create(
+                name=label_name, description=label_data["description"], color=label_data["color"]
+            )
         return
 
     def _config_repo_branch_names(self) -> dict:
@@ -495,8 +499,7 @@ class PushEventHandler(ModifyingEventHandler):
         old_to_new_map = {}
         if before["default"]["name"] != after["default"]["name"]:
             self._gh_api_admin.branch_rename(
-                old_name=before["default"]["name"],
-                new_name=after["default"]["name"]
+                old_name=before["default"]["name"], new_name=after["default"]["name"]
             )
             old_to_new_map[before["default"]["name"]] = after["default"]["name"]
         branches = self._gh_api_admin.branches
@@ -511,4 +514,3 @@ class PushEventHandler(ModifyingEventHandler):
                         self._gh_api_admin.branch_rename(old_name=branch_name, new_name=new_name)
                         old_to_new_map[branch_name] = new_name
         return old_to_new_map
-

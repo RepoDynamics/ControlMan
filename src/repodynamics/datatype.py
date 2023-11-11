@@ -3,6 +3,7 @@ from pathlib import Path
 from enum import Enum
 from repodynamics.version import PEP440SemVer
 
+
 class EventType(Enum):
     PUSH_MAIN = "push_main"
     PUSH_RELEASE = "push_release"
@@ -363,6 +364,7 @@ class WorkflowDispatchInput(NamedTuple):
     website_build: bool
     website_announcement: str
     website_announcement_msg: str
+
 
 class IssueStatus(Enum):
     TRIAGE = "triage"

@@ -181,7 +181,8 @@ class MetaReader:
     def _get_local_config(self):
         self.logger.h3("Read Local Config")
         source_path = (
-            self._pathfinder.file_local_config if self._pathfinder.file_local_config.is_file()
+            self._pathfinder.file_local_config
+            if self._pathfinder.file_local_config.is_file()
             else self._pathfinder.dir_meta / "config.yaml"
         )
         local_config = self._read_datafile(

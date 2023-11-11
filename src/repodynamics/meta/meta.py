@@ -55,9 +55,7 @@ class Meta:
     def read_metadata_raw(self) -> dict:
         if self._metadata_raw:
             return self._metadata_raw
-        self._reader = MetaReader(
-            paths=self.paths, github_token=self._github_token, logger=self._logger
-        )
+        self._reader = MetaReader(paths=self.paths, github_token=self._github_token, logger=self._logger)
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
 
@@ -115,9 +113,9 @@ class Meta:
         self._generated_files = generated_files
         return self._generated_files
 
-    def compare_files(self) -> tuple[
-        list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str
-    ]:
+    def compare_files(
+        self,
+    ) -> tuple[list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str]:
         if self._results:
             return self._results, self._changes, self._summary
         updates = self.generate_files()

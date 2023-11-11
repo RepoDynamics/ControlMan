@@ -11,7 +11,6 @@ from repodynamics.actions._changelog import ChangelogManager
 
 
 class WebAnnouncement:
-
     def __init__(
         self,
         metadata_main: MetaManager,

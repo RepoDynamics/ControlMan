@@ -12,11 +12,7 @@ from repodynamics.meta.files.forms import FormGenerator
 
 
 class IssuesEventHandler(NonModifyingEventHandler):
-    def __init__(
-        self,
-        context_manager: ContextManager,
-        logger: Logger | None = None
-    ):
+    def __init__(self, context_manager: ContextManager, logger: Logger | None = None):
         super().__init__(context_manager=context_manager, logger=logger)
         self._payload: IssuesPayload = self._context.payload
         return
@@ -29,17 +25,12 @@ class IssuesEventHandler(NonModifyingEventHandler):
             self._run_labeled()
         else:
             _helpers.error_unsupported_triggering_action(
-                event_name=self._context.github.event_name,
-                action=action,
-                logger=self._logger
+                event_name=self._context.github.event_name, action=action, logger=self._logger
             )
         return
 
     def _run_opened(self):
-        self._gh_api.issue_comment_create(
-            number=self._payload.number,
-            body="This post tracks the issue."
-        )
+        self._gh_api.issue_comment_create(number=self._payload.number, body="This post tracks the issue.")
         self._post_process_issue()
         return
 
@@ -73,12 +64,9 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     title=self._payload.title,
                     body=f"This is a draft pull request for the issue #{self._payload.number}.",
                     maintainer_can_modify=True,
-                    draft=True
+                    draft=True,
                 )
-                self._gh_api.issue_labels_set(
-                    number=pull_data["number"],
-                    labels=self._payload.label_names
-                )
+                self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._payload.label_names)
         return
 
     def _post_process_issue(self):

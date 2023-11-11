@@ -5,7 +5,6 @@ from repodynamics.datatype import InitCheckAction
 
 
 class WorkflowDispatchEventHandler(NonModifyingEventHandler):
-
     def __init__(
         self,
         context_manager: ContextManager,

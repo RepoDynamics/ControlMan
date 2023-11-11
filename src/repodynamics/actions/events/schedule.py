@@ -3,7 +3,6 @@ from repodynamics.actions.context_manager import ContextManager
 
 
 class ScheduleEventHandler(EventHandler):
-
     def __init__(self, context_manager: ContextManager):
         super().__init__(context_manager=context_manager)
         self._context = context_manager

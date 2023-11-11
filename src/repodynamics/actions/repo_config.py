@@ -4,14 +4,13 @@ from repodynamics.meta.manager import MetaManager
 
 
 class RepoConfigAction:
-
     def __init__(
         self,
         workflow_api: Repo,
         admin_api: Repo,
         metadata: MetaManager,
         metadata_before: MetaManager | None = None,
-        logger: Logger | None = None
+        logger: Logger | None = None,
     ):
         self.api = workflow_api
         self.api_admin = admin_api
@@ -19,8 +18,6 @@ class RepoConfigAction:
         self.metadata_before = metadata_before
         self.logger = logger or Logger()
         return
-
-
 
     def update_repo_labels(self, init: bool = False):
         name = "Repository Labels Synchronizer"
@@ -50,7 +47,7 @@ class RepoConfigAction:
         added_version_ids = set(new_labels_versions.keys()) - set(old_labels_versions.keys())
         deleted_version_ids = sorted(
             [PEP440SemVer(ver) for ver in set(old_labels_versions.keys()) - set(new_labels_versions.keys())],
-            reverse=True
+            reverse=True,
         )
         remaining_allowed_number = 1000 - len(new_labels)
         still_allowed_version_ids = deleted_version_ids[:remaining_allowed_number]
@@ -72,11 +69,14 @@ class RepoConfigAction:
                     name=old_label["name"],
                     new_name=new_label["name"],
                     description=new_label["description"],
-                    color=new_label["color"]
+                    color=new_label["color"],
                 )
         if not still_allowed_version_ids:
             return
-        if self.metadata_before["label"]["auto_group"]["version"] == self.metadata["label"]["auto_group"]["version"]:
+        if (
+            self.metadata_before["label"]["auto_group"]["version"]
+            == self.metadata["label"]["auto_group"]["version"]
+        ):
             return
         new_prefix = self.metadata["label"]["auto_group"]["version"]["prefix"]
         new_color = self.metadata["label"]["auto_group"]["version"]["color"]
@@ -86,10 +86,6 @@ class RepoConfigAction:
                 name=old_labels_versions[str(still_allowed_version_id)]["name"],
                 new_name=f"{new_prefix}{still_allowed_version_id}",
                 description=new_description,
-                color=new_color
+                color=new_color,
             )
         return
-
-
-
-

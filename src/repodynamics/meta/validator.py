@@ -106,14 +106,13 @@ class MetaValidator:
                 )
             if changelog_id not in changelog_sections:
                 changelog_sections[changelog_id] = [
-                    section["id"]
-                    for section in self._data["changelog"][changelog_id]["sections"]
+                    section["id"] for section in self._data["changelog"][changelog_id]["sections"]
                 ]
             if commit_data["changelog_section_id"] not in changelog_sections[changelog_id]:
                 self._logger.error(
                     f"Invalid commit changelog section ID: {commit_data['changelog_section_id']}",
                     f"The changelog section ID '{commit_data['changelog_section_id']}' set for commit "
-                    f"'secondary_custom.{commit_type}' is not defined in 'changelog.{changelog_id}.sections'."
+                    f"'secondary_custom.{commit_type}' is not defined in 'changelog.{changelog_id}.sections'.",
                 )
         return
 

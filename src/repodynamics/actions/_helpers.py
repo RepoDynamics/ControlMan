@@ -3,9 +3,7 @@ from repodynamics.logger import Logger
 
 
 def error_unsupported_triggering_action(
-    event_name: str,
-    action: WorkflowTriggeringAction | str,
-    logger: Logger
+    event_name: str, action: WorkflowTriggeringAction | str, logger: Logger
 ):
     action_name = action.value if isinstance(action, WorkflowTriggeringAction) else action
     action_err_msg = f"Unsupported triggering action for '{event_name}' event."

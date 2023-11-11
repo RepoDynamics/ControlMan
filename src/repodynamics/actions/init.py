@@ -51,9 +51,7 @@ def init(
     context_manager = ContextManager(github_context=context)
     event_name = context_manager.github.event_name
     if event_name == "issues":
-        event_manager = IssuesEventHandler(
-            context_manager=context_manager, logger=logger
-        )
+        event_manager = IssuesEventHandler(context_manager=context_manager, logger=logger)
     elif event_name == "issue_comment":
         event_manager = IssueCommentEventHandler(context_manager=context_manager)
     elif event_name == "pull_request":

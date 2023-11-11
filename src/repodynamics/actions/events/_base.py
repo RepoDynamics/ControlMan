@@ -47,13 +47,7 @@ from repodynamics.datatype import (
 
 
 class EventHandler:
-
-    def __init__(
-        self,
-        context_manager: ContextManager,
-        admin_token: str,
-        logger: Logger | None = None
-    ):
+    def __init__(self, context_manager: ContextManager, admin_token: str, logger: Logger | None = None):
         self._context = context_manager
         self._metadata_main: MetaManager | None = meta.read_from_json_file(
             path_root="repo_self", logger=logger
@@ -90,7 +84,8 @@ class EventHandler:
         self._failed = False
         self._hash_latest: str = ""
         self._job_run_flag: dict[str, bool] = {
-            job_id: False for job_id in [
+            job_id: False
+            for job_id in [
                 "package_build",
                 "package_test_local",
                 "package_lint",
@@ -157,7 +152,12 @@ class EventHandler:
                     typ=self._metadata_main["commit"]["secondary_action"]["meta_sync"]["type"],
                     title="Sync dynamic files with meta content",
                 )
-                self.commit(message=str(commit_msg), stage="all", push=True, set_upstream=action == InitCheckAction.PULL)
+                self.commit(
+                    message=str(commit_msg),
+                    stage="all",
+                    push=True,
+                    set_upstream=action == InitCheckAction.PULL,
+                )
             if action == InitCheckAction.PULL:
                 pull_data = self._gh_api.pull_create(
                     head=pr_branch,
@@ -178,8 +178,7 @@ class EventHandler:
                     oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
                 else:
                     link = html.a(
-                        href=str(self._gh_link.commit(self.hash_latest)),
-                        content=self.hash_latest[:7]
+                        href=str(self._gh_link.commit(self.hash_latest)), content=self.hash_latest[:7]
                     )
                     oneliner += "the current branch " + (
                         f"in a new commit (hash: {link})"
@@ -188,9 +187,12 @@ class EventHandler:
                     )
         self.add_summary(
             name=name,
-            status="fail" if meta_changes_any and action in [InitCheckAction.FAIL, InitCheckAction.REPORT, InitCheckAction.PULL] else "pass",
+            status="fail"
+            if meta_changes_any
+            and action in [InitCheckAction.FAIL, InitCheckAction.REPORT, InitCheckAction.PULL]
+            else "pass",
             oneliner=oneliner,
-            details=meta_summary
+            details=meta_summary,
         )
         return
 
@@ -240,7 +242,8 @@ class EventHandler:
         if action == InitCheckAction.PULL:
             pr_branch = self.switch_to_ci_branch("hooks")
         input_action = (
-            action if action in [InitCheckAction.REPORT, InitCheckAction.AMEND, InitCheckAction.COMMIT]
+            action
+            if action in [InitCheckAction.REPORT, InitCheckAction.AMEND, InitCheckAction.COMMIT]
             else (InitCheckAction.REPORT if action == InitCheckAction.FAIL else InitCheckAction.COMMIT)
         )
         commit_msg = (
@@ -248,7 +251,8 @@ class EventHandler:
                 typ=self._metadata_main["commit"]["secondary_action"]["hook_fix"]["type"],
                 title="Apply automatic fixes made by workflow hooks",
             )
-            if action in [InitCheckAction.COMMIT, InitCheckAction.PULL] else ""
+            if action in [InitCheckAction.COMMIT, InitCheckAction.PULL]
+            else ""
         )
         hooks_output = hook.run(
             ref_range=(self._context.hash_before, self.hash_latest),
@@ -305,7 +309,7 @@ class EventHandler:
             name=name,
             status="fail" if not passed or (action == InitCheckAction.PULL and modified) else "pass",
             oneliner=oneliner,
-            details=hooks_output["summary"]
+            details=hooks_output["summary"],
         )
         return
 
@@ -487,7 +491,7 @@ class EventHandler:
                     "download_url_testpypi": f"https://test.pypi.org/project/{package_name}/{self._version}",
                     "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
                 },
-                "release": self._release_info | {"tag_name": self._tag}
+                "release": self._release_info | {"tag_name": self._tag},
             },
             "metadata_ci": {
                 "path": metadata["path"],
@@ -503,7 +507,7 @@ class EventHandler:
                     "pure_python": package.get("pure_python", True),
                     "cibw_matrix_platform": package.get("cibw_matrix_platform", []),
                     "cibw_matrix_python": package.get("cibw_matrix_python", []),
-                }
+                },
             },
         }
         return out
@@ -513,7 +517,7 @@ class EventHandler:
             html.details(content=md.code_block(str(data), lang="yaml"), summary=summary)
             for data, summary in (
                 (self._context.github, "🎬 GitHub Context"),
-                (self._context.payload, "📥 Event Payload")
+                (self._context.payload, "📥 Event Payload"),
             )
         )
         intro = [
@@ -557,34 +561,14 @@ class EventHandler:
 
 
 class NonModifyingEventHandler(EventHandler):
-
-    def __init__(
-        self,
-        context_manager: ContextManager,
-        admin_token: str = "",
-        logger: Logger | None = None
-    ):
-        super().__init__(
-            context_manager=context_manager,
-            admin_token=admin_token,
-            logger=logger
-        )
+    def __init__(self, context_manager: ContextManager, admin_token: str = "", logger: Logger | None = None):
+        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
         return
 
 
 class ModifyingEventHandler(EventHandler):
-
-    def __init__(
-        self,
-        context_manager: ContextManager,
-        admin_token: str,
-        logger: Logger | None = None
-    ):
-        super().__init__(
-            context_manager=context_manager,
-            admin_token=admin_token,
-            logger=logger
-        )
+    def __init__(self, context_manager: ContextManager, admin_token: str, logger: Logger | None = None):
+        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
         return
 
     def _action_file_change_detector(self) -> dict[RepoFileType, list[str]]:
@@ -730,5 +714,3 @@ class ModifyingEventHandler(EventHandler):
             # else:
             #     parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
         return parsed_commits
-
-

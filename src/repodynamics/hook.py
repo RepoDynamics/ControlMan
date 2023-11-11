@@ -127,7 +127,8 @@ class PreCommitHooks:
             path = self._path_root.parent / ".__temporary_pre_commit_config__.yaml"
             with open(path, "w") as f:
                 config = (
-                    self._config if isinstance(self._config, str)
+                    self._config
+                    if isinstance(self._config, str)
                     else YAML(typ=["rt", "string"]).dumps(self._config, add_final_eol=True)
                 )
                 f.write(config)

@@ -1,8 +1,4 @@
-
-
 class PullRequestTargetEventHandler:
-
-
     def run(self):
         if action == WorkflowTriggeringAction.OPENED:
             self.event_pull_target_opened()

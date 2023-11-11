@@ -15,6 +15,7 @@ class GitHubContext:
     ----------
     - [GitHub Docs](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context)
     """
+
     def __init__(self, context: dict):
         self._token = context.pop("token")
         self._context = dict(sorted(context.items()))
@@ -151,7 +152,6 @@ class EventPayload:
 
 
 class IssueCommentPayload(EventPayload):
-
     def __init__(self, payload: dict):
         super().__init__(payload=payload)
         self._payload = payload
@@ -164,7 +164,9 @@ class IssueCommentPayload(EventPayload):
         return self._payload["action"]
 
     @property
-    def author_association(self) -> Literal[
+    def author_association(
+        self,
+    ) -> Literal[
         "COLLABORATOR",
         "CONTRIBUTOR",
         "FIRST_TIMER",
@@ -198,7 +200,6 @@ class IssueCommentPayload(EventPayload):
 
 
 class IssuesPayload(EventPayload):
-
     def __init__(self, payload: dict):
         super().__init__(payload=payload)
         self._payload = payload
@@ -273,7 +274,6 @@ class IssuesPayload(EventPayload):
 
 
 class PullRequestPayload(EventPayload):
-
     def __init__(self, payload: dict):
         super().__init__(payload=payload)
         self._payload = payload
@@ -342,14 +342,15 @@ class PullRequestPayload(EventPayload):
 
 
 class PushPayload(EventPayload):
-
     def __init__(self, payload: dict):
         super().__init__(payload=payload)
         self._payload = payload
         return
 
     @property
-    def action(self) -> Literal[
+    def action(
+        self,
+    ) -> Literal[
         WorkflowTriggeringAction.CREATED, WorkflowTriggeringAction.DELETED, WorkflowTriggeringAction.EDITED
     ]:
         """Push action type."""
@@ -379,7 +380,6 @@ class PushPayload(EventPayload):
 
 
 class ContextManager:
-
     def __init__(self, github_context: dict):
         payload_manager = {
             "issues": IssuesPayload,
@@ -407,7 +407,11 @@ class ContextManager:
 
     @property
     def target_repo_fullname(self) -> str:
-        return self.payload.head_repo_fullname if self.github.event_name == "pull_request" else self.github.repo_fullname
+        return (
+            self.payload.head_repo_fullname
+            if self.github.event_name == "pull_request"
+            else self.github.repo_fullname
+        )
 
     @property
     def target_branch_name(self) -> str:

@@ -325,7 +325,7 @@ class MetadataGenerator:
                     "group_name": group_name,
                     "id": label_id,
                     "description": label["description"],
-                    "color": group["color"]
+                    "color": group["color"],
                 }
         release_info = self._metadata.get("package", {}).get("releases", {})
         for autogroup_name, release_key in (("version", "package_versions"), ("target", "branch_names")):
@@ -579,7 +579,9 @@ class MetadataGenerator:
             if not ver:
                 self._logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
-            branch_metadata = _util.dict.read(self._output_path.metadata.path) if branch != curr_branch else self._metadata
+            branch_metadata = (
+                _util.dict.read(self._output_path.metadata.path) if branch != curr_branch else self._metadata
+            )
             if not branch_metadata:
                 self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
                 continue

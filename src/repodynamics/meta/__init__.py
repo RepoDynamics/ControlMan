@@ -15,10 +15,7 @@ from repodynamics.git import Git
 
 
 def read_from_json_file(
-    path_root: str | Path = ".",
-    commit_hash: str = "",
-    git: Git | None = None,
-    logger: Logger | None = None
+    path_root: str | Path = ".", commit_hash: str = "", git: Git | None = None, logger: Logger | None = None
 ) -> MetaManager | None:
     logger = logger or Logger()
     path_root = Path(path_root).resolve()

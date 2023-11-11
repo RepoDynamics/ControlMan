@@ -2,7 +2,6 @@ from repodynamics.actions.events._base import NonModifyingEventHandler
 
 
 class IssueCommentEventHandler(NonModifyingEventHandler):
-
     def run(self):
         is_pull = self._context.payload.get("pull_request")
         if is_pull:
@@ -34,10 +33,15 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
         return
 
     def event_comment_issue_created(self):
-        action_err_details = "The workflow was triggered by a comment on " + (
-            "a pull request ('issue_comment' event with 'pull_request' payload)"
-            if is_pull else "an issue ('issue_comment' event without 'pull_request' payload)"
-        ) + f", {action_err_details_sub}"
+        action_err_details = (
+            "The workflow was triggered by a comment on "
+            + (
+                "a pull request ('issue_comment' event with 'pull_request' payload)"
+                if is_pull
+                else "an issue ('issue_comment' event without 'pull_request' payload)"
+            )
+            + f", {action_err_details_sub}"
+        )
         return
 
     def event_comment_issue_edited(self):
