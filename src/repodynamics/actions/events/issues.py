@@ -68,7 +68,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     message=f"Create branch '{head_branch_name}' for issue #{self._payload.number}",
                     allow_empty=True,
                 )
-                self._git_target.push()
+                self._git_target.push(target="origin", set_upstream=True)
                 pull_data = self._gh_api.pull_create(
                     head=new_branch["name"],
                     base=base_branch_name,
