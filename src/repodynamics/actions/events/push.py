@@ -321,7 +321,7 @@ class PushEventHandler(ModifyingEventHandler):
                             head=self._context.github.ref_name,
                             base=self._branch.suffix[1],
                         )
-                    elif len(matching_pulls) != 0:
+                    elif len(matching_pulls) != 1:
                         self._logger.error(
                             f"Found {len(matching_pulls)} matching pull requests, but expected 0 or 1.",
                             raise_error=False,
