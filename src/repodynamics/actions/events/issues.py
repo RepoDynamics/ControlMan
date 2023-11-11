@@ -54,18 +54,27 @@ class IssuesEventHandler(NonModifyingEventHandler):
         for issue_label in self._payload.labels:
             if issue_label["name"].startswith(target_label_prefix):
                 base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
+                head_branch_name = f"{dev_branch_prefix}{self._payload.number}/{base_branch_name}"
                 new_branch = self._gh_api.branch_create_linked(
                     issue_id=self._payload.node_id,
                     base_sha=branch_sha[base_branch_name],
-                    name=f"{dev_branch_prefix}{self._payload.number}/{base_branch_name}",
+                    name=head_branch_name,
                 )
+                self._git_target.fetch_remote_branches_by_name(branch_names=head_branch_name)
+                self._git_target.checkout(head_branch_name)
+                self._git_target.commit(
+                    message=f"Create branch '{head_branch_name}' for issue #{self._payload.number}",
+                    allow_empty=True,
+                )
+                self._git_target.push()
                 pull_data = self._gh_api.pull_create(
                     head=new_branch["name"],
                     base=base_branch_name,
-                    title=self._payload.title,
-                    body=f"This is a draft pull request for the issue #{self._payload.number}.",
+                    # title=self._payload.title,
+                    # body=f"This is a draft pull request for the issue #{self._payload.number}.",
                     maintainer_can_modify=True,
                     draft=True,
+                    issue=self._payload.number,
                 )
                 self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._payload.label_names)
         return

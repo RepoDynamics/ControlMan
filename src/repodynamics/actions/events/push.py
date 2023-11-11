@@ -197,6 +197,10 @@ class PushEventHandler(ModifyingEventHandler):
         #     amend=True,
         #     push=True,
         # )
+
+        # Squash all commits into a single commit
+        # Ref: https://blog.avneesh.tech/how-to-delete-all-commit-history-in-github
+        #      https://stackoverflow.com/questions/55325930/git-how-to-squash-all-commits-on-master-branch
         self._git_target.checkout("temp", orphan=True)
         self.commit(message="init: Create repository from RepoDynamics PyPackIT template")
         self._git_target.branch_delete(self._context.github.ref_name, force=True)
