@@ -190,6 +190,6 @@ class ConfigFileGenerator:
         for attribute in attributes:
             pattern = list(attribute.keys())[0]
             attrs = list(attribute.values())[0]
-            attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs)
+            attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs).strip()
             text += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
         return [(info, text)]
