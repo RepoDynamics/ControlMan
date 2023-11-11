@@ -1,11 +1,12 @@
 from repodynamics.actions.events._base import ModifyingEventHandler
-from repodynamics.actions.context_manager import ContextManager
+from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.datatype import (
     WorkflowTriggeringAction,
     EventType,
     PrimaryActionCommitType,
     CommitGroup,
     BranchType,
+    IssueStatus
 )
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -21,6 +22,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
         logger: Logger | None = None,
     ):
         super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
+        self._payload: PullRequestPayload = self._context.payload
         return
 
     def run_event(self):
@@ -53,6 +55,18 @@ class PullRequestEventHandler(ModifyingEventHandler):
         return
 
     def _run_labeled(self):
+        label_name = self._payload.label["name"]
+        if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
+            self._run_labeled_status()
+        return
+
+    def _run_labeled_status(self):
+        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
+        if status == IssueStatus.FINAL:
+            self._run_labeled_status_final()
+        return
+
+    def _run_labeled_status_final(self):
         return
 
     def event_pull_request(self):
