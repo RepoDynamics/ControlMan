@@ -386,6 +386,16 @@ class Git:
         """Get the name of the current branch."""
         return self._run(["git", "branch", "--show-current"])
 
+    def branch_delete(self, branch_name: str, force: bool = False):
+        cmd = ["git", "branch", "-D" if force else "-d", branch_name]
+        self._run(cmd)
+        return
+
+    def branch_rename(self, new_name: str, force: bool = False):
+        cmd = ["git", "branch", "-M" if force else "-m", new_name]
+        self._run(cmd)
+        return
+
     def get_all_branch_names(self) -> tuple[str, list[str]]:
         """Get the name of the current branch."""
         branches_str = self._run(["git", "branch"])
@@ -403,13 +413,15 @@ class Git:
             raise RuntimeError("More than one current branch found.")
         return branch_current[0], branches_other
 
-    def checkout(self, branch: str, create: bool = False, reset: bool = False):
+    def checkout(self, branch: str, create: bool = False, reset: bool = False, orphan: bool = False):
         """Checkout a branch."""
         cmd = ["git", "checkout"]
         if reset:
             cmd.append("-B")
         elif create:
             cmd.append("-b")
+        elif orphan:
+            cmd.append("--orphan")
         cmd.append(branch)
         return self._run(cmd)
 

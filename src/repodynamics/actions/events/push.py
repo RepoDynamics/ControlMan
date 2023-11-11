@@ -173,9 +173,9 @@ class PushEventHandler(ModifyingEventHandler):
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
-        self._action_meta(action=InitCheckAction.AMEND)
+        self._action_meta(action=InitCheckAction.COMMIT)
         if self._metadata_main["workflow"].get("pre_commit"):
-            self._action_hooks(action=InitCheckAction.AMEND)
+            self._action_hooks(action=InitCheckAction.COMMIT)
         self._config_repo_branch_names()
         self._set_job_run(
             package_lint=True,
@@ -197,6 +197,11 @@ class PushEventHandler(ModifyingEventHandler):
         #     amend=True,
         #     push=True,
         # )
+        self._git_target.checkout("temp", orphan=True)
+        self.commit(message="init: Create repository from RepoDynamics PyPackIT template")
+        self._git_target.branch_delete(self._context.github.ref_name, force=True)
+        self._git_target.branch_rename(self._context.github.ref_name, force=True)
+        self._git_target.push(target="origin", ref=self._context.github.ref_name, force_with_lease=True)
         self._tag_version(ver="0.0.0", msg="Initial release")
         self._set_job_run(
             package_publish_testpypi=True,
