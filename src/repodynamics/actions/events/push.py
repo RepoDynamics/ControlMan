@@ -367,14 +367,13 @@ class PushEventHandler(ModifyingEventHandler):
             ver_last_dev, _ = self._get_latest_version(dev_only=True)
             if ver_last_target.pre:
                 next_ver = ver_last_target.next_post
-                next_ver_str = str(next_ver)
                 if not ver_last_dev or (
                     ver_last_dev.release != next_ver.release or ver_last_dev.pre != next_ver.pre
                 ):
                     dev = 0
                 else:
                     dev = (ver_last_dev.dev or -1) + 1
-                next_ver_str += f".dev{dev}"
+                next_ver_str = f"{next_ver}.dev{dev}"
             else:
                 next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
                 next_ver_str = str(next_ver)

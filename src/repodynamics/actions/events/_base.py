@@ -432,8 +432,9 @@ class EventHandler:
             git.checkout(branch=branch)
         latest_version = git.get_latest_version(tag_prefix=ver_tag_prefix, dev_only=dev_only)
         if not latest_version:
+            if dev_only:
+                return None, None
             self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
-            return None, None
         distance = git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}")
         if branch:
             git.checkout(branch=curr_branch)
