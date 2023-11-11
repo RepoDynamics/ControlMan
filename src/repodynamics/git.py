@@ -335,8 +335,8 @@ class Git:
             f"{'+' if not_fast_forward_ok else ''}{branch_name}:{branch_name}" for branch_name in branch_names
         ]
         self._run(["git", "fetch", remote_name, *refspecs])
-        for branch_name in branch_names:
-            self._run(["git", "branch", "--track", branch_name, f"{remote_name}/{branch_name}"])
+        # for branch_name in branch_names:
+        #     self._run(["git", "branch", "--track", branch_name, f"{remote_name}/{branch_name}"])
         # self._run(["git", "fetch", "--all"])
         # self._run(["git", "pull", "--all"])
         return

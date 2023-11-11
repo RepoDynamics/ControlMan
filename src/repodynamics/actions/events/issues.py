@@ -60,6 +60,8 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     base_sha=branch_sha[base_branch_name],
                     name=head_branch_name,
                 )
+                # Create empty commit on dev branch to be able to open a draft pull request
+                # Ref: https://stackoverflow.com/questions/46577500/why-cant-i-create-an-empty-pull-request-for-discussion-prior-to-developing-chan
                 self._git_target.fetch_remote_branches_by_name(branch_names=head_branch_name)
                 self._git_target.checkout(head_branch_name)
                 self._git_target.commit(
