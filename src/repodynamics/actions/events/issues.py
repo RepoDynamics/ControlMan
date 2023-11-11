@@ -35,7 +35,8 @@ class IssuesEventHandler(NonModifyingEventHandler):
         return
 
     def _run_labeled(self):
-        if self._payload.label["name"].startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
+        label_name = self._payload.label["name"]
+        if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
             self._run_labeled_status()
         return
 
