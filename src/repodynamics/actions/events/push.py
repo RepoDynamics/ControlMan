@@ -298,7 +298,15 @@ class PushEventHandler(ModifyingEventHandler):
         head_commit = commits[0]
         if head_commit.group_data.group != CommitGroup.NON_CONV:
             footers = head_commit.msg.footer
-            if footers.get("ready_for_review", "") == "true":
+            ready_for_review = footers.get("ready_for_review", ["false"])
+            if len(ready_for_review) != 1:
+                self._logger.error(
+                    f"Found {len(ready_for_review)} 'ready_for_review' footers, but expected 1.",
+                    raise_error=False,
+                )
+                self._failed = True
+                return
+            if ready_for_review[0] == "true":
                 if self._metadata_main["repo"]["full_name"] == self._context.github.repo_fullname:
                     # workflow is running from own repository
                     matching_pulls = self._gh_api.pull_list(

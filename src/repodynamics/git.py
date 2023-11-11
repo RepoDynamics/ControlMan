@@ -447,7 +447,7 @@ class Git:
         This returns a list of tags ordered by the commit date (newest first).
         Each element is a list itself, containing all tags that point to the same commit.
         """
-        output = self.log(simplify_by_decoration=True, tags=True, pretty="format:%D")
+        output = self.log(simplify_by_decoration=True, pretty="format:%D")
         tags = []
         for line in output.splitlines():
             potential_tags = line.split(", ")
