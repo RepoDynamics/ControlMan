@@ -1,3 +1,6 @@
+"""Run all tests for the package."""
+
+
 import ${{package.name}}_tests as testsuite
 
 testsuite.run()

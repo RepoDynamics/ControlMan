@@ -1,7 +1,18 @@
+"""${{ name }} Test-Suite
+
+${{license.notice}}
+"""
+
 import subprocess
 
 
 def run(path_root: str = ".", path_config: str = "pyproject.toml"):
-    cmd = ["pytest", f"--rootdir={path_root}", f"--config-file={path_config}"]
-    process = subprocess.run(cmd, text=True, cwd=path_root, capture_output=False)
+    """Run the test-suite."""
+    process = subprocess.run(
+        ["pytest", f"--rootdir={path_root}", f"--config-file={path_config}"],
+        text=True,
+        cwd=path_root,
+        capture_output=False,
+        check=True
+    )
     return
