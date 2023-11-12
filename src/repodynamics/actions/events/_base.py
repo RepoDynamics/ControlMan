@@ -59,19 +59,19 @@ class EventHandler:
         self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
         self._gh_api = pylinks.api.github(token=self._context.github.token).user(repo_user).repo(repo_name)
         self._gh_link = pylinks.site.github.user(repo_user).repo(repo_name)
-        self._git_self: Git = Git(
+        self._git_base: Git = Git(
             path_repo="repo_self",
             user=(self._context.payload.sender_username, self._context.payload.sender_email),
             logger=self._logger,
         )
         if self._context.github.event_name == "pull_request" and not self._context.payload.internal:
-            self._git_target: Git = Git(
+            self._git_head: Git = Git(
                 path_repo="repo_fork",
                 user=(self._context.payload.sender_username, self._context.payload.sender_email),
                 logger=self._logger,
             )
         else:
-            self._git_target = self._git_self
+            self._git_head = self._git_base
         self._meta: Meta | None = None
         self._metadata_branch: MetaManager | None = None
         self._branch: Branch | None = None
@@ -260,7 +260,7 @@ class EventHandler:
             commit_message=str(commit_msg),
             path_root=self._meta.paths.root,
             config=config,
-            git=self._git_target,
+            git=self._git_head,
             logger=self._logger,
         )
         passed = hooks_output["passed"]
@@ -321,7 +321,7 @@ class EventHandler:
         push: bool = False,
         set_upstream: bool = False,
     ):
-        commit_hash = self._git_target.commit(message=message, stage=stage, amend=amend)
+        commit_hash = self._git_head.commit(message=message, stage=stage, amend=amend)
         if amend:
             self._amended = True
         if push:
@@ -329,11 +329,11 @@ class EventHandler:
         return commit_hash
 
     def push(self, amend: bool = False, set_upstream: bool = False):
-        new_hash = self._git_target.push(
+        new_hash = self._git_head.push(
             target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
         )
         self._amended = False
-        if new_hash and self._git_target.current_branch_name() == self._context.github.ref_name:
+        if new_hash and self._git_head.current_branch_name() == self._context.github.ref_name:
             self._hash_latest = new_hash
         return new_hash
 
@@ -342,23 +342,23 @@ class EventHandler:
         tag = f"{tag_prefix}{ver}"
         if not msg:
             msg = f"Release version {ver}"
-        self._git_target.create_tag(tag=tag, message=msg)
+        self._git_head.create_tag(tag=tag, message=msg)
         self._tag = tag
         self._version = str(ver)
         return
 
     def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
-        current_branch = self._git_target.current_branch_name()
+        current_branch = self._git_head.current_branch_name()
         new_branch_prefix = self._metadata_main.branch__group["ci_pull"]["prefix"]
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
-        self._git_target.stash()
-        self._git_target.checkout(branch=new_branch_name, reset=True)
+        self._git_head.stash()
+        self._git_head.checkout(branch=new_branch_name, reset=True)
         self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
         return new_branch_name
 
     def switch_to_original_branch(self):
-        self._git_target.checkout(branch=self._context.github.ref_name)
-        self._git_target.stash_pop()
+        self._git_head.checkout(branch=self._context.github.ref_name)
+        self._git_head.stash_pop()
         return
 
     @property
@@ -420,25 +420,25 @@ class EventHandler:
 
     def _get_latest_version(
         self,
-        repo: Literal["self", "fork"] = "self",
         branch: str | None = None,
         dev_only: bool = False,
+        from_fork: bool = False,
     ) -> tuple[PEP440SemVer | None, int | None]:
-        git = self._git_self if repo == "self" else self._git_target
+        git = self._git_head if from_fork else self._git_base
         ver_tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
         if branch:
             git.stash()
             curr_branch = git.current_branch_name()
             git.checkout(branch=branch)
         latest_version = git.get_latest_version(tag_prefix=ver_tag_prefix, dev_only=dev_only)
-        if not latest_version:
-            if dev_only:
-                return None, None
-            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
-        distance = git.get_distance(ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}")
+        distance = git.get_distance(
+            ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}"
+        ) if latest_version else None
         if branch:
             git.checkout(branch=curr_branch)
             git.stash_pop()
+        if not latest_version and not dev_only:
+            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
         return latest_version, distance
 
     @staticmethod
@@ -471,6 +471,7 @@ class EventHandler:
         for job_id, dependent_job_id in (
             ("package_publish_testpypi", "package_test_testpypi"),
             ("package_publish_pypi", "package_test_pypi"),
+            ("website_deploy", "website_build"),
         ):
             if self._job_run_flag[job_id]:
                 self._job_run_flag[dependent_job_id] = True
@@ -557,8 +558,8 @@ class EventHandler:
         if not branch_name:
             branch_name = self._context.github.ref_name
         if branch_name == self._context.payload.repository_default_branch:
-            return Branch(type=BranchType.DEFAULT)
-        return self._metadata.get_branch_info_from_name(branch_name=branch_name)
+            return Branch(name=branch_name, type=BranchType.DEFAULT)
+        return self._metadata_main.get_branch_info_from_name(branch_name=branch_name)
 
 
 class NonModifyingEventHandler(EventHandler):
@@ -591,7 +592,7 @@ class ModifyingEventHandler(EventHandler):
         }
         summary_detail = {file_type: [] for file_type in RepoFileType}
         change_group = {file_type: [] for file_type in RepoFileType}
-        changes = self._git_target.changed_files(
+        changes = self._git_head.changed_files(
             ref_start=self._context.hash_before, ref_end=self._context.hash_after
         )
         self._logger.success("Detected changed files", json.dumps(changes, indent=3))
@@ -688,7 +689,7 @@ class ModifyingEventHandler(EventHandler):
         #     + primary_custom_types
         #     + list(self.metadata["commit"]["secondary_custom"].keys())
         # )
-        commits = self._git_target.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
+        commits = self._git_head.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
         parser = CommitParser(
             types=self._metadata_main.get_all_conventional_commit_types(), logger=self._logger
