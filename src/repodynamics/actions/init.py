@@ -55,7 +55,9 @@ def init(
     elif event_name == "issue_comment":
         event_manager = IssueCommentEventHandler(context_manager=context_manager)
     elif event_name == "pull_request":
-        event_manager = PullRequestEventHandler(context_manager=context_manager)
+        event_manager = PullRequestEventHandler(
+            context_manager=context_manager
+        )
     elif event_name == "pull_request_target":
         event_manager = PullRequestTargetEventHandler(context_manager=context_manager)
     elif event_name == "push":
