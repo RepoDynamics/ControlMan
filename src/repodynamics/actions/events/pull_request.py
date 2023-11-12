@@ -1,3 +1,7 @@
+import time
+
+from pylinks.http import WebAPIError
+
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.datatype import (
@@ -23,6 +27,10 @@ class PullRequestEventHandler(ModifyingEventHandler):
     ):
         super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
         self._payload: PullRequestPayload = self._context.payload
+        self._branch_base = self.resolve_branch(self._context.github.base_ref)
+        self._branch_head = self.resolve_branch(self._context.github.head_ref)
+        self._git_base.fetch_remote_branches_by_name(branch_names=self._context.github.base_ref)
+        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.head_ref)
         return
 
     def run_event(self):
@@ -41,6 +49,16 @@ class PullRequestEventHandler(ModifyingEventHandler):
             _helpers.error_unsupported_triggering_action(
                 event_name="pull_request", action=action, logger=self._logger
             )
+        return
+
+    def _run_opened(self):
+        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
+            self._logger.attention(
+                "Meta synchronization cannot be performed as pull request is from a forked repository; "
+                f"switching action from '{action}' to 'fail'."
+            )
+            action = "fail"
+        return
 
     def _run_reopened(self):
         return
@@ -67,6 +85,122 @@ class PullRequestEventHandler(ModifyingEventHandler):
         return
 
     def _run_labeled_status_final(self):
+        if self._branch_head.type == BranchType.DEV:
+            if self._branch_base.type in (BranchType.RELEASE, BranchType.DEFAULT):
+                return self._run_merge_dev_to_release()
+            elif self._branch_base.type == BranchType.PRE_RELEASE:
+                return self._run_merge_dev_to_pre()
+        elif self._branch_head.type == BranchType.PRE_RELEASE:
+            if self._branch_base.type in (BranchType.RELEASE, BranchType.DEFAULT):
+                return self._run_merge_pre_to_release()
+        elif self._branch_head.type == BranchType.CI_PULL:
+            return self._run_merge_ci_pull()
+        self._logger.error(
+            "Merge not allowed",
+            f"Merge from a head branch of type '{self._branch_head.type.value}' "
+            f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+        )
+        return
+
+    def _run_merge_dev_to_release(self):
+        if not self._payload.internal:
+            self._logger.error(
+                "Merge not allowed",
+                "Merge from a forked repository is only allowed "
+                "from a development branch to the corresponding development branch.",
+            )
+            return
+        self._git_base.checkout(branch=self._branch_base.name)
+        hash_bash = self._git_base.commit_hash_normal()
+        ver_base, dist_base = self._get_latest_version()
+        labels = self._payload.label_names
+        primary_commit_type = self._metadata_main.get_issue_data_from_labels(labels).group_data
+        if primary_commit_type.group == CommitGroup.PRIMARY_CUSTOM or primary_commit_type.action in (
+            PrimaryActionCommitType.WEBSITE,
+            PrimaryActionCommitType.META,
+        ):
+            ver_dist = f"{ver_base}+{dist_base + 1}"
+            next_ver = None
+        else:
+            next_ver = self._get_next_version(ver_base, primary_commit_type.action)
+            ver_dist = str(next_ver)
+        changelog_manager = ChangelogManager(
+            changelog_metadata=self._metadata_main["changelog"],
+            ver_dist=ver_dist,
+            commit_type=primary_commit_type.conv_type,
+            commit_title=self._payload.title,
+            parent_commit_hash=hash_bash,
+            parent_commit_url=self._gh_link.commit(hash_bash),
+            logger=self._logger,
+        )
+        self._git_base.checkout(branch=self._branch_head.name)
+        commits = self._get_commits()
+        for commit in commits:
+            self._logger.info(f"Processing commit: {commit}")
+            if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
+                changelog_manager.add_change(
+                    changelog_id=commit.group_data.changelog_id,
+                    section_id=commit.group_data.changelog_section_id,
+                    change_title=commit.msg.title,
+                    change_details=commit.msg.body,
+                )
+        changelog_manager.write_all_changelogs()
+        commit_hash = self.commit(
+            message="Update changelogs",
+            push=True,
+        )
+        # Wait 30 s to make sure the push is registered
+        time.sleep(30)
+        try:
+            response = self._gh_api.pull_merge(
+                number=self._payload.number,
+                commit_title=self._payload.title,
+                commit_message=self._payload.body,
+                sha=commit_hash,
+                merge_method="squash",
+            )
+        except WebAPIError as e:
+            bare_title = self._payload.title.removeprefix(f'{primary_commit_type.conv_type}: ')
+            self._gh_api.pull_update(
+                number=self._payload.number,
+                title=f"{primary_commit_type.conv_type}: {bare_title}",
+            )
+            self._logger.error("Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False)
+            self._failed = True
+            return
+        if not next_ver:
+            self._set_job_run(
+                package_build=True,
+                package_lint=True,
+                package_test_local=True,
+                website_deploy=True,
+                github_release=True,
+            )
+            return
+        new_hash_base = response["sha"]
+        self._git_base.checkout(branch=self._branch_base.name)
+        for i in range(10):
+            self._git_base.pull()
+            if self._git_base.commit_hash_normal() == new_hash_base:
+                break
+            time.sleep(5)
+        else:
+            self._logger.error("Failed to pull changes from GitHub. Please pull manually.")
+            self._failed = True
+            return
+        self._tag_version(ver=next_ver)
+        self._set_job_run(
+            package_lint=True,
+            package_test_local=True,
+            website_deploy=True,
+            package_publish_testpypi=True,
+            package_publish_pypi=True,
+            github_release=True,
+        )
+        self._set_release(
+            name=f"{self._metadata_main['name']} v{next_ver}",
+            body=changelog_manager.get_entry(changelog_id="package_public")[0],
+        )
         return
 
     def event_pull_request(self):
@@ -87,7 +221,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
         branch = self.resolve_branch(self.pull_head_ref_name)
         issue_labels = [label["name"] for label in self.gh_api.issue_labels(number=branch.suffix)]
-        issue_data = self.metadata_main.get_issue_data_from_labels(issue_labels)
+        issue_data = self._metadata_main.get_issue_data_from_labels(issue_labels)
 
         if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
             PrimaryActionCommitType.WEBSITE,
@@ -132,11 +266,4 @@ class PullRequestEventHandler(ModifyingEventHandler):
         )
         return
 
-    def _run_opened(self):
-        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
-            self._logger.attention(
-                "Meta synchronization cannot be performed as pull request is from a forked repository; "
-                f"switching action from '{action}' to 'fail'."
-            )
-            action = "fail"
-        return
+
