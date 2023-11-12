@@ -148,6 +148,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
         commit_hash = self.commit(
             message="Update changelogs",
             push=True,
+            set_upstream=True,
         )
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
