@@ -2,6 +2,7 @@ import time
 
 from pylinks.http import WebAPIError
 
+from repodynamics import meta
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.datatype import (
@@ -80,9 +81,28 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
     def _run_labeled_status(self):
         status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
-        if status == IssueStatus.FINAL:
+        if status in (IssueStatus.ALPHA, IssueStatus.BETA, IssueStatus.RC):
+            self._run_labeled_status_pre()
+        elif status == IssueStatus.FINAL:
             self._run_labeled_status_final()
         return
+
+    def _run_labeled_status_pre(self):
+        if self._branch_head.type != BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.DEFAULT):
+            self._logger.error(
+                "Merge not allowed",
+                f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+            )
+            return
+        if not self._payload.internal:
+            self._logger.error(
+                "Merge not allowed",
+                "Merge from a forked repository is only allowed "
+                "from a development branch to the corresponding development branch.",
+            )
+            return
+
 
     def _run_labeled_status_final(self):
         if self._branch_head.type == BranchType.DEV:
@@ -150,21 +170,25 @@ class PullRequestEventHandler(ModifyingEventHandler):
             push=True,
             set_upstream=True,
         )
+        self._metadata_branch = meta.read_from_json_file(
+            path_root="repo_self", logger=self._logger
+        )
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
+        bare_title = self._payload.title.removeprefix(f'{primary_commit_type.conv_type}: ')
+        commit_title = f"{primary_commit_type.conv_type}: {bare_title}"
         try:
             response = self._gh_api.pull_merge(
                 number=self._payload.number,
-                commit_title=self._payload.title,
+                commit_title=commit_title,
                 commit_message=self._payload.body,
                 sha=commit_hash,
                 merge_method="squash",
             )
         except WebAPIError as e:
-            bare_title = self._payload.title.removeprefix(f'{primary_commit_type.conv_type}: ')
             self._gh_api.pull_update(
                 number=self._payload.number,
-                title=f"{primary_commit_type.conv_type}: {bare_title}",
+                title=commit_title,
             )
             self._logger.error("Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False)
             self._failed = True
@@ -178,11 +202,11 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 github_release=True,
             )
             return
-        new_hash_base = response["sha"]
+        self._hash_latest = response["sha"]
         self._git_base.checkout(branch=self._branch_base.name)
         for i in range(10):
             self._git_base.pull()
-            if self._git_base.commit_hash_normal() == new_hash_base:
+            if self._git_base.commit_hash_normal() == self._hash_latest:
                 break
             time.sleep(5)
         else:
