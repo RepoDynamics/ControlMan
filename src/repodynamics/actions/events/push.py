@@ -63,7 +63,7 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_branch_created(self):
         if self._context.ref_is_main:
-            if not self._git_self.get_tags():
+            if not self._git_base.get_tags():
                 self._run_repository_created()
             else:
                 self._logger.skip(
@@ -114,11 +114,11 @@ class PushEventHandler(ModifyingEventHandler):
     def _run_branch_edited(self):
         if self._context.ref_is_main:
             self._event_type = EventType.PUSH_MAIN
-            self._branch = Branch(type=BranchType.DEFAULT, prefix=self._context.github.ref_name)
+            self._branch = Branch(type=BranchType.DEFAULT, name=self._context.github.ref_name)
             return self._run_branch_edited_main()
         self._branch = self._metadata_main.get_branch_info_from_name(branch_name=self._context.github.ref_name)
-        self._git_target.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
-        self._git_target.checkout(self._context.github.ref_name)
+        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
+        self._git_head.checkout(self._context.github.ref_name)
         self._meta = Meta(
             path_root="repo_self",
             github_token=self._context.github.token,
@@ -138,7 +138,7 @@ class PushEventHandler(ModifyingEventHandler):
         return self._run_branch_edited_other()
 
     def _run_branch_edited_main(self):
-        if not self._git_self.get_tags():
+        if not self._git_base.get_tags():
             # The repository is in the initialization phase
             head_commit_msg = self._context.payload.head_commit_message
             if head_commit_msg == "init":
@@ -149,7 +149,7 @@ class PushEventHandler(ModifyingEventHandler):
         self._metadata_main_before = read_from_json_file(
             path_root="repo_self",
             commit_hash=self._context.hash_before,
-            git=self._git_self,
+            git=self._git_base,
             logger=self._logger,
         )
         if not self._metadata_main_before:
@@ -160,13 +160,13 @@ class PushEventHandler(ModifyingEventHandler):
         self._metadata_main_before = read_from_json_file(
             path_root="repo_self",
             commit_hash=self._context.hash_before,
-            git=self._git_self,
+            git=self._git_base,
             logger=self._logger,
         )
         self._meta = Meta(
             path_root="repo_self",
             github_token=self._context.github.token,
-            future_versions={self._branch.prefix: "0.0.0"},
+            future_versions={self._branch.name: "0.0.0"},
             logger=self._logger,
         )
         self._metadata_main = self._metadata_branch = self._meta.read_metadata_full()
@@ -201,11 +201,11 @@ class PushEventHandler(ModifyingEventHandler):
         # Squash all commits into a single commit
         # Ref: https://blog.avneesh.tech/how-to-delete-all-commit-history-in-github
         #      https://stackoverflow.com/questions/55325930/git-how-to-squash-all-commits-on-master-branch
-        self._git_target.checkout("temp", orphan=True)
+        self._git_head.checkout("temp", orphan=True)
         self.commit(message="init: Create repository from RepoDynamics PyPackIT template")
-        self._git_target.branch_delete(self._context.github.ref_name, force=True)
-        self._git_target.branch_rename(self._context.github.ref_name, force=True)
-        self._hash_latest = self._git_target.push(
+        self._git_head.branch_delete(self._context.github.ref_name, force=True)
+        self._git_head.branch_rename(self._context.github.ref_name, force=True)
+        self._hash_latest = self._git_head.push(
             target="origin", ref=self._context.github.ref_name, force_with_lease=True
         )
         self._tag_version(ver="0.0.0", msg="Initial release")
@@ -370,7 +370,7 @@ class PushEventHandler(ModifyingEventHandler):
             ):
                 self._set_job_run(package_publish_testpypi=False)
                 return
-            self._git_target.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
+            self._git_head.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
             ver_last_target, _ = self._get_latest_version(branch=self._branch.suffix[1])
             ver_last_dev, _ = self._get_latest_version(dev_only=True)
             if ver_last_target.pre:
