@@ -341,6 +341,12 @@ class Git:
         # self._run(["git", "pull", "--all"])
         return
 
+    def pull(self, fast_forward_only: bool = True):
+        cmd = ["git", "pull"]
+        if fast_forward_only:
+            cmd.append("--ff-only")
+        return self._run(cmd)
+
     def get_commits(self, revision_range: str | None = None) -> list[dict[str, str | list[str]]]:
         """
         Get a list of commits.
