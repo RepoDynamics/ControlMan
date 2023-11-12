@@ -29,7 +29,8 @@ class BranchType(Enum):
 
 class Branch(NamedTuple):
     type: BranchType
-    prefix: str
+    name: str
+    prefix: str | None = None
     suffix: str | int | PEP440SemVer | tuple[int, str] | None = None
 
 
