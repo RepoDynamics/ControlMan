@@ -49,28 +49,22 @@ def init(
     logger=None,
 ):
     context_manager = ContextManager(github_context=context)
+    args = {"context_manager": context_manager, "admin_token": admin_token, "logger": logger}
     event_name = context_manager.github.event_name
     if event_name == "issues":
-        event_manager = IssuesEventHandler(context_manager=context_manager, logger=logger)
+        event_manager = IssuesEventHandler(**args)
     elif event_name == "issue_comment":
-        event_manager = IssueCommentEventHandler(context_manager=context_manager)
+        event_manager = IssueCommentEventHandler(**args)
     elif event_name == "pull_request":
-        event_manager = PullRequestEventHandler(
-            context_manager=context_manager
-        )
+        event_manager = PullRequestEventHandler(**args)
     elif event_name == "pull_request_target":
-        event_manager = PullRequestTargetEventHandler(context_manager=context_manager)
+        event_manager = PullRequestTargetEventHandler(**args)
     elif event_name == "push":
-        event_manager = PushEventHandler(
-            context_manager=context_manager,
-            admin_token=admin_token,
-            logger=logger,
-        )
+        event_manager = PushEventHandler(**args)
     elif event_name == "schedule":
-        event_manager = ScheduleEventHandler(context_manager=context_manager)
+        event_manager = ScheduleEventHandler(**args)
     elif event_name == "workflow_dispatch":
         event_manager = WorkflowDispatchEventHandler(
-            context_manager=context_manager,
             package_build=package_build,
             package_lint=package_lint,
             package_test=package_test,
@@ -79,6 +73,7 @@ def init(
             hooks=hooks,
             website_announcement=website_announcement,
             website_announcement_msg=website_announcement_msg,
+            **args,
         )
     else:
         logger.error(f"Event '{event_name}' is not supported.")
