@@ -14,10 +14,11 @@ class ChangelogManager:
         commit_title: str,
         parent_commit_hash: str,
         parent_commit_url: str,
+        path_root: str = "repo_self",
         logger: Logger = None,
     ):
-        self.meta = changelog_metadata
-        self.vars = {
+        self._meta = changelog_metadata
+        self._vars = {
             "ver_dist": ver_dist,
             "date": datetime.date.today().strftime("%Y.%m.%d"),
             "commit_type": commit_type,
@@ -25,20 +26,21 @@ class ChangelogManager:
             "parent_commit_hash": parent_commit_hash,
             "parent_commit_url": parent_commit_url,
         }
-        self._name_to_id = {v["name"]: k for k, v in self.meta.items()}
-        self.logger = logger or Logger("github")
-        self.changes = {}
+        self._path_root = Path(path_root).resolve()
+        self._logger = logger or Logger("github")
+        self._name_to_id = {v["name"]: k for k, v in self._meta.items()}
+        self._changes = {}
         return
 
     def add_change(self, changelog_id: str, section_id: str, change_title: str, change_details: str):
-        if changelog_id not in self.meta:
-            self.logger.error(f"Invalid changelog ID: {changelog_id}")
-        changelog_dict = self.changes.setdefault(changelog_id, {})
+        if changelog_id not in self._meta:
+            self._logger.error(f"Invalid changelog ID: {changelog_id}")
+        changelog_dict = self._changes.setdefault(changelog_id, {})
         if not isinstance(changelog_dict, dict):
-            self.logger.error(
+            self._logger.error(
                 f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes."
             )
-        for section_idx, section in enumerate(self.meta[changelog_id]["sections"]):
+        for section_idx, section in enumerate(self._meta[changelog_id]["sections"]):
             if section["id"] == section_id:
                 section_dict = changelog_dict.setdefault(
                     section_idx, {"title": section["title"], "changes": []}
@@ -46,17 +48,17 @@ class ChangelogManager:
                 section_dict["changes"].append({"title": change_title, "details": change_details})
                 break
         else:
-            self.logger.error(f"Invalid section ID: {section_id}")
+            self._logger.error(f"Invalid section ID: {section_id}")
         return
 
     def add_entry(self, changelog_id: str, sections: str):
-        if changelog_id not in self.meta:
-            self.logger.error(f"Invalid changelog ID: {changelog_id}")
-        if changelog_id in self.changes:
-            self.logger.error(
+        if changelog_id not in self._meta:
+            self._logger.error(f"Invalid changelog ID: {changelog_id}")
+        if changelog_id in self._changes:
+            self._logger.error(
                 f"Changelog {changelog_id} is already updated with an entry; cannot add new entry."
             )
-        self.changes[changelog_id] = sections
+        self._changes[changelog_id] = sections
         return
 
     def add_from_commit_body(self, body: str):
@@ -70,30 +72,30 @@ class ChangelogManager:
             changelog_name = heading.removeprefix("Changelog: ").strip()
             changelog_id = self._name_to_id.get(changelog_name)
             if not changelog_id:
-                self.logger.error(f"Invalid changelog name: {changelog_name}")
+                self._logger.error(f"Invalid changelog name: {changelog_name}")
             self.add_entry(changelog_id, content)
         return
 
     def write_all_changelogs(self):
-        for changelog_id in self.changes:
+        for changelog_id in self._changes:
             self.write_changelog(changelog_id)
         return
 
     def write_changelog(self, changelog_id: str):
-        if changelog_id not in self.changes:
+        if changelog_id not in self._changes:
             return
         changelog = self.get_changelog(changelog_id)
-        with open(self.meta[changelog_id]["path"], "w") as f:
+        with open(self._path_root / self._meta[changelog_id]["path"], "w") as f:
             f.write(changelog)
         return
 
     def get_changelog(self, changelog_id: str) -> str:
-        if changelog_id not in self.changes:
+        if changelog_id not in self._changes:
             return ""
-        path = Path(self.meta[changelog_id]["path"])
+        path = self._path_root / self._meta[changelog_id]["path"]
         if not path.exists():
-            title = f"# {self.meta[changelog_id]['title']}"
-            intro = self.meta[changelog_id]["intro"].strip()
+            title = f"# {self._meta[changelog_id]['title']}"
+            intro = self._meta[changelog_id]["intro"].strip()
             text_before = f"{title}\n\n{intro}"
             text_after = ""
         else:
@@ -112,24 +114,24 @@ class ChangelogManager:
         return [self.get_entry(changelog_id) for changelog_id in self.open_changelogs]
 
     def get_entry(self, changelog_id: str) -> tuple[str, str]:
-        if changelog_id not in self.changes:
+        if changelog_id not in self._changes:
             return "", ""
         entry_sections, needs_intro = self.get_sections(changelog_id)
         if needs_intro:
-            entry_title = self.meta[changelog_id]["entry"]["title"].format(**self.vars).strip()
-            entry_intro = self.meta[changelog_id]["entry"]["intro"].format(**self.vars).strip()
+            entry_title = self._meta[changelog_id]["entry"]["title"].format(**self._vars).strip()
+            entry_intro = self._meta[changelog_id]["entry"]["intro"].format(**self._vars).strip()
             entry = f"## {entry_title}\n\n{entry_intro}\n\n{entry_sections}"
         else:
             entry = entry_sections
-        changelog_name = self.meta[changelog_id]["name"]
+        changelog_name = self._meta[changelog_id]["name"]
         return entry, changelog_name
 
     def get_sections(self, changelog_id: str) -> tuple[str, bool]:
-        if changelog_id not in self.changes:
+        if changelog_id not in self._changes:
             return "", False
-        if isinstance(self.changes[changelog_id], str):
-            return self.changes[changelog_id], True
-        changelog_dict = self.changes[changelog_id]
+        if isinstance(self._changes[changelog_id], str):
+            return self._changes[changelog_id], True
+        changelog_dict = self._changes[changelog_id]
         sorted_sections = [value for key, value in sorted(changelog_dict.items())]
         sections_str = ""
         for section in sorted_sections:
@@ -140,4 +142,4 @@ class ChangelogManager:
 
     @property
     def open_changelogs(self) -> tuple[str]:
-        return tuple(self.changes.keys())
+        return tuple(self._changes.keys())
