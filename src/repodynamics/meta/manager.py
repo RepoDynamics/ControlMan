@@ -85,7 +85,7 @@ class MetaManager:
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch["default"]["name"]:
-            return Branch(type=BranchType.DEFAULT, prefix=branch_name)
+            return Branch(type=BranchType.DEFAULT, name=branch_name)
         for group_name, group_data in self.branch__group.items():
             prefix = group_data["prefix"]
             if branch_name.startswith(prefix):
@@ -99,8 +99,8 @@ class MetaManager:
                     suffix = (int(issue_num), target_branch)
                 else:
                     suffix = suffix_raw
-                return Branch(type=BranchType(group_name), prefix=prefix, suffix=suffix)
-        return Branch(type=BranchType.OTHER, prefix=branch_name)
+                return Branch(type=BranchType(group_name), name=branch_name, prefix=prefix, suffix=suffix)
+        return Branch(type=BranchType.OTHER, name=branch_name)
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
         """
