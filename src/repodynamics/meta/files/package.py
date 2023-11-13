@@ -112,9 +112,9 @@ class PackageFileGenerator:
             )
             out = [(func(package_name, old_path=package_dirs[0], new_path=path), "")]
             package_old_name = package_dirs[0].name
-            for filepath in self._out_db.root.glob("**/*.py") if not tests else path.glob("**/*.py"):
+            for filepath in (self._out_db.root.glob("**/*.py") if not tests else path.glob("**/*.py")):
                 new_content = self.rename_imports(
-                    module_content=path.read_text(), old_name=package_old_name, new_name=name
+                    module_content=filepath.read_text(), old_name=package_old_name, new_name=name
                 )
                 out.append((self._out_db.python_file(filepath), new_content))
             return out
