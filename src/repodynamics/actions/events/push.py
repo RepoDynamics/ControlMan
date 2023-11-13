@@ -83,6 +83,8 @@ class PushEventHandler(ModifyingEventHandler):
         shutil.rmtree(meta.paths.dir_source)
         shutil.rmtree(meta.paths.dir_tests)
         shutil.rmtree(meta.paths.dir_local)
+        shutil.rmtree(meta.paths.dir_website)
+        (meta.paths.dir_docs / "__website_new__").rename(meta.paths.dir_website)
         for item in meta.paths.dir_meta.iterdir():
             if item.is_dir():
                 if item.name not in ("__examples__", "__new__"):
@@ -99,8 +101,6 @@ class PushEventHandler(ModifyingEventHandler):
         for changelog_data in metadata.changelog.values():
             path_changelog_file = meta.paths.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
-        with open(meta.paths.dir_website / "announcement.html", "w") as f:
-            f.write("")
         self.commit(
             message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True
         )

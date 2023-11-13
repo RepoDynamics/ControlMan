@@ -102,6 +102,10 @@ class PathFinder:
         return self._path_root / self.dir_meta_rel
 
     @property
+    def dir_docs(self) -> Path:
+        return self._path_root / "docs"
+
+    @property
     def dir_website_rel(self) -> str:
         return f'{self._paths["dir"]["website"]}/'
 
