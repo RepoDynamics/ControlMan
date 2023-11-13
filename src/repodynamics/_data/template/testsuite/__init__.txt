@@ -1,15 +1,16 @@
 """${{ name }} Test-Suite
 
 ${{license.notice}}
-"""
+"""  # noqa: D400
+
 
 import subprocess
 
 
 def run(path_root: str = ".", path_config: str = "pyproject.toml"):
     """Run the test-suite."""
-    process = subprocess.run(
-        ["pytest", f"--rootdir={path_root}", f"--config-file={path_config}"],
+    subprocess.run(
+        ["pytest", f"--rootdir={path_root}", f"--config-file={path_config}"],  # noqa: S603, S607
         text=True,
         cwd=path_root,
         capture_output=False,
