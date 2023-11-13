@@ -378,8 +378,7 @@ class PathFinder:
         rel_path = str(path.relative_to(self._path_root))
         return DynamicFile(f"discussion-form-outdated-{filename}", DynamicFileType.FORM, rel_path, path)
 
-    def package_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> DynamicFile:
-        filename = package_name
+    def package_dir(self, old_path: Path | None, new_path: Path) -> DynamicFile:
         rel_path = str(new_path.relative_to(self._path_root))
         alt_paths = [old_path] if old_path else None
         return DynamicFile(
@@ -396,8 +395,7 @@ class PathFinder:
         rel_path = str(path.relative_to(self._path_root))
         return DynamicFile(rel_path, DynamicFileType.PACKAGE, rel_path, path)
 
-    def package_tests_dir(self, package_name: str, old_path: Path | None, new_path: Path) -> DynamicFile:
-        filename = f"{package_name}_tests"
+    def package_tests_dir(self, old_path: Path | None, new_path: Path) -> DynamicFile:
         rel_path = str(new_path.relative_to(self._path_root))
         alt_paths = [old_path] if old_path else None
         return DynamicFile(
