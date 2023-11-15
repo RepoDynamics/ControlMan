@@ -41,6 +41,7 @@ class PathFinder:
         paths = _util.dict.read(
             path=self._path_root / rel_path_meta / "paths.yaml",
             schema=_util.file.datafile("schema/paths.yaml"),
+            raise_empty=False,
             logger=self._logger,
         )["path"]
         paths["dir"]["meta"] = rel_path_meta
