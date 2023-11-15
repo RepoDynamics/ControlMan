@@ -80,21 +80,13 @@ class PushEventHandler(ModifyingEventHandler):
         self._logger.info("Detected event: repository creation")
         meta = Meta(path_root="repo_self", github_token=self._context.github.token, logger=self._logger)
         metadata = read_from_json_file(path_root="repo_self", logger=self._logger)
+        shutil.rmtree(meta.paths.dir_meta)
         shutil.rmtree(meta.paths.dir_source)
         shutil.rmtree(meta.paths.dir_tests)
         shutil.rmtree(meta.paths.dir_local)
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "__website_new__").rename(meta.paths.dir_website)
-        for item in meta.paths.dir_meta.iterdir():
-            if item.is_dir():
-                if item.name not in ("__examples__", "__new__"):
-                    shutil.rmtree(item)
-            else:
-                item.unlink()
-        path_meta_new = meta.paths.dir_meta / "__new__"
-        for item in path_meta_new.iterdir():
-            item.rename(meta.paths.dir_meta / item.name)
-        path_meta_new.rmdir()
+        (meta.paths.root / "__meta_new__").rename(meta.paths.dir_meta)
         (meta.paths.dir_github / ".repodynamics_meta_path.txt").unlink(missing_ok=True)
         for path_dynamic_file in meta.paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
@@ -102,7 +94,7 @@ class PushEventHandler(ModifyingEventHandler):
             path_changelog_file = meta.paths.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
         self.commit(
-            message="init: Create repository from RepoDynamics PyPackIT template", amend=True, push=True
+            message="Initialize repository from RepoDynamics PyPackIT template", push=True
         )
         self.add_summary(
             name="Init",
