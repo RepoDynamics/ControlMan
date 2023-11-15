@@ -94,6 +94,7 @@ class MetaReader:
         extensions = _util.dict.read(
             path=self._pathfinder.file_meta_core_extensions,
             schema=self._get_schema("extensions"),
+            raise_empty=False,
             logger=self.logger,
         )
         if not extensions["extensions"]:
@@ -281,7 +282,7 @@ class MetaReader:
         return toml_dict
 
     def _read_datafile(self, source: Path, schema: Path = None, **kwargs):
-        return _util.dict.read(path=source, schema=schema, logger=self.logger, **kwargs)
+        return _util.dict.read(path=source, schema=schema, raise_empty=False, logger=self.logger, **kwargs)
 
     def _validate_datafile(self, source: dict, schema: str):
         return _util.dict.validate_schema(source=source, schema=self._get_schema(schema), logger=self.logger)
