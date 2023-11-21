@@ -1,0 +1,32 @@
+dir:
+  # Name of the source directory
+  source: src
+  # Path to the tests directory
+  tests: tests
+  # Path to the website directory
+  website: docs/website
+  local:
+    # Path to the local directory
+    root: .local
+    cache:
+      # Name of the cache directory under the local directory
+      root: cache
+      # Name of subdirectories under the cache directory
+      # You can add other keys here for other tools that you use
+      repodynamics: repodynamics
+      coverage: coverage
+      mypy: mypy
+      pylint: pylint
+      pytest: pytest
+      ruff: ruff
+    report:
+      # Name of the report directory under the local directory
+      root: report
+      # Name of subdirectories under the report directory
+      # You can add other keys here for other tools that you use
+      repodynamics: repodynamics
+      coverage: coverage
+      mypy: mypy
+      pylint: pylint
+      pytest: pytest
+      ruff: ruff
