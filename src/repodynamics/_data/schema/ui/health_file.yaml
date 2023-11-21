@@ -24,6 +24,7 @@ properties:
     additionalProperties: false
     properties:
       path:
+        type: string
         enum: [., .github, docs]
         default: .github
     required: [path]
@@ -33,6 +34,7 @@ properties:
     additionalProperties: false
     properties:
       path:
+        type: string
         enum: [., .github, docs]
         default: .
       text:
@@ -45,6 +47,7 @@ properties:
     additionalProperties: false
     properties:
       path:
+        type: string
         enum: [., .github, docs]
         default: .
       text:
@@ -57,6 +60,7 @@ properties:
     additionalProperties: false
     properties:
       path:
+        type: string
         enum: [., .github, docs]
         default: .
       text:
@@ -69,6 +73,7 @@ properties:
     additionalProperties: false
     properties:
       path:
+        type: string
         enum: [., .github, docs]
         default: .
       text:
