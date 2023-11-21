@@ -203,8 +203,8 @@ class ReadmeFileGenerator:
         bottom_data = get_bottom_data()
         colors = [
             pcit.gradient.interpolate_rgb(
-                color_start=pcit.color.hexa(self._metadata["color"]["primary"][theme]),
-                color_end=pcit.color.hexa(self._metadata["color"]["secondary"][theme]),
+                color_start=pcit.color.hexa(self._metadata["theme"]["color"]["primary"][theme]),
+                color_end=pcit.color.hexa(self._metadata["theme"]["color"]["secondary"][theme]),
                 count=len(top_data) + len(bottom_data),
             ).hex()
             for theme in (0, 1)
@@ -406,7 +406,7 @@ class ReadmeFileGenerator:
             text=text,
             style="for-the-badge",
             color={
-                theme: (self._metadata["color"][color][idx] if isinstance(color, str) else color[idx])
+                theme: (self._metadata["theme"]["color"][color][idx] if isinstance(color, str) else color[idx])
                 for idx, theme in enumerate(("light", "dark"))
             },
             alt=text,
