@@ -2,18 +2,19 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Project Credits
 description: Information about the authors and funding of the project
 type: object
+default: { }
 additionalProperties: false
 properties:
   author:
     description: Authors of the project
     type: object
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
       role:
         description: Declarations of author roles
         type: object
-        default: {}
+        default: { }
         additionalProperties:
           type: object
           additionalProperties: false
