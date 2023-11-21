@@ -4,6 +4,8 @@ from pathlib import Path
 import json
 import re
 import copy
+import importlib.util
+import sys
 
 # Non-standard libraries
 import pylinks
@@ -124,8 +126,29 @@ class MetadataGenerator:
 
         self._metadata["maintainer"]["list"] = self._maintainers()
 
+        self._metadata["custom"] |= self._generate_custom_metadata()
+
         self._reader.cache_save()
         return self._metadata
+
+    def _generate_custom_metadata(self) -> dict:
+        dir_path = self._output_path.dir_meta / "custom"
+        if not (dir_path / "generator.py").is_file():
+            return {}
+        self._logger.h3("Generate custom metadata")
+        if (dir_path / "requirements.txt").is_file():
+            self._logger.debug("Install custom metadata generator requirements")
+            _util.shell.run_command(
+                command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
+            )
+        spec = importlib.util.spec_from_file_location(
+            "generator",
+            dir_path / "generator.py",
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["generator"] = module
+        spec.loader.exec_module(module)
+        return module.run(self._metadata)
 
     def _repo(self) -> dict:
         self._logger.h3("Generate 'repo' metadata")

@@ -187,6 +187,7 @@ class MetaReader:
                 source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
             )
         for entry in (
+            "custom/custom",
             "dev/branch",
             "dev/changelog",
             "dev/commit",
