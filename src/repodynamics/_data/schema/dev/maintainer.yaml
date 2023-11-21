@@ -1,0 +1,78 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_issues
+description: GitHub issues settings for the project
+type: object
+default: {}
+additionalProperties: false
+properties:
+  email:
+    description: Email addresses for the project
+    type: object
+    required: [ main ]
+    properties:
+      main:
+        type: string
+        format: email
+      security:
+        type: string
+        format: email
+      support:
+        type: string
+        format: email
+      code_of_conduct:
+        type: string
+        format: email
+  issue:
+    description: Assignees for the project issues
+    type: object
+    additionalProperties:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        oneOf:
+          - type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+          - type: string
+            pattern: '^\${{\s*.*\s*}}$'
+  discussion:
+    description: Assignees for the project discussions
+    type: object
+    additionalProperties:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        oneOf:
+          - type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+          - type: string
+            pattern: '^\${{\s*.*\s*}}$'
+  pull:
+    description: Pull request assignees and reviewers of the repository
+    type: object
+    additionalProperties: false
+    properties:
+      reviewer:
+        type: object
+        additionalProperties: false
+        properties:
+          by_path:
+            type: array
+            minItems: 1
+            uniqueItems: true
+            items:
+              type: object
+              minProperties: 1
+              maxProperties: 1
+              additionalProperties:
+                type: array
+                minItems: 1
+                uniqueItems: true
+                items:
+                  type: string
+                  oneOf:
+                    - type: string
+                      pattern: '^[A-Za-z0-9][A-Za-z0-9\-]*$'
+                    - type: string
+                      pattern: '^\${{\s*.*\s*}}$'

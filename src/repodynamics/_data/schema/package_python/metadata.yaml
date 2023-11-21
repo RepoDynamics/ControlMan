@@ -1,0 +1,45 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_package_metadata
+description: Package metadata
+type: object
+default: { }
+additionalProperties: false
+properties:
+  manifest:
+    description: MANIFEST.in configuration
+    type: array
+    default:
+      - graft ${{ path.dir.source }}/${{ package.name }}
+      - include CODE_OF_CONDUCT.md
+      - global-exclude *.py[cod] __pycache__ *.so
+    uniqueItems: true
+    items:
+      type: string
+
+  typed:
+    description: Whether the package is typed
+    type: boolean
+    default: true
+
+  trove_classifiers:
+    description: Trove classifiers for the project
+    type: array
+    default: []
+    uniqueItems: true
+    items:
+      type: string
+      pattern: '^[\w\s\-]+( :: [\w\s\-]+)+$'
+
+  urls:
+    description: URLs for the project
+    type: object
+    default:
+      Homepage: ${{ url.website.base }}
+      Download: ${{ url.github.releases.home }}
+      News: ${{ url.website.news }}
+      Documentation: ${{ url.website.base }}
+      Issue-Tracker: ${{ url.github.issues.home }}
+      Sponsor: ${{ url.website.sponsor }}
+      Source: ${{ url.github.home }}
+    additionalProperties:
+      type: string

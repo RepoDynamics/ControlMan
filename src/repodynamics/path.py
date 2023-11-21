@@ -39,11 +39,11 @@ class PathFinder:
         pathfile = self._path_root / RelativePath.file_path_meta
         rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
         paths = _util.dict.read(
-            path=self._path_root / rel_path_meta / "paths.yaml",
-            schema=_util.file.datafile("schema/paths.yaml"),
+            path=self._path_root / rel_path_meta / "path.yaml",
+            schema=_util.file.datafile("schema/path.yaml"),
             raise_empty=False,
             logger=self._logger,
-        )["path"]
+        )
         paths["dir"]["meta"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):

@@ -1,39 +1,33 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_dev_issues
 description: GitHub issues settings for the project
-
 type: object
+default: {}
 additionalProperties: false
 properties:
-  readme:
-    description: Readme for the project
+  repo:
+    description: Main README file of the repository
     type: object
     default: {}
     additionalProperties: false
     properties:
-      repo:
-        description: Main README file of the repository
+      header:
         type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          header:
-            type: object
-          body:
-            type: object
-      package:
-        description: README file of the package used for PyPI/TestPyPI/conda
+      body:
         type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          header:
-            type: object
-          body:
-            type: object
-      dir:
-        description: Directory README files
+  package:
+    description: README file of the package used for PyPI/TestPyPI/conda
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      header:
         type: object
-        default: {}
-        additionalProperties:
-          type: string
+      body:
+        type: object
+  dir:
+    description: Directory README files
+    type: object
+    default: {}
+    additionalProperties:
+      type: string

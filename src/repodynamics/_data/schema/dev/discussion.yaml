@@ -1,0 +1,42 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_dev_discussions
+description: GitHub discussions settings for the project
+type: object
+default: { }
+additionalProperties: false
+properties:
+  form:
+    type: object
+    default: { }
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        labels:
+          type: array
+          uniqueItems: true
+          items:
+              type: string
+        body:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: [ checkboxes, dropdown, input, markdown, textarea ]
+              id:
+                type: string
+                pattern: ^[A-Za-z][A-Za-z0-9_-]*$
+              attributes:
+                type: object
+                additionalProperties: true
+              validations:
+                type: object
+                additionalProperties: true
+            required: [ type, attributes ]
+      required: [ body ]
+required: [ form ]

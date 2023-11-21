@@ -15,21 +15,22 @@ def read(
     path: str | Path,
     schema: Optional[str | Path | dict] = None,
     raise_missing: bool = False,
-    raise_empty: bool = True,
+    raise_empty: bool = False,
+    root_type: Literal["dict", "list"] = "dict",
     extension: Optional[Literal["json", "yaml", "toml"]] = None,
     logger: Optional[Logger] = None,
-) -> dict:
+) -> dict | list:
     logger = logger or Logger()
     path = Path(path).resolve()
     logger.info(f"Read data file from '{path}'")
     if not path.is_file():
         if raise_missing:
             logger.error(f"No file exists at '{path}'.")
-        content = {}
+        content = {} if root_type == "dict" else []
     elif path.read_text().strip() == "":
         if raise_empty:
             logger.error(f"File at '{path}' is empty.")
-        content = {}
+        content = {} if root_type == "dict" else []
     else:
         extension = extension or path.suffix.removeprefix(".")
         match extension:
@@ -41,7 +42,9 @@ def read(
                 content = _read_toml(path=path, logger=logger)
             case _:
                 logger.error(f"Unsupported file extension '{extension}'.")
-        if not isinstance(content, dict):
+        if content is None:
+            content = {} if root_type == "dict" else []
+        if not isinstance(content, (dict, list)):
             logger.error(
                 f"Invalid datafile.", f"Expected a dict, but '{path}' had:\n{json.dumps(content, indent=3)}"
             )

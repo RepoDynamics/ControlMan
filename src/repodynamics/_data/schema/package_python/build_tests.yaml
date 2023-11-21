@@ -1,8 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_package_tests
 description: TestSuite pyproject.toml file
-
 type: object
+default: { }
+additionalProperties: false
 properties:
   build-system:
     description: Build system definitions
@@ -44,6 +45,31 @@ properties:
           - required: [ name, dynamic ]
           - required: [ name, version ]
     required: [ requires ]
+  project:
+    description: Project metadata
+    type: object
+    default: {}
+    properties:
+      name:
+        type: string
+        default: "${{ package.name }}_tests"
+      dynamic:
+        type: array
+        default: [ "version" ]
+      dependencies:
+        type: array
+        default:
+          - 'pytest >= 7.4.2, < 8'
+          - 'pytest-cov >= 4.1.0, < 5'
+        uniqueItems: true
+        items:
+          type: string
+    oneOf:
+      - required: [ name, dynamic ]
+      - required: [ name, version ]
+  tool:
+    description: Build system definitions
+    type: object
+    additionalProperties:
+      type: object
 required: [ build-system ]
-additionalProperties:
-  type: object

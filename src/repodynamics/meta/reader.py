@@ -30,13 +30,6 @@ class MetaReader:
         self._metadata["path"]["file"] = {
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
         }
-
-        if self._metadata.get("package"):
-            self._package_config = self._read_pyproject_metadata()
-            self._test_package_config = self._read_single_file(rel_path="package/build_tests", ext="toml")
-        else:
-            self._package_config = self._test_package_config = None
-
         self._cache: dict = self._initialize_api_cache()
         self._db = self._read_datafile(_util.file.datafile("db.yaml"))
         return
@@ -44,14 +37,6 @@ class MetaReader:
     @property
     def metadata(self) -> dict:
         return self._metadata
-
-    @property
-    def package_config(self) -> tomlkit.TOMLDocument | None:
-        return self._package_config
-
-    @property
-    def test_package_config(self) -> tomlkit.TOMLDocument | None:
-        return self._test_package_config
 
     @property
     def github(self):
@@ -94,14 +79,14 @@ class MetaReader:
         extensions = _util.dict.read(
             path=self._pathfinder.file_meta_core_extensions,
             schema=self._get_schema("extensions"),
-            raise_empty=False,
+            root_type="list",
             logger=self.logger,
         )
-        if not extensions["extensions"]:
+        if not extensions:
             return extensions, None
-        local_path, exists = self._get_local_extensions(extensions["extensions"])
+        local_path, exists = self._get_local_extensions(extensions)
         if not exists:
-            self._download_extensions(extensions["extensions"], download_path=local_path)
+            self._download_extensions(extensions, download_path=local_path)
         return extensions, local_path
 
     def _get_local_extensions(self, extensions: list[dict]) -> tuple[Path, bool]:
@@ -195,50 +180,59 @@ class MetaReader:
 
     def _read_raw_metadata(self):
         self.logger.h3("Read Raw Metadata")
-        data = [
-            "core/credits",
-            "core/intro",
-            "core/license",
-            "dev/branches",
-            "dev/changelogs",
-            "dev/commits",
-            "dev/discussions",
-            "dev/issues",
-            "dev/labels",
-            "dev/maintainers",
-            "dev/pulls",
-            "dev/repo",
-            "dev/tags",
-            "dev/workflows",
-            "package/conda",
-            "package/dev_config",
-            "package/docs",
-            "package/entry_points",
-            "package/metadata",
-            "package/requirements",
-            "ui/health_files",
-            "ui/readme",
-            "ui/theme",
-            "ui/web",
-        ]
         metadata = {}
-        for entry in data:
+        for entry in ("core/credits", "core/intro", "core/license"):
             section = self._read_single_file(rel_path=entry)
             self._recursive_update(
                 source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
             )
+        for entry in (
+            "dev/branch",
+            "dev/changelog",
+            "dev/commit",
+            "dev/discussion",
+            "dev/issue",
+            "dev/label",
+            "dev/maintainer",
+            "dev/pull",
+            "dev/repo",
+            "dev/tag",
+            "dev/workflow",
+            "ui/health_file",
+            "ui/readme",
+            "ui/theme",
+            "ui/web",
+        ):
+            section = {entry.split("/")[1]: self._read_single_file(rel_path=entry)}
+            self._recursive_update(
+                source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
+            )
+        package = {}
+        if (self._pathfinder.dir_meta / "package_python").is_dir():
+            package["type"] = "python"
+            for entry in (
+                "package_python/conda",
+                "package_python/dev_config",
+                "package_python/docs",
+                "package_python/entry_points",
+                "package_python/metadata",
+                "package_python/requirements",
+            ):
+                section = self._read_single_file(rel_path=entry)
+                self._recursive_update(
+                    source=package, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
+                )
+            package["pyproject"] = self._read_package_python_pyproject()
+            package["pyproject_tests"] = self._read_single_file(rel_path="package_python/build_tests", ext="toml")
+        else:
+            package["type"] = None
+        metadata["package"] = package
         self.logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
         return metadata
 
-    def _read_pyproject_metadata(self):
-        build = self._read_single_file(rel_path="package/build", ext="toml")
-        tool = self._read_package_config()
-        self._recursive_update(build, tool, raise_on_duplicated=True)
-        return build
-
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
         section = self._read_datafile(self._pathfinder.dir_meta / f"{rel_path}.{ext}")
-        for idx, extension in enumerate(self._extensions["extensions"]):
+        for idx, extension in enumerate(self._extensions):
             if extension["type"] == rel_path:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
                 extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
@@ -253,11 +247,11 @@ class MetaReader:
         self._validate_datafile(source=section, schema=rel_path)
         return section
 
-    def _read_package_config(self):
+    def _read_package_python_pyproject(self):
         self.logger.h3("Read Package Config")
 
         def read_package_toml(path: Path):
-            dirpath_config = Path(path) / "package" / "tools"
+            dirpath_config = Path(path) / "package_python" / "tools"
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
@@ -267,19 +261,21 @@ class MetaReader:
                 )
             return config
 
-        toml_dict = read_package_toml(self._pathfinder.dir_meta)
-        for idx, extension in enumerate(self._extensions["extensions"]):
-            if extension["type"] == "package/tools":
+        build = self._read_single_file(rel_path="package_python/build", ext="toml")
+        tools = read_package_toml(self._pathfinder.dir_meta)
+        for idx, extension in enumerate(self._extensions):
+            if extension["type"] == "package_python/tools":
                 extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
                 self._recursive_update(
-                    toml_dict,
+                    tools,
                     extension_config,
                     append_list=extension["append_list"],
                     append_dict=extension["append_dict"],
                     raise_on_duplicated=extension["raise_duplicate"],
                 )
-        self._validate_datafile(source=toml_dict, schema="package/tools")
-        return toml_dict
+        self._validate_datafile(source=tools, schema="package_python/tools")
+        self._recursive_update(build, tools, raise_on_duplicated=True)
+        return build
 
     def _read_datafile(self, source: Path, schema: Path = None, **kwargs):
         return _util.dict.read(path=source, schema=schema, raise_empty=False, logger=self.logger, **kwargs)
@@ -293,7 +289,7 @@ class MetaReader:
 
     def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
-            days=self._local_config["repodynamics"]["cache_retention_days"][typ]
+            days=self._local_config["cache_retention_days"][typ]
         )
         if exp_date <= datetime.datetime.now():
             return True

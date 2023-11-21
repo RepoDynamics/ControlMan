@@ -2,131 +2,127 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Website Configurations
 description: Configurations for the project's website
 type: object
+default: {}
 additionalProperties: false
 properties:
-  web:
+  analytics:
+    description: Configurations of web analytics services
     type: object
-    default: {}
     additionalProperties: false
     properties:
-      analytics:
-        description: Configurations of web analytics services
+      google_id:
+        description: Google Analytics ID
+        type: string
+      plausible:
+        description: Plausible Analytics data
         type: object
         additionalProperties: false
         properties:
-          google_id:
-            description: Google Analytics ID
+          domain:
+            description: Domain for Plausible Analytics
             type: string
-          plausible:
-            description: Plausible Analytics data
-            type: object
-            additionalProperties: false
-            properties:
-              domain:
-                description: Domain for Plausible Analytics
-                type: string
-              url:
-                description: URL for Plausible Analytics
-                type: string
-                format: uri
-            required: [ domain, url ]
-      announcement_retention_days:
-        description: Number of days to keep an announcement before removing it from the website
-        type: integer
-        minimum: 0
-        default: 30
-      base_url:
-        description: Custom base URL (cname) for the website
-        type: string
-        format: uri
-      navbar_icons:
-        description: Icons to be shown in the navigation bar of the website
-        type: array
-        default: []
-        uniqueItems: true
-        items:
-          type: object
-          additionalProperties: false
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            icon:
-              type: string
-            url:
-              type: string
-              format: uri
-            type:
-              enum:
-                - fontawesome
-                - url
-                - local
-            attributes:
-              type: object
-      readthedocs:
-        description: Configuration for ReadTheDocs website
-        type: object
-        properties:
-          name:
-            description: Name of the project on ReadTheDocs, i.e. the project slug
+          url:
+            description: URL for Plausible Analytics
             type: string
-          version:
-            type: integer
-            enum: [2]
-            default: 2
-          format:
-            description: Additional formats of the documentation to be built, apart from the default HTML.
-            oneOf:
-              - type: string
-                enum: [all]
-              - type: array
-                uniqueItems: true
-                minItems: 1
-                items:
-                  type: string
-                  enum: [ htmlzip, pdf, epub ]
-        required: [ name, version ]
-      quicklinks:
-        description: Quicklinks for the navbar
-        type: array
-        uniqueItems: true
-        items:
-          type: array
-          uniqueItems: true
-          minItems: 1
-          items:
-            type: object
-            additionalProperties: false
-            required:
-              - title
-              - path
-            properties:
-              title:
-                type: string
-              path:
-                type: string
-              include_in_readme:
-                type: boolean
-                default: false
-      path:
-        description: Relative paths to important pages on the website
-        type: object
-        default: {}
-        additionalProperties:
+            format: uri
+        required: [ domain, url ]
+  announcement_retention_days:
+    description: Number of days to keep an announcement before removing it from the website
+    type: integer
+    minimum: 0
+    default: 30
+  base_url:
+    description: Custom base URL (cname) for the website
+    type: string
+    format: uri
+  navbar_icons:
+    description: Icons to be shown in the navigation bar of the website
+    type: array
+    default: []
+    uniqueItems: true
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
           type: string
+        name:
+          type: string
+        icon:
+          type: string
+        url:
+          type: string
+          format: uri
+        type:
+          enum:
+            - fontawesome
+            - url
+            - local
+        attributes:
+          type: object
+  readthedocs:
+    description: Configuration for ReadTheDocs website
+    type: object
+    properties:
+      name:
+        description: Name of the project on ReadTheDocs, i.e. the project slug
+        type: string
+      version:
+        type: integer
+        enum: [2]
+        default: 2
+      format:
+        description: Additional formats of the documentation to be built, apart from the default HTML.
+        oneOf:
+          - type: string
+            enum: [all]
+          - type: array
+            uniqueItems: true
+            minItems: 1
+            items:
+              type: string
+              enum: [ htmlzip, pdf, epub ]
+    required: [ name, version ]
+  quicklinks:
+    description: Quicklinks for the navbar
+    type: array
+    uniqueItems: true
+    items:
+      type: array
+      uniqueItems: true
+      minItems: 1
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - title
+          - path
         properties:
-          contact:
-            description: Relative path to the contact page
+          title:
             type: string
-            default: help/contact
-          news:
-            description: Relative path to the news page
+          path:
             type: string
-            default: news
-        not:
-          anyOf:
-            - required: [ base ]
-            - required: [ home ]
-            - required: [ announcement ]
-    required: [ announcement_retention_days, path ]
+          include_in_readme:
+            type: boolean
+            default: false
+  path:
+    description: Relative paths to important pages on the website
+    type: object
+    default: {}
+    additionalProperties:
+      type: string
+    properties:
+      contact:
+        description: Relative path to the contact page
+        type: string
+        default: help/contact
+      news:
+        description: Relative path to the news page
+        type: string
+        default: news
+    not:
+      anyOf:
+        - required: [ base ]
+        - required: [ home ]
+        - required: [ announcement ]
+required: [ announcement_retention_days, path ]

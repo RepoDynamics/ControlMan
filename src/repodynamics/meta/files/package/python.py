@@ -22,20 +22,16 @@ from repodynamics.datatype import DynamicFile
 from repodynamics.meta.manager import MetaManager
 
 
-class PackageFileGenerator:
+class PythonPackageFileGenerator:
     def __init__(
         self,
         metadata: MetaManager,
-        package_config: tomlkit.TOMLDocument,
-        test_package_config: tomlkit.TOMLDocument,
-        output_path: PathFinder,
+        paths: PathFinder,
         logger: Logger = None,
     ):
         self._logger = logger or Logger()
         self._meta = metadata
-        self._pyproject = package_config
-        self._pyproject_test = test_package_config
-        self._out_db = output_path
+        self._path = paths
 
         self._package_dir_output: tuple[DynamicFile, str] | None = None
         self._test_package_dir_output: tuple[DynamicFile, str] | None = None
@@ -56,7 +52,7 @@ class PackageFileGenerator:
         )
 
     def typing_marker(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.package_typing_marker(package_name=self._meta["package"]["name"])
+        info = self._path.package_typing_marker(package_name=self._meta["package"]["name"])
         text = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
             if self._meta["package"].get("typed")
@@ -66,7 +62,7 @@ class PackageFileGenerator:
 
     def requirements(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h3("Generate File Content: requirements.txt")
-        info = self._out_db.package_requirements
+        info = self._path.package_requirements
         text = ""
         if self._meta["package"].get("core_dependencies"):
             for dep in self._meta["package"]["core_dependencies"]:
@@ -82,14 +78,14 @@ class PackageFileGenerator:
         package_name = self._meta["package"]["name"]
         out = []
         for name, sub_path, func in (
-            (package_name, self._meta["path"]["dir"]["source"], self._out_db.package_dir),
+            (package_name, self._meta["path"]["dir"]["source"], self._path.package_dir),
             (
                 f"{package_name}_tests",
                 f'{self._meta["path"]["dir"]["tests"]}/src',
-                self._out_db.package_tests_dir
+                self._path.package_tests_dir
             ),
         ):
-            path = self._out_db.root / sub_path / name
+            path = self._path.root / sub_path / name
             if path.exists():
                 self._logger.skip(f"Package path exists", f"{path}")
                 out.append((func(path, path), ""))
@@ -131,7 +127,7 @@ class PackageFileGenerator:
             if dir_.alt_paths and dir_.alt_paths[0] != dir_.path:
                 mapping[dir_.alt_paths[0].name] = dir_.path.name
         if mapping:
-            for filepath in self._out_db.root.glob("**/*.py"):
+            for filepath in self._path.root.glob("**/*.py"):
                 if package_dir.alt_paths and filepath.is_relative_to(package_dir.alt_paths[0]):
                     new_path = package_dir.path / filepath.relative_to(package_dir.alt_paths[0])
                 elif test_package_dir.alt_paths and filepath.is_relative_to(test_package_dir.alt_paths[0]):
@@ -139,13 +135,13 @@ class PackageFileGenerator:
                 else:
                     new_path = filepath
                 new_content = self.rename_imports(module_content=filepath.read_text(), mapping=mapping)
-                out.append((self._out_db.python_file(new_path), new_content))
+                out.append((self._path.python_file(new_path), new_content))
         if not test_package_dir.alt_paths:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
                 filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
                 text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta.as_dict)
-                path = self._out_db.python_file(
+                path = self._path.python_file(
                     (test_package_dir.path / testsuite_filename).with_suffix(".py")
                 )
                 out.append((path, text))
@@ -235,17 +231,17 @@ __version__ = __version_details__["version"]"""
         else:
             # Replace the existing docstring with the new one
             text = re.sub(pattern, rf"\1{docstring}", file_content)
-        info = self._out_db.package_init(self._meta["package"]["name"])
+        info = self._path.package_init(self._meta["package"]["name"])
         return [(info, text)]
 
     def manifest(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.package_manifest
+        info = self._path.package_manifest
         text = "\n".join(self._meta["package"].get("manifest", []))
         return [(info, text)]
 
     def pyproject(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.package_pyproject
-        pyproject = _util.dict.fill_template(self._pyproject, metadata=self._meta.as_dict)
+        info = self._path.package_pyproject
+        pyproject = self._meta["package"]["pyproject"]
         project = pyproject.setdefault("project", {})
         for key, val in self.pyproject_project().items():
             if key not in project:
@@ -253,20 +249,19 @@ __version__ = __version_details__["version"]"""
         return [(info, tomlkit.dumps(pyproject))]
 
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.test_package_pyproject
-        pyproject = _util.dict.fill_template(self._pyproject_test, metadata=self._meta.as_dict)
-        return [(info, tomlkit.dumps(pyproject))]
+        info = self._path.test_package_pyproject
+        return [(info, tomlkit.dumps(self._meta["package"]["pyproject_tests"]))]
 
     def pyproject_project(self) -> dict:
         data_type = {
             "name": ("str", self._meta["package"]["name"]),
             "dynamic": ("array", ["version"]),
             "description": ("str", self._meta.tagline),
-            "readme": ("str", self._out_db.readme_pypi.rel_path),
+            "readme": ("str", self._path.readme_pypi.rel_path),
             "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
             "license": (
                 "inline_table",
-                {"file": self._out_db.license.rel_path} if self._meta["license"] else None,
+                {"file": self._path.license.rel_path} if self._meta["license"] else None,
             ),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),

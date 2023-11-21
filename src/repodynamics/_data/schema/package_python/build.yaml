@@ -1,15 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_package_metadata
 description: Package metadata
-
 type: object
+default: { }
+additionalProperties: false
 properties:
   build-system:
     description: Build system definitions
     type: object
-    required: [ requires ]
+    default: { }
     properties:
-
       requires:
         description: Build system requirements
         type: array
@@ -17,10 +17,13 @@ properties:
         minItems: 1
         items:
           type: string
-
       build-backend:
         description: Build backend
         type: string
+    required: [ requires ]
+  tool:
+    description: Build system definitions
+    type: object
+    additionalProperties:
+      type: object
 required: [ build-system ]
-additionalProperties:
-  type: object

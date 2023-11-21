@@ -1,0 +1,26 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Tag Configurations
+description: Repository tags settings
+type: object
+default: { }
+additionalProperties: false
+properties:
+  group:
+    type: object
+    description: Tag groups
+    default: {}
+    additionalProperties: false
+    properties:
+      version:
+        type: object
+        description: Version tags
+        default: {}
+        additionalProperties: false
+        properties:
+          prefix:
+            description: Prefix of all version tags
+            type: string
+            default: ver/
+        required: [ prefix ]
+    required: [ version ]
+required: [ group ]

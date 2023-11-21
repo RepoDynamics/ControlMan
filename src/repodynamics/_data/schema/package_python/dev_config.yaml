@@ -1,0 +1,18 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: meta_package_dev_config
+description: Package development tools configuration
+type: object
+default: { }
+additionalProperties: false
+properties:
+  dev_config:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      max_line_length:
+        description: Maximum line length
+        type: integer
+        default: 100
+        minimum: 50
+        maximum: 500

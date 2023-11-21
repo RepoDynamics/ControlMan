@@ -1,14 +1,10 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_package_conda
 description: Package conda metadata
-
 type: object
+default: { }
 additionalProperties: false
 properties:
-  package:
-    description: Package metadata
+  conda:
     type: object
-    additionalProperties: false
-    properties:
-      conda:
-        type: object
+    default: { }

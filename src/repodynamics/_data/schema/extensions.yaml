@@ -1,62 +1,56 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Meta Content Extensions
 description: Extension declarations for meta content
-type: object
-additionalProperties: false
-properties:
-  extensions:
-    description: The single root key of the main object
-    type: array
-    default: []
-    uniqueItems: true
-    items:
-      type: object
-      additionalProperties: false
-      properties:
-        type:
-          enum:
-            - core/credits
-            - core/intro
-            - core/license
-            - dev/branches
-            - dev/changelogs
-            - dev/commits
-            - dev/discussions
-            - dev/issues
-            - dev/labels
-            - dev/maintainers
-            - dev/pulls
-            - dev/repo
-            - dev/tags
-            - dev/workflows
-            - package/build
-            - package/build_tests
-            - package/conda
-            - package/dev_config
-            - package/docs
-            - package/entry_points
-            - package/metadata
-            - package/requirements
-            - package/tools
-            - ui/health_files
-            - ui/readme
-            - ui/theme
-            - ui/web
-        repo:
-          type: string
-          pattern: ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$
-        ref:
-          type: string
-        path:
-          type: string
-        append_list:
-          type: boolean
-          default: true
-        append_dict:
-          type: boolean
-          default: true
-        raise_duplicate:
-          type: boolean
-          default: false
-      required: [ type, repo, path, append_list, append_dict, raise_duplicate ]
-required: [ extensions ]
+type: array
+default: []
+uniqueItems: true
+items:
+  type: object
+  additionalProperties: false
+  properties:
+    type:
+      enum:
+        - core/credits
+        - core/intro
+        - core/license
+        - dev/branch
+        - dev/changelog
+        - dev/commit
+        - dev/discussion
+        - dev/issue
+        - dev/label
+        - dev/maintainer
+        - dev/pull
+        - dev/repo
+        - dev/tag
+        - dev/workflow
+        - package_python/build
+        - package_python/build_tests
+        - package_python/conda
+        - package_python/dev_config
+        - package_python/docs
+        - package_python/entry_points
+        - package_python/metadata
+        - package_python/requirements
+        - package_python/tools
+        - ui/health_files
+        - ui/readme
+        - ui/theme
+        - ui/web
+    repo:
+      type: string
+      pattern: ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$
+    ref:
+      type: string
+    path:
+      type: string
+    append_list:
+      type: boolean
+      default: true
+    append_dict:
+      type: boolean
+      default: true
+    raise_duplicate:
+      type: boolean
+      default: false
+  required: [ type, repo, path, append_list, append_dict, raise_duplicate ]

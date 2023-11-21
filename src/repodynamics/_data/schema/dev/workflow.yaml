@@ -1,98 +1,91 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_dev_issues
 description: GitHub issues settings for the project
-
 type: object
+default: {}
 additionalProperties: false
 properties:
-  workflow:
+  init:
     type: object
     default: {}
     additionalProperties: false
     properties:
-      init:
+      meta_check_action:
+        $ref: '#/definitions/check_action'
+      hooks_check_action:
+        $ref: '#/definitions/check_action'
+      schedule:
         type: object
         default: {}
         additionalProperties: false
         properties:
-          meta_check_action:
-            $ref: '#/definitions/check_action'
-          hooks_check_action:
-            $ref: '#/definitions/check_action'
-          schedule:
-            type: object
-            default: {}
-            additionalProperties: false
-            properties:
-              test:
-                type: string
-                default: '0 0 * * 1'  # Every Monday at midnight UTC.
-              sync:
-                type: string
-                default: '0 0 * * *'  # Every day at midnight UTC.
-            required: [ test, sync ]
-          get_owner_publications:
-            description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
-            type: boolean
-            default: false
-        required: [ meta_check_action, hooks_check_action, schedule, get_owner_publications ]
-      tool:
+          test:
+            type: string
+            default: '0 0 * * 1'  # Every Monday at midnight UTC.
+          sync:
+            type: string
+            default: '0 0 * * *'  # Every day at midnight UTC.
+        required: [ test, sync ]
+      get_owner_publications:
+        description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
+        type: boolean
+        default: false
+    required: [ meta_check_action, hooks_check_action, schedule, get_owner_publications ]
+  tool:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      pylint:
         type: object
-        default: {}
         additionalProperties: false
         properties:
-          pylint:
-            type: object
-            additionalProperties: false
-            properties:
-              pip_spec:
-                type: array
-                default:
-                  - pylint[spelling] >= 2.7.15, < 2.8
-                items:
-                  type: string
-          mypy:
-            type: object
-            additionalProperties: false
-            properties:
-              pip_spec:
-                type: array
-                default:
-                  - mypy[reports] >=1.5.1, <1.6
-                items:
-                  type: string
-          bandit:
-            type: object
-            additionalProperties: false
-            properties:
-              pip_spec:
-                type: array
-                default:
-                  - bandit[toml]
-                  - bandit-sarif-formatter
-                items:
-                  type: string
-      pre_commit:
+          pip_spec:
+            type: array
+            default:
+              - pylint[spelling] >= 2.7.15, < 2.8
+            items:
+              type: string
+      mypy:
         type: object
-        default: {}
         additionalProperties: false
         properties:
-          main:
-            $ref: '#/definitions/pre_commit_config'
-          release:
-            $ref: '#/definitions/pre_commit_config'
-          pre_release:
-            $ref: '#/definitions/pre_commit_config'
-          dev:
-            $ref: '#/definitions/pre_commit_config'
-          other:
-            $ref: '#/definitions/pre_commit_config'
-      codecov:
+          pip_spec:
+            type: array
+            default:
+              - mypy[reports] >=1.5.1, <1.6
+            items:
+              type: string
+      bandit:
         type: object
-        minProperties: 1
-    required: [ init, tool, codecov ]
-required: [ workflow ]
-
+        additionalProperties: false
+        properties:
+          pip_spec:
+            type: array
+            default:
+              - bandit[toml]
+              - bandit-sarif-formatter
+            items:
+              type: string
+  pre_commit:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      main:
+        $ref: '#/definitions/pre_commit_config'
+      release:
+        $ref: '#/definitions/pre_commit_config'
+      pre_release:
+        $ref: '#/definitions/pre_commit_config'
+      dev:
+        $ref: '#/definitions/pre_commit_config'
+      other:
+        $ref: '#/definitions/pre_commit_config'
+  codecov:
+    type: object
+    minProperties: 1
+required: [ init, tool, codecov ]
 
 definitions:
   check_action:

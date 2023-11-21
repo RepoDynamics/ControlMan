@@ -2,27 +2,22 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: RepoDynamics Meta Configuration
 description: Base configurations for RepoDynamics
 type: object
+default: {}
+additionalProperties: false
 properties:
-  repodynamics:
-    description: The single root key of this file
+  cache_retention_days:
+    description: Number of days to keep cache data for meta content.
     type: object
     default: {}
     additionalProperties: false
     properties:
-      cache_retention_days:
-        description: Number of days to keep cache data for meta content.
-        type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          api:
-            type: integer
-            minimum: 0
-            default: 1
-          extensions:
-            type: integer
-            minimum: 0
-            default: 1
-        required: [ api, extensions ]
-    required: [ cache_retention_days ]
-required: [ repodynamics ]
+      api:
+        type: integer
+        minimum: 0
+        default: 1
+      extensions:
+        type: integer
+        minimum: 0
+        default: 1
+    required: [ api, extensions ]
+required: [ cache_retention_days ]

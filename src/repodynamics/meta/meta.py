@@ -15,7 +15,7 @@ from repodynamics.datatype import DynamicFileType
 from repodynamics.version import PEP440SemVer
 from repodynamics.meta.files.config import ConfigFileGenerator
 from repodynamics.meta.files.health import HealthFileGenerator
-from repodynamics.meta.files.package import PackageFileGenerator
+from repodynamics.meta.files import package
 from repodynamics.meta.files.readme import ReadmeFileGenerator
 from repodynamics.meta.files.forms import FormGenerator
 
@@ -97,14 +97,11 @@ class Meta:
             metadata=metadata, output_path=self.paths, logger=self._logger
         ).generate()
 
-        if "package" in self._metadata:
-            generated_files += PackageFileGenerator(
-                metadata=metadata,
-                package_config=self._reader.package_config,
-                test_package_config=self._reader.test_package_config,
-                output_path=self.paths,
-                logger=self._logger,
-            ).generate()
+        generated_files += package.generate(
+            metadata=metadata,
+            paths=self.paths,
+            logger=self._logger,
+        )
 
         generated_files += ReadmeFileGenerator(
             metadata=metadata, paths=self.paths, logger=self._logger

@@ -1,8 +1,8 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_dev_issues
 description: GitHub issues settings for the project
-
 type: object
+default: {}
 additionalProperties: false
 properties:
   color:
@@ -29,3 +29,4 @@ properties:
           - type: string
             pattern: ^[0-9a-fA-F]{6}$
     required: [ primary, secondary ]
+required: [ color ]

@@ -1,0 +1,124 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Branch Configuration
+description: Names, prefixes, and protection rules for different branch types
+type: object
+default: {}
+additionalProperties: false
+properties:
+  default:
+    description: Default branch
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        default: main
+      protection_rules:
+        description: Branch protection rules
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          allow_deletion:
+            type: boolean
+            default: false
+          allow_force_push:
+            type: boolean
+            default: false
+    required: [ name ]
+  group:
+    type: object
+    description: Branch groups
+    default: {}
+    properties:
+      release:
+        type: object
+        description: Release branch
+        default: { }
+        properties:
+          prefix:
+            description: Prefix for the branch name
+            type: string
+            default: release/v
+          protection_rules:
+            description: Branch protection rules
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              allow_deletion:
+                type: boolean
+                default: false
+              allow_force_push:
+                type: boolean
+                default: false
+        required: [ prefix ]
+      pre_release:
+        type: object
+        description: Pre-release branch
+        default: { }
+        properties:
+          prefix:
+            description: Prefix for the branch name
+            type: string
+            default: pre-release/v
+          protection_rules:
+            description: Branch protection rules
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              allow_deletion:
+                type: boolean
+                default: false
+              allow_force_push:
+                type: boolean
+                default: false
+        required: [ prefix ]
+      dev:
+        type: object
+        description: Development branch
+        default: {}
+        properties:
+          prefix:
+            description: Prefix for the branch name
+            type: string
+            default: dev/
+          protection_rules:
+            description: Branch protection rules
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              allow_deletion:
+                type: boolean
+                default: true
+              allow_force_push:
+                type: boolean
+                default: true
+        required: [ prefix ]
+      ci_pull:
+        type: object
+        description: CI pull request head branch
+        default: { }
+        properties:
+          prefix:
+            description: Prefix for the branch name
+            type: string
+            default: ci-pull/
+          protection_rules:
+            description: Branch protection rules
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              allow_deletion:
+                type: boolean
+                default: true
+              allow_force_push:
+                type: boolean
+                default: true
+        required: [ prefix ]
+    required: [ release, dev, ci_pull ]
+required: [ default, group ]

@@ -1,20 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: meta_dev_pulls
 description: GitHub pull request settings for the project
-
 type: object
+default: { }
 additionalProperties: false
 properties:
-  pull:
+  template:
     type: object
     default: {}
-    additionalProperties: false
+    additionalProperties:
+      type: string
     properties:
-      template:
-        type: object
-        default: {}
-        additionalProperties:
-          type: string
-        properties:
-          default:
-            type: string
+      default:
+        type: string
