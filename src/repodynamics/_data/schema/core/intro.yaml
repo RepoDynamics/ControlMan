@@ -2,6 +2,7 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Project Introduction
 description: Name, tagline, keywords, and other descriptions for the project
 type: object
+default: {}
 additionalProperties: false
 properties:
   name:
