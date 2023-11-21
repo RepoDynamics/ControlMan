@@ -2,22 +2,23 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Branch Configuration
 description: Names, prefixes, and protection rules for different branch types
 type: object
-default: {}
+default: { }
 additionalProperties: false
 properties:
   default:
-    description: Default branch
+    description: Configurations for the default (main) branch
     type: object
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
       name:
+        description: Name of the default branch
         type: string
         default: main
       protection_rules:
-        description: Branch protection rules
+        description: Branch protection rules for the default branch
         type: object
-        default: {}
+        default: { }
         additionalProperties: false
         properties:
           allow_deletion:
@@ -28,13 +29,13 @@ properties:
             default: false
     required: [ name ]
   group:
+    description: Configurations for different branch groups
     type: object
-    description: Branch groups
-    default: {}
+    default: { }
     properties:
       release:
+        description: Configurations for release branches
         type: object
-        description: Release branch
         default: { }
         properties:
           prefix:
@@ -120,5 +121,5 @@ properties:
                 type: boolean
                 default: true
         required: [ prefix ]
-    required: [ release, dev, ci_pull ]
+    required: [ ci_pull, dev, pre_release, release ]
 required: [ default, group ]
