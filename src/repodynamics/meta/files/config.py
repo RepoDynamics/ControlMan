@@ -174,7 +174,6 @@ class ConfigFileGenerator:
                 f"{local_dir}/**",
                 f"!{local_dir}/**/",
                 f"!{local_dir}/**/README.md",
-                f"!{local_dir}/config.yaml",
             ]
         )
         return [(info, text)]
