@@ -12,6 +12,7 @@ properties:
     properties:
       primary:
         description: Primary colors of the project
+        type: array
         items: false
         default: [ 135400, 459B24 ]
         prefixItems:
@@ -21,6 +22,7 @@ properties:
             pattern: ^[0-9a-fA-F]{6}$
       secondary:
         description: Secondary colors of the project
+        type: array
         items: false
         default: [ 055005, 9CCC00 ]
         prefixItems:
