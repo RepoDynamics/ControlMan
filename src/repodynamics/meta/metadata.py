@@ -140,6 +140,7 @@ class MetadataGenerator:
             self._logger.debug("Install custom metadata generator requirements")
             _util.shell.run_command(
                 command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
+                raise_stderr=False,
             )
         spec = importlib.util.spec_from_file_location(
             "generator",
