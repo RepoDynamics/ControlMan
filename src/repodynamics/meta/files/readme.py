@@ -132,7 +132,7 @@ class ReadmeFileGenerator:
 
     def logo(self) -> html.A:
         style = self._metadata["readme"]["repo"]["header"]["style"]
-        url = f"{self._metadata['path']['dir']['meta']}/ui/logo/full_{{}}.svg"
+        url = f"{self._metadata['path']['dir']['meta']}/ui/branding/logo_full_{{}}.svg"
         picture_tag = html.PICTURE(
             img=html.IMG(
                 src=url.format("light"),
@@ -515,5 +515,5 @@ def pypackit_badge():
         ),
         alt="Template by PyPackIT",
         title=f"Project template created by PyPackIT version {repodynamics.__version__}.",
-        link="https://pypackit.readthedocs.io",
+        link="https://repodynamics.github.io/pypackit",
     )

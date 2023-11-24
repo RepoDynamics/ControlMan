@@ -26,6 +26,7 @@ properties:
     type: array
     default: []
     uniqueItems: true
+    maxItems: 20
     items:
       type: string
       maxLength: 50
