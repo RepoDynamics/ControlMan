@@ -377,11 +377,11 @@ class PushEventHandler(ModifyingEventHandler):
             else:
                 next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
                 next_ver_str = str(next_ver)
-                if final_commit_type.action != PrimaryActionCommitType.PACKAGE_POST:
+                if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
                     next_ver_str += f".a{self._branch.suffix[0]}"
                 if not ver_last_dev:
                     dev = 0
-                elif final_commit_type.action == PrimaryActionCommitType.PACKAGE_POST:
+                elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
                     if ver_last_dev.post is not None and ver_last_dev.post == next_ver.post:
                         dev = ver_last_dev.dev + 1
                     else:
