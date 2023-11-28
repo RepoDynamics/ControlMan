@@ -8,7 +8,7 @@ properties:
   auto_group:
     type: object
     description: Auto label groups
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
       version:
@@ -31,7 +31,7 @@ properties:
             description: Description of the label
             default: Related to this specific version of the package.
         required: [ prefix, color, description ]
-      target:
+      branch:
         type: object
         description: Target branch labels
         default: { }
@@ -51,16 +51,16 @@ properties:
             description: Description of the label
             default: Related to this specific branch of the repository.
         required: [ prefix, color, description ]
-    required: [ version, target ]
+    required: [ version, branch ]
   group:
     type: object
     description: Label groups
-    default: {}
+    default: { }
     properties:
       primary_type:
         type: object
         description: Primary commit types
-        default: {}
+        default: { }
         properties:
           prefix:
             description: Prefix for the label name
@@ -88,7 +88,7 @@ properties:
                   maxLength: 100
               required: [ suffix, description ]
             properties:
-              package_major:
+              release_major:
                 type: object
                 default: {}
                 properties:
@@ -102,7 +102,7 @@ properties:
                     maxLength: 100
                     default: |
                       Resolving/merging the labeled issue/pull-request will result in a major release of the package.
-              package_minor:
+              release_minor:
                 type: object
                 default: {}
                 properties:
@@ -116,7 +116,7 @@ properties:
                     maxLength: 100
                     default: |
                       Resolving/merging the labeled issue/pull-request will result in a minor release of the package.
-              package_patch:
+              release_patch:
                 type: object
                 default: {}
                 properties:
@@ -130,7 +130,7 @@ properties:
                     maxLength: 100
                     default: |
                       Resolving/merging the labeled issue/pull-request will result in a patch release of the package.
-              package_post:
+              release_post:
                 type: object
                 default: {}
                 properties:
@@ -172,7 +172,7 @@ properties:
                     maxLength: 100
                     default: |
                       An issue/pull-request about the meta content of the repository.
-            required: [ package_major, package_minor, package_patch, package_post, website, meta ]
+            required: [ release_major, release_minor, release_patch, release_post, website, meta ]
       status:
         type: object
         description: Issue/pull status
@@ -365,7 +365,7 @@ properties:
               - rc
               - final
         required: [ prefix, color, labels ]
-      sub_type:
+      subtype:
         type: object
         description: Issue sub types
         default: { }
