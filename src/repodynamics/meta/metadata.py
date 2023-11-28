@@ -352,7 +352,7 @@ class MetadataGenerator:
                     "color": group["color"],
                 }
         release_info = self._metadata.get("package", {}).get("releases", {})
-        for autogroup_name, release_key in (("version", "package_versions"), ("target", "branch_names")):
+        for autogroup_name, release_key in (("version", "package_versions"), ("branch", "branch_names")):
             entries = release_info.get(release_key, [])
             label_data = self._metadata["label"]["auto_group"][autogroup_name]
             for entry in entries:
