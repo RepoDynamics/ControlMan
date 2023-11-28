@@ -134,8 +134,8 @@ class MetaManager:
 
         Returns
         -------
-        A tuple of (primary_type, sub_type) label names for the issue.
-        Note that `sub_type` may be `None`.
+        A tuple of (primary_type, subtype) label names for the issue.
+        Note that `subtype` may be `None`.
         """
         for form in self._data["issue"]["forms"]:
             if form["id"] == issue_form_id:
@@ -143,22 +143,22 @@ class MetaManager:
                 break
         else:
             raise ValueError(f"Unknown issue form ID: {issue_form_id}")
-        primary_type = issue_form["primary_commit_id"]
+        primary_type = issue_form["primary_type"]
         primary_type_label_name = self.get_label_grouped("primary_type", primary_type)["name"]
-        sub_type = issue_form.get("sub_type")
-        if sub_type:
-            sub_type_label_name = self.get_label_grouped("sub_type", sub_type)["name"]
+        subtype = issue_form.get("subtype")
+        if subtype:
+            subtype_label_name = self.get_label_grouped("subtype", subtype)["name"]
         else:
-            sub_type_label_name = None
-        return primary_type_label_name, sub_type_label_name
+            subtype_label_name = None
+        return primary_type_label_name, subtype_label_name
 
     def get_issue_form_from_labels(self, label_names: list[str]) -> dict:
         """
         Get the issue form from a list of label names.
 
         This is done by finding the primary type and subtype labels in the list of labels,
-        finding their IDs, and then finding the issue form with the corresponding `primary_commit_id`
-        and `sub_type`.
+        finding their IDs, and then finding the issue form with the corresponding `primary_type`
+        and `subtype`.
 
         Parameters
         ----------
@@ -171,7 +171,7 @@ class MetaManager:
         """
         prefix = {
             "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
-            "sub_type": self._data["label"]["group"].get("sub_type", {}).get("prefix"),
+            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
         }
         suffix = {}
         for label_name in label_names:
@@ -181,35 +181,35 @@ class MetaManager:
                         raise ValueError(f"Label '{label_name}' with type {label_type} is a duplicate.")
                     suffix[label_type] = label_name.removeprefix(prefix)
                     break
-        label_ids = {"primary_type": "", "sub_type": ""}
+        label_ids = {"primary_type": "", "subtype": ""}
         for label_id, label in self._data["label"]["group"]["primary_type"]["labels"].items():
             if label["suffix"] == suffix["primary_type"]:
                 label_ids["primary_type"] = label_id
                 break
         else:
             raise ValueError(f"Unknown primary type label suffix '{suffix['primary_type']}'.")
-        if suffix["sub_type"]:
-            for label_id, label in self._data["label"]["group"]["sub_type"]["labels"].items():
-                if label["suffix"] == suffix["sub_type"]:
-                    label_ids["sub_type"] = label_id
+        if suffix["subtype"]:
+            for label_id, label in self._data["label"]["group"]["subtype"]["labels"].items():
+                if label["suffix"] == suffix["subtype"]:
+                    label_ids["subtype"] = label_id
                     break
             else:
-                raise ValueError(f"Unknown sub type label suffix '{suffix['sub_type']}'.")
+                raise ValueError(f"Unknown sub type label suffix '{suffix['subtype']}'.")
         for form in self._data["issue"]["forms"]:
             if (
-                form["primary_commit_id"] == label_ids["primary_type"]
-                and form.get("sub_type", "") == label_ids["sub_type"]
+                form["primary_type"] == label_ids["primary_type"]
+                and form.get("subtype", "") == label_ids["subtype"]
             ):
                 return form
         raise ValueError(
             f"Could not find issue form with primary type '{label_ids['primary_type']}' "
-            f"and sub type '{label_ids['sub_type']}'."
+            f"and sub type '{label_ids['subtype']}'."
         )
 
     def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
         type_prefix = {
             "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
-            "sub_type": self._data["label"]["group"].get("sub_type", {}).get("prefix"),
+            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
         }
         label = {}
         for label_name in label_names:
@@ -222,7 +222,7 @@ class MetaManager:
         if "primary_type" not in label:
             raise ValueError(f"Could not find primary type label in {label_names}.")
 
-        key = (label["primary_type"], label.get("sub_type"))
+        key = (label["primary_type"], label.get("subtype"))
 
         if not self._issue_data:
             self._issue_data = self._initialize_issue_data()
@@ -232,7 +232,7 @@ class MetaManager:
         if not issue_data:
             raise ValueError(
                 f"Could not find issue type with primary type '{label['primary_type']}' "
-                f"and sub type '{label.get('sub_type')}'."
+                f"and sub type '{label.get('subtype')}'."
             )
         return issue_data
 
@@ -299,7 +299,7 @@ class MetaManager:
     def _initialize_issue_data(self):
         issue_data = {}
         for issue in self._data["issue"]["forms"]:
-            prim_id = issue["primary_commit_id"]
+            prim_id = issue["primary_type"]
 
             prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]
             prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
@@ -307,10 +307,10 @@ class MetaManager:
 
             type_labels = [prim_label]
 
-            sub_id = issue.get("sub_type")
+            sub_id = issue.get("subtype")
             if sub_id:
-                sub_label_prefix = self._data["label"]["group"]["sub_type"]["prefix"]
-                sub_label_suffix = self._data["label"]["group"]["sub_type"]["labels"][sub_id]["suffix"]
+                sub_label_prefix = self._data["label"]["group"]["subtype"]["prefix"]
+                sub_label_suffix = self._data["label"]["group"]["subtype"]["labels"][sub_id]["suffix"]
                 sub_label = f"{sub_label_prefix}{sub_label_suffix}"
                 type_labels.append(sub_label)
             else:
