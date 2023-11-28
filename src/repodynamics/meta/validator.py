@@ -71,13 +71,13 @@ class MetaValidator:
                         f"is already used by another earlier commit.",
                     )
                 commit_types.append(commit_data["type"])
-                for subtype_type, subtypes in commit_data["sub_types"]:
+                for subtype_type, subtypes in commit_data["subtypes"]:
                     for subtype in subtypes:
                         if subtype not in self._data["commit"]["secondary_custom"]:
                             self._logger.error(
                                 f"Invalid commit subtype: {subtype}",
                                 f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
-                                f"in 'sub_types.{subtype_type}' is not defined in 'commit.secondary_custom'.",
+                                f"in 'subtypes.{subtype_type}' is not defined in 'commit.secondary_custom'.",
                             )
         for commit_id, commit_data in self._data["commit"]["secondary_action"].items():
             if commit_data["type"] in commit_types:
@@ -126,7 +126,7 @@ class MetaValidator:
                     f"The issue-form number {form_idx} has an ID that is already used by another earlier form.",
                 )
             form_ids.append(form["id"])
-            identifying_labels = (form["primary_commit_id"], form.get("sub_type"))
+            identifying_labels = (form["primary_type"], form.get("subtype"))
             if identifying_labels in form_identifying_labels:
                 self._logger.error(
                     f"Duplicate issue-form identifying labels: {identifying_labels}",
@@ -196,16 +196,16 @@ class MetaValidator:
                                     )
                                 break
         # Verify that identifying labels are defined in 'label.group' metadata
-        for primary_type_id, sub_type_id in form_identifying_labels:
+        for primary_type_id, subtype_id in form_identifying_labels:
             if primary_type_id not in self._data["label"]["group"]["primary_type"]["labels"]:
                 self._logger.error(
-                    f"Unknown issue-form primary_commit_id: {primary_type_id}",
+                    f"Unknown issue-form `primary_type`: {primary_type_id}",
                     f"The ID '{primary_type_id}' does not exist in 'label.group.primary_type.labels'.",
                 )
-            if sub_type_id and sub_type_id not in self._data["label"]["group"]["sub_type"]["labels"]:
+            if subtype_id and subtype_id not in self._data["label"]["group"]["subtype"]["labels"]:
                 self._logger.error(
-                    f"Unknown issue-form sub_type: {sub_type_id}",
-                    f"The ID '{sub_type_id}' does not exist in 'label.group.sub_type.labels'.",
+                    f"Unknown issue-form subtype: {subtype_id}",
+                    f"The ID '{subtype_id}' does not exist in 'label.group.subtype.labels'.",
                 )
         return
 
