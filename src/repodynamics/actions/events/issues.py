@@ -47,7 +47,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
         return
 
     def _run_labeled_status_in_dev(self):
-        target_label_prefix = self._metadata_main["label"]["auto_group"]["target"]["prefix"]
+        target_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
         dev_branch_prefix = self._metadata_main["branch"]["group"]["dev"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
@@ -87,7 +87,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
         self._logger.success("Retrieve issue form", issue_form)
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
-        branch_label_prefix = self._metadata_main["label"]["auto_group"]["target"]["prefix"]
+        branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
         if "branch" in issue_entries:
             branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
             for branch in branches:
