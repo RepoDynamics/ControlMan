@@ -11,7 +11,7 @@ properties:
     default: {}
     additionalProperties: false
     properties:
-      package_major:
+      release_major:
         type: object
         default: { }
         additionalProperties: false
@@ -24,10 +24,10 @@ properties:
             default: |
               Remove features/components from - or introduce breaking changes to - the public API, 
               and publish a new major release of the package.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
         required: [ type, description ]
-      package_minor:
+      release_minor:
         type: object
         default: { }
         additionalProperties: false
@@ -40,10 +40,10 @@ properties:
             default: |
               Add features/components to - or enhance/deprecate existing features in - the public API, 
               and publish a new minor release of the package.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
         required: [ type, description ]
-      package_patch:
+      release_patch:
         type: object
         default: { }
         additionalProperties: false
@@ -57,10 +57,10 @@ properties:
               Fix bugs or security issues in the public API, 
               or improve the performance of existing functionalities, 
               and publish a new patch release of the package.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
         required: [ type, description ]
-      package_post:
+      release_post:
         type: object
         default: { }
         additionalProperties: false
@@ -73,8 +73,8 @@ properties:
             default: |
               Fix documentation or release notes in a previous package release, 
               and publish a new post release.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
         required: [ type, description ]
       website:
         type: object
@@ -87,8 +87,8 @@ properties:
           description:
             type: string
             default: Change the website content, design or backend.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
           announcement:
             type: object
             default: {}
@@ -117,14 +117,14 @@ properties:
             type: string
             default: |
               Change the meta content of the repository.
-          sub_types:
-            $ref: '#/definitions/sub_types'
+          subtypes:
+            $ref: '#/definitions/subtypes'
         required: [ type, description ]
     required:
-      - package_major
-      - package_minor
-      - package_patch
-      - package_post
+      - release_major
+      - release_minor
+      - release_patch
+      - release_post
       - website
       - meta
   primary_custom:
@@ -138,8 +138,8 @@ properties:
           type: string
         description:
           type: string
-        sub_types:
-          $ref: '#/definitions/sub_types'
+        subtypes:
+          $ref: '#/definitions/subtypes'
       required: [ type, description ]
   secondary_action:
     description: Secondary action commit types
@@ -202,7 +202,7 @@ properties:
 required: [ primary_action, primary_custom, secondary_action, secondary_custom ]
 
 definitions:
-  sub_types:
+  subtypes:
     type: object
     properties:
       any:
