@@ -443,15 +443,15 @@ class EventHandler:
 
     @staticmethod
     def _get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
-        if action == PrimaryActionCommitType.PACKAGE_MAJOR:
+        if action == PrimaryActionCommitType.RELEASE_MAJOR:
             if version.major == 0:
                 return version.next_minor
             return version.next_major
-        if action == PrimaryActionCommitType.PACKAGE_MINOR:
+        if action == PrimaryActionCommitType.RELEASE_MINOR:
             return version.next_minor
-        if action == PrimaryActionCommitType.PACKAGE_PATCH:
+        if action == PrimaryActionCommitType.RELEASE_PATCH:
             return version.next_patch
-        if action == PrimaryActionCommitType.PACKAGE_POST:
+        if action == PrimaryActionCommitType.RELEASE_POST:
             return version.next_post
         return version
 
