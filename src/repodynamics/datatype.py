@@ -177,10 +177,10 @@ class CommitGroup(Enum):
 
 
 class PrimaryActionCommitType(Enum):
-    PACKAGE_MAJOR = "package_major"
-    PACKAGE_MINOR = "package_minor"
-    PACKAGE_PATCH = "package_patch"
-    PACKAGE_POST = "package_post"
+    RELEASE_MAJOR = "release_major"
+    RELEASE_MINOR = "release_minor"
+    RELEASE_PATCH = "release_patch"
+    RELEASE_POST = "release_post"
     WEBSITE = "website"
     META = "meta"
 
