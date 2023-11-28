@@ -1,8 +1,8 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Issue Configurations
-description: GitHub Issues settings and templates
+description: Configurations for GitHub Issues
 type: object
-default: {}
+default: { }
 additionalProperties: false
 properties:
   blank_enabled:
@@ -12,34 +12,45 @@ properties:
   contact_links:
     description: External links to be shown on the issue template chooser
     type: array
-    default: []
+    default: [ ]
     uniqueItems: true
     items:
       type: object
       additionalProperties: false
       properties:
         name:
+          description: Title shown on the issue template chooser
+          type: string
+        about:
+          description: Description shown on the issue template chooser
           type: string
         url:
+          description: URL to the external link
           type: string
           format: uri
-        about:
-          type: string
-      required: [name, url, about]
+      required: [ name, about, url ]
   forms:
+    description: Declarations of issue forms and their configurations
     type: array
-    default: []
+    default: [ ]
     uniqueItems: true
     items:
       type: object
       additionalProperties: false
       properties:
         id:
+          description: >-
+            Unique identifier of the issue form,
+            used to reference the form in other places
+            (e.g. as a key of the `maintainer.issue` object, to assign the issue to a maintainer),
+            and to generate the filename of the issue template's YAML file.
           type: string
-        primary_commit_id:
+          pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+        primary_type:
           type: string
-        sub_type:
+        subtype:
           type: string
+          default: ''
         pre_process:
           $ref: '#/definitions/pre_process'
         post_process:
@@ -58,10 +69,11 @@ properties:
                       type: string
                     number:
                       type: integer
+                      default: 1
                     is_checked:
                       type: boolean
                       default: true
-                  required: [id, number, is_checked]
+                  required: [ id, number, is_checked ]
             body:
               type: string
         name:
@@ -74,13 +86,13 @@ properties:
           minItems: 1
           items:
               type: string
-        title:
-          type: string
         projects:
           type: array
           uniqueItems: true
           items:
               type: string
+        title:
+          type: string
         body:
           type: array
           minItems: 1
@@ -90,7 +102,7 @@ properties:
             properties:
               type:
                 type: string
-                enum: [ checkboxes, dropdown, input, markdown, textarea]
+                enum: [ checkboxes, dropdown, input, markdown, textarea ]
               id:
                 type: string
                 pattern: ^[A-Za-z][A-Za-z0-9_-]*$
@@ -102,8 +114,9 @@ properties:
                 additionalProperties: true
               pre_process:
                 $ref: '#/definitions/pre_process'
-            required: [type, attributes]
-      required: [ id, primary_commit_id, sub_type, name, description, body]
+            required: [ type, attributes ]
+      required: [ id, primary_type, name, description, body ]
+required: [ blank_enabled, contact_links, forms ]
 
 definitions:
   pre_process:
