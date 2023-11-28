@@ -25,24 +25,25 @@ class FormGenerator:
         issue_maintainers = self._meta["maintainer"].get("issue", {})
         paths = []
         label_meta = self._meta["label"]["group"]
-        for idx, issue in enumerate(issues):
+        idx = 1
+        for issue in issues:
             pre_process = issue.get("pre_process")
             if pre_process and not self._pre_process_existence(pre_process):
                 continue
-            info = self._out_db.issue_form(issue["id"], idx + 1)
             form = {
                 key: val
                 for key, val in issue.items()
-                if key not in ["id", "primary_commit_id", "sub_type", "body", "pre_process", "post_process"]
+                if key not in ["id", "primary_type", "subtype", "body", "pre_process", "post_process"]
             }
 
             labels = form.setdefault("labels", [])
             type_label_prefix = label_meta["primary_type"]["prefix"]
-            type_label_suffix = label_meta["primary_type"]["labels"][issue["primary_commit_id"]]["suffix"]
+            type_label_suffix = label_meta["primary_type"]["labels"][issue["primary_type"]]["suffix"]
             labels.append(f"{type_label_prefix}{type_label_suffix}")
-            sub_type_label_prefix = label_meta["sub_type"]["prefix"]
-            sub_type_label_suffix = label_meta["sub_type"]["labels"][issue["sub_type"]]["suffix"]
-            labels.append(f"{sub_type_label_prefix}{sub_type_label_suffix}")
+            if issue["subtype"]:
+                subtype_label_prefix = label_meta["subtype"]["prefix"]
+                subtype_label_suffix = label_meta["subtype"]["labels"][issue["subtype"]]["suffix"]
+                labels.append(f"{subtype_label_prefix}{subtype_label_suffix}")
             status_label_prefix = label_meta["status"]["prefix"]
             status_label_suffix = label_meta["status"]["labels"]["triage"]["suffix"]
             labels.append(f"{status_label_prefix}{status_label_suffix}")
@@ -52,14 +53,16 @@ class FormGenerator:
             form["body"] = []
             for elem in issue["body"]:
                 pre_process = elem.get("pre_process")
-                if not pre_process or self._pre_process_existence(pre_process):
-                    form["body"].append(
-                        {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
-                    )
-
+                if pre_process and not self._pre_process_existence(pre_process):
+                    continue
+                form["body"].append(
+                    {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
+                )
             text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
+            info = self._out_db.issue_form(issue["id"], idx)
             out.append((info, text))
             paths.append(info.path)
+            idx += 1
         dir_issues = self._out_db.dir_issue_forms
         path_template_chooser = self._out_db.issue_template_chooser_config.path
         if dir_issues.is_dir():
