@@ -26,6 +26,7 @@ class MetaReader:
 
         self._extensions, self._path_extensions = self._read_extensions()
         self._metadata: dict = self._read_raw_metadata()
+        self._metadata["extensions"] = self._extensions
         self._metadata["path"] = self._pathfinder.paths_dict
         self._metadata["path"]["file"] = {
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",

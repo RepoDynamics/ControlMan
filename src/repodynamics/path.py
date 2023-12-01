@@ -23,7 +23,7 @@ class RelativePath:
     file_codecov_config = ".github/.codecov.yml"
     file_gitignore = ".gitignore"
     file_gitattributes = ".gitattributes"
-    file_path_meta = ".github/.repodynamics_meta_path.txt"
+    file_path_meta = ".github/.control_center_path.txt"
     dir_github = ".github/"
     dir_github_workflows = ".github/workflows/"
     dir_github_workflow_requirements = ".github/workflow_requirements/"
@@ -47,13 +47,12 @@ class PathFinder:
         paths["dir"]["meta"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
-            paths["dir"]["local"][local_dir][
-                "root"
-            ] = f'{dir_local_root}/{paths["dir"]["local"][local_dir]["root"]}'
-            for key, sub_dir in paths["dir"]["local"][local_dir].items():
+            dict_local_dir = paths["dir"]["local"][local_dir]
+            dict_local_dir["root"] = f'{dir_local_root}/{dict_local_dir["root"]}'
+            for key, sub_dir in dict_local_dir.items():
                 if key != "root":
-                    full_rel_path = f'{paths["dir"]["local"][local_dir]["root"]}/{sub_dir}'
-                    paths["dir"]["local"][local_dir][key] = full_rel_path
+                    full_rel_path = f'{dict_local_dir["root"]}/{sub_dir}'
+                    dict_local_dir[key] = full_rel_path
                     fullpath = self._path_root / full_rel_path
                     if fullpath.is_file():
                         self._logger.error(f"Input local directory '{fullpath}' is a file")
@@ -209,6 +208,10 @@ class PathFinder:
         files.remove(self._path_root / ".github/PULL_REQUEST_TEMPLATE/README.md")
         files.extend(list((self._path_root / ".github/DISCUSSION_TEMPLATE").glob("*.yaml")))
         return files
+
+    @property
+    def file_path_meta(self) -> Path:
+        return self.root / RelativePath.file_path_meta
 
     @property
     def file_local_config(self) -> Path:

@@ -25,8 +25,7 @@ class FormGenerator:
         issue_maintainers = self._meta["maintainer"].get("issue", {})
         paths = []
         label_meta = self._meta["label"]["group"]
-        idx = 1
-        for issue in issues:
+        for idx, issue in enumerate(issues):
             pre_process = issue.get("pre_process")
             if pre_process and not self._pre_process_existence(pre_process):
                 continue
@@ -59,10 +58,9 @@ class FormGenerator:
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                 )
             text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
-            info = self._out_db.issue_form(issue["id"], idx)
+            info = self._out_db.issue_form(issue["id"], idx + 1)
             out.append((info, text))
             paths.append(info.path)
-            idx += 1
         dir_issues = self._out_db.dir_issue_forms
         path_template_chooser = self._out_db.issue_template_chooser_config.path
         if dir_issues.is_dir():

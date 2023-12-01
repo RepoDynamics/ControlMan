@@ -87,7 +87,7 @@ class PushEventHandler(ModifyingEventHandler):
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "__website_new__").rename(meta.paths.dir_website)
         (meta.paths.root / "__meta_new__").rename(meta.paths.dir_meta)
-        (meta.paths.dir_github / ".repodynamics_meta_path.txt").unlink(missing_ok=True)
+        meta.paths.file_path_meta.unlink(missing_ok=True)
         for path_dynamic_file in meta.paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in metadata.changelog.values():
