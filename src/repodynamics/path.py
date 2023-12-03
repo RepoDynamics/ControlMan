@@ -37,7 +37,7 @@ class PathFinder:
         self._path_root = Path(path_root).resolve()
         self._logger = logger or Logger()
         pathfile = self._path_root / RelativePath.file_path_meta
-        rel_path_meta = pathfile.read_text().strip() if pathfile.is_file() else ".meta"
+        rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".meta"
         paths = _util.dict.read(
             path=self._path_root / rel_path_meta / "path.yaml",
             schema=_util.file.datafile("schema/path.yaml"),

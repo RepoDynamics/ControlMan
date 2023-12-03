@@ -1,32 +1,51 @@
+# Paths to the main directories in the repository:
 dir:
-  # Name of the source directory
+
+  # Path to the source directory:
   source: src
-  # Path to the tests directory
+
+  # Path to the tests directory:
   tests: tests
-  # Path to the website directory
+
+  # Path to the website directory:
   website: docs/website
+
+  # Paths to the local directory and its subdirectories:
   local:
-    # Path to the local directory
+
+    # Path to the local directory:
     root: .local
+
+    # Paths to the cache subdirectory of the local directory,
+    # and its subdirectories:
     cache:
-      # Name of the cache directory under the local directory
+
+      # Name of the cache subdirectory under the local directory:
       root: cache
-      # Name of subdirectories under the cache directory
-      # You can add other keys here for other tools that you use
+
+      # Name of subdirectories under the cache subdirectory;
+      # the following key:value pairs are set by default:
       repodynamics: repodynamics
       coverage: coverage
       mypy: mypy
       pylint: pylint
       pytest: pytest
       ruff: ruff
+      # You can add other key:value pairs here for other tools that you use.
+
+    # Paths to the report subdirectory of the local directory,
+    # and its subdirectories:
     report:
-      # Name of the report directory under the local directory
+
+      # Name of the report subdirectory under the local directory:
       root: report
-      # Name of subdirectories under the report directory
-      # You can add other keys here for other tools that you use
+
+      # Name of subdirectories under the report subdirectory;
+      # the following key:value pairs are set by default:
       repodynamics: repodynamics
       coverage: coverage
       mypy: mypy
       pylint: pylint
       pytest: pytest
       ruff: ruff
+      # You can add other key:value pairs here for other tools that you use.

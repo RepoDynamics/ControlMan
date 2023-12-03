@@ -182,8 +182,8 @@ class MetaReader:
     def _read_raw_metadata(self):
         self.logger.h3("Read Raw Metadata")
         metadata = {}
-        for entry in ("core/credits", "core/intro", "core/license"):
-            section = self._read_single_file(rel_path=entry)
+        for entry in ("credits", "intro", "license"):
+            section = self._read_single_file(rel_path=f"project/{entry}")
             self._recursive_update(
                 source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
             )

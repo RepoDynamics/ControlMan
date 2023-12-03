@@ -1,92 +1,116 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Repository Paths
-description: Paths to key directories in the repository
+title: Paths
+description: Paths to directories and files in the repository.
 type: object
 default: {}
 additionalProperties: false
 properties:
   dir:
-    description: Paths to directories in the repository
+    description: Paths to the main directories in the repository.
     type: object
     default: {}
     additionalProperties: false
     properties:
       source:
+        description: Path to the source directory.
         type: string
         default: src
       tests:
+        description: Path to the tests directory.
         type: string
         default: tests
       website:
+        description: Path to the website directory.
         type: string
         default: docs/website
       local:
+        description: Paths to the local directory and its subdirectories.
         type: object
         default: {}
         additionalProperties: false
         properties:
           root:
+            description: Path to the local directory.
             type: string
             default: .local
           cache:
+            description: Paths to the cache subdirectory of the local directory, and its subdirectories.
             type: object
             default: {}
-            additionalProperties:
-              type: string
             properties:
               root:
+                description: Path to the root of the cache subdirectory, relative to the local directory.
                 type: string
                 default: cache
               repodynamics:
+                description: Path to the RepoDynamics cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: repodynamics
               coverage:
+                description: Path to the Coverage cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: coverage
               mypy:
+                description: Path to the Mypy cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: mypy
               pylint:
+                description: Path to the Pylint cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: pylint
               pytest:
+                description: Path to the Pytest cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: pytest
               ruff:
+                description: Path to the Ruff cache subdirectory, relative to the cache subdirectory.
                 type: string
                 default: ruff
+            additionalProperties:
+              description: |
+                Paths to other custom subdirectories of the cache subdirectory.
+                These can be referenced in your custom configurations for other tools.
+              type: string
             required: [ root, repodynamics, coverage, mypy, pylint, pytest, ruff ]
           report:
+            description: Paths to the report subdirectory of the local directory, and its subdirectories.
             type: object
             default: {}
-            additionalProperties: false
             properties:
               root:
+                description: Path to the root of the report subdirectory, relative to the local directory.
                 type: string
                 default: report
               repodynamics:
+                description: Path to the RepoDynamics reports subdirectory, relative to the report subdirectory.
                 type: string
                 default: repodynamics
               coverage:
+                description: Path to the Coverage reports subdirectory, relative to the report subdirectory.
                 type: string
                 default: coverage
               mypy:
+                description: Path to the Mypy reports subdirectory, relative to the report subdirectory.
                 type: string
                 default: mypy
               pylint:
+                description: Path to the Pylint reports subdirectory, relative to the report subdirectory.
                 type: string
                 default: pylint
               pytest:
+                description: Name of the pytest subdirectory under the report subdirectory.
                 type: string
                 default: pytest
               ruff:
+                description: Path to the Pytest reports subdirectory, relative to the report subdirectory.
                 type: string
                 default: ruff
+            additionalProperties:
+              description: |
+                Paths to other custom subdirectories of the report subdirectory.
+                These can be referenced in your custom configurations for other tools.
+              type: string
             required: [ root, repodynamics, coverage, mypy, pylint, pytest, ruff ]
         required: [ root, cache, report ]
     required: [ source, local, tests, website ]
-  file:
-    type: object
-    default: {}
-    additionalProperties: false
-required: [ dir, file ]
+required: [ dir ]
