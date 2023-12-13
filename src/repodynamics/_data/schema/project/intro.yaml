@@ -1,12 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Project Introduction
-description: Name, tagline, keywords, and other descriptions for the project
+description: Name, tagline, keywords, and other descriptions for the project.
 type: object
 default: {}
 additionalProperties: false
 properties:
   name:
-    description: Name of the project
+    description: |
+      Name of the project.
+      If not set, the project name is derived from the repository name,
+      by replacing all hyphens with spaces.
     type: string
     default: ""
     oneOf:
@@ -14,11 +17,11 @@ properties:
         maxLength: 0
       - pattern: ^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$
   tagline:
-    description: A short description, or slogan of the project
+    description: A single-sentence description or slogan for the project.
     type: string
     default: ""
   description:
-    description: A long description of the project
+    description: A short description or abstract for the project.
     type: string
     default: ""
   keywords:
