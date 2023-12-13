@@ -67,7 +67,7 @@ properties:
                 type: string
                 default: ruff
             additionalProperties:
-              description: |
+              description: >-
                 Paths to other custom subdirectories of the cache subdirectory.
                 These can be referenced in your custom configurations for other tools.
               type: string
@@ -106,7 +106,7 @@ properties:
                 type: string
                 default: ruff
             additionalProperties:
-              description: |
+              description: >-
                 Paths to other custom subdirectories of the report subdirectory.
                 These can be referenced in your custom configurations for other tools.
               type: string
