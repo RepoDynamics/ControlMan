@@ -1,21 +1,27 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: RepoDynamics Meta Configuration
-description: Base configurations for RepoDynamics
+title: Base Config
+description: Configurations for the control center iteself.
 type: object
 default: {}
 additionalProperties: false
 properties:
   cache_retention_days:
-    description: Number of days to keep cache data for meta content.
+    description: Number of days to keep cached data.
     type: object
     default: {}
     additionalProperties: false
     properties:
       api:
+        description: >-
+          Number of days to keep the cached data retrieved from web APIs,
+          such as GitHub repo/users data, software versions, publications etc.
         type: integer
         minimum: 0
         default: 1
       extensions:
+        description: >-
+          Number of days to keep the cached extension files 
+          retrieved from other GitHub repositories.
         type: integer
         minimum: 0
         default: 1
