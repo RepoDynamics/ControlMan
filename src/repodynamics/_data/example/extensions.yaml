@@ -1,17 +1,19 @@
 # First (highest-priority) extension
-- type: dev/changelogs
+- type: dev/changelog
   repo: MyUsername/MyExtensionsRepo
-  path: path/to/changelogs.yaml
+  path: path/to/changelog.yaml
   ref: my-branch
+
 # Second (lower-priority) extension
-- type: dev/changelogs
+- type: dev/changelog
   repo: RepoDynamics/MetaExtensions
-  path: .meta/dev/branches.yaml
+  path: .meta/dev/branch.yaml
   ref: PyPackIT/v1
   append_list: false
   append_dict: false
+
 # Another extension
-- type: dev/issues
+- type: dev/issue
   repo: RepoDynamics/MetaExtensions
-  path: .meta/dev/issues.yaml
+  path: .meta/dev/issue.yaml
   ref: PyPackIT/v1
