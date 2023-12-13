@@ -1,6 +1,8 @@
-# Number of days to keep the cache data for meta contents
+# Number of days to keep the cache data:
 cache_retention_days:
-  # For extended meta contents retrieved from other repositories
+
+  # For extension files retrieved from other repositories:
   extensions: 3
-  # For data retrieved from web APIs
+
+  # For data retrieved from web APIs:
   api: 5
