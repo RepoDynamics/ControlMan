@@ -1,4 +1,5 @@
 import re
+import json
 
 from repodynamics.datatype import CommitMsg
 from repodynamics.logger import Logger
@@ -39,8 +40,16 @@ class CommitParser:
                     continue
                 match = re.match(r"^(?P<key>[\w-]+)( *:* *(?P<value>.*))?$", footer)
                 if match:
-                    footer_list = parsed_footers.setdefault(match.group("key"), [])
-                    footer_list.append(match.group("value").strip() if match.group("value") else True)
+                    key = match.group("key")
+                    val = match.group("value").strip() if match.group("value") else "true"
+                    if key in parsed_footers:
+                        self._logger.error(f"Duplicate footer: {footer}")
+                    try:
+                        parsed_footers[key] = json.loads(val)
+                    except json.JSONDecodeError:
+                        self._logger.error(f"Invalid footer value: {footer}")
+                    # footer_list = parsed_footers.setdefault(match.group("key"), [])
+                    # footer_list.append(match.group("value").strip() if match.group("value") else True)
                 else:
                     # Otherwise, the footer is invalid
                     self._logger.warning(f"Invalid footer: {footer}")
