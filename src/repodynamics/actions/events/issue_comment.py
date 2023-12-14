@@ -1,7 +1,31 @@
 from repodynamics.actions.events._base import NonModifyingEventHandler
+from repodynamics.actions.context_manager import ContextManager
+from repodynamics.datatype import Branch, TemplateType, WorkflowTriggeringAction
+from repodynamics.logger import Logger
 
 
 class IssueCommentEventHandler(NonModifyingEventHandler):
+
+    def __init__(
+        self,
+        template_type: TemplateType,
+        context_manager: ContextManager,
+        admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None,
+    ):
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger
+        )
+        self._branch: Branch | None = None
+        return
+
     def run(self):
         is_pull = self._context.payload.get("pull_request")
         if is_pull:
