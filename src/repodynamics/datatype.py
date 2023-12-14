@@ -1,4 +1,5 @@
-from typing import NamedTuple
+import json
+from typing import NamedTuple, Any
 from pathlib import Path
 from enum import Enum
 from repodynamics.version import PEP440SemVer
@@ -22,6 +23,7 @@ class BranchType(Enum):
     DEFAULT = "main"
     RELEASE = "release"
     PRE_RELEASE = "pre_release"
+    IMPLEMENT = "implementation"
     DEV = "dev"
     CI_PULL = "ci_pull"
     OTHER = "other"
@@ -114,7 +116,7 @@ class CommitMsg:
         title: str,
         body: str | None = None,
         scope: str | tuple[str] | list[str] | None = None,
-        footer: dict[str, str | list[str]] | None = None,
+        footer: dict[str, Any] | None = None,
     ):
         for arg, arg_name in ((typ, "typ"), (title, "title")):
             if not isinstance(arg, str):
@@ -144,7 +146,7 @@ class CommitMsg:
         if footer is None:
             self.footer = {}
         elif isinstance(footer, dict):
-            self.footer = footer
+            self.footer = {str(key): value for key, value in footer.items()}
         else:
             raise TypeError(f"Argument 'footer' must be a dict, but got {type(footer)}: {footer}")
         return
@@ -161,10 +163,11 @@ class CommitMsg:
         if self.footer:
             commit += "\n\n-----------\n\n"
             for key, values in self.footer.items():
-                if isinstance(values, str):
-                    values = [values]
-                for value in values:
-                    commit += f"{key}: {value}\n"
+                commit += f"{key}: {json.dumps(values)}\n"
+                # if isinstance(values, str):
+                #     values = [values]
+                # for value in values:
+                #     commit += f"{key}: {value}\n"
         return commit.strip() + "\n"
 
 
@@ -381,6 +384,11 @@ class IssueStatus(Enum):
     BETA = "beta"
     RC = "rc"
     FINAL = "final"
+
+
+class TemplateType(Enum):
+    PYPACKIT = "pypackit"
+    SPHINXIT = "sphinxit"
 
 
 class Emoji:
