@@ -8,6 +8,7 @@ import shutil
 from markitup import html, md
 import pylinks
 
+import repodynamics
 from repodynamics import meta
 from repodynamics.logger import Logger
 from repodynamics.git import Git
@@ -43,30 +44,49 @@ from repodynamics.datatype import (
     IssueStatus,
     InitCheckAction,
     WorkflowDispatchInput,
+    TemplateType,
 )
 
 
 class EventHandler:
-    def __init__(self, context_manager: ContextManager, admin_token: str, logger: Logger | None = None):
+    def __init__(
+        self,
+        template_type: TemplateType,
+        context_manager: ContextManager,
+        admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None
+    ):
+        self._template_type = template_type
         self._context = context_manager
+        self._path_root_self = path_root_self
+        self._path_root_fork = path_root_fork
         self._metadata_main: MetaManager | None = meta.read_from_json_file(
-            path_root="repo_self", logger=logger
+            path_root=self._path_root_self, logger=logger
         )
         self._logger = logger or Logger()
 
+        self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
         repo_user = self._context.github.repo_owner
         repo_name = self._context.github.repo_name
         self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
         self._gh_api = pylinks.api.github(token=self._context.github.token).user(repo_user).repo(repo_name)
         self._gh_link = pylinks.site.github.user(repo_user).repo(repo_name)
         self._git_base: Git = Git(
-            path_repo="repo_self",
+            path_repo=self._path_root_self,
             user=(self._context.payload.sender_username, self._context.payload.sender_email),
             logger=self._logger,
         )
         if self._context.github.event_name == "pull_request" and not self._context.payload.internal:
+            if not self._path_root_fork:
+                self._logger.error(
+                    "No fork path provided.",
+                    "The event was triggered by a pull request from a fork, "
+                    "but no local path to the forked repository was provided.",
+                )
             self._git_head: Git = Git(
-                path_repo="repo_fork",
+                path_repo=self._path_root_fork,
                 user=(self._context.payload.sender_username, self._context.payload.sender_email),
                 logger=self._logger,
             )
@@ -563,14 +583,44 @@ class EventHandler:
 
 
 class NonModifyingEventHandler(EventHandler):
-    def __init__(self, context_manager: ContextManager, admin_token: str = "", logger: Logger | None = None):
-        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
+    def __init__(
+        self,
+        template_type: TemplateType,
+        context_manager: ContextManager,
+        admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None
+    ):
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger,
+        )
         return
 
 
 class ModifyingEventHandler(EventHandler):
-    def __init__(self, context_manager: ContextManager, admin_token: str, logger: Logger | None = None):
-        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
+    def __init__(
+        self,
+        template_type: TemplateType,
+        context_manager: ContextManager,
+        admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None
+    ):
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger,
+        )
         return
 
     def _action_file_change_detector(self) -> dict[RepoFileType, list[str]]:
