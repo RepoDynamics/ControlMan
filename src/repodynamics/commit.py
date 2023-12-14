@@ -9,11 +9,13 @@ class CommitParser:
         self._types = types
         self._logger = logger or Logger()
         pattern = rf"""
-            ^(?P<typ>{"|".join(types)})    # type
-            (?:\((?P<scope>[^\)\n]+)\))?  # optional scope within parentheses
-            :[ ](?P<title>[^\n]+)   # commit description after ": "
-            (?:\n(?P<body>.+?))?          # optional commit body after newline
-            (?:\n-{{3,}}\n(?P<footer>.*))?  # optional footers after horizontal line
+            ^
+            (?P<typ>{"|".join(types)})         # type
+            (?:\((?P<scope>[^\)\n]+)\))?       # optional scope within parentheses
+            :[ ](?P<title>[^\n]+)              # commit description after ": "
+            (?:(?P<body>.*?)(\n-{{3,}}\n)|$)?  # optional commit body 
+                                               #   everything until first "\n---" or end of string
+            (?P<footer>.*)?                    # optional footers
             $
         """
         self._pattern = re.compile(pattern, flags=re.VERBOSE | re.DOTALL)
@@ -32,13 +34,14 @@ class CommitParser:
             parsed_footers = {}
             footers = commit_parts["footer"].strip().splitlines()
             for footer in footers:
-                match = re.match(r"^(?P<key>[\w-]+)(: | )(?P<value>.+)$", footer)
+                # Sometimes GitHub adds a second horizontal line after the original footer; skip it
+                if not footer or re.fullmatch("-{3,}", footer):
+                    continue
+                match = re.match(r"^(?P<key>[\w-]+)( *:* *(?P<value>.*))?$", footer)
                 if match:
                     footer_list = parsed_footers.setdefault(match.group("key"), [])
-                    footer_list.append(match.group("value"))
-                    continue
-                # Sometimes GitHub adds a second horizontal line after the original footer; skip it
-                if footer and not re.fullmatch("-{3,}", footer):
+                    footer_list.append(match.group("value").strip() if match.group("value") else True)
+                else:
                     # Otherwise, the footer is invalid
                     self._logger.warning(f"Invalid footer: {footer}")
             commit_parts["footer"] = parsed_footers
