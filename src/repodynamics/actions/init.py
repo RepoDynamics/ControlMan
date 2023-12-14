@@ -8,7 +8,7 @@ from repodynamics.actions.events.pull_request_target import PullRequestTargetEve
 from repodynamics.actions.events.push import PushEventHandler
 from repodynamics.actions.events.schedule import ScheduleEventHandler
 from repodynamics.actions.events.workflow_dispatch import WorkflowDispatchEventHandler
-
+from repodynamics.datatype import TemplateType
 
 # class Init:
 #
@@ -36,7 +36,10 @@ from repodynamics.actions.events.workflow_dispatch import WorkflowDispatchEventH
 
 
 def init(
+    template: str,
     context: dict,
+    path_root_self: str,
+    path_root_fork: str = "",
     admin_token: str = "",
     package_build: bool = False,
     package_lint: bool = False,
@@ -48,8 +51,24 @@ def init(
     website_announcement_msg: str = "",
     logger=None,
 ):
+    try:
+        template_type = TemplateType(template)
+    except ValueError:
+        supported_templates = ", ".join([f"'{enum.value}'" for enum in TemplateType])
+        logger.error(
+            "Invalid input: template",
+            f"Expected one of {supported_templates}; got '{template}' instead.",
+        )
+        return
     context_manager = ContextManager(github_context=context)
-    args = {"context_manager": context_manager, "admin_token": admin_token, "logger": logger}
+    args = {
+        "template_type": template_type,
+        "context_manager": context_manager,
+        "path_root_self": path_root_self,
+        "path_root_fork": path_root_fork,
+        "admin_token": admin_token,
+        "logger": logger
+    }
     event_name = context_manager.github.event_name
     if event_name == "issues":
         event_manager = IssuesEventHandler(**args)
