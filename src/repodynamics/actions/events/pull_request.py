@@ -11,7 +11,8 @@ from repodynamics.datatype import (
     PrimaryActionCommitType,
     CommitGroup,
     BranchType,
-    IssueStatus
+    IssueStatus,
+    TemplateType,
 )
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -20,13 +21,24 @@ from repodynamics.actions import _helpers
 
 
 class PullRequestEventHandler(ModifyingEventHandler):
+
     def __init__(
         self,
+        template_type: TemplateType,
         context_manager: ContextManager,
         admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
         logger: Logger | None = None,
     ):
-        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger
+        )
         self._payload: PullRequestPayload = self._context.payload
         self._branch_base = self.resolve_branch(self._context.github.base_ref)
         self._branch_head = self.resolve_branch(self._context.github.head_ref)
@@ -151,6 +163,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             commit_title=self._payload.title,
             parent_commit_hash=hash_bash,
             parent_commit_url=self._gh_link.commit(hash_bash),
+            path_root=self._path_root_self,
             logger=self._logger,
         )
         self._git_base.checkout(branch=self._branch_head.name)
@@ -171,7 +184,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             set_upstream=True,
         )
         self._metadata_branch = meta.read_from_json_file(
-            path_root="repo_self", logger=self._logger
+            path_root=self._path_root_self, logger=self._logger
         )
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
@@ -263,6 +276,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             commit_title=self.pull_title,
             parent_commit_hash=latest_base_hash,
             parent_commit_url=self._gh_link.commit(latest_base_hash),
+            path_root=self._path_root_self,
             logger=self.logger,
         )
 
