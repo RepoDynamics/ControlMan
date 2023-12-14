@@ -3,7 +3,7 @@ import re
 from pylinks.api.github import Repo
 
 from repodynamics.actions.context_manager import ContextManager, IssuesPayload
-from repodynamics.datatype import WorkflowTriggeringAction, IssueStatus
+from repodynamics.datatype import WorkflowTriggeringAction, IssueStatus, TemplateType
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.actions import _helpers
@@ -12,8 +12,24 @@ from repodynamics.meta.files.forms import FormGenerator
 
 
 class IssuesEventHandler(NonModifyingEventHandler):
-    def __init__(self, context_manager: ContextManager, logger: Logger | None = None):
-        super().__init__(context_manager=context_manager, logger=logger)
+
+    def __init__(
+        self,
+        template_type: TemplateType,
+        context_manager: ContextManager,
+        admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None,
+    ):
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger
+        )
         self._payload: IssuesPayload = self._context.payload
         return
 
