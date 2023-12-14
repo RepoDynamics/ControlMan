@@ -17,12 +17,14 @@ class WebAnnouncement:
         context_manager: ContextManager,
         state_manager: StateManager,
         git: Git,
+        path_root: str,
         logger: Logger | None = None,
     ):
         self._metadata = metadata_main
         self._context = context_manager
         self._state = state_manager
         self._git = git
+        self._path_root = path_root
         self._logger = logger or Logger()
 
         self._path_announcement_file = Path(self._metadata["path"]["file"]["website_announcement"])
@@ -277,6 +279,8 @@ class WebAnnouncement:
                 commit_title=commit_title,
                 parent_commit_hash=self._state.hash_latest,
                 parent_commit_url=str(self.gh_link.commit(self.hash_after)),
+                path_root=self._path_root_self,
+                logger=self._logger,
             )
             changelog_manager.add_change(
                 changelog_id=changelog_id,
