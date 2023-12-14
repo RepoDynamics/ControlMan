@@ -37,14 +37,14 @@ class PathFinder:
         self._path_root = Path(path_root).resolve()
         self._logger = logger or Logger()
         pathfile = self._path_root / RelativePath.file_path_meta
-        rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".meta"
+        rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
         paths = _util.dict.read(
             path=self._path_root / rel_path_meta / "path.yaml",
             schema=_util.file.datafile("schema/path.yaml"),
             raise_empty=False,
             logger=self._logger,
         )
-        paths["dir"]["meta"] = rel_path_meta
+        paths["dir"]["control"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
             dict_local_dir = paths["dir"]["local"][local_dir]
@@ -60,7 +60,7 @@ class PathFinder:
                         self._logger.info(f"Creating input local directory '{fullpath}'.")
                         fullpath.mkdir(parents=True, exist_ok=True)
         self._paths = paths
-        for path, name in ((self.dir_meta, "meta"), (self.dir_github, "github")):
+        for path, name in ((self.dir_meta, "control center"), (self.dir_github, "github")):
             if not path.is_dir():
                 self._logger.error(f"Input {name} directory '{path}' not found")
         return
@@ -95,7 +95,7 @@ class PathFinder:
 
     @property
     def dir_meta_rel(self) -> str:
-        return f'{self._paths["dir"]["meta"]}/'
+        return f'{self._paths["dir"]["control"]}/'
 
     @property
     def dir_meta(self):
