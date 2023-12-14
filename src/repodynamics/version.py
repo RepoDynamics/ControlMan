@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from typing import Literal
-from packaging.version import Version
+from packaging.version import Version, InvalidVersion
 
 
 class PEP440SemVer:
     def __init__(self, version: str):
         self._version_input = version
-        self._version = Version(version)
+        try:
+            self._version = Version(version)
+        except InvalidVersion:
+            raise ValueError(f"Invalid version: {version}")
         if len(self._version.release) != 3:
             raise ValueError(f"Invalid version: {version}")
         if self._version.local:
