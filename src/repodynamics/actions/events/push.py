@@ -16,22 +16,34 @@ from repodynamics.datatype import (
     RepoFileType,
     CommitGroup,
     PrimaryActionCommitType,
+    TemplateType,
 )
 from repodynamics.meta.meta import Meta
 from repodynamics import _util
 from repodynamics.actions import _helpers
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
+from repodynamics.commit import CommitParser
 
 
 class PushEventHandler(ModifyingEventHandler):
     def __init__(
         self,
+        template_type: TemplateType,
         context_manager: ContextManager,
         admin_token: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
         logger: Logger | None = None,
     ):
-        super().__init__(context_manager=context_manager, admin_token=admin_token, logger=logger)
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger
+        )
         self._branch: Branch | None = None
         return
 
@@ -78,28 +90,34 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
-        meta = Meta(path_root="repo_self", github_token=self._context.github.token, logger=self._logger)
-        metadata = read_from_json_file(path_root="repo_self", logger=self._logger)
+        meta = Meta(
+            path_root=self._path_root_self,
+            github_token=self._context.github.token,
+            logger=self._logger
+        )
+        metadata = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
         shutil.rmtree(meta.paths.dir_meta)
-        shutil.rmtree(meta.paths.dir_source)
-        shutil.rmtree(meta.paths.dir_tests)
-        shutil.rmtree(meta.paths.dir_local)
         shutil.rmtree(meta.paths.dir_website)
-        (meta.paths.dir_docs / "__website_new__").rename(meta.paths.dir_website)
-        (meta.paths.root / "__meta_new__").rename(meta.paths.dir_meta)
+        (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
+        (meta.paths.root / ".control_template").rename(meta.paths.dir_meta)
+        shutil.rmtree(meta.paths.dir_local)
         meta.paths.file_path_meta.unlink(missing_ok=True)
         for path_dynamic_file in meta.paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in metadata.changelog.values():
             path_changelog_file = meta.paths.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
+        if self._template_type is TemplateType.PYPACKIT:
+            shutil.rmtree(meta.paths.dir_source)
+            shutil.rmtree(meta.paths.dir_tests)
         self.commit(
-            message="Initialize repository from RepoDynamics PyPackIT template", push=True
+            message=f"init: Create repository from RepoDynamics {self._template_name_ver} template",
+            push=True
         )
         self.add_summary(
             name="Init",
             status="pass",
-            oneliner="Repository created from RepoDynamics PyPackIT template.",
+            oneliner=f"Repository created from RepoDynamics {self._template_name_ver} template.",
         )
         return
 
@@ -112,7 +130,7 @@ class PushEventHandler(ModifyingEventHandler):
         self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
         self._git_head.checkout(self._context.github.ref_name)
         self._meta = Meta(
-            path_root="repo_self",
+            path_root=self._path_root_self,
             github_token=self._context.github.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
@@ -133,13 +151,25 @@ class PushEventHandler(ModifyingEventHandler):
         if not self._git_base.get_tags():
             # The repository is in the initialization phase
             head_commit_msg = self._context.payload.head_commit_message
-            if head_commit_msg == "init":
+            head_commit_msg_lines = head_commit_msg.splitlines()
+            head_commit_summary = head_commit_msg_lines[0]
+            if head_commit_summary.startswith("init:"):
                 # User is signaling the end of initialization phase
-                return self._run_first_release()
+                if head_commit_summary.removeprefix("init:").strip():
+                    head_commit_msg_final = head_commit_msg
+                else:
+                    head_commit_msg_lines[0] = (
+                        f"init: Initialize project from RepoDynamics {self._template_name_ver} template"
+                    )
+                    head_commit_msg_final = "\n".join(head_commit_msg_lines)
+                head_commit_msg_parsed = CommitParser(types=["init"], logger=self._logger).parse(
+                    head_commit_msg_final
+                )
+                return self._run_first_release(head_commit_msg_parsed)
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
         self._metadata_main_before = read_from_json_file(
-            path_root="repo_self",
+            path_root=self._path_root_self,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
@@ -148,17 +178,17 @@ class PushEventHandler(ModifyingEventHandler):
             return self._run_existing_repository_initialized()
         return self._run_branch_edited_main_normal()
 
-    def _run_init_phase(self):
+    def _run_init_phase(self, version: str = "0.0.0"):
         self._metadata_main_before = read_from_json_file(
-            path_root="repo_self",
+            path_root=self._path_root_self,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
         )
         self._meta = Meta(
-            path_root="repo_self",
+            path_root=self._path_root_self,
             github_token=self._context.github.token,
-            future_versions={self._branch.name: "0.0.0"},
+            future_versions={self._branch.name: version},
             logger=self._logger,
         )
         self._metadata_main = self._metadata_branch = self._meta.read_metadata_full()
@@ -177,34 +207,40 @@ class PushEventHandler(ModifyingEventHandler):
         )
         return
 
-    def _run_first_release(self):
-        self._run_init_phase()
-        # commit_msg = CommitMsg(
-        #     typ="init",
-        #     title="Initialize package and website",
-        #     body="This is an initial release of the website, and the yet empty package on PyPI and TestPyPI.",
-        # )
-        # self.commit(
-        #     message=str(commit_msg),
-        #     amend=True,
-        #     push=True,
-        # )
-
-        # Squash all commits into a single commit
-        # Ref: https://blog.avneesh.tech/how-to-delete-all-commit-history-in-github
-        #      https://stackoverflow.com/questions/55325930/git-how-to-squash-all-commits-on-master-branch
-        self._git_head.checkout("temp", orphan=True)
-        self.commit(message="init: Create repository from RepoDynamics PyPackIT template")
-        self._git_head.branch_delete(self._context.github.ref_name, force=True)
-        self._git_head.branch_rename(self._context.github.ref_name, force=True)
-        self._hash_latest = self._git_head.push(
-            target="origin", ref=self._context.github.ref_name, force_with_lease=True
-        )
-        self._tag_version(ver="0.0.0", msg="Initial release")
-        self._set_job_run(
-            package_publish_testpypi=True,
-            package_publish_pypi=True,
-        )
+    def _run_first_release(self, commit_msg: CommitMsg):
+        if commit_msg.footer.get("version"):
+            version = commit_msg.footer["version"]
+            try:
+                PEP440SemVer(version)
+            except ValueError:
+                self._logger.error(
+                    f"Invalid version string in commit footer: {version}",
+                    raise_error=False,
+                )
+                self.fail = True
+                return
+        else:
+            version = "0.0.0"
+        self._run_init_phase(version=version)
+        if commit_msg.footer.get("squash", True):
+            # Squash all commits into a single commit
+            # Ref: https://blog.avneesh.tech/how-to-delete-all-commit-history-in-github
+            #      https://stackoverflow.com/questions/55325930/git-how-to-squash-all-commits-on-master-branch
+            self._git_head.checkout("temp", orphan=True)
+            self.commit(
+                message=f"init: Initialize project from RepoDynamics {self._template_name_ver} template",
+            )
+            self._git_head.branch_delete(self._context.github.ref_name, force=True)
+            self._git_head.branch_rename(self._context.github.ref_name, force=True)
+            self._hash_latest = self._git_head.push(
+                target="origin", ref=self._context.github.ref_name, force_with_lease=True
+            )
+        self._tag_version(ver=version, msg=f"Release version {version}")
+        if self._template_type is TemplateType.PYPACKIT:
+            self._set_job_run(
+                package_publish_testpypi=True,
+                package_publish_pypi=True,
+            )
         return
 
     def _run_existing_repository_initialized(self):
@@ -256,6 +292,8 @@ class PushEventHandler(ModifyingEventHandler):
             commit_title=commit.msg.title,
             parent_commit_hash=self.hash_before,
             parent_commit_url=self._gh_link.commit(self.hash_before),
+            path_root=self._path_root_self,
+            logger=self._logger,
         )
         changelog_manager.add_from_commit_body(commit.msg.body)
         changelog_manager.write_all_changelogs()
@@ -284,21 +322,21 @@ class PushEventHandler(ModifyingEventHandler):
                 self._action_meta()
                 break
         else:
-            self._metadata_branch = read_from_json_file(path_root="repo_self", logger=self._logger)
+            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
         self._action_hooks()
         commits = self._get_commits()
         head_commit = commits[0]
         if head_commit.group_data.group != CommitGroup.NON_CONV:
             footers = head_commit.msg.footer
-            ready_for_review = footers.get("ready_for_review", ["false"])
-            if len(ready_for_review) != 1:
+            ready_for_review = footers.get("ready-for-review", False)
+            if not isinstance(ready_for_review, bool):
                 self._logger.error(
-                    f"Found {len(ready_for_review)} 'ready_for_review' footers, but expected 1.",
+                    f"Footer 'ready-for-review' should be a boolean, but found {ready_for_review}.",
                     raise_error=False,
                 )
                 self._failed = True
                 return
-            if ready_for_review[0] == "true":
+            if ready_for_review:
                 if self._metadata_main["repo"]["full_name"] == self._context.github.repo_fullname:
                     # workflow is running from own repository
                     matching_pulls = self._gh_api.pull_list(
@@ -404,7 +442,7 @@ class PushEventHandler(ModifyingEventHandler):
                 self._action_meta()
                 break
         else:
-            self._metadata_branch = read_from_json_file(path_root="repo_self", logger=self._logger)
+            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
         self._action_hooks()
         if changed_file_groups[RepoFileType.WEBSITE]:
             self._set_job_run(website_build=True)
