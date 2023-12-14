@@ -9,6 +9,7 @@ from repodynamics.datatype import (
     SecondaryCustomCommit,
     Issue,
     IssueStatus,
+    TemplateType,
 )
 from repodynamics.version import PEP440SemVer
 
@@ -82,6 +83,10 @@ class MetaManager:
     @property
     def package(self) -> dict:
         return self._data.get("package", {})
+
+    @property
+    def config__template(self) -> TemplateType:
+        return TemplateType(self._data["config"]["template"])
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch["default"]["name"]:
