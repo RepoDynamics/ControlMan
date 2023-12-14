@@ -5,9 +5,12 @@ from repodynamics.datatype import InitCheckAction
 
 
 class WorkflowDispatchEventHandler(NonModifyingEventHandler):
+
     def __init__(
         self,
+        template_type: TemplateType,
         context_manager: ContextManager,
+        admin_token: str,
         package_build: bool,
         package_lint: bool,
         package_test: bool,
@@ -16,8 +19,18 @@ class WorkflowDispatchEventHandler(NonModifyingEventHandler):
         hooks: str,
         website_announcement: str,
         website_announcement_msg: str,
+        path_root_self: str,
+        path_root_fork: str | None = None,
+        logger: Logger | None = None,
     ):
-        super().__init__(context_manager=context_manager)
+        super().__init__(
+            template_type=template_type,
+            context_manager=context_manager,
+            admin_token=admin_token,
+            path_root_self=path_root_self,
+            path_root_fork=path_root_fork,
+            logger=logger
+        )
         for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):
             if arg not in ["report", "amend", "commit", "pull", "none", ""]:
                 raise ValueError(
