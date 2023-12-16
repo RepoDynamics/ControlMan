@@ -56,11 +56,38 @@ properties:
     type: object
     description: Label groups
     default: { }
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      properties:
+        prefix:
+          description: Prefix for the label name
+          type: string
+        color:
+          description: Color of the label
+          type: string
+          pattern: ^[0-9a-fA-F]{6}$
+        labels:
+          description: Labels for the group
+          type: object
+          additionalProperties:
+            description: Labels for the group
+            type: object
+            additionalProperties: false
+            properties:
+              suffix:
+                description: Suffix for the label name
+                type: string
+              description:
+                description: Description of the label
+                type: string
+                maxLength: 100
     properties:
       primary_type:
         type: object
         description: Primary commit types
         default: { }
+        additionalProperties: false
         properties:
           prefix:
             description: Prefix for the label name
@@ -242,67 +269,67 @@ properties:
                     type: string
                     maxLength: 100
                     default: The issue/pull-request is invalid.
-              queued:
+              planning:
                 type: object
                 default: { }
                 additionalProperties: false
                 properties:
                   suffix:
                     type: string
-                    default: 'queued'
+                    default: 'planning'
                   description:
                     type: string
                     maxLength: 100
-                    default: The issue/pull-request is queued for processing.
-              discuss:
+                    default: The issue is in the planning phase.
+              requirement_analysis:
                 type: object
                 default: { }
                 additionalProperties: false
                 properties:
                   suffix:
                     type: string
-                    default: 'discuss'
+                    default: 'requirement analysis'
                   description:
                     type: string
                     maxLength: 100
-                    default: The issue/pull-request requires more discussion.
-              need_volunteer:
+                    default: The issue is in the requirement analysis phase.
+              design:
                 type: object
                 default: { }
                 additionalProperties: false
                 properties:
                   suffix:
                     type: string
-                    default: 'need-volunteer'
+                    default: 'designing'
                   description:
                     type: string
                     maxLength: 100
-                    default: The issue/pull-request requires a volunteer.
-              in_dev:
+                    default: The issue is in the design phase.
+              implementation:
                 type: object
                 default: { }
                 additionalProperties: false
                 properties:
                   suffix:
                     type: string
-                    default: 'in-development'
+                    default: 'implementation'
                   description:
                     type: string
                     maxLength: 100
-                    default: The issue/pull-request is being developed.
-              in_review:
+                    default: The issue is in the implementation phase.
+              testing:
                 type: object
                 default: { }
                 additionalProperties: false
                 properties:
                   suffix:
                     type: string
-                    default: 'in-review'
+                    default: 'testing'
                   description:
                     type: string
                     maxLength: 100
-                    default: The issue/pull-request is being reviewed.
-              alpha:
+                    default: The issue is in the testing phase.
+              deploy_alpha:
                 type: object
                 default: { }
                 additionalProperties: false
@@ -314,7 +341,7 @@ properties:
                     type: string
                     maxLength: 100
                     default: The issue/pull-request is in alpha release.
-              beta:
+              deploy_beta:
                 type: object
                 default: { }
                 additionalProperties: false
@@ -326,7 +353,7 @@ properties:
                     type: string
                     maxLength: 100
                     default: The issue/pull-request is in beta release.
-              rc:
+              deploy_rc:
                 type: object
                 default: { }
                 additionalProperties: false
@@ -338,7 +365,7 @@ properties:
                     type: string
                     maxLength: 100
                     default: The issue/pull-request is published as a release candidate.
-              final:
+              deploy_final:
                 type: object
                 default: { }
                 additionalProperties: false
@@ -358,12 +385,15 @@ properties:
               - queued
               - discuss
               - need_volunteer
-              - in_dev
-              - in_review
-              - alpha
-              - beta
-              - rc
-              - final
+              - planning
+              - requirement_analysis
+              - design
+              - implementation
+              - testing
+              - deploy_alpha
+              - deploy_beta
+              - deploy_rc
+              - deploy_final
         required: [ prefix, color, labels ]
       subtype:
         type: object
