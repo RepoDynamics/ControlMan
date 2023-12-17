@@ -45,16 +45,56 @@ class MetaManager:
         return self._data["branch"]
 
     @property
-    def branch__group(self) -> dict:
-        return self.branch["group"]
+    def branch__main(self) -> dict:
+        return self.branch["main"]
+
+    @property
+    def branch__main__name(self) -> str:
+        return self.branch__main["name"]
+
+    @property
+    def branch__release(self) -> dict:
+        return self.branch["release"]
+
+    @property
+    def branch__prerelease(self) -> dict:
+        return self.branch["pre-release"]
+
+    @property
+    def branch__implement(self) -> dict:
+        return self.branch["implementation"]
+
+    @property
+    def branch__dev(self) -> dict:
+        return self.branch["development"]
+
+    @property
+    def branch__groups__prefixes(self) -> dict[BranchType, str]:
+        return {BranchType(key): val["prefix"] for key, val in self.branch.items() if key != "main"}
 
     @property
     def changelog(self) -> dict:
         return self._data.get("changelog", {})
 
     @property
+    def issue(self) -> dict:
+        return self._data["issue"]
+
+    @property
+    def issue__forms(self) -> list[dict]:
+        return self.issue["forms"]
+
+    @property
     def label__compiled(self) -> dict:
         return self._data["label"]["compiled"]
+
+    @property
+    def maintainer(self) -> dict:
+        return self._data["maintainer"]
+
+    @property
+    def maintainer__issue(self) -> dict:
+        return self.maintainer["issue"]
 
     @property
     def repo__config(self) -> dict:
@@ -89,22 +129,25 @@ class MetaManager:
         return TemplateType(self._data["config"]["template"])
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
-        if branch_name == self.branch["default"]["name"]:
-            return Branch(type=BranchType.DEFAULT, name=branch_name)
-        for group_name, group_data in self.branch__group.items():
-            prefix = group_data["prefix"]
-            if branch_name.startswith(prefix):
-                suffix_raw = branch_name.removeprefix(prefix)
-                if group_name == "release":
+        if branch_name == self.branch__main__name:
+            return Branch(type=BranchType.MAIN, name=branch_name)
+        for branch_type, branch_prefix in self.branch__groups__prefixes.items():
+            if branch_name.startswith(branch_prefix):
+                suffix_raw = branch_name.removeprefix(branch_prefix)
+                if branch_type is BranchType.RELEASE:
                     suffix = int(suffix_raw)
-                elif group_name == "pre_release":
+                elif branch_type is BranchType.PRERELEASE:
                     suffix = PEP440SemVer(suffix_raw)
-                elif group_name == "dev":
+                elif branch_type is BranchType.IMPLEMENT:
                     issue_num, target_branch = suffix_raw.split("/", 1)
                     suffix = (int(issue_num), target_branch)
+                elif branch_type is BranchType.DEV:
+                    issue_num, target_branch_and_task = suffix_raw.split("/", 1)
+                    target_branch, task_nr = target_branch_and_task.rsplit("/", 1)
+                    suffix = (int(issue_num), target_branch, int(task_nr))
                 else:
                     suffix = suffix_raw
-                return Branch(type=BranchType(group_name), name=branch_name, prefix=prefix, suffix=suffix)
+                return Branch(type=branch_type, name=branch_name, prefix=branch_prefix, suffix=suffix)
         return Branch(type=BranchType.OTHER, name=branch_name)
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
