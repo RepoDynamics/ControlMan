@@ -31,12 +31,14 @@ def read_from_json_file(
     metadata = _util.dict.read(path_json, logger=logger, raise_empty=False)
     if not metadata:
         return None
-    MetaValidator(metadata=metadata, logger=logger).validate()
-    return MetaManager(metadata=metadata)
+    meta_manager = MetaManager(metadata=metadata)
+    MetaValidator(metadata=meta_manager, logger=logger).validate()
+    return meta_manager
 
 
 def read_from_json_string(content: str, logger: Logger | None = None) -> MetaManager:
     logger = logger or Logger()
     metadata = json.loads(content)
-    MetaValidator(metadata=metadata, logger=logger).validate()
-    return MetaManager(metadata=metadata)
+    meta_manager = MetaManager(metadata=metadata)
+    MetaValidator(metadata=meta_manager, logger=logger).validate()
+    return meta_manager
