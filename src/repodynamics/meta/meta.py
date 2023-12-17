@@ -70,8 +70,8 @@ class Meta:
             future_versions=self._future_versions,
             logger=self._logger,
         ).generate()
-        MetaValidator(metadata=metadata_dict, logger=self._logger).validate()
         self._metadata = MetaManager(metadata=metadata_dict)
+        MetaValidator(metadata=self._metadata, logger=self._logger).validate()
         return self._metadata
 
     def generate_files(self) -> list[tuple[DynamicFile, str]]:
