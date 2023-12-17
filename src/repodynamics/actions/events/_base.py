@@ -369,7 +369,7 @@ class EventHandler:
 
     def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
         current_branch = self._git_head.current_branch_name()
-        new_branch_prefix = self._metadata_main.branch__group["ci_pull"]["prefix"]
+        new_branch_prefix = self._metadata_main.branch__group["auto-update"]["prefix"]
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         self._git_head.stash()
         self._git_head.checkout(branch=new_branch_name, reset=True)
@@ -578,7 +578,7 @@ class EventHandler:
         if not branch_name:
             branch_name = self._context.github.ref_name
         if branch_name == self._context.payload.repository_default_branch:
-            return Branch(name=branch_name, type=BranchType.DEFAULT)
+            return Branch(name=branch_name, type=BranchType.MAIN)
         return self._metadata_main.get_branch_info_from_name(branch_name=branch_name)
 
 
