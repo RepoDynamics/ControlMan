@@ -13,7 +13,7 @@ class RelativePath:
     file_funding = ".github/FUNDING.yml"
     file_pre_commit_config_main = ".github/.pre-commit-config-main.yaml"
     file_pre_commit_config_release = ".github/.pre-commit-config-release.yaml"
-    file_pre_commit_config_dev = ".github/.pre-commit-config-dev.yaml"
+    file_pre_commit_config_development = ".github/.pre-commit-config-dev.yaml"
     file_pre_commit_config_other = ".github/.pre-commit-config-other.yaml"
     file_readthedocs_config = ".github/.readthedocs.yaml"
     file_issue_template_chooser_config = ".github/ISSUE_TEMPLATE/config.yml"
