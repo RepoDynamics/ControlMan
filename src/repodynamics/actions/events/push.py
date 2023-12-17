@@ -124,7 +124,7 @@ class PushEventHandler(ModifyingEventHandler):
     def _run_branch_edited(self):
         if self._context.ref_is_main:
             self._event_type = EventType.PUSH_MAIN
-            self._branch = Branch(type=BranchType.DEFAULT, name=self._context.github.ref_name)
+            self._branch = Branch(type=BranchType.MAIN, name=self._context.github.ref_name)
             return self._run_branch_edited_main()
         self._branch = self._metadata_main.get_branch_info_from_name(branch_name=self._context.github.ref_name)
         self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
@@ -141,7 +141,7 @@ class PushEventHandler(ModifyingEventHandler):
         if self._branch.type == BranchType.DEV:
             self._event_type = EventType.PUSH_DEV
             return self._run_branch_edited_dev()
-        if self._branch.type == BranchType.CI_PULL:
+        if self._branch.type == BranchType.AUTOUPDATE:
             self._event_type = EventType.PUSH_CI_PULL
             return self._run_branch_edited_ci_pull()
         self._event_type = EventType.PUSH_OTHER
@@ -547,7 +547,7 @@ class PushEventHandler(ModifyingEventHandler):
             old_to_new_map[before["default"]["name"]] = after["default"]["name"]
         branches = self._gh_api_admin.branches
         branch_names = [branch["name"] for branch in branches]
-        for group_name in ("release", "dev", "ci_pull"):
+        for group_name in ("release", "development", "auto-update"):
             prefix_before = before["group"][group_name]["prefix"]
             prefix_after = after["group"][group_name]["prefix"]
             if prefix_before != prefix_after:
