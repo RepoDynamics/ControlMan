@@ -132,7 +132,7 @@ class ReadmeFileGenerator:
 
     def logo(self) -> html.A:
         style = self._metadata["readme"]["repo"]["header"]["style"]
-        url = f"{self._metadata['path']['dir']['meta']}/ui/branding/logo_full_{{}}.svg"
+        url = f"{self._metadata['path']['dir']['control']}/ui/branding/logo_full_{{}}.svg"
         picture_tag = html.PICTURE(
             img=html.IMG(
                 src=url.format("light"),
