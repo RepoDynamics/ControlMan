@@ -20,12 +20,12 @@ class EventType(Enum):
 
 
 class BranchType(Enum):
-    DEFAULT = "main"
+    MAIN = "main"
     RELEASE = "release"
-    PRE_RELEASE = "pre_release"
+    PRERELEASE = "pre-release"
     IMPLEMENT = "implementation"
-    DEV = "dev"
-    CI_PULL = "ci_pull"
+    DEV = "development"
+    AUTOUPDATE = "auto-update"
     OTHER = "other"
 
 
@@ -33,7 +33,7 @@ class Branch(NamedTuple):
     type: BranchType
     name: str
     prefix: str | None = None
-    suffix: str | int | PEP440SemVer | tuple[int, str] | None = None
+    suffix: str | int | PEP440SemVer | tuple[int, str] | tuple[int, str, int] | None = None
 
 
 class RepoFileType(Enum):
@@ -375,15 +375,15 @@ class IssueStatus(Enum):
     REJECTED = "rejected"
     DUPLICATE = "duplicate"
     INVALID = "invalid"
-    QUEUED = "queued"
-    DISCUSS = "discuss"
-    NEED_VOLUNTEER = "need_volunteer"
-    IN_DEV = "in_dev"
-    IN_REVIEW = "in_review"
-    ALPHA = "alpha"
-    BETA = "beta"
-    RC = "rc"
-    FINAL = "final"
+    PLANNING = "planning"
+    REQUIREMENT_ANALYSIS = "requirement_analysis"
+    DESIGN = "design"
+    IMPLEMENTATION = "implementation"
+    TESTING = "testing"
+    DEPLOY_ALPHA = "deploy_alpha"
+    DEPLOY_BETA = "deploy_beta"
+    DEPLOY_RC = "deploy_rc"
+    DEPLOY_FINAL = "deploy_final"
 
 
 class TemplateType(Enum):
