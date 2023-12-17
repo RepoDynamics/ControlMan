@@ -1,11 +1,12 @@
 import re
 
+from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 
 
 class MetaValidator:
-    def __init__(self, metadata: dict, logger: Logger = None):
-        self._data = metadata
+    def __init__(self, metadata: MetaManager, logger: Logger = None):
+        self._meta = metadata
         self._logger = logger or Logger()
         return
 
@@ -17,23 +18,23 @@ class MetaValidator:
 
     def branch_names(self):
         """Verify that branch names and prefixes are unique."""
-        branch_names = [self._data["branch"]["default"]["name"]]
-        for group_name, branch_data in self._data["branch"]["group"].items():
+        branch_names = [self._meta.branch__main__name]
+        for branch_type, branch_prefix in self._meta.branch__groups__prefixes.items():
             for branch_name in branch_names:
-                if branch_name.startswith(branch_data["prefix"]):
+                if branch_name.startswith(branch_prefix):
                     self._logger.error(
                         f"Duplicate branch name: {branch_name}",
                         f"The branch name '{branch_name}' starts with "
-                        f"the prefix of branch group '{group_name}'.",
+                        f"the prefix of branch group '{branch_type.value}'.",
                     )
-            branch_names.append(branch_data["prefix"])
+            branch_names.append(branch_prefix)
         return
 
     def changelogs(self):
         """Verify that changelog paths, names and sections are unique."""
         changelog_paths = []
         changelog_names = []
-        for changelog_id, changelog_data in self._data["changelog"].items():
+        for changelog_id, changelog_data in self._meta["changelog"].items():
             if changelog_data["path"] in changelog_paths:
                 self._logger.error(
                     f"Duplicate changelog path: {changelog_data['path']}",
@@ -63,7 +64,7 @@ class MetaValidator:
         """Verify that commit types are unique, and that subtypes are defined."""
         commit_types = []
         for main_type in ("primary_action", "primary_custom"):
-            for commit_id, commit_data in self._data["commit"][main_type].items():
+            for commit_id, commit_data in self._meta["commit"][main_type].items():
                 if commit_data["type"] in commit_types:
                     self._logger.error(
                         f"Duplicate commit type: {commit_data['type']}",
@@ -73,13 +74,13 @@ class MetaValidator:
                 commit_types.append(commit_data["type"])
                 for subtype_type, subtypes in commit_data["subtypes"]:
                     for subtype in subtypes:
-                        if subtype not in self._data["commit"]["secondary_custom"]:
+                        if subtype not in self._meta["commit"]["secondary_custom"]:
                             self._logger.error(
                                 f"Invalid commit subtype: {subtype}",
                                 f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
                                 f"in 'subtypes.{subtype_type}' is not defined in 'commit.secondary_custom'.",
                             )
-        for commit_id, commit_data in self._data["commit"]["secondary_action"].items():
+        for commit_id, commit_data in self._meta["commit"]["secondary_action"].items():
             if commit_data["type"] in commit_types:
                 self._logger.error(
                     f"Duplicate commit type: {commit_data['type']}",
@@ -88,7 +89,7 @@ class MetaValidator:
                 )
             commit_types.append(commit_data["type"])
         changelog_sections = {}
-        for commit_type, commit_data in self._data["commit"]["secondary_custom"].items():
+        for commit_type, commit_data in self._meta["commit"]["secondary_custom"].items():
             if commit_type in commit_types:
                 self._logger.error(
                     f"Duplicate commit type: {commit_type}",
@@ -98,7 +99,7 @@ class MetaValidator:
             commit_types.append(commit_type)
             # Verify that linked changelogs are defined
             changelog_id = commit_data["changelog_id"]
-            if changelog_id not in self._data["changelog"]:
+            if changelog_id not in self._meta["changelog"]:
                 self._logger.error(
                     f"Invalid commit changelog ID: {changelog_id}",
                     f"The changelog ID '{changelog_id}' set for commit "
@@ -106,7 +107,7 @@ class MetaValidator:
                 )
             if changelog_id not in changelog_sections:
                 changelog_sections[changelog_id] = [
-                    section["id"] for section in self._data["changelog"][changelog_id]["sections"]
+                    section["id"] for section in self._meta["changelog"][changelog_id]["sections"]
                 ]
             if commit_data["changelog_section_id"] not in changelog_sections[changelog_id]:
                 self._logger.error(
@@ -119,7 +120,7 @@ class MetaValidator:
     def issue_forms(self):
         form_ids = []
         form_identifying_labels = []
-        for form_idx, form in enumerate(self._data["issue"]["forms"]):
+        for form_idx, form in enumerate(self._meta["issue"]["forms"]):
             if form["id"] in form_ids:
                 self._logger.error(
                     f"Duplicate issue-form ID: {form['id']}",
@@ -197,12 +198,12 @@ class MetaValidator:
                                 break
         # Verify that identifying labels are defined in 'label.group' metadata
         for primary_type_id, subtype_id in form_identifying_labels:
-            if primary_type_id not in self._data["label"]["group"]["primary_type"]["labels"]:
+            if primary_type_id not in self._meta["label"]["group"]["primary_type"]["labels"]:
                 self._logger.error(
                     f"Unknown issue-form `primary_type`: {primary_type_id}",
                     f"The ID '{primary_type_id}' does not exist in 'label.group.primary_type.labels'.",
                 )
-            if subtype_id and subtype_id not in self._data["label"]["group"]["subtype"]["labels"]:
+            if subtype_id and subtype_id not in self._meta["label"]["group"]["subtype"]["labels"]:
                 self._logger.error(
                     f"Unknown issue-form subtype: {subtype_id}",
                     f"The ID '{subtype_id}' does not exist in 'label.group.subtype.labels'.",
@@ -213,7 +214,7 @@ class MetaValidator:
         """Verify that label names and prefixes are unique."""
         labels = []
         for main_type in ("auto_group", "group", "single"):
-            for label_id, label_data in self._data["label"].get(main_type, {}).items():
+            for label_id, label_data in self._meta["label"].get(main_type, {}).items():
                 label = label_data["name"] if main_type == "single" else label_data["prefix"]
                 label_type = "name" if main_type == "single" else "prefix"
                 for set_label in labels:
@@ -229,7 +230,7 @@ class MetaValidator:
                 f"Too many labels: {len(labels)}",
                 f"The maximum number of labels allowed by GitHub is 1000.",
             )
-        for label_id, label_data in self._data["label"]["group"].items():
+        for label_id, label_data in self._meta["label"]["group"].items():
             suffixes = []
             for label_type, suffix_data in label_data["labels"].items():
                 suffix = suffix_data["suffix"]
@@ -243,8 +244,8 @@ class MetaValidator:
         return
 
     def maintainers(self):
-        issue_ids = [issue["id"] for issue in self._data.get("issue", {}).get("forms", [])]
-        for issue_id in self._data.get("maintainer", {}).get("issue", {}).keys():
+        issue_ids = [issue["id"] for issue in self._meta.issue__forms]
+        for issue_id in self._meta.maintainer__issue.keys():
             if issue_id not in issue_ids:
                 self._logger.error(
                     f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
