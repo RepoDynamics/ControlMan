@@ -93,14 +93,14 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
     def _run_labeled_status(self):
         status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
-        if status in (IssueStatus.ALPHA, IssueStatus.BETA, IssueStatus.RC):
+        if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
             self._run_labeled_status_pre()
-        elif status == IssueStatus.FINAL:
+        elif status == IssueStatus.DEPLOY_FINAL:
             self._run_labeled_status_final()
         return
 
     def _run_labeled_status_pre(self):
-        if self._branch_head.type != BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.DEFAULT):
+        if self._branch_head.type != BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
             self._logger.error(
                 "Merge not allowed",
                 f"Merge from a head branch of type '{self._branch_head.type.value}' "
@@ -118,14 +118,14 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
     def _run_labeled_status_final(self):
         if self._branch_head.type == BranchType.DEV:
-            if self._branch_base.type in (BranchType.RELEASE, BranchType.DEFAULT):
+            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
                 return self._run_merge_dev_to_release()
-            elif self._branch_base.type == BranchType.PRE_RELEASE:
+            elif self._branch_base.type == BranchType.PRERELEASE:
                 return self._run_merge_dev_to_pre()
-        elif self._branch_head.type == BranchType.PRE_RELEASE:
-            if self._branch_base.type in (BranchType.RELEASE, BranchType.DEFAULT):
+        elif self._branch_head.type == BranchType.PRERELEASE:
+            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
                 return self._run_merge_pre_to_release()
-        elif self._branch_head.type == BranchType.CI_PULL:
+        elif self._branch_head.type == BranchType.AUTOUPDATE:
             return self._run_merge_ci_pull()
         self._logger.error(
             "Merge not allowed",
