@@ -116,7 +116,7 @@ class ConfigFileGenerator:
 
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
         out = []
-        for config_type in ("main", "release", "dev", "other"):
+        for config_type in ("main", "release", "development", "other"):
             info = self._out_db.pre_commit_config(config_type)
             config = self._meta["workflow"]["pre_commit"].get(config_type)
             if not config:
