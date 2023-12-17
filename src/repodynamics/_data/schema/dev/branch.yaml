@@ -5,8 +5,8 @@ type: object
 default: { }
 additionalProperties: false
 properties:
-  default:
-    description: Configurations for the default (main) branch
+  main:
+    description: Configurations for the main (aka trunk, default) branch
     type: object
     default: { }
     additionalProperties: false
@@ -27,99 +27,115 @@ properties:
           allow_force_push:
             type: boolean
             default: false
-    required: [ name ]
-  group:
-    description: Configurations for different branch groups
+    required: [ name, protection_rules ]
+  release:
+    description: Configurations for release branches
     type: object
     default: { }
     properties:
-      release:
-        description: Configurations for release branches
+      prefix:
+        description: Prefix for the branch name
+        type: string
+        default: release/v
+      protection_rules:
+        description: Branch protection rules
         type: object
         default: { }
+        additionalProperties: false
         properties:
-          prefix:
-            description: Prefix for the branch name
-            type: string
-            default: release/v
-          protection_rules:
-            description: Branch protection rules
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              allow_deletion:
-                type: boolean
-                default: false
-              allow_force_push:
-                type: boolean
-                default: false
-        required: [ prefix ]
-      pre_release:
+          allow_deletion:
+            type: boolean
+            default: false
+          allow_force_push:
+            type: boolean
+            default: false
+    required: [ prefix ]
+  pre-release:
+    type: object
+    description: Pre-release branch
+    default: { }
+    properties:
+      prefix:
+        description: Prefix for the branch name
+        type: string
+        default: pre-release/v
+      protection_rules:
+        description: Branch protection rules
         type: object
-        description: Pre-release branch
         default: { }
+        additionalProperties: false
         properties:
-          prefix:
-            description: Prefix for the branch name
-            type: string
-            default: pre-release/v
-          protection_rules:
-            description: Branch protection rules
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              allow_deletion:
-                type: boolean
-                default: false
-              allow_force_push:
-                type: boolean
-                default: false
-        required: [ prefix ]
-      dev:
+          allow_deletion:
+            type: boolean
+            default: false
+          allow_force_push:
+            type: boolean
+            default: false
+    required: [ prefix ]
+  implementation:
+    type: object
+    description: Implementation branch
+    default: { }
+    properties:
+      prefix:
+        description: Prefix for the branch name
+        type: string
+        default: impl/
+      protection_rules:
+        description: Branch protection rules
         type: object
-        description: Development branch
-        default: {}
-        properties:
-          prefix:
-            description: Prefix for the branch name
-            type: string
-            default: dev/
-          protection_rules:
-            description: Branch protection rules
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              allow_deletion:
-                type: boolean
-                default: true
-              allow_force_push:
-                type: boolean
-                default: true
-        required: [ prefix ]
-      ci_pull:
-        type: object
-        description: CI pull request head branch
         default: { }
+        additionalProperties: false
         properties:
-          prefix:
-            description: Prefix for the branch name
-            type: string
-            default: ci-pull/
-          protection_rules:
-            description: Branch protection rules
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              allow_deletion:
-                type: boolean
-                default: true
-              allow_force_push:
-                type: boolean
-                default: true
-        required: [ prefix ]
-    required: [ ci_pull, dev, pre_release, release ]
-required: [ default, group ]
+          allow_deletion:
+            type: boolean
+            default: true
+          allow_force_push:
+            type: boolean
+            default: true
+    required: [ prefix ]
+  development:
+    type: object
+    description: Development branch
+    default: {}
+    properties:
+      prefix:
+        description: Prefix for the branch name
+        type: string
+        default: dev/
+      protection_rules:
+        description: Branch protection rules
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          allow_deletion:
+            type: boolean
+            default: true
+          allow_force_push:
+            type: boolean
+            default: true
+    required: [ prefix ]
+  auto-update:
+    type: object
+    description: Auto-update branch
+    default: { }
+    properties:
+      prefix:
+        description: Prefix for the branch name
+        type: string
+        default: auto-update/
+      protection_rules:
+        description: Branch protection rules
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          allow_deletion:
+            type: boolean
+            default: true
+          allow_force_push:
+            type: boolean
+            default: true
+    required: [ prefix ]
+required: [ main, release, pre-release, implementation, development, auto-update ]
