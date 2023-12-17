@@ -582,9 +582,9 @@ class MetadataGenerator:
         else:
             source = self._metadata
         release_prefix, pre_release_prefix = allowed_prefixes = tuple(
-            source["branch"]["group"][group_name]["prefix"] for group_name in ["release", "pre_release"]
+            source["branch"][group_name]["prefix"] for group_name in ["release", "pre-release"]
         )
-        main_branch_name = source["branch"]["default"]["name"]
+        main_branch_name = source["branch"]["main"]["name"]
         branch_pattern = re.compile(rf"^({release_prefix}|{pre_release_prefix}|{main_branch_name})")
         releases: list[dict] = []
         self._git.fetch_remote_branches_by_pattern(branch_pattern=branch_pattern)
@@ -616,12 +616,12 @@ class MetadataGenerator:
                 self._logger.warning(f"No operating systems specified for branch '{branch}'; skipping branch.")
                 continue
             if branch == main_branch_name:
-                branch_name = self._metadata["branch"]["default"]["name"]
+                branch_name = self._metadata["branch"]["main"]["name"]
             elif branch.startswith(release_prefix):
-                new_prefix = self._metadata["branch"]["group"]["release"]["prefix"]
+                new_prefix = self._metadata["branch"]["release"]["prefix"]
                 branch_name = f"{new_prefix}{branch.removeprefix(release_prefix)}"
             else:
-                new_prefix = self._metadata["branch"]["group"]["pre_release"]["prefix"]
+                new_prefix = self._metadata["branch"]["pre-release"]["prefix"]
                 branch_name = f"{new_prefix}{branch.removeprefix(pre_release_prefix)}"
             release_info = {
                 "branch": branch_name,
