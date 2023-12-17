@@ -1,4 +1,5 @@
 import re
+import datetime
 
 from pylinks.api.github import Repo
 
@@ -12,6 +13,13 @@ from repodynamics.meta.files.forms import FormGenerator
 
 
 class IssuesEventHandler(NonModifyingEventHandler):
+
+    _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
+    _MARKER_TIMELINE_END = "<!-- End timeline -->"
+    _MARKER_TASKLIST_START = "<!-- Begin secondary commits tasklist -->"
+    _MARKER_TASKLIST_END = "<!-- End secondary commits tasklist -->"
+    _MARKER_COMMIT_START = "<!-- Begin primary commit summary -->"
+    _MARKER_COMMIT_END = "<!-- End primary commit summary -->"
 
     def __init__(
         self,
@@ -46,8 +54,9 @@ class IssuesEventHandler(NonModifyingEventHandler):
         return
 
     def _run_opened(self):
-        self._gh_api.issue_comment_create(number=self._payload.number, body="This post tracks the issue.")
-        self._post_process_issue()
+        issue_body = self._post_process_issue()
+        dev_protocol = self._create_dev_protocol(issue_body)
+        self._gh_api.issue_comment_create(number=self._payload.number, body=dev_protocol)
         return
 
     def _run_labeled(self):
@@ -58,19 +67,64 @@ class IssuesEventHandler(NonModifyingEventHandler):
 
     def _run_labeled_status(self):
         status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
-        if status == IssueStatus.IN_DEV:
-            self._run_labeled_status_in_dev()
+        if status is IssueStatus.TRIAGE:
+            self._run_labeled_status_triage()
+        elif status is IssueStatus.REJECTED:
+            self._run_labeled_status_rejected()
+        elif status is IssueStatus.DUPLICATE:
+            self._run_labeled_status_duplicate()
+        elif status is IssueStatus.INVALID:
+            self._run_labeled_status_invalid()
+        elif status is IssueStatus.PLANNING:
+            self._run_labeled_status_planning()
+        elif status is IssueStatus.REQUIREMENT_ANALYSIS:
+            self._run_labeled_status_requirement_analysis()
+        elif status is IssueStatus.DESIGN:
+            self._run_labeled_status_design()
+        elif status is IssueStatus.IMPLEMENTATION:
+            self._run_labeled_status_implementation()
         return
 
-    def _run_labeled_status_in_dev(self):
-        target_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
-        dev_branch_prefix = self._metadata_main["branch"]["group"]["dev"]["prefix"]
+    def _run_labeled_status_triage(self):
+        self._add_to_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender}).")
+        return
+
+    def _run_labeled_status_rejected(self):
+        self._add_to_timeline(entry=f"The issue was rejected and closed (actor: @{self._payload.sender}).")
+        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        return
+
+    def _run_labeled_status_duplicate(self):
+        self._add_to_timeline(entry=f"The issue was marked as a duplicate and closed (actor: @{self._payload.sender}).")
+        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        return
+
+    def _run_labeled_status_invalid(self):
+        self._add_to_timeline(entry=f"The issue was marked as invalid and closed (actor: @{self._payload.sender}).")
+        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        return
+
+    def _run_labeled_status_planning(self):
+        self._add_to_timeline(entry=f"The issue entered the planning phase (actor: @{self._payload.sender}).")
+        return
+
+    def _run_labeled_status_requirement_analysis(self):
+        self._add_to_timeline(entry=f"The issue entered the requirement analysis phase (actor: @{self._payload.sender}).")
+        return
+
+    def _run_labeled_status_design(self):
+        self._add_to_timeline(entry=f"The issue entered the design phase (actor: @{self._payload.sender}).")
+        return
+
+    def _run_labeled_status_implementation(self):
+        branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
+        impl_branch_prefix = self._metadata_main["branch"]["group"]["implementation"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         for issue_label in self._payload.labels:
-            if issue_label["name"].startswith(target_label_prefix):
-                base_branch_name = issue_label["name"].removeprefix(target_label_prefix)
-                head_branch_name = f"{dev_branch_prefix}{self._payload.number}/{base_branch_name}"
+            if issue_label["name"].startswith(branch_label_prefix):
+                base_branch_name = issue_label["name"].removeprefix(branch_label_prefix)
+                head_branch_name = f"{impl_branch_prefix}{self._payload.number}/{base_branch_name}"
                 new_branch = self._gh_api.branch_create_linked(
                     issue_id=self._payload.node_id,
                     base_sha=branch_sha[base_branch_name],
@@ -97,7 +151,24 @@ class IssuesEventHandler(NonModifyingEventHandler):
                 self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._payload.label_names)
         return
 
-    def _post_process_issue(self):
+    def _add_to_timeline(self, entry: str):
+        today = datetime.date.today().strftime("%Y.%m.%d")
+        timeline_entry = (
+            f"- {today}: {entry}"
+        )
+        comment = self._get_dev_protocol_comment()
+        pattern = rf"({self._MARKER_TIMELINE_START}).*?({self._MARKER_TIMELINE_END})"
+        replacement = r"\1\2" + timeline_entry + "\n" + r"\3"
+        new_body = re.sub(pattern, replacement, comment["body"], flags=re.DOTALL)
+        self._gh_api.issue_comment_update(comment_id=comment["id"], body=new_body)
+        return
+
+    def _get_dev_protocol_comment(self):
+        comments = self._gh_api.issue_comments(number=self._payload.number, max_count=100)
+        comment = comments[0]
+        return comment
+
+    def _post_process_issue(self) -> str:
         self._logger.success("Retrieve issue labels", self._payload.label_names)
         issue_form = self._metadata_main.get_issue_data_from_labels(self._payload.label_names).form
         self._logger.success("Retrieve issue form", issue_form)
@@ -124,11 +195,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
             self._logger.skip(
                 "No post-process action defined in issue form; skip❗",
             )
-            return
-        post_body = issue_form["post_process"].get("body")
-        if post_body:
-            new_body = post_body.format(**issue_entries)
-            self._gh_api.issue_update(number=self._payload.number, body=new_body)
+            return self._payload.body
         assign_creator = issue_form["post_process"].get("assign_creator")
         if assign_creator:
             if_checkbox = assign_creator.get("if_checkbox")
@@ -146,7 +213,12 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     self._gh_api.issue_add_assignees(
                         number=self._payload.number, assignees=self._payload.author_username
                     )
-        return
+        post_body = issue_form["post_process"].get("body")
+        if post_body:
+            new_body = post_body.format(**issue_entries)
+            self._gh_api.issue_update(number=self._payload.number, body=new_body)
+            return new_body
+        return self._payload.body
 
     def _extract_entries_from_issue_body(self, body_elems: list[dict]):
         def create_pattern(parts):
@@ -184,3 +256,20 @@ class IssuesEventHandler(NonModifyingEventHandler):
             for section_id, content in match.groupdict().items()
         }
         return sections
+
+    def _create_dev_protocol(self, issue_body: str) -> str:
+        dev_protocol_template = self._metadata_main["issue"]["dev_protocol"]["template"]
+        today = datetime.date.today().strftime("%Y.%m.%d")
+        timeline_entry = (
+            f"- {today}: The issue was submitted (actor: @{self._payload.author_username})."
+        )
+        args = {
+            "issue_body": issue_body,
+            "primary_commit_summary": f"{self._MARKER_COMMIT_START}{self._MARKER_COMMIT_END}",
+            "secondary_commits_tasklist": (
+                f"{self._MARKER_TASKLIST_START}\n\n{self._MARKER_TASKLIST_END}"
+            ),
+            "timeline": f"{self._MARKER_TIMELINE_START}\n{timeline_entry}\n{self._MARKER_TIMELINE_END}",
+        }
+        dev_protocol = dev_protocol_template.format(**args)
+        return dev_protocol
