@@ -382,9 +382,6 @@ properties:
               - rejected
               - duplicate
               - invalid
-              - queued
-              - discuss
-              - need_volunteer
               - planning
               - requirement_analysis
               - design
