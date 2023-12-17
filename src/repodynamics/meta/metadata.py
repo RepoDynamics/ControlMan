@@ -18,7 +18,7 @@ from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathFinder
 from repodynamics.datatype import PrimaryActionCommitType
-
+from repodynamics.meta.manager import MetaManager
 
 class MetadataGenerator:
     def __init__(
@@ -40,6 +40,7 @@ class MetadataGenerator:
         self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
+        self._meta = MetaManager(self._metadata)
         self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
         return
@@ -420,7 +421,7 @@ class MetadataGenerator:
         url["home"] = base
         url["announcement"] = (
             f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/"
-            f"{self._metadata['branch']['default']['name']}/{self._metadata['path']['dir']['website']}/"
+            f"{self._meta.branch__main__name}/{self._metadata['path']['dir']['website']}/"
             "announcement.html"
         )
         for path_id, rel_path in self._metadata["web"]["path"].items():
