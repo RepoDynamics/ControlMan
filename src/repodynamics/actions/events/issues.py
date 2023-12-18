@@ -117,10 +117,12 @@ class IssuesEventHandler(NonModifyingEventHandler):
         return
 
     def _run_labeled_status_implementation(self):
+        self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender}).")
         branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
         impl_branch_prefix = self._metadata_main["branch"]["group"]["implementation"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
+        pull_title, pull_body = self._get_pr_title_and_body()
         for issue_label in self._payload.labels:
             if issue_label["name"].startswith(branch_label_prefix):
                 base_branch_name = issue_label["name"].removeprefix(branch_label_prefix)
@@ -135,18 +137,20 @@ class IssuesEventHandler(NonModifyingEventHandler):
                 self._git_head.fetch_remote_branches_by_name(branch_names=head_branch_name)
                 self._git_head.checkout(head_branch_name)
                 self._git_head.commit(
-                    message=f"Create branch '{head_branch_name}' for issue #{self._payload.number}",
+                    message=(
+                        f"init: Create implementation branch '{head_branch_name}' "
+                        f"from base branch '{base_branch_name}' for issue #{self._payload.number}"
+                    ),
                     allow_empty=True,
                 )
                 self._git_head.push(target="origin", set_upstream=True)
                 pull_data = self._gh_api.pull_create(
                     head=new_branch["name"],
                     base=base_branch_name,
-                    # title=self._payload.title,
-                    # body=f"This is a draft pull request for the issue #{self._payload.number}.",
+                    title=pull_title,
+                    body=pull_body,
                     maintainer_can_modify=True,
                     draft=True,
-                    issue=self._payload.number,
                 )
                 self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._payload.label_names)
         return
@@ -162,6 +166,14 @@ class IssuesEventHandler(NonModifyingEventHandler):
         new_body = re.sub(pattern, replacement, comment["body"], flags=re.DOTALL)
         self._gh_api.issue_comment_update(comment_id=comment["id"], body=new_body)
         return
+
+    def _get_pr_title_and_body(self):
+        dev_protocol_comment = self._get_dev_protocol_comment()
+        body = dev_protocol_comment["body"]
+        pattern = rf"{self._MARKER_COMMIT_START}(.*?){self._MARKER_COMMIT_END}"
+        match = re.search(pattern, body, flags=re.DOTALL)
+        title = match.group(1).strip() if match else self._payload.title
+        return title, body
 
     def _get_dev_protocol_comment(self):
         comments = self._gh_api.issue_comments(number=self._payload.number, max_count=100)
