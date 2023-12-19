@@ -4,10 +4,12 @@ import re
 from pylinks.http import WebAPIError
 
 from repodynamics import meta
+from repodynamics.meta.meta import Meta
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.path import RelativePath
+from repodynamics.version import PEP440SemVer
 from repodynamics.datatype import (
     WorkflowTriggeringAction,
     EventType,
@@ -82,16 +84,67 @@ class PullRequestEventHandler(ModifyingEventHandler):
         return
 
     def _run_synchronize(self):
+        if self._payload.internal:
+            if self._branch_head.type is BranchType.DEV:
+                if self._branch_base.type is not BranchType.IMPLEMENT:
+                    self._logger.error(
+                        "Unsupported pull request synchronization",
+                        "Pull request synchronization from a development (head) branch "
+                        "is only supported to an implementation (base) branch, "
+                        f"but the base branch is '{self._branch_base.type.value}'.",
+                        raise_error=False,
+                    )
+                    self._failed = True
+                    return
+            elif self._branch_head.type is BranchType.IMPLEMENT:
+                if self._branch_base.type not in [BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE]:
+                    self._logger.error(
+                        "Unsupported pull request synchronization",
+                        "Pull request synchronization from an implementation (head) branch "
+                        "is only supported to a main, release, or pre-release (base) branch, "
+                        f"but the base branch is '{self._branch_base.type.value}'.",
+                        raise_error=False,
+                    )
+                    self._failed = True
+                    return
+            else:
+                self._logger.error(
+                    "Unsupported pull request synchronization",
+                    "Pull request synchronization is not supported "
+                    f"for pull requests from a '{self._branch_head.type.value}' branch.",
+                    raise_error=False,
+                )
+                self._failed = True
+                return
+            meta_and_hooks_action_type = InitCheckAction.COMMIT
+        else:
+            if self._branch_base.type is not BranchType.IMPLEMENT:
+                self._logger.error(
+                    "Unsupported pull request synchronization",
+                    "Pull request synchronization from a forked repository is only supported "
+                    "to an implementation (base) branch.",
+                    raise_error=False,
+                )
+                self._failed = True
+                return
+            meta_and_hooks_action_type = InitCheckAction.FAIL
+        self._git_head.checkout(branch=self._branch_head.name)
+        self._meta = Meta(
+            path_root=self._path_root_head,
+            github_token=self._context.github.token,
+            hash_before=self._context.hash_before,
+            logger=self._logger,
+        )
         changed_file_groups = self._action_file_change_detector()
         for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
             if changed_file_groups[file_type]:
-                self._action_meta(action=InitCheckAction.COMMIT)
+                self._action_meta(action=meta_and_hooks_action_type)
                 break
         else:
-            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
-        self._action_hooks(action=InitCheckAction.COMMIT)
+            self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
+        self._action_hooks(action=meta_and_hooks_action_type)
         tasks_complete = self._update_implementation_tasklist()
-        if tasks_complete:
+        if tasks_complete and not self._failed:
             self._gh_api.pull_update(
                 number=self._payload.number,
                 draft=False,
@@ -121,57 +174,51 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 package_test_local=True,
                 package_publish_testpypi=True,
             )
-        if self._job_run_flag["package_publish_testpypi"]:
-            issue_labels = [
-                label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])
-            ]
-            final_commit_type = self._metadata_main.get_issue_data_from_labels(issue_labels).group_data
-            if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
-                PrimaryActionCommitType.WEBSITE,
-                PrimaryActionCommitType.META,
+        if not self._job_run_flag["package_publish_testpypi"]:
+            return
+        if self._branch_head.type is not BranchType.IMPLEMENT or not self._payload.internal:
+            self._set_job_run(package_publish_testpypi=False)
+            return
+        final_commit_type = self._metadata_main.get_issue_data_from_labels(self._payload.label_names).group_data
+        if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
+            PrimaryActionCommitType.WEBSITE,
+            PrimaryActionCommitType.META,
+        ):
+            self._set_job_run(package_publish_testpypi=False)
+            return
+        ver_last_head, _ = self._get_latest_version(dev_only=True)
+        ver_last_base, _ = self._get_latest_version(branch=self._branch_base.name)
+        if ver_last_base.pre:
+            # The base branch is a pre-release branch
+            next_ver = ver_last_base.next_post
+            if not ver_last_head or (
+                ver_last_head.release != next_ver.release or ver_last_head.pre != next_ver.pre
             ):
-                self._set_job_run(package_publish_testpypi=False)
-                return
-            self._git_head.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
-            ver_last_target, _ = self._get_latest_version(branch=self._branch.suffix[1])
-            ver_last_dev, _ = self._get_latest_version(dev_only=True)
-            if ver_last_target.pre:
-                next_ver = ver_last_target.next_post
-                if not ver_last_dev or (
-                    ver_last_dev.release != next_ver.release or ver_last_dev.pre != next_ver.pre
-                ):
-                    dev = 0
-                else:
-                    dev = (ver_last_dev.dev or -1) + 1
-                next_ver_str = f"{next_ver}.dev{dev}"
+                dev = 0
             else:
-                next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
-                next_ver_str = str(next_ver)
-                if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
-                    next_ver_str += f".a{self._branch.suffix[0]}"
-                if not ver_last_dev:
-                    dev = 0
-                elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
-                    if ver_last_dev.post is not None and ver_last_dev.post == next_ver.post:
-                        dev = ver_last_dev.dev + 1
-                    else:
-                        dev = 0
-                elif ver_last_dev.pre is not None and ver_last_dev.pre == ("a", self._branch.suffix[0]):
-                    dev = ver_last_dev.dev + 1
+                dev = (ver_last_head.dev or -1) + 1
+            next_ver_str = f"{next_ver}.dev{dev}"
+        else:
+            next_ver = self._get_next_version(ver_last_base, final_commit_type.action)
+            next_ver_str = str(next_ver)
+            if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
+                next_ver_str += f".a{self._branch_head.suffix[0]}"
+            if not ver_last_head:
+                dev = 0
+            elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
+                if ver_last_head.post is not None and ver_last_head.post == next_ver.post:
+                    dev = ver_last_head.dev + 1
                 else:
                     dev = 0
-                next_ver_str += f".dev{dev}"
-            self._tag_version(
-                ver=PEP440SemVer(next_ver_str),
-                msg=f"Developmental release (issue: #{self._branch.suffix[0]}, target: {self._branch.suffix[1]})",
-            )
-
-        # if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
-        #     self._logger.attention(
-        #         "Hook fixes cannot be applied as pull request is from a forked repository; "
-        #         f"switching action from '{action}' to 'fail'."
-        #     )
-        #     action = "fail"
+            elif ver_last_head.pre is not None and ver_last_head.pre == ("a", self._branch_head.suffix[0]):
+                dev = ver_last_head.dev + 1
+            else:
+                dev = 0
+            next_ver_str += f".dev{dev}"
+        self._tag_version(
+            ver=PEP440SemVer(next_ver_str),
+            msg=f"Developmental release (issue: #{self._branch_head.suffix[0]}, target: {self._branch_base.name})",
+        )
         return
 
     def _run_labeled(self):
@@ -251,7 +298,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             commit_title=self._payload.title,
             parent_commit_hash=hash_bash,
             parent_commit_url=self._gh_link.commit(hash_bash),
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             logger=self._logger,
         )
         self._git_base.checkout(branch=self._branch_head.name)
@@ -272,7 +319,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             set_upstream=True,
         )
         self._metadata_branch = meta.read_from_json_file(
-            path_root=self._path_root_self, logger=self._logger
+            path_root=self._path_root_base, logger=self._logger
         )
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
@@ -364,7 +411,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             commit_title=self.pull_title,
             parent_commit_hash=latest_base_hash,
             parent_commit_url=self._gh_link.commit(latest_base_hash),
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             logger=self.logger,
         )
 
