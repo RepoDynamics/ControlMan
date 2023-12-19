@@ -1,8 +1,10 @@
 import time
+import re
 
 from pylinks.http import WebAPIError
 
 from repodynamics import meta
+from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.datatype import (
@@ -13,6 +15,7 @@ from repodynamics.datatype import (
     BranchType,
     IssueStatus,
     TemplateType,
+    RepoFileType,
 )
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -77,6 +80,20 @@ class PullRequestEventHandler(ModifyingEventHandler):
         return
 
     def _run_synchronize(self):
+        changed_file_groups = self._action_file_change_detector()
+        for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
+            if changed_file_groups[file_type]:
+                self._action_meta()
+                break
+        else:
+            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
+        self._action_hooks()
+        tasks_complete = self._update_implementation_tasklist()
+
+
+
+
+
         if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
             self._logger.attention(
                 "Hook fixes cannot be applied as pull request is from a forked repository; "
@@ -114,7 +131,6 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 "from a development branch to the corresponding development branch.",
             )
             return
-
 
     def _run_labeled_status_final(self):
         if self._branch_head.type == BranchType.DEV:
@@ -212,7 +228,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 package_lint=True,
                 package_test_local=True,
                 website_deploy=True,
-                github_release=True,
+                # github_release=True,
             )
             return
         self._hash_latest = response["sha"]
@@ -305,4 +321,122 @@ class PullRequestEventHandler(ModifyingEventHandler):
         )
         return
 
+    def _update_implementation_tasklist(self):
+
+        def apply(commit_details, tasklist_entries):
+            for entry in tasklist_entries:
+                if entry['complete'] or entry['summary'].casefold() != commit_details[0].casefold():
+                    continue
+                if (
+                    not entry['sublist']
+                    or len(commit_details) == 1
+                    or commit_details[1].casefold() not in [subentry['summary'].casefold() for subentry in entry['sublist']]
+                ):
+                    entry['complete'] = True
+                    return
+                apply(commit_details[1:], entry['sublist'])
+            return
+
+        def update_complete(tasklist_entries):
+            for entry in tasklist_entries:
+                if entry['sublist']:
+                    entry['complete'] = update_complete(entry['sublist'])
+            return all([entry['complete'] for entry in tasklist_entries])
+
+        commits = self._get_commits()
+        tasklist = self._extract_tasklist_entries()
+        for commit in commits:
+            commit_details = (
+                commit.msg.splitlines() if commit.group_data.group == CommitGroup.NON_CONV
+                else [commit.msg.summary, *commit.msg.body.splitlines()]
+            )
+            apply(commit_details, tasklist)
+        complete = update_complete(tasklist)
+        self._write_tasklist(tasklist)
+        return complete
+
+    def _extract_tasklist_entries(self) -> list[dict[str, bool | str | list]]:
+        """
+        Extract the implementation tasklist from the pull request body.
+        
+        Returns
+        -------
+        A list of dictionaries, each representing a tasklist entry.
+        Each dictionary has the following keys:
+        - complete : bool
+            Whether the task is complete.
+        - summary : str
+            The summary of the task.
+        - description : str
+            The description of the task.
+        - sublist : list[dict[str, bool | str | list]]
+            A list of dictionaries, each representing a subtask entry, if any.
+            Each dictionary has the same keys as the parent dictionary.
+        """
+
+        def extract(tasklist_string: str, level: int = 0):
+            # Regular expression pattern to match each task item
+            pattern = rf'{" " * level * 2}- \[(X| )\] (.+?)(?=\n{" " * level * 2}- \[|\Z)'
+            # Find all matches
+            matches = re.findall(pattern, tasklist_string, flags=re.DOTALL)
+            # Process each match into the required dictionary format
+            tasklist_entries = []
+            for match in matches:
+                complete, summary_and_desc = match
+                summary_and_desc_split = summary_and_desc.split('\n', 1)
+                summary = summary_and_desc_split[0]
+                description = summary_and_desc_split[1] if len(summary_and_desc_split) > 1 else ''
+                if description:
+                    sublist_pattern = r'^( *- \[(?:X| )\])'
+                    parts = re.split(sublist_pattern, description, maxsplit=1, flags=re.MULTILINE)
+                    description = parts[0]
+                    if len(parts) > 1:
+                        sublist_str = ''.join(parts[1:])
+                        sublist = extract(sublist_str, level + 1)
+                    else:
+                        sublist = []
+                else:
+                    sublist = []
+                tasklist_entries.append({
+                    'complete': complete == 'X',
+                    'summary': summary.strip(),
+                    'description': description.rstrip(),
+                    'sublist': sublist
+                })
+            return tasklist_entries
+
+        pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
+        match = re.search(pattern, self._payload.body, flags=re.DOTALL)
+        return extract(match.group(1).strip() if match else "")
+
+    def _write_tasklist(self, tasklist_entries: list[dict[str, bool | str | list]]) -> None:
+        """
+        Update the implementation tasklist in the pull request body.
+
+        Parameters
+        ----------
+        tasklist_entries : list[dict[str, bool | str | list]]
+            A list of dictionaries, each representing a tasklist entry.
+            The format of each dictionary is the same as that returned by
+            `_extract_tasklist_entries`.
+        """
+        string = []
+
+        def write(entries, level=0):
+            for entry in entries:
+                description = f"{entry['description']}\n" if entry['description'] else ''
+                check = 'X' if entry['complete'] else ' '
+                string.append(f"{' ' * level * 2}- [{check}] {entry['summary']}\n{description}")
+                write(entry['sublist'], level + 1)
+
+        write(tasklist_entries)
+        tasklist_string = "".join(string).rstrip()
+        pattern = rf"({self._MARKER_TASKLIST_START}).*?({self._MARKER_TASKLIST_END})"
+        replacement = rf"\1\n{tasklist_string}\n\2"
+        new_body = re.sub(pattern, replacement, self._payload.body, flags=re.DOTALL)
+        self._gh_api.pull_update(
+            number=self._payload.number,
+            body=new_body,
+        )
+        return
 
