@@ -285,9 +285,8 @@ class MetaManager:
         return issue_data
 
     def get_all_conventional_commit_types(self) -> list[str]:
-        if self._commit_data:
-            return list(self._commit_data.keys())
-        self._commit_data = self._initialize_commit_data()
+        if not self._commit_data:
+            self._commit_data = self._initialize_commit_data()
         return list(self._commit_data.keys())
 
     def get_commit_type_from_conventional_type(
