@@ -91,11 +91,11 @@ class PushEventHandler(ModifyingEventHandler):
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
         meta = Meta(
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             github_token=self._context.github.token,
             logger=self._logger
         )
-        metadata = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
+        metadata = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
         shutil.rmtree(meta.paths.dir_meta)
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
@@ -130,7 +130,7 @@ class PushEventHandler(ModifyingEventHandler):
         self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
         self._git_head.checkout(self._context.github.ref_name)
         self._meta = Meta(
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             github_token=self._context.github.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
@@ -169,7 +169,7 @@ class PushEventHandler(ModifyingEventHandler):
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
         self._metadata_main_before = read_from_json_file(
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
@@ -180,13 +180,13 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_init_phase(self, version: str = "0.0.0"):
         self._metadata_main_before = read_from_json_file(
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
         )
         self._meta = Meta(
-            path_root=self._path_root_self,
+            path_root=self._path_root_base,
             github_token=self._context.github.token,
             future_versions={self._branch.name: version},
             logger=self._logger,
@@ -322,7 +322,7 @@ class PushEventHandler(ModifyingEventHandler):
                 self._action_meta()
                 break
         else:
-            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
+            self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
         self._action_hooks()
         commits = self._get_commits()
         head_commit = commits[0]
