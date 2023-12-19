@@ -49,6 +49,14 @@ from repodynamics.datatype import (
 
 
 class EventHandler:
+
+    _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
+    _MARKER_TIMELINE_END = "<!-- End timeline -->"
+    _MARKER_TASKLIST_START = "<!-- Begin secondary commits tasklist -->"
+    _MARKER_TASKLIST_END = "<!-- End secondary commits tasklist -->"
+    _MARKER_COMMIT_START = "<!-- Begin primary commit summary -->"
+    _MARKER_COMMIT_END = "<!-- End primary commit summary -->"
+
     def __init__(
         self,
         template_type: TemplateType,
@@ -679,7 +687,7 @@ class ModifyingEventHandler(EventHandler):
                     typ = RepoFileType.DYNAMIC
                 elif path == RelativePath.file_path_meta:
                     typ = RepoFileType.SUPERMETA
-                elif path == f"{self._meta.paths.dir_meta_rel}paths.yaml":
+                elif path == f"{self._meta.paths.dir_meta_rel}path.yaml":
                     typ = RepoFileType.SUPERMETA
                 elif path.startswith(self._meta.paths.dir_meta_rel):
                     typ = RepoFileType.META
