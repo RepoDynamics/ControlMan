@@ -14,13 +14,6 @@ from repodynamics.meta.files.forms import FormGenerator
 
 class IssuesEventHandler(NonModifyingEventHandler):
 
-    _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
-    _MARKER_TIMELINE_END = "<!-- End timeline -->"
-    _MARKER_TASKLIST_START = "<!-- Begin secondary commits tasklist -->"
-    _MARKER_TASKLIST_END = "<!-- End secondary commits tasklist -->"
-    _MARKER_COMMIT_START = "<!-- Begin primary commit summary -->"
-    _MARKER_COMMIT_END = "<!-- End primary commit summary -->"
-
     def __init__(
         self,
         template_type: TemplateType,
@@ -161,7 +154,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
             f"- {today}: {entry}"
         )
         comment = self._get_dev_protocol_comment()
-        pattern = rf"({self._MARKER_TIMELINE_START}).*?({self._MARKER_TIMELINE_END})"
+        pattern = rf"({self._MARKER_TIMELINE_START})(.*?)({self._MARKER_TIMELINE_END})"
         replacement = r"\1\2" + timeline_entry + "\n" + r"\3"
         new_body = re.sub(pattern, replacement, comment["body"], flags=re.DOTALL)
         self._gh_api.issue_comment_update(comment_id=comment["id"], body=new_body)
