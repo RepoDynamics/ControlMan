@@ -7,6 +7,7 @@ from repodynamics import meta
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import ModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
+from repodynamics.path import RelativePath
 from repodynamics.datatype import (
     WorkflowTriggeringAction,
     EventType,
@@ -16,6 +17,7 @@ from repodynamics.datatype import (
     IssueStatus,
     TemplateType,
     RepoFileType,
+    InitCheckAction
 )
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -68,12 +70,12 @@ class PullRequestEventHandler(ModifyingEventHandler):
         return
 
     def _run_opened(self):
-        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
-            self._logger.attention(
-                "Meta synchronization cannot be performed as pull request is from a forked repository; "
-                f"switching action from '{action}' to 'fail'."
-            )
-            action = "fail"
+        # if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
+        #     self._logger.attention(
+        #         "Meta synchronization cannot be performed as pull request is from a forked repository; "
+        #         f"switching action from '{action}' to 'fail'."
+        #     )
+        #     action = "fail"
         return
 
     def _run_reopened(self):
@@ -83,23 +85,93 @@ class PullRequestEventHandler(ModifyingEventHandler):
         changed_file_groups = self._action_file_change_detector()
         for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
             if changed_file_groups[file_type]:
-                self._action_meta()
+                self._action_meta(action=InitCheckAction.COMMIT)
                 break
         else:
             self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
-        self._action_hooks()
+        self._action_hooks(action=InitCheckAction.COMMIT)
         tasks_complete = self._update_implementation_tasklist()
-
-
-
-
-
-        if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
-            self._logger.attention(
-                "Hook fixes cannot be applied as pull request is from a forked repository; "
-                f"switching action from '{action}' to 'fail'."
+        if tasks_complete:
+            self._gh_api.pull_update(
+                number=self._payload.number,
+                draft=False,
             )
-            action = "fail"
+        if changed_file_groups[RepoFileType.WEBSITE]:
+            self._set_job_run(website_build=True)
+        if changed_file_groups[RepoFileType.TEST]:
+            self._set_job_run(package_test_local=True)
+        if changed_file_groups[RepoFileType.PACKAGE]:
+            self._set_job_run(
+                package_build=True,
+                package_lint=True,
+                package_test_local=True,
+                website_build=True,
+                package_publish_testpypi=True,
+            )
+        elif any(
+            filepath in changed_file_groups[RepoFileType.DYNAMIC]
+            for filepath in (
+                RelativePath.file_python_pyproject,
+                RelativePath.file_python_manifest,
+            )
+        ):
+            self._set_job_run(
+                package_build=True,
+                package_lint=True,
+                package_test_local=True,
+                package_publish_testpypi=True,
+            )
+        if self._job_run_flag["package_publish_testpypi"]:
+            issue_labels = [
+                label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])
+            ]
+            final_commit_type = self._metadata_main.get_issue_data_from_labels(issue_labels).group_data
+            if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
+                PrimaryActionCommitType.WEBSITE,
+                PrimaryActionCommitType.META,
+            ):
+                self._set_job_run(package_publish_testpypi=False)
+                return
+            self._git_head.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
+            ver_last_target, _ = self._get_latest_version(branch=self._branch.suffix[1])
+            ver_last_dev, _ = self._get_latest_version(dev_only=True)
+            if ver_last_target.pre:
+                next_ver = ver_last_target.next_post
+                if not ver_last_dev or (
+                    ver_last_dev.release != next_ver.release or ver_last_dev.pre != next_ver.pre
+                ):
+                    dev = 0
+                else:
+                    dev = (ver_last_dev.dev or -1) + 1
+                next_ver_str = f"{next_ver}.dev{dev}"
+            else:
+                next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
+                next_ver_str = str(next_ver)
+                if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
+                    next_ver_str += f".a{self._branch.suffix[0]}"
+                if not ver_last_dev:
+                    dev = 0
+                elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
+                    if ver_last_dev.post is not None and ver_last_dev.post == next_ver.post:
+                        dev = ver_last_dev.dev + 1
+                    else:
+                        dev = 0
+                elif ver_last_dev.pre is not None and ver_last_dev.pre == ("a", self._branch.suffix[0]):
+                    dev = ver_last_dev.dev + 1
+                else:
+                    dev = 0
+                next_ver_str += f".dev{dev}"
+            self._tag_version(
+                ver=PEP440SemVer(next_ver_str),
+                msg=f"Developmental release (issue: #{self._branch.suffix[0]}, target: {self._branch.suffix[1]})",
+            )
+
+        # if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
+        #     self._logger.attention(
+        #         "Hook fixes cannot be applied as pull request is from a forked repository; "
+        #         f"switching action from '{action}' to 'fail'."
+        #     )
+        #     action = "fail"
         return
 
     def _run_labeled(self):
@@ -321,7 +393,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
         )
         return
 
-    def _update_implementation_tasklist(self):
+    def _update_implementation_tasklist(self) -> bool:
 
         def apply(commit_details, tasklist_entries):
             for entry in tasklist_entries:
@@ -345,6 +417,8 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
         commits = self._get_commits()
         tasklist = self._extract_tasklist_entries()
+        if not tasklist:
+            return False
         for commit in commits:
             commit_details = (
                 commit.msg.splitlines() if commit.group_data.group == CommitGroup.NON_CONV
@@ -374,7 +448,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
             Each dictionary has the same keys as the parent dictionary.
         """
 
-        def extract(tasklist_string: str, level: int = 0):
+        def extract(tasklist_string: str, level: int = 0) -> list[dict[str, bool | str | list]]:
             # Regular expression pattern to match each task item
             pattern = rf'{" " * level * 2}- \[(X| )\] (.+?)(?=\n{" " * level * 2}- \[|\Z)'
             # Find all matches
