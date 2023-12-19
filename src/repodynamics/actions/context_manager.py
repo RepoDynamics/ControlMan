@@ -301,6 +301,24 @@ class PullRequestPayload(EventPayload):
         return self._pull_request["state"]
 
     @property
+    def before(self) -> str | None:
+        """
+        The SHA hash of the most recent commit on the head branch before the synchronization event.
+
+        This is only available for the 'synchronize' action.
+        """
+        return self._payload.get("before")
+
+    @property
+    def after(self) -> str | None:
+        """
+        The SHA hash of the most recent commit on the head branch after the synchronization event.
+
+        This is only available for the 'synchronize' action.
+        """
+        return self._payload.get("after")
+
+    @property
     def head(self) -> dict:
         """Pull request's head branch info."""
         return self._pull_request["head"]
@@ -436,7 +454,7 @@ class ContextManager:
         if self.github.event_name == "push":
             return self.payload.before
         if self.github.event_name == "pull_request":
-            return self.payload.base_sha
+            return self.payload.before or self.payload.base_sha
         return self.github.sha
 
     @property
@@ -445,5 +463,5 @@ class ContextManager:
         if self.github.event_name == "push":
             return self.payload.after
         if self.github.event_name == "pull_request":
-            return self.payload.head_sha
+            return self.payload.after or self.payload.head_sha
         return self.github.sha
