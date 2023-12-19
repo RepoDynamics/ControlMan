@@ -68,10 +68,10 @@ class EventHandler:
     ):
         self._template_type = template_type
         self._context = context_manager
-        self._path_root_self = path_root_self
-        self._path_root_fork = path_root_fork
+        self._path_root_base = path_root_self
+        self._path_root_head = path_root_fork
         self._metadata_main: MetaManager | None = meta.read_from_json_file(
-            path_root=self._path_root_self, logger=logger
+            path_root=self._path_root_base, logger=logger
         )
         self._logger = logger or Logger()
 
@@ -82,24 +82,26 @@ class EventHandler:
         self._gh_api = pylinks.api.github(token=self._context.github.token).user(repo_user).repo(repo_name)
         self._gh_link = pylinks.site.github.user(repo_user).repo(repo_name)
         self._git_base: Git = Git(
-            path_repo=self._path_root_self,
+            path_repo=self._path_root_base,
             user=(self._context.payload.sender_username, self._context.payload.sender_email),
             logger=self._logger,
         )
         if self._context.github.event_name == "pull_request" and not self._context.payload.internal:
-            if not self._path_root_fork:
+            # Event triggered by a pull request from a fork
+            if not self._path_root_head:
                 self._logger.error(
                     "No fork path provided.",
                     "The event was triggered by a pull request from a fork, "
                     "but no local path to the forked repository was provided.",
                 )
             self._git_head: Git = Git(
-                path_repo=self._path_root_fork,
+                path_repo=self._path_root_head,
                 user=(self._context.payload.sender_username, self._context.payload.sender_email),
                 logger=self._logger,
             )
         else:
             self._git_head = self._git_base
+            self._path_root_head = self._path_root_base
         self._meta: Meta | None = None
         self._metadata_branch: MetaManager | None = None
         self._branch: Branch | None = None
