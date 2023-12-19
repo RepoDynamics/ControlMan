@@ -247,72 +247,72 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def _run_branch_edited_main_normal(self):
-        self.action_repo_labels_sync()
-
-        self.action_file_change_detector()
-        for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
-            self.set_job_run(job_id)
-
-        self.action_meta(action=metadata_raw["workflow"]["init"]["meta_check_action"][self.event_type.value])
-        self._action_hooks()
-        self.last_ver_main, self.dist_ver_main = self._get_latest_version()
-        commits = self._get_commits()
-        if len(commits) != 1:
-            self._logger.error(
-                f"Push event on main branch should only contain a single commit, but found {len(commits)}.",
-                raise_error=False,
-            )
-            self.fail = True
-            return
-        commit = commits[0]
-        if commit.group_data.group not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
-            self._logger.error(
-                f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
-                raise_error=False,
-            )
-            self.fail = True
-            return
-        if self.fail:
-            return
-
-        if commit.group_data.group == CommitGroup.PRIMARY_CUSTOM or commit.group_data.action in [
-            PrimaryActionCommitType.WEBSITE,
-            PrimaryActionCommitType.META,
-        ]:
-            ver_dist = f"{self.last_ver_main}+{self.dist_ver_main + 1}"
-            next_ver = None
-        else:
-            next_ver = self._get_next_version(self.last_ver_main, commit.group_data.action)
-            ver_dist = str(next_ver)
-
-        changelog_manager = ChangelogManager(
-            changelog_metadata=self.metadata_main["changelog"],
-            ver_dist=ver_dist,
-            commit_type=commit.group_data.conv_type,
-            commit_title=commit.msg.title,
-            parent_commit_hash=self.hash_before,
-            parent_commit_url=self._gh_link.commit(self.hash_before),
-            path_root=self._path_root_self,
-            logger=self._logger,
-        )
-        changelog_manager.add_from_commit_body(commit.msg.body)
-        changelog_manager.write_all_changelogs()
-        self.commit(amend=True, push=True)
-
-        if next_ver:
-            self._tag_version(ver=next_ver)
-            for job_id in ("package_publish_testpypi", "package_publish_pypi", "github_release"):
-                self.set_job_run(job_id)
-            self._release_info["body"] = changelog_manager.get_entry("package_public")[0]
-            self._release_info["name"] = f"{self.metadata_main['name']} {next_ver}"
-
-        if commit.group_data.group == CommitGroup.PRIMARY_ACTION:
-            self.set_job_run("website_deploy")
+        # self.action_repo_labels_sync()
+        #
+        # self.action_file_change_detector()
+        # for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
+        #     self.set_job_run(job_id)
+        #
+        # self.action_meta(action=metadata_raw["workflow"]["init"]["meta_check_action"][self.event_type.value])
+        # self._action_hooks()
+        # self.last_ver_main, self.dist_ver_main = self._get_latest_version()
+        # commits = self._get_commits()
+        # if len(commits) != 1:
+        #     self._logger.error(
+        #         f"Push event on main branch should only contain a single commit, but found {len(commits)}.",
+        #         raise_error=False,
+        #     )
+        #     self.fail = True
+        #     return
+        # commit = commits[0]
+        # if commit.group_data.group not in [CommitGroup.PRIMARY_ACTION, CommitGroup.PRIMARY_CUSTOM]:
+        #     self._logger.error(
+        #         f"Push event on main branch should only contain a single conventional commit, but found {commit}.",
+        #         raise_error=False,
+        #     )
+        #     self.fail = True
+        #     return
+        # if self.fail:
+        #     return
+        #
+        # if commit.group_data.group == CommitGroup.PRIMARY_CUSTOM or commit.group_data.action in [
+        #     PrimaryActionCommitType.WEBSITE,
+        #     PrimaryActionCommitType.META,
+        # ]:
+        #     ver_dist = f"{self.last_ver_main}+{self.dist_ver_main + 1}"
+        #     next_ver = None
+        # else:
+        #     next_ver = self._get_next_version(self.last_ver_main, commit.group_data.action)
+        #     ver_dist = str(next_ver)
+        #
+        # changelog_manager = ChangelogManager(
+        #     changelog_metadata=self.metadata_main["changelog"],
+        #     ver_dist=ver_dist,
+        #     commit_type=commit.group_data.conv_type,
+        #     commit_title=commit.msg.title,
+        #     parent_commit_hash=self.hash_before,
+        #     parent_commit_url=self._gh_link.commit(self.hash_before),
+        #     path_root=self._path_root_self,
+        #     logger=self._logger,
+        # )
+        # changelog_manager.add_from_commit_body(commit.msg.body)
+        # changelog_manager.write_all_changelogs()
+        # self.commit(amend=True, push=True)
+        #
+        # if next_ver:
+        #     self._tag_version(ver=next_ver)
+        #     for job_id in ("package_publish_testpypi", "package_publish_pypi", "github_release"):
+        #         self.set_job_run(job_id)
+        #     self._release_info["body"] = changelog_manager.get_entry("package_public")[0]
+        #     self._release_info["name"] = f"{self.metadata_main['name']} {next_ver}"
+        #
+        # if commit.group_data.group == CommitGroup.PRIMARY_ACTION:
+        #     self.set_job_run("website_deploy")
         return
 
     def _run_branch_edited_release(self):
-        self.event_type = EventType.PUSH_RELEASE
-        action_hooks = self.metadata["workflow"]["init"]["hooks_check_action"][self.event_type.value]
+        # self.event_type = EventType.PUSH_RELEASE
+        # action_hooks = self.metadata["workflow"]["init"]["hooks_check_action"][self.event_type.value]
         return
 
     def _run_branch_edited_dev(self):
@@ -436,37 +436,37 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def _run_branch_edited_other(self):
-        changed_file_groups = self._action_file_change_detector()
-        for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
-            if changed_file_groups[file_type]:
-                self._action_meta()
-                break
-        else:
-            self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
-        self._action_hooks()
-        if changed_file_groups[RepoFileType.WEBSITE]:
-            self._set_job_run(website_build=True)
-        if changed_file_groups[RepoFileType.TEST]:
-            self._set_job_run(package_test_local=True)
-        if changed_file_groups[RepoFileType.PACKAGE]:
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-                website_build=True,
-            )
-        elif any(
-            filepath in changed_file_groups[RepoFileType.DYNAMIC]
-            for filepath in (
-                RelativePath.file_python_pyproject,
-                RelativePath.file_python_manifest,
-            )
-        ):
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-            )
+        # changed_file_groups = self._action_file_change_detector()
+        # for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
+        #     if changed_file_groups[file_type]:
+        #         self._action_meta()
+        #         break
+        # else:
+        #     self._metadata_branch = read_from_json_file(path_root=self._path_root_self, logger=self._logger)
+        # self._action_hooks()
+        # if changed_file_groups[RepoFileType.WEBSITE]:
+        #     self._set_job_run(website_build=True)
+        # if changed_file_groups[RepoFileType.TEST]:
+        #     self._set_job_run(package_test_local=True)
+        # if changed_file_groups[RepoFileType.PACKAGE]:
+        #     self._set_job_run(
+        #         package_build=True,
+        #         package_lint=True,
+        #         package_test_local=True,
+        #         website_build=True,
+        #     )
+        # elif any(
+        #     filepath in changed_file_groups[RepoFileType.DYNAMIC]
+        #     for filepath in (
+        #         RelativePath.file_python_pyproject,
+        #         RelativePath.file_python_manifest,
+        #     )
+        # ):
+        #     self._set_job_run(
+        #         package_build=True,
+        #         package_lint=True,
+        #         package_test_local=True,
+        #     )
         return
 
     def _run_branch_deleted(self):
