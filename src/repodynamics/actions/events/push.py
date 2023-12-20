@@ -18,8 +18,8 @@ from repodynamics.datatype import (
     PrimaryActionCommitType,
     TemplateType,
 )
+from repodynamics.actions.contexts.enums import RefType
 from repodynamics.meta.meta import Meta
-from repodynamics import _util
 from repodynamics.actions import _helpers
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
@@ -49,9 +49,9 @@ class PushEventHandler(ModifyingEventHandler):
 
     def run_event(self):
         ref_type = self._context.github.ref_type
-        if ref_type == "branch":
+        if ref_type is RefType.BRANCH:
             self._run_branch()
-        elif ref_type == "tag":
+        elif ref_type is RefType.TAG:
             self._run_tag()
         else:
             self._logger.error(
