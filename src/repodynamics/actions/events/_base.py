@@ -588,7 +588,7 @@ class EventHandler:
         if not branch_name:
             branch_name = self._context.github.ref_name
         if branch_name == self._context.payload.repository_default_branch:
-            return Branch(name=branch_name, type=BranchType.MAIN)
+            return Branch(type=BranchType.MAIN, name=branch_name)
         return self._metadata_main.get_branch_info_from_name(branch_name=branch_name)
 
 
