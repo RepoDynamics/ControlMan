@@ -1,6 +1,6 @@
-from repodynamics.logger import Logger
-from repodynamics.actions.context_manager import ContextManager
+import github_contexts
 
+from repodynamics.logger import Logger
 from repodynamics.actions.events.issue_comment import IssueCommentEventHandler
 from repodynamics.actions.events.issues import IssuesEventHandler
 from repodynamics.actions.events.pull_request import PullRequestEventHandler
@@ -60,7 +60,7 @@ def init(
             f"Expected one of {supported_templates}; got '{template}' instead.",
         )
         return
-    context_manager = ContextManager(github_context=context)
+    context_manager = github_contexts.context_github(context=context)
     args = {
         "template_type": template_type,
         "context_manager": context_manager,
