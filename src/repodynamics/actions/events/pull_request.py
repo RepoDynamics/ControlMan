@@ -85,6 +85,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
 
     def _run_synchronize(self):
         if self._payload.internal:
+            meta_and_hooks_action_type = InitCheckAction.COMMIT
             if self._branch_head.type is BranchType.DEV:
                 if self._branch_base.type is not BranchType.IMPLEMENT:
                     self._logger.error(
@@ -116,8 +117,8 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 )
                 self._failed = True
                 return
-            meta_and_hooks_action_type = InitCheckAction.COMMIT
         else:
+            meta_and_hooks_action_type = InitCheckAction.FAIL
             if self._branch_base.type is not BranchType.IMPLEMENT:
                 self._logger.error(
                     "Unsupported pull request synchronization",
@@ -127,7 +128,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
                 )
                 self._failed = True
                 return
-            meta_and_hooks_action_type = InitCheckAction.FAIL
+
         self._git_head.checkout(branch=self._branch_head.name)
         self._meta = Meta(
             path_root=self._path_root_head,
