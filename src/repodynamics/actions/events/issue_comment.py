@@ -1,8 +1,9 @@
 from repodynamics.actions.events._base import NonModifyingEventHandler
 from repodynamics.actions.context_manager import ContextManager
-from repodynamics.datatype import Branch, TemplateType, WorkflowTriggeringAction
+from repodynamics.datatype import Branch, TemplateType, WorkflowTriggeringAction, RepoDynamicsBotCommand
 from repodynamics.logger import Logger
-
+from repodynamics.actions.context_manager import IssueCommentPayload
+from repodynamics.actions import _helpers
 
 class IssueCommentEventHandler(NonModifyingEventHandler):
 
@@ -23,53 +24,68 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._branch: Branch | None = None
+        self._payload: IssueCommentPayload = self._context.payload
+
+        self._commands_pull = {
+            RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
+        }
         return
 
-    def run(self):
-        is_pull = self._context.payload.get("pull_request")
-        if is_pull:
-            if action == WorkflowTriggeringAction.CREATED:
-                self.event_comment_pull_created()
-            elif action == WorkflowTriggeringAction.EDITED:
-                self.event_comment_pull_edited()
-            elif action == WorkflowTriggeringAction.DELETED:
-                self.event_comment_pull_deleted()
-            else:
-                self.logger.error(action_err_msg, action_err_details)
+    def run_event(self):
+        action = self._payload.action
+        is_pull = self._payload.is_pull_comment
+        if action is WorkflowTriggeringAction.CREATED:
+            self._run_pull_created() if is_pull else self._issue_created()
+        elif action is WorkflowTriggeringAction.EDITED:
+            self._run_pull_edited() if is_pull else self._run_issue_edited()
+        elif action is WorkflowTriggeringAction.DELETED:
+            self._run_pull_deleted() if is_pull else self._run_issue_deleted()
         else:
-            if action == WorkflowTriggeringAction.CREATED:
-                self.event_comment_issue_created()
-            elif action == WorkflowTriggeringAction.EDITED:
-                self.event_comment_issue_edited()
-            elif action == WorkflowTriggeringAction.DELETED:
-                self.event_comment_issue_deleted()
-            else:
-                self.logger.error(action_err_msg, action_err_details)
-
-    def event_comment_pull_created(self):
-        return
-
-    def event_comment_pull_edited(self):
-        return
-
-    def event_comment_pull_deleted(self):
-        return
-
-    def event_comment_issue_created(self):
-        action_err_details = (
-            "The workflow was triggered by a comment on "
-            + (
-                "a pull request ('issue_comment' event with 'pull_request' payload)"
-                if is_pull
-                else "an issue ('issue_comment' event without 'pull_request' payload)"
+            _helpers.error_unsupported_triggering_action(
+                event_name="issue_comment", action=action, logger=self._logger
             )
-            + f", {action_err_details_sub}"
-        )
         return
 
-    def event_comment_issue_edited(self):
+    def _run_pull_created(self):
+        command = self._process_comment()
+        if not command:
+            return
+        command_name, kwargs = command
+        command_type = RepoDynamicsBotCommand(command_name)
+        if command_type not in self._commands_pull:
+            return
+        self._commands_pull[command_type](**kwargs)
         return
 
-    def event_comment_issue_deleted(self):
+    def _run_pull_edited(self):
+        self._run_pull_created()
         return
+
+    def _run_pull_deleted(self):
+        return
+
+    def _issue_created(self):
+        command = self._process_comment()
+        if not command:
+            return
+        return
+
+    def _run_issue_edited(self):
+        self._issue_created()
+        return
+
+    def _run_issue_deleted(self):
+        return
+
+    def _create_dev_branch(self, task_nr: int):
+
+
+    def _process_comment(self):
+        body = self._payload.body
+        if not body.startswith("@RepoDynamicsBot"):
+            return
+        command_str = body.removeprefix("@RepoDynamicsBot").strip()
+        command_name, kwargs = _helpers.parse_function_call(command_str)
+        return command_name, kwargs
+
+
