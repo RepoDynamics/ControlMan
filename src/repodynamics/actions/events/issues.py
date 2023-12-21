@@ -9,11 +9,11 @@ from github_contexts.github.enums import ActionType
 from repodynamics.datatype import IssueStatus, TemplateType
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
-from repodynamics.actions.events._base import NonModifyingEventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.meta.files.forms import FormGenerator
 
 
-class IssuesEventHandler(NonModifyingEventHandler):
+class IssuesEventHandler(EventHandler):
 
     def __init__(
         self,
