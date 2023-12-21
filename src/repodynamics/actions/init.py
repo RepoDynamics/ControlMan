@@ -1,4 +1,5 @@
 import github_contexts
+from github_contexts.github.enums import EventType
 
 from repodynamics.logger import Logger
 from repodynamics.actions.events.issue_comment import IssueCommentEventHandler
@@ -69,20 +70,20 @@ def init(
         "admin_token": admin_token,
         "logger": logger
     }
-    event_name = context_manager.github.event_name
-    if event_name == "issues":
+    event = context_manager.github.event_name
+    if event is EventType.ISSUES:
         event_manager = IssuesEventHandler(**args)
-    elif event_name == "issue_comment":
+    elif event is EventType.ISSUE_COMMENT:
         event_manager = IssueCommentEventHandler(**args)
-    elif event_name == "pull_request":
+    elif event is EventType.PULL_REQUEST:
         event_manager = PullRequestEventHandler(**args)
-    elif event_name == "pull_request_target":
+    elif event is EventType.PULL_REQUEST_TARGET:
         event_manager = PullRequestTargetEventHandler(**args)
-    elif event_name == "push":
+    elif event is EventType.PUSH:
         event_manager = PushEventHandler(**args)
-    elif event_name == "schedule":
+    elif event is EventType.SCHEDULE:
         event_manager = ScheduleEventHandler(**args)
-    elif event_name == "workflow_dispatch":
+    elif event is EventType.WORKFLOW_DISPATCH:
         event_manager = WorkflowDispatchEventHandler(
             package_build=package_build,
             package_lint=package_lint,
@@ -95,5 +96,5 @@ def init(
             **args,
         )
     else:
-        logger.error(f"Event '{event_name}' is not supported.")
+        logger.error(f"Event '{event}' is not supported.")
     return event_manager.run()
