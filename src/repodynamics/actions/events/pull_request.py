@@ -46,15 +46,15 @@ class PullRequestEventHandler(ModifyingEventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._payload: PullRequestPayload = self._context.payload
-        self._branch_base = self.resolve_branch(self._context.github.base_ref)
-        self._branch_head = self.resolve_branch(self._context.github.head_ref)
-        self._git_base.fetch_remote_branches_by_name(branch_names=self._context.github.base_ref)
-        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.head_ref)
+        self._payload: PullRequestPayload = self._context.event
+        self._branch_base = self.resolve_branch(self._context.base_ref)
+        self._branch_head = self.resolve_branch(self._context.head_ref)
+        self._git_base.fetch_remote_branches_by_name(branch_names=self._context.base_ref)
+        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.head_ref)
         return
 
     def run_event(self):
-        action = self._context.payload.action
+        action = self._context.event.action
         if action == WorkflowTriggeringAction.OPENED:
             self._run_opened()
         elif action == WorkflowTriggeringAction.REOPENED:
@@ -132,7 +132,7 @@ class PullRequestEventHandler(ModifyingEventHandler):
         self._git_head.checkout(branch=self._branch_head.name)
         self._meta = Meta(
             path_root=self._path_root_head,
-            github_token=self._context.github.token,
+            github_token=self._context.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
         )
