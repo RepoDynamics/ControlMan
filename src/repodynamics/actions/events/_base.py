@@ -603,48 +603,6 @@ class EventHandler:
         self._logger.error(action_err_msg, action_err_details)
         return
 
-
-class NonModifyingEventHandler(EventHandler):
-    def __init__(
-        self,
-        template_type: TemplateType,
-        context_manager: ContextManager,
-        admin_token: str,
-        path_root_self: str,
-        path_root_fork: str | None = None,
-        logger: Logger | None = None
-    ):
-        super().__init__(
-            template_type=template_type,
-            context_manager=context_manager,
-            admin_token=admin_token,
-            path_root_self=path_root_self,
-            path_root_fork=path_root_fork,
-            logger=logger,
-        )
-        return
-
-
-class ModifyingEventHandler(EventHandler):
-    def __init__(
-        self,
-        template_type: TemplateType,
-        context_manager: ContextManager,
-        admin_token: str,
-        path_root_self: str,
-        path_root_fork: str | None = None,
-        logger: Logger | None = None
-    ):
-        super().__init__(
-            template_type=template_type,
-            context_manager=context_manager,
-            admin_token=admin_token,
-            path_root_self=path_root_self,
-            path_root_fork=path_root_fork,
-            logger=logger,
-        )
-        return
-
     def _action_file_change_detector(self) -> dict[RepoFileType, list[str]]:
         name = "File Change Detector"
         self._logger.h1(name)
