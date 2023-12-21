@@ -2,12 +2,13 @@ import re
 import datetime
 
 from pylinks.api.github import Repo
+from github_contexts import GitHubContext
+from github_contexts.github.payloads.issues import IssuesPayload
+from github_contexts.github.enums import ActionType
 
-from repodynamics.actions.context_manager import ContextManager, IssuesPayload
-from repodynamics.datatype import WorkflowTriggeringAction, IssueStatus, TemplateType
+from repodynamics.datatype import IssueStatus, TemplateType
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
-from repodynamics.actions import _helpers
 from repodynamics.actions.events._base import NonModifyingEventHandler
 from repodynamics.meta.files.forms import FormGenerator
 
@@ -17,7 +18,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
@@ -31,35 +32,34 @@ class IssuesEventHandler(NonModifyingEventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._payload: IssuesPayload = self._context.payload
+        self._payload: IssuesPayload = self._context.event
+        self._issue = self._payload.issue
         return
 
     def run_event(self):
         action = self._payload.action
-        if action == WorkflowTriggeringAction.OPENED:
+        if action == ActionType.OPENED:
             self._run_opened()
-        elif action == WorkflowTriggeringAction.LABELED:
+        elif action == ActionType.LABELED:
             self._run_labeled()
         else:
-            _helpers.error_unsupported_triggering_action(
-                event_name=self._context.github.event_name, action=action, logger=self._logger
-            )
+            self.error_unsupported_triggering_action()
         return
 
     def _run_opened(self):
         issue_body = self._post_process_issue()
         dev_protocol = self._create_dev_protocol(issue_body)
-        self._gh_api.issue_comment_create(number=self._payload.number, body=dev_protocol)
+        self._gh_api.issue_comment_create(number=self._issue.number, body=dev_protocol)
         return
 
     def _run_labeled(self):
-        label_name = self._payload.label["name"]
+        label_name = self._payload.label.name
         if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
             self._run_labeled_status()
         return
 
     def _run_labeled_status(self):
-        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
+        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label.name)
         if status is IssueStatus.TRIAGE:
             self._run_labeled_status_triage()
         elif status is IssueStatus.REJECTED:
@@ -79,49 +79,49 @@ class IssuesEventHandler(NonModifyingEventHandler):
         return
 
     def _run_labeled_status_triage(self):
-        self._add_to_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender}).")
+        self._add_to_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_rejected(self):
-        self._add_to_timeline(entry=f"The issue was rejected and closed (actor: @{self._payload.sender}).")
-        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        self._add_to_timeline(entry=f"The issue was rejected and closed (actor: @{self._payload.sender.login}).")
+        self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_duplicate(self):
-        self._add_to_timeline(entry=f"The issue was marked as a duplicate and closed (actor: @{self._payload.sender}).")
-        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        self._add_to_timeline(entry=f"The issue was marked as a duplicate and closed (actor: @{self._payload.sender.login}).")
+        self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_invalid(self):
-        self._add_to_timeline(entry=f"The issue was marked as invalid and closed (actor: @{self._payload.sender}).")
-        self._gh_api.issue_update(number=self._payload.number, state="closed", state_reason="not_planned")
+        self._add_to_timeline(entry=f"The issue was marked as invalid and closed (actor: @{self._payload.sender.login}).")
+        self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_planning(self):
-        self._add_to_timeline(entry=f"The issue entered the planning phase (actor: @{self._payload.sender}).")
+        self._add_to_timeline(entry=f"The issue entered the planning phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_requirement_analysis(self):
-        self._add_to_timeline(entry=f"The issue entered the requirement analysis phase (actor: @{self._payload.sender}).")
+        self._add_to_timeline(entry=f"The issue entered the requirement analysis phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_design(self):
-        self._add_to_timeline(entry=f"The issue entered the design phase (actor: @{self._payload.sender}).")
+        self._add_to_timeline(entry=f"The issue entered the design phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_implementation(self):
-        self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender}).")
+        self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).")
         branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
         impl_branch_prefix = self._metadata_main["branch"]["group"]["implementation"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
-        for issue_label in self._payload.labels:
-            if issue_label["name"].startswith(branch_label_prefix):
-                base_branch_name = issue_label["name"].removeprefix(branch_label_prefix)
-                head_branch_name = f"{impl_branch_prefix}{self._payload.number}/{base_branch_name}"
+        for issue_label in self._issue.labels:
+            if issue_label.name.startswith(branch_label_prefix):
+                base_branch_name = issue_label.name.removeprefix(branch_label_prefix)
+                head_branch_name = f"{impl_branch_prefix}{self._issue.number}/{base_branch_name}"
                 new_branch = self._gh_api.branch_create_linked(
-                    issue_id=self._payload.node_id,
+                    issue_id=self._issue.node_id,
                     base_sha=branch_sha[base_branch_name],
                     name=head_branch_name,
                 )
@@ -132,7 +132,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
                 self._git_head.commit(
                     message=(
                         f"init: Create implementation branch '{head_branch_name}' "
-                        f"from base branch '{base_branch_name}' for issue #{self._payload.number}"
+                        f"from base branch '{base_branch_name}' for issue #{self._issue.number}"
                     ),
                     allow_empty=True,
                 )
@@ -145,7 +145,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     maintainer_can_modify=True,
                     draft=True,
                 )
-                self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._payload.label_names)
+                self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._issue.label_names)
         return
 
     def _add_to_timeline(self, entry: str):
@@ -165,17 +165,17 @@ class IssuesEventHandler(NonModifyingEventHandler):
         body = dev_protocol_comment["body"]
         pattern = rf"{self._MARKER_COMMIT_START}(.*?){self._MARKER_COMMIT_END}"
         match = re.search(pattern, body, flags=re.DOTALL)
-        title = match.group(1).strip() if match else self._payload.title
+        title = match.group(1).strip() if match else self._issue.title
         return title, body
 
     def _get_dev_protocol_comment(self):
-        comments = self._gh_api.issue_comments(number=self._payload.number, max_count=100)
+        comments = self._gh_api.issue_comments(number=self._issue.number, max_count=100)
         comment = comments[0]
         return comment
 
     def _post_process_issue(self) -> str:
-        self._logger.success("Retrieve issue labels", self._payload.label_names)
-        issue_form = self._metadata_main.get_issue_data_from_labels(self._payload.label_names).form
+        self._logger.success("Retrieve issue labels", self._issue.label_names)
+        issue_form = self._metadata_main.get_issue_data_from_labels(self._issue.label_names).form
         self._logger.success("Retrieve issue form", issue_form)
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
@@ -195,12 +195,12 @@ class IssuesEventHandler(NonModifyingEventHandler):
             self._logger.error(
                 "Could not match branch or version in issue body to pattern defined in metadata.",
             )
-        self._gh_api.issue_labels_add(self._payload.number, labels)
+        self._gh_api.issue_labels_add(self._issue.number, labels)
         if "post_process" not in issue_form:
             self._logger.skip(
                 "No post-process action defined in issue form; skip❗",
             )
-            return self._payload.body
+            return self._issue.body
         assign_creator = issue_form["post_process"].get("assign_creator")
         if assign_creator:
             if_checkbox = assign_creator.get("if_checkbox")
@@ -216,14 +216,14 @@ class IssuesEventHandler(NonModifyingEventHandler):
                     checked = False
                 if (if_checkbox["is_checked"] and checked) or (not if_checkbox["is_checked"] and not checked):
                     self._gh_api.issue_add_assignees(
-                        number=self._payload.number, assignees=self._payload.author_username
+                        number=self._issue.number, assignees=self._issue.user.login
                     )
         post_body = issue_form["post_process"].get("body")
         if post_body:
             new_body = post_body.format(**issue_entries)
-            self._gh_api.issue_update(number=self._payload.number, body=new_body)
+            self._gh_api.issue_update(number=self._issue.number, body=new_body)
             return new_body
-        return self._payload.body
+        return self._issue.body
 
     def _extract_entries_from_issue_body(self, body_elems: list[dict]):
         def create_pattern(parts):
@@ -251,8 +251,8 @@ class IssuesEventHandler(NonModifyingEventHandler):
         pattern = create_pattern(parts)
         compiled_pattern = re.compile(pattern, re.S)
         # Search for the pattern in the markdown
-        self._logger.success("Retrieve issue body", self._payload.body)
-        match = re.search(compiled_pattern, self._payload.body)
+        self._logger.success("Retrieve issue body", self._issue.body)
+        match = re.search(compiled_pattern, self._issue.body)
         if not match:
             self._logger.error("Could not match the issue body to pattern defined in metadata.")
         # Create a dictionary with titles as keys and matched content as values
@@ -266,7 +266,7 @@ class IssuesEventHandler(NonModifyingEventHandler):
         dev_protocol_template = self._metadata_main["issue"]["dev_protocol"]["template"]
         today = datetime.date.today().strftime("%Y.%m.%d")
         timeline_entry = (
-            f"- {today}: The issue was submitted (actor: @{self._payload.author_username})."
+            f"- {today}: The issue was submitted (actor: @{self._issue.user.login})."
         )
         args = {
             "issue_body": issue_body,
