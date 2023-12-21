@@ -1,11 +1,7 @@
 from typing import Any
 import ast
 
-from repodynamics.datatype import WorkflowTriggeringAction
 from repodynamics.logger import Logger
-
-
-
 
 
 def parse_function_call(code: str) -> tuple[str, dict[str, Any]]:
