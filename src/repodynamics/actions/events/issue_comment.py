@@ -1,16 +1,19 @@
+from github_contexts import GitHubContext
+from github_contexts.github.payloads.issue_comment import IssueCommentPayload
+from github_contexts.github.enums import ActionType
+
 from repodynamics.actions.events._base import NonModifyingEventHandler
-from repodynamics.actions.context_manager import ContextManager
-from repodynamics.datatype import Branch, TemplateType, WorkflowTriggeringAction, RepoDynamicsBotCommand
+from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand
 from repodynamics.logger import Logger
-from repodynamics.actions.context_manager import IssueCommentPayload
 from repodynamics.actions import _helpers
+
 
 class IssueCommentEventHandler(NonModifyingEventHandler):
 
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
@@ -24,7 +27,7 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._payload: IssueCommentPayload = self._context.payload
+        self._payload: IssueCommentPayload = self._context.event
 
         self._commands_pull = {
             RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
@@ -33,17 +36,15 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
 
     def run_event(self):
         action = self._payload.action
-        is_pull = self._payload.is_pull_comment
-        if action is WorkflowTriggeringAction.CREATED:
+        is_pull = self._payload.is_on_pull
+        if action is ActionType.CREATED:
             self._run_pull_created() if is_pull else self._issue_created()
-        elif action is WorkflowTriggeringAction.EDITED:
+        elif action is ActionType.EDITED:
             self._run_pull_edited() if is_pull else self._run_issue_edited()
-        elif action is WorkflowTriggeringAction.DELETED:
+        elif action is ActionType.DELETED:
             self._run_pull_deleted() if is_pull else self._run_issue_deleted()
         else:
-            _helpers.error_unsupported_triggering_action(
-                event_name="issue_comment", action=action, logger=self._logger
-            )
+            self.error_unsupported_triggering_action()
         return
 
     def _run_pull_created(self):
