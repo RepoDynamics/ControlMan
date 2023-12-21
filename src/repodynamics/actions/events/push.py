@@ -1,13 +1,13 @@
 import shutil
 
 from pylinks.http import WebAPIError
+from github_contexts import GitHubContext
+from github_contexts.github.enums import RefType, ActionType
 
 from repodynamics.meta import read_from_json_file
-from repodynamics.actions.context_manager import ContextManager
-from repodynamics.actions.events._base import ModifyingEventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
-    WorkflowTriggeringAction,
     EventType,
     BranchType,
     Branch,
@@ -18,19 +18,17 @@ from repodynamics.datatype import (
     PrimaryActionCommitType,
     TemplateType,
 )
-from repodynamics.actions.contexts.enums import RefType
 from repodynamics.meta.meta import Meta
-from repodynamics.actions import _helpers
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.commit import CommitParser
 
 
-class PushEventHandler(ModifyingEventHandler):
+class PushEventHandler(EventHandler):
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
@@ -63,14 +61,14 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_branch(self):
         action = self._context.action
-        if action == WorkflowTriggeringAction.CREATED:
+        if action == ActionType.CREATED:
             self._run_branch_created()
-        elif action == WorkflowTriggeringAction.EDITED:
+        elif action == ActionType.EDITED:
             self._run_branch_edited()
-        elif action == WorkflowTriggeringAction.DELETED:
+        elif action == ActionType.DELETED:
             self._run_branch_deleted()
         else:
-            _helpers.error_unsupported_triggering_action(event_name="push", action=action, logger=self._logger)
+            self.error_unsupported_triggering_action()
         return
 
     def _run_branch_created(self):
@@ -474,14 +472,14 @@ class PushEventHandler(ModifyingEventHandler):
 
     def _run_tag(self):
         action = self._context.event.action
-        if action == WorkflowTriggeringAction.CREATED:
+        if action == ActionType.CREATED:
             self._run_tag_created()
-        elif action == WorkflowTriggeringAction.DELETED:
+        elif action == ActionType.DELETED:
             self._run_tag_deleted()
-        elif action == WorkflowTriggeringAction.EDITED:
+        elif action == ActionType.EDITED:
             self._run_tag_edited()
         else:
-            _helpers.error_unsupported_triggering_action(event_name="push", action=action, logger=self._logger)
+            self.error_unsupported_triggering_action()
 
     def _run_tag_created(self):
         return
