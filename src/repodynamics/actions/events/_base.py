@@ -7,6 +7,8 @@ import shutil
 
 from markitup import html, md
 import pylinks
+from github_contexts import GitHubContext
+from github_contexts.github.enums import EventType
 
 import repodynamics
 from repodynamics import meta
@@ -18,7 +20,6 @@ from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.actions.repo_config import RepoConfigAction
-from repodynamics.actions.context_manager import ContextManager
 from repodynamics.meta.meta import Meta
 from repodynamics.path import RelativePath
 
@@ -60,7 +61,7 @@ class EventHandler:
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
@@ -76,17 +77,17 @@ class EventHandler:
         self._logger = logger or Logger()
 
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
-        repo_user = self._context.github.repo_owner
-        repo_name = self._context.github.repo_name
+        repo_user = self._context.repository_owner
+        repo_name = self._context.repository_name
         self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
-        self._gh_api = pylinks.api.github(token=self._context.github.token).user(repo_user).repo(repo_name)
+        self._gh_api = pylinks.api.github(token=self._context.token).user(repo_user).repo(repo_name)
         self._gh_link = pylinks.site.github.user(repo_user).repo(repo_name)
         self._git_base: Git = Git(
             path_repo=self._path_root_base,
-            user=(self._context.payload.sender_username, self._context.payload.sender_email),
+            user=(self._context.event.sender.login, self._context.event.sender.github_email),
             logger=self._logger,
         )
-        if self._context.github.event_name == "pull_request" and not self._context.payload.internal:
+        if self._context.event_name is EventType.PULL_REQUEST and not self._context.event.internal:
             # Event triggered by a pull request from a fork
             if not self._path_root_head:
                 self._logger.error(
@@ -96,7 +97,7 @@ class EventHandler:
                 )
             self._git_head: Git = Git(
                 path_repo=self._path_root_head,
-                user=(self._context.payload.sender_username, self._context.payload.sender_email),
+                user=(self._context.event.sender.login, self._context.event.sender.github_email),
                 logger=self._logger,
             )
         else:
@@ -363,7 +364,7 @@ class EventHandler:
             target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
         )
         self._amended = False
-        if new_hash and self._git_head.current_branch_name() == self._context.github.ref_name:
+        if new_hash and self._git_head.current_branch_name() == self._context.ref_name:
             self._hash_latest = new_hash
         return new_hash
 
@@ -387,7 +388,7 @@ class EventHandler:
         return new_branch_name
 
     def switch_to_original_branch(self):
-        self._git_head.checkout(branch=self._context.github.ref_name)
+        self._git_head.checkout(branch=self._context.ref_name)
         self._git_head.stash_pop()
         return
 
@@ -548,12 +549,12 @@ class EventHandler:
         github_context, event_payload = (
             html.details(content=md.code_block(str(data), lang="yaml"), summary=summary)
             for data, summary in (
-                (self._context.github, "🎬 GitHub Context"),
-                (self._context.payload, "📥 Event Payload"),
+                (self._context, "🎬 GitHub Context"),
+                (self._context.event, "📥 Event Payload"),
             )
         )
         intro = [
-            f"{Emoji.PLAY} The workflow was triggered by a <code>{self._context.github.event_name}</code> event."
+            f"{Emoji.PLAY} The workflow was triggered by a <code>{self._context.event_name}</code> event."
         ]
         if self._failed:
             intro.append(f"{Emoji.FAIL} The workflow failed.")
@@ -586,10 +587,21 @@ class EventHandler:
 
     def resolve_branch(self, branch_name: str | None = None) -> Branch:
         if not branch_name:
-            branch_name = self._context.github.ref_name
-        if branch_name == self._context.payload.repository_default_branch:
+            branch_name = self._context.ref_name
+        if branch_name == self._context.event.repository.default_branch:
             return Branch(type=BranchType.MAIN, name=branch_name)
         return self._metadata_main.get_branch_info_from_name(branch_name=branch_name)
+
+    def error_unsupported_triggering_action(self):
+        event_name = self._context.event_name
+        action_name = self._context.event.action.value
+        action_err_msg = f"Unsupported triggering action for '{event_name}' event."
+        action_err_details_sub = f"but the triggering action '{action_name}' is not supported."
+        action_err_details = (
+            f"The workflow was triggered by an event of type '{event_name}', {action_err_details_sub}"
+        )
+        self._logger.error(action_err_msg, action_err_details)
+        return
 
 
 class NonModifyingEventHandler(EventHandler):
