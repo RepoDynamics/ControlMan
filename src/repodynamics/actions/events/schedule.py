@@ -21,7 +21,7 @@ class ScheduleEventHandler(EventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._payload: IssuesPayload = self._context.payload
+        self._payload: IssuesPayload = self._context.event
         return
 
     def run(self):
