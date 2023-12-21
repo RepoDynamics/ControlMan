@@ -6,7 +6,7 @@ from pylinks.http import WebAPIError
 from repodynamics import meta
 from repodynamics.meta.meta import Meta
 from repodynamics.meta import read_from_json_file
-from repodynamics.actions.events._base import ModifyingEventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
@@ -27,7 +27,7 @@ from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.actions import _helpers
 
 
-class PullRequestEventHandler(ModifyingEventHandler):
+class PullRequestEventHandler(EventHandler):
 
     def __init__(
         self,
