@@ -48,7 +48,7 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def run_event(self):
-        ref_type = self._context.github.ref_type
+        ref_type = self._context.ref_type
         if ref_type is RefType.BRANCH:
             self._run_branch()
         elif ref_type is RefType.TAG:
@@ -62,7 +62,7 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def _run_branch(self):
-        action = self._context.payload.action
+        action = self._context.action
         if action == WorkflowTriggeringAction.CREATED:
             self._run_branch_created()
         elif action == WorkflowTriggeringAction.EDITED:
@@ -92,7 +92,7 @@ class PushEventHandler(ModifyingEventHandler):
         self._logger.info("Detected event: repository creation")
         meta = Meta(
             path_root=self._path_root_base,
-            github_token=self._context.github.token,
+            github_token=self._context.token,
             logger=self._logger
         )
         metadata = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
@@ -124,14 +124,14 @@ class PushEventHandler(ModifyingEventHandler):
     def _run_branch_edited(self):
         if self._context.ref_is_main:
             self._event_type = EventType.PUSH_MAIN
-            self._branch = Branch(type=BranchType.MAIN, name=self._context.github.ref_name)
+            self._branch = Branch(type=BranchType.MAIN, name=self._context.ref_name)
             return self._run_branch_edited_main()
-        self._branch = self._metadata_main.get_branch_info_from_name(branch_name=self._context.github.ref_name)
-        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.github.ref_name)
-        self._git_head.checkout(self._context.github.ref_name)
+        self._branch = self._metadata_main.get_branch_info_from_name(branch_name=self._context.ref_name)
+        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.ref_name)
+        self._git_head.checkout(self._context.ref_name)
         self._meta = Meta(
             path_root=self._path_root_base,
-            github_token=self._context.github.token,
+            github_token=self._context.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
         )
@@ -150,7 +150,7 @@ class PushEventHandler(ModifyingEventHandler):
     def _run_branch_edited_main(self):
         if not self._git_base.get_tags():
             # The repository is in the initialization phase
-            head_commit_msg = self._context.payload.head_commit_message
+            head_commit_msg = self._context.event.head_commit.message
             head_commit_msg_lines = head_commit_msg.splitlines()
             head_commit_summary = head_commit_msg_lines[0]
             if head_commit_summary.startswith("init:"):
@@ -187,7 +187,7 @@ class PushEventHandler(ModifyingEventHandler):
         )
         self._meta = Meta(
             path_root=self._path_root_base,
-            github_token=self._context.github.token,
+            github_token=self._context.token,
             future_versions={self._branch.name: version},
             logger=self._logger,
         )
@@ -230,10 +230,10 @@ class PushEventHandler(ModifyingEventHandler):
             self.commit(
                 message=f"init: Initialize project from RepoDynamics {self._template_name_ver} template",
             )
-            self._git_head.branch_delete(self._context.github.ref_name, force=True)
-            self._git_head.branch_rename(self._context.github.ref_name, force=True)
+            self._git_head.branch_delete(self._context.ref_name, force=True)
+            self._git_head.branch_rename(self._context.ref_name, force=True)
             self._hash_latest = self._git_head.push(
-                target="origin", ref=self._context.github.ref_name, force_with_lease=True
+                target="origin", ref=self._context.ref_name, force_with_lease=True
             )
         self._tag_version(ver=version, msg=f"Release version {version}")
         if self._template_type is TemplateType.PYPACKIT:
@@ -337,18 +337,18 @@ class PushEventHandler(ModifyingEventHandler):
                 self._failed = True
                 return
             if ready_for_review:
-                if self._metadata_main["repo"]["full_name"] == self._context.github.repo_fullname:
+                if self._metadata_main["repo"]["full_name"] == self._context.repository:
                     # workflow is running from own repository
                     matching_pulls = self._gh_api.pull_list(
                         state="open",
-                        head=f"{self._context.github.repo_owner}:{self._context.github.ref_name}",
+                        head=f"{self._context.repository_owner}:{self._context.ref_name}",
                         base=self._branch.suffix[1],
                     )
                     if not matching_pulls:
                         self._gh_api.pull_create(
                             title=head_commit.msg.title,
                             body=head_commit.msg.body,
-                            head=self._context.github.ref_name,
+                            head=self._context.ref_name,
                             base=self._branch.suffix[1],
                         )
                     elif len(matching_pulls) != 1:
@@ -473,7 +473,7 @@ class PushEventHandler(ModifyingEventHandler):
         return
 
     def _run_tag(self):
-        action = self._context.payload.action
+        action = self._context.event.action
         if action == WorkflowTriggeringAction.CREATED:
             self._run_tag_created()
         elif action == WorkflowTriggeringAction.DELETED:
