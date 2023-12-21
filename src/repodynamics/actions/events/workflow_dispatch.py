@@ -1,10 +1,10 @@
 from repodynamics.datatype import WorkflowDispatchInput
-from repodynamics.actions.events._base import NonModifyingEventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.actions.context_manager import ContextManager
 from repodynamics.datatype import InitCheckAction
 
 
-class WorkflowDispatchEventHandler(NonModifyingEventHandler):
+class WorkflowDispatchEventHandler(EventHandler):
 
     def __init__(
         self,
