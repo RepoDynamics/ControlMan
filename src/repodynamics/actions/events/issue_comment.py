@@ -2,13 +2,13 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.issue_comment import IssueCommentPayload
 from github_contexts.github.enums import ActionType
 
-from repodynamics.actions.events._base import NonModifyingEventHandler
+from repodynamics.actions.events._base import EventHandler
 from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand
 from repodynamics.logger import Logger
 from repodynamics.actions import _helpers
 
 
-class IssueCommentEventHandler(NonModifyingEventHandler):
+class IssueCommentEventHandler(EventHandler):
 
     def __init__(
         self,
@@ -28,6 +28,7 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
             logger=logger
         )
         self._payload: IssueCommentPayload = self._context.event
+        self._comment = self._payload.comment
 
         self._commands_pull = {
             RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
@@ -79,10 +80,11 @@ class IssueCommentEventHandler(NonModifyingEventHandler):
         return
 
     def _create_dev_branch(self, task_nr: int):
+        return
 
 
     def _process_comment(self):
-        body = self._payload.body
+        body = self._comment.body
         if not body.startswith("@RepoDynamicsBot"):
             return
         command_str = body.removeprefix("@RepoDynamicsBot").strip()
