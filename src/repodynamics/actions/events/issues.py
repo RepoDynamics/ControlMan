@@ -6,7 +6,7 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.issues import IssuesPayload
 from github_contexts.github.enums import ActionType
 
-from repodynamics.datatype import IssueStatus, TemplateType
+from repodynamics.datatype import IssueStatus, TemplateType, LabelType
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.actions.events._base import EventHandler
@@ -53,13 +53,12 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled(self):
-        label_name = self._payload.label.name
-        if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
-            self._run_labeled_status()
+        label = self._metadata_main.resolve_label(self._payload.label.name)
+        if label.category is LabelType.STATUS:
+            self._run_labeled_status(label.type)
         return
 
-    def _run_labeled_status(self):
-        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label.name)
+    def _run_labeled_status(self, status: IssueStatus):
         if status is IssueStatus.TRIAGE:
             self._run_labeled_status_triage()
         elif status is IssueStatus.REJECTED:
