@@ -4,6 +4,7 @@ from typing import Literal, NamedTuple
 import datetime
 from enum import Enum
 import shutil
+import re
 
 from markitup import html, md
 import pylinks
@@ -38,7 +39,6 @@ from repodynamics.datatype import (
     PrimaryCustomCommit,
     SecondaryActionCommit,
     SecondaryCustomCommit,
-    WorkflowTriggeringAction,
     NonConventionalCommit,
     FileChangeType,
     Emoji,
@@ -746,3 +746,86 @@ class EventHandler:
             # else:
             #     parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
         return parsed_commits
+
+    def _extract_tasklist(self, body: str) -> list[dict[str, bool | str | list]]:
+        """
+        Extract the implementation tasklist from the pull request body.
+
+        Returns
+        -------
+        A list of dictionaries, each representing a tasklist entry.
+        Each dictionary has the following keys:
+        - complete : bool
+            Whether the task is complete.
+        - summary : str
+            The summary of the task.
+        - description : str
+            The description of the task.
+        - sublist : list[dict[str, bool | str | list]]
+            A list of dictionaries, each representing a subtask entry, if any.
+            Each dictionary has the same keys as the parent dictionary.
+        """
+
+        def extract(tasklist_string: str, level: int = 0) -> list[dict[str, bool | str | list]]:
+            # Regular expression pattern to match each task item
+            pattern = rf'{" " * level * 2}- \[(X| )\] (.+?)(?=\n{" " * level * 2}- \[|\Z)'
+            # Find all matches
+            matches = re.findall(pattern, tasklist_string, flags=re.DOTALL)
+            # Process each match into the required dictionary format
+            tasklist_entries = []
+            for match in matches:
+                complete, summary_and_desc = match
+                summary_and_desc_split = summary_and_desc.split('\n', 1)
+                summary = summary_and_desc_split[0]
+                description = summary_and_desc_split[1] if len(summary_and_desc_split) > 1 else ''
+                if description:
+                    sublist_pattern = r'^( *- \[(?:X| )\])'
+                    parts = re.split(sublist_pattern, description, maxsplit=1, flags=re.MULTILINE)
+                    description = parts[0]
+                    if len(parts) > 1:
+                        sublist_str = ''.join(parts[1:])
+                        sublist = extract(sublist_str, level + 1)
+                    else:
+                        sublist = []
+                else:
+                    sublist = []
+                tasklist_entries.append({
+                    'complete': complete == 'X',
+                    'summary': summary.strip(),
+                    'description': description.rstrip(),
+                    'sublist': sublist
+                })
+            return tasklist_entries
+
+        pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
+        match = re.search(pattern, body, flags=re.DOTALL)
+        return extract(match.group(1).strip() if match else "")
+
+    def create_branch_name_implementation(self, issue_nr: int, base_branch_name: str) -> str:
+        """Generate the name of the implementation branch for a given issue number and base branch."""
+        impl_branch_prefix = self._metadata_main.branch__groups__prefixes[BranchType.IMPLEMENT]
+        return f"{impl_branch_prefix}{issue_nr}/{base_branch_name}"
+
+    @staticmethod
+    def _write_tasklist(entries: list[dict[str, bool | str | list]]) -> str:
+        """
+        Write the implementation tasklist.
+
+        Parameters
+        ----------
+        entries : list[dict[str, bool | str | list]]
+            A list of dictionaries, each representing a tasklist entry.
+            The format of each dictionary is the same as that returned by
+            `_extract_tasklist_entries`.
+        """
+        string = []
+
+        def write(entry_list, level=0):
+            for entry in entry_list:
+                description = f"{entry['description']}\n" if entry['description'] else ''
+                check = 'X' if entry['complete'] else ' '
+                string.append(f"{' ' * level * 2}- [{check}] {entry['summary']}\n{description}")
+                write(entry['sublist'], level + 1)
+
+        write(entries)
+        return "".join(string).rstrip()
