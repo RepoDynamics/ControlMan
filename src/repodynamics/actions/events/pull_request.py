@@ -2,16 +2,17 @@ import time
 import re
 
 from pylinks.http import WebAPIError
+from github_contexts import GitHubContext
+from github_contexts.github.payloads.pull_request import PullRequestPayload
+from github_contexts.github.enums import ActionType
 
 from repodynamics import meta
 from repodynamics.meta.meta import Meta
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import EventHandler
-from repodynamics.actions.context_manager import ContextManager, PullRequestPayload
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.datatype import (
-    WorkflowTriggeringAction,
     EventType,
     PrimaryActionCommitType,
     CommitGroup,
@@ -32,7 +33,7 @@ class PullRequestEventHandler(EventHandler):
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
@@ -47,6 +48,7 @@ class PullRequestEventHandler(EventHandler):
             logger=logger
         )
         self._payload: PullRequestPayload = self._context.event
+        self._pull = self._payload.pull_request
         self._branch_base = self.resolve_branch(self._context.base_ref)
         self._branch_head = self.resolve_branch(self._context.head_ref)
         self._git_base.fetch_remote_branches_by_name(branch_names=self._context.base_ref)
@@ -55,20 +57,18 @@ class PullRequestEventHandler(EventHandler):
 
     def run_event(self):
         action = self._context.event.action
-        if action == WorkflowTriggeringAction.OPENED:
+        if action == ActionType.OPENED:
             self._run_opened()
-        elif action == WorkflowTriggeringAction.REOPENED:
+        elif action == ActionType.REOPENED:
             self._run_reopened()
-        elif action == WorkflowTriggeringAction.SYNCHRONIZE:
+        elif action == ActionType.SYNCHRONIZE:
             self._run_synchronize()
-        elif action == WorkflowTriggeringAction.LABELED:
+        elif action == ActionType.LABELED:
             self._run_labeled()
-        elif action == WorkflowTriggeringAction.READY_FOR_REVIEW:
+        elif action == ActionType.READY_FOR_REVIEW:
             self._run_ready_for_review()
         else:
-            _helpers.error_unsupported_triggering_action(
-                event_name="pull_request", action=action, logger=self._logger
-            )
+            self.error_unsupported_triggering_action()
         return
 
     def _run_opened(self):
@@ -223,13 +223,13 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_labeled(self):
-        label_name = self._payload.label["name"]
+        label_name = self._payload.label.name
         if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
             self._run_labeled_status()
         return
 
     def _run_labeled_status(self):
-        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label["name"])
+        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label.name)
         if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
             self._run_labeled_status_pre()
         elif status == IssueStatus.DEPLOY_FINAL:
@@ -237,7 +237,7 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_labeled_status_pre(self):
-        if self._branch_head.type != BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
+        if self._branch_head.type is not BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
             self._logger.error(
                 "Merge not allowed",
                 f"Merge from a head branch of type '{self._branch_head.type.value}' "
@@ -253,15 +253,15 @@ class PullRequestEventHandler(EventHandler):
             return
 
     def _run_labeled_status_final(self):
-        if self._branch_head.type == BranchType.DEV:
+        if self._branch_head.type is BranchType.DEV:
             if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
                 return self._run_merge_dev_to_release()
-            elif self._branch_base.type == BranchType.PRERELEASE:
+            elif self._branch_base.type is BranchType.PRERELEASE:
                 return self._run_merge_dev_to_pre()
-        elif self._branch_head.type == BranchType.PRERELEASE:
+        elif self._branch_head.type is BranchType.PRERELEASE:
             if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
                 return self._run_merge_pre_to_release()
-        elif self._branch_head.type == BranchType.AUTOUPDATE:
+        elif self._branch_head.type is BranchType.AUTOUPDATE:
             return self._run_merge_ci_pull()
         self._logger.error(
             "Merge not allowed",
@@ -281,7 +281,7 @@ class PullRequestEventHandler(EventHandler):
         self._git_base.checkout(branch=self._branch_base.name)
         hash_bash = self._git_base.commit_hash_normal()
         ver_base, dist_base = self._get_latest_version()
-        labels = self._payload.label_names
+        labels = self._pull.label_names
         primary_commit_type = self._metadata_main.get_issue_data_from_labels(labels).group_data
         if primary_commit_type.group == CommitGroup.PRIMARY_CUSTOM or primary_commit_type.action in (
             PrimaryActionCommitType.WEBSITE,
@@ -296,7 +296,7 @@ class PullRequestEventHandler(EventHandler):
             changelog_metadata=self._metadata_main["changelog"],
             ver_dist=ver_dist,
             commit_type=primary_commit_type.conv_type,
-            commit_title=self._payload.title,
+            commit_title=self._pull.title,
             parent_commit_hash=hash_bash,
             parent_commit_url=self._gh_link.commit(hash_bash),
             path_root=self._path_root_base,
@@ -324,13 +324,13 @@ class PullRequestEventHandler(EventHandler):
         )
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
-        bare_title = self._payload.title.removeprefix(f'{primary_commit_type.conv_type}: ')
+        bare_title = self._pull.title.removeprefix(f'{primary_commit_type.conv_type}: ')
         commit_title = f"{primary_commit_type.conv_type}: {bare_title}"
         try:
             response = self._gh_api.pull_merge(
                 number=self._payload.number,
                 commit_title=commit_title,
-                commit_message=self._payload.body,
+                commit_message=self._pull.body,
                 sha=commit_hash,
                 merge_method="squash",
             )
@@ -464,7 +464,7 @@ class PullRequestEventHandler(EventHandler):
             return all([entry['complete'] for entry in tasklist_entries])
 
         commits = self._get_commits()
-        tasklist = self._extract_tasklist_entries()
+        tasklist = self._extract_tasklist(body=self._pull.body)
         if not tasklist:
             return False
         for commit in commits:
@@ -474,88 +474,24 @@ class PullRequestEventHandler(EventHandler):
             )
             apply(commit_details, tasklist)
         complete = update_complete(tasklist)
-        self._write_tasklist(tasklist)
+        self._update_tasklist(tasklist)
         return complete
 
-    def _extract_tasklist_entries(self) -> list[dict[str, bool | str | list]]:
-        """
-        Extract the implementation tasklist from the pull request body.
-        
-        Returns
-        -------
-        A list of dictionaries, each representing a tasklist entry.
-        Each dictionary has the following keys:
-        - complete : bool
-            Whether the task is complete.
-        - summary : str
-            The summary of the task.
-        - description : str
-            The description of the task.
-        - sublist : list[dict[str, bool | str | list]]
-            A list of dictionaries, each representing a subtask entry, if any.
-            Each dictionary has the same keys as the parent dictionary.
-        """
-
-        def extract(tasklist_string: str, level: int = 0) -> list[dict[str, bool | str | list]]:
-            # Regular expression pattern to match each task item
-            pattern = rf'{" " * level * 2}- \[(X| )\] (.+?)(?=\n{" " * level * 2}- \[|\Z)'
-            # Find all matches
-            matches = re.findall(pattern, tasklist_string, flags=re.DOTALL)
-            # Process each match into the required dictionary format
-            tasklist_entries = []
-            for match in matches:
-                complete, summary_and_desc = match
-                summary_and_desc_split = summary_and_desc.split('\n', 1)
-                summary = summary_and_desc_split[0]
-                description = summary_and_desc_split[1] if len(summary_and_desc_split) > 1 else ''
-                if description:
-                    sublist_pattern = r'^( *- \[(?:X| )\])'
-                    parts = re.split(sublist_pattern, description, maxsplit=1, flags=re.MULTILINE)
-                    description = parts[0]
-                    if len(parts) > 1:
-                        sublist_str = ''.join(parts[1:])
-                        sublist = extract(sublist_str, level + 1)
-                    else:
-                        sublist = []
-                else:
-                    sublist = []
-                tasklist_entries.append({
-                    'complete': complete == 'X',
-                    'summary': summary.strip(),
-                    'description': description.rstrip(),
-                    'sublist': sublist
-                })
-            return tasklist_entries
-
-        pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
-        match = re.search(pattern, self._payload.body, flags=re.DOTALL)
-        return extract(match.group(1).strip() if match else "")
-
-    def _write_tasklist(self, tasklist_entries: list[dict[str, bool | str | list]]) -> None:
+    def _update_tasklist(self, entries: list[dict[str, bool | str | list]]) -> None:
         """
         Update the implementation tasklist in the pull request body.
 
         Parameters
         ----------
-        tasklist_entries : list[dict[str, bool | str | list]]
+        entries : list[dict[str, bool | str | list]]
             A list of dictionaries, each representing a tasklist entry.
             The format of each dictionary is the same as that returned by
             `_extract_tasklist_entries`.
         """
-        string = []
-
-        def write(entries, level=0):
-            for entry in entries:
-                description = f"{entry['description']}\n" if entry['description'] else ''
-                check = 'X' if entry['complete'] else ' '
-                string.append(f"{' ' * level * 2}- [{check}] {entry['summary']}\n{description}")
-                write(entry['sublist'], level + 1)
-
-        write(tasklist_entries)
-        tasklist_string = "".join(string).rstrip()
+        tasklist_string = self._write_tasklist(entries)
         pattern = rf"({self._MARKER_TASKLIST_START}).*?({self._MARKER_TASKLIST_END})"
         replacement = rf"\1\n{tasklist_string}\n\2"
-        new_body = re.sub(pattern, replacement, self._payload.body, flags=re.DOTALL)
+        new_body = re.sub(pattern, replacement, self._pull.body, flags=re.DOTALL)
         self._gh_api.pull_update(
             number=self._payload.number,
             body=new_body,
