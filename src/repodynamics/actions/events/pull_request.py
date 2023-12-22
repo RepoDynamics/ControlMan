@@ -20,7 +20,8 @@ from repodynamics.datatype import (
     IssueStatus,
     TemplateType,
     RepoFileType,
-    InitCheckAction
+    InitCheckAction,
+    LabelType,
 )
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
@@ -180,7 +181,7 @@ class PullRequestEventHandler(EventHandler):
         if self._branch_head.type is not BranchType.IMPLEMENT or not self._payload.internal:
             self._set_job_run(package_publish_testpypi=False)
             return
-        final_commit_type = self._metadata_main.get_issue_data_from_labels(self._payload.label_names).group_data
+        final_commit_type = self._metadata_main.get_issue_data_from_labels(self._pull.label_names).group_data
         if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
             PrimaryActionCommitType.WEBSITE,
             PrimaryActionCommitType.META,
@@ -223,16 +224,15 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_labeled(self):
-        label_name = self._payload.label.name
-        if label_name.startswith(self._metadata_main["label"]["group"]["status"]["prefix"]):
-            self._run_labeled_status()
+        label = self._metadata_main.resolve_label(self._payload.label.name)
+        if label.category is LabelType.STATUS:
+            self._run_labeled_status(label.type)
         return
 
-    def _run_labeled_status(self):
-        status = self._metadata_main.get_issue_status_from_status_label(self._payload.label.name)
+    def _run_labeled_status(self, status: IssueStatus):
         if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
             self._run_labeled_status_pre()
-        elif status == IssueStatus.DEPLOY_FINAL:
+        elif status is IssueStatus.DEPLOY_FINAL:
             self._run_labeled_status_final()
         return
 
@@ -339,7 +339,9 @@ class PullRequestEventHandler(EventHandler):
                 number=self._payload.number,
                 title=commit_title,
             )
-            self._logger.error("Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False)
+            self._logger.error(
+                "Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False
+            )
             self._failed = True
             return
         if not next_ver:
