@@ -368,6 +368,28 @@ class RepoDynamicsBotCommand(Enum):
     CREATE_DEV_BRANCH = "create_dev_branch"
 
 
+class LabelType(Enum):
+    VERSION = "version"
+    BRANCH = "branch"
+    TYPE = "primary_type"
+    SUBTYPE = "subtype"
+    STATUS = "status"
+    CUSTOM_GROUP = "custom_group"
+    SINGLE = "single"
+    UNKNOWN = "unknown"
+
+
+class Label(NamedTuple):
+    category: LabelType
+    name: str
+    prefix: str = ""
+    type: PrimaryActionCommitType | IssueStatus | str = None
+
+    @property
+    def suffix(self) -> str:
+        return self.name.removeprefix(self.prefix)
+
+
 class Emoji:
     """Enum of emojis used in the bot."""
 
@@ -389,33 +411,3 @@ class Emoji:
 
 
 Emoji = Emoji()
-
-
-
-
-
-class WorkflowTriggeringAction(Enum):
-    """
-    Triggering actions of events that can trigger a workflow.
-    Each action is only valid for certain events. For example:
-
-    created: issue_comment
-    edited: issue_comment
-    deleted: issue_comment
-    opened: issues, pull_request
-    labeled: issues, pull_request
-    reopened: issues, pull_request
-    synchronize: pull_request
-    closed: issues, pull_request
-    ready_for_review: pull_request
-    """
-
-    CREATED = "created"
-    EDITED = "edited"
-    DELETED = "deleted"
-    OPENED = "opened"
-    CLOSED = "closed"
-    LABELED = "labeled"
-    REOPENED = "reopened"
-    SYNCHRONIZE = "synchronize"
-    READY_FOR_REVIEW = "ready_for_review"
