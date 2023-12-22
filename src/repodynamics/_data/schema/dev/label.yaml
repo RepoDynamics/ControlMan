@@ -200,6 +200,39 @@ properties:
                     default: |
                       An issue/pull-request about the meta content of the repository.
             required: [ release_major, release_minor, release_patch, release_post, website, meta ]
+      subtype:
+        type: object
+        description: Issue sub types
+        default: { }
+        additionalProperties: false
+        properties:
+          prefix:
+            description: Prefix for the label name
+            type: string
+            default: 'SubType: '
+          color:
+            description: Color of the label
+            type: string
+            pattern: ^[0-9a-fA-F]{6}$
+            default: '0366d6'
+          labels:
+            description: Labels for the issue sub-type
+            type: object
+            default: { }
+            additionalProperties:
+              description: Labels for the issue sub-type
+              type: object
+              default: { }
+              properties:
+                suffix:
+                  description: Suffix for the label name
+                  type: string
+                description:
+                  description: Description of the label
+                  type: string
+                  maxLength: 100
+              required: [ suffix, description ]
+        required: [ prefix, color, labels ]
       status:
         type: object
         description: Issue/pull status
@@ -391,39 +424,6 @@ properties:
               - deploy_beta
               - deploy_rc
               - deploy_final
-        required: [ prefix, color, labels ]
-      subtype:
-        type: object
-        description: Issue sub types
-        default: { }
-        additionalProperties: false
-        properties:
-          prefix:
-            description: Prefix for the label name
-            type: string
-            default: 'SubType: '
-          color:
-            description: Color of the label
-            type: string
-            pattern: ^[0-9a-fA-F]{6}$
-            default: '0366d6'
-          labels:
-            description: Labels for the issue sub-type
-            type: object
-            default: { }
-            additionalProperties:
-              description: Labels for the issue sub-type
-              type: object
-              default: { }
-              properties:
-                suffix:
-                  description: Suffix for the label name
-                  type: string
-                description:
-                  description: Description of the label
-                  type: string
-                  maxLength: 100
-              required: [ suffix, description ]
         required: [ prefix, color, labels ]
     required: [ primary_type, status ]
   single:
