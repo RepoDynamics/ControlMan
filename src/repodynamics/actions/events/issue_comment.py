@@ -1,3 +1,6 @@
+"""Event handler for issue comments."""
+
+
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.issue_comment import IssueCommentPayload
 from github_contexts.github.enums import ActionType
@@ -9,6 +12,11 @@ from repodynamics.actions import _helpers
 
 
 class IssueCommentEventHandler(EventHandler):
+    """Event handler for the `issue_comment` event type.
+
+    This event is triggered when a comment on an issue or pull request
+    is created, edited, or deleted.
+    """
 
     def __init__(
         self,
@@ -29,59 +37,80 @@ class IssueCommentEventHandler(EventHandler):
         )
         self._payload: IssueCommentPayload = self._context.event
         self._comment = self._payload.comment
+        self._issue = self._payload.issue
 
-        self._commands_pull = {
+        self._command_runner_pull = {
             RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
         }
+        self._command_runner_issue = {}
         return
 
     def run_event(self):
         action = self._payload.action
         is_pull = self._payload.is_on_pull
         if action is ActionType.CREATED:
-            self._run_pull_created() if is_pull else self._issue_created()
+            self._run_created_pull() if is_pull else self._run_created_issue()
         elif action is ActionType.EDITED:
-            self._run_pull_edited() if is_pull else self._run_issue_edited()
+            self._run_edited_pull() if is_pull else self._run_edited_issue()
         elif action is ActionType.DELETED:
-            self._run_pull_deleted() if is_pull else self._run_issue_deleted()
+            self._run_deleted_pull() if is_pull else self._run_deleted_issue()
         else:
             self.error_unsupported_triggering_action()
         return
 
-    def _run_pull_created(self):
+    def _run_created_pull(self):
         command = self._process_comment()
         if not command:
             return
-        command_name, kwargs = command
-        command_type = RepoDynamicsBotCommand(command_name)
-        if command_type not in self._commands_pull:
+        command_type, kwargs = command
+        if command_type not in self._command_runner_pull:
             return
-        self._commands_pull[command_type](**kwargs)
+        self._command_runner_pull[command_type](kwargs)
         return
 
-    def _run_pull_edited(self):
-        self._run_pull_created()
+    def _run_edited_pull(self):
+        self._run_created_pull()
         return
 
-    def _run_pull_deleted(self):
+    def _run_deleted_pull(self):
         return
 
-    def _issue_created(self):
+    def _run_created_issue(self):
         command = self._process_comment()
         if not command:
             return
+        command_type, kwargs = command
+        if command_type not in self._command_runner_issue:
+            return
+        self._command_runner_issue[command_type](kwargs)
         return
 
-    def _run_issue_edited(self):
-        self._issue_created()
+    def _run_edited_issue(self):
+        self._run_created_issue()
         return
 
-    def _run_issue_deleted(self):
+    def _run_deleted_issue(self):
         return
 
-    def _create_dev_branch(self, task_nr: int):
-        return
+    def _create_dev_branch(self, kwargs: dict):
+        if "task" not in kwargs or not isinstance(kwargs["task"], int):
+            self._logger.error("Invalid task number.")
+            return
+        task_num = kwargs["task"]
 
+
+        tasklist = self._extract_tasklist(body=self._issue.body)
+        if len(tasklist) < task_num:
+            self._logger.error("Invalid task number.")
+            return
+        task = tasklist[task_num - 1]
+        sub_tasklist_str = self._write_tasklist(entries=[task])
+        pull_body = (
+            f"This pull request implements task {task_num} of the "
+            f"pull request #{self._issue.number}:\n\n{sub_tasklist_str}"
+        )
+
+        return
 
     def _process_comment(self):
         body = self._comment.body
@@ -89,6 +118,7 @@ class IssueCommentEventHandler(EventHandler):
             return
         command_str = body.removeprefix("@RepoDynamicsBot").strip()
         command_name, kwargs = _helpers.parse_function_call(command_str)
-        return command_name, kwargs
+        command_type = RepoDynamicsBotCommand(command_name)
+        return command_type, kwargs
 
 
