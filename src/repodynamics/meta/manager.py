@@ -10,6 +10,8 @@ from repodynamics.datatype import (
     Issue,
     IssueStatus,
     TemplateType,
+    Label,
+    LabelType
 )
 from repodynamics.version import PEP440SemVer
 
@@ -173,6 +175,66 @@ class MetaManager:
             "description": label["description"],
         }
         return out
+
+    def resolve_label(self, name: str) -> Label:
+        """
+        Resolve a label name to a label object.
+
+        Parameters
+        ----------
+        name : str
+            Name of the label.
+        """
+        def get_label_id():
+            for label_id, label_data in group["labels"].items():
+                if label_data["suffix"] == label_suffix:
+                    break
+            else:
+                raise ValueError(f"Unknown label suffix '{label_suffix}' for group '{group_id}'.")
+            return label_id
+
+        for autogroup_id, autogroup in self._data["label"]["auto_group"].items():
+            prefix = autogroup["prefix"]
+            if name.startswith(prefix):
+                return Label(
+                    category=LabelType(autogroup_id),
+                    name=name,
+                    prefix=prefix,
+                )
+        for group_id, group in self._data["label"]["group"].items():
+            prefix = group["prefix"]
+            if name.startswith(prefix):
+                label_suffix = name.removeprefix(prefix)
+                if group_id == "primary_type":
+                    category = LabelType.TYPE
+                    label_id = get_label_id()
+                    try:
+                        suffix_type = PrimaryActionCommitType(label_id)
+                    except ValueError:
+                        suffix_type = label_id
+                elif group_id == "subtype":
+                    category = LabelType.SUBTYPE
+                    suffix_type = get_label_id()
+                elif group_id == "status":
+                    category = LabelType.STATUS
+                    suffix_type = IssueStatus(get_label_id())
+                else:
+                    category = LabelType.CUSTOM_GROUP
+                    suffix_type = get_label_id()
+                return Label(
+                    category=category,
+                    name=name,
+                    prefix=prefix,
+                    type=suffix_type,
+                )
+        for label_id, label in self._data["label"]["single"].items():
+            if name == label["name"]:
+                return Label(
+                    category=LabelType.SINGLE,
+                    name=name,
+                    type=label_id,
+                )
+        return Label(category=LabelType.UNKNOWN, name=name)
 
     def get_issue_form_identifying_labels(self, issue_form_id: str) -> tuple[str, str | None]:
         """
