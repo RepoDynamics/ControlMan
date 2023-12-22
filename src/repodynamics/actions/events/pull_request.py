@@ -57,15 +57,15 @@ class PullRequestEventHandler(EventHandler):
 
     def run_event(self):
         action = self._context.event.action
-        if action == ActionType.OPENED:
+        if action is ActionType.OPENED:
             self._run_opened()
-        elif action == ActionType.REOPENED:
+        elif action is ActionType.REOPENED:
             self._run_reopened()
-        elif action == ActionType.SYNCHRONIZE:
+        elif action is ActionType.SYNCHRONIZE:
             self._run_synchronize()
-        elif action == ActionType.LABELED:
+        elif action is ActionType.LABELED:
             self._run_labeled()
-        elif action == ActionType.READY_FOR_REVIEW:
+        elif action is ActionType.READY_FOR_REVIEW:
             self._run_ready_for_review()
         else:
             self.error_unsupported_triggering_action()
