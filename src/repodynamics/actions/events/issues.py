@@ -112,14 +112,15 @@ class IssuesEventHandler(EventHandler):
     def _run_labeled_status_implementation(self):
         self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).")
         branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
-        impl_branch_prefix = self._metadata_main["branch"]["group"]["implementation"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
         for issue_label in self._issue.labels:
             if issue_label.name.startswith(branch_label_prefix):
                 base_branch_name = issue_label.name.removeprefix(branch_label_prefix)
-                head_branch_name = f"{impl_branch_prefix}{self._issue.number}/{base_branch_name}"
+                head_branch_name = self.create_branch_name_implementation(
+                    issue_nr=self._issue.number, base_branch_name=base_branch_name
+                )
                 new_branch = self._gh_api.branch_create_linked(
                     issue_id=self._issue.node_id,
                     base_sha=branch_sha[base_branch_name],
