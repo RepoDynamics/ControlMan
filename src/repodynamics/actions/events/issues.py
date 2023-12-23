@@ -6,7 +6,7 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.issues import IssuesPayload
 from github_contexts.github.enums import ActionType
 
-from repodynamics.datatype import IssueStatus, TemplateType, LabelType
+from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.actions.events._base import EventHandler
@@ -110,42 +110,53 @@ class IssuesEventHandler(EventHandler):
 
     def _run_labeled_status_implementation(self):
         self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).")
-        branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
-        for issue_label in self._issue.labels:
-            if issue_label.name.startswith(branch_label_prefix):
-                base_branch_name = issue_label.name.removeprefix(branch_label_prefix)
-                head_branch_name = self.create_branch_name_implementation(
-                    issue_nr=self._issue.number, base_branch_name=base_branch_name
-                )
-                new_branch = self._gh_api.branch_create_linked(
-                    issue_id=self._issue.node_id,
-                    base_sha=branch_sha[base_branch_name],
-                    name=head_branch_name,
-                )
-                # Create empty commit on dev branch to be able to open a draft pull request
-                # Ref: https://stackoverflow.com/questions/46577500/why-cant-i-create-an-empty-pull-request-for-discussion-prior-to-developing-chan
-                self._git_head.fetch_remote_branches_by_name(branch_names=head_branch_name)
-                self._git_head.checkout(head_branch_name)
-                self._git_head.commit(
-                    message=(
-                        f"init: Create implementation branch '{head_branch_name}' "
-                        f"from base branch '{base_branch_name}' for issue #{self._issue.number}"
-                    ),
-                    allow_empty=True,
-                )
-                self._git_head.push(target="origin", set_upstream=True)
-                pull_data = self._gh_api.pull_create(
-                    head=new_branch["name"],
-                    base=base_branch_name,
-                    title=pull_title,
-                    body=pull_body,
-                    maintainer_can_modify=True,
-                    draft=True,
-                )
-                self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._issue.label_names)
+        label_groups = self._metadata_main.resolve_labels(self._issue.label_names)
+        base_branches_and_labels: list[tuple[str, list[str]]] = []
+        common_labels = []
+        for label_group, group_labels in label_groups.items():
+            if label_group not in [LabelType.BRANCH, LabelType.VERSION]:
+                common_labels.extend([label.name for label in group_labels])
+        if label_groups.get(LabelType.VERSION):
+            for version_label in label_groups[LabelType.VERSION]:
+                branch_label = self._metadata_main.create_label_branch(source=version_label)
+                labels = common_labels + [version_label.name, branch_label.name]
+                base_branches_and_labels.append((branch_label.suffix, labels))
+        else:
+            for branch_label in label_groups[LabelType.BRANCH]:
+                base_branches_and_labels.append((branch_label.suffix, common_labels + [branch_label.name]))
+        for base_branch_name, labels in base_branches_and_labels:
+            head_branch_name = self.create_branch_name_implementation(
+                issue_nr=self._issue.number, base_branch_name=base_branch_name
+            )
+            new_branch = self._gh_api.branch_create_linked(
+                issue_id=self._issue.node_id,
+                base_sha=branch_sha[base_branch_name],
+                name=head_branch_name,
+            )
+            # Create empty commit on dev branch to be able to open a draft pull request
+            # Ref: https://stackoverflow.com/questions/46577500/why-cant-i-create-an-empty-pull-request-for-discussion-prior-to-developing-chan
+            self._git_head.fetch_remote_branches_by_name(branch_names=head_branch_name)
+            self._git_head.checkout(head_branch_name)
+            self._git_head.commit(
+                message=(
+                    f"init: Create implementation branch '{head_branch_name}' "
+                    f"from base branch '{base_branch_name}' for issue #{self._issue.number}"
+                ),
+                allow_empty=True,
+            )
+            self._git_head.push(target="origin", set_upstream=True)
+            pull_data = self._gh_api.pull_create(
+                head=new_branch["name"],
+                base=base_branch_name,
+                title=pull_title,
+                body=pull_body,
+                maintainer_can_modify=True,
+                draft=True,
+            )
+            self._gh_api.issue_labels_set(number=pull_data["number"], labels=labels)
         return
 
     def _add_to_timeline(self, entry: str):
@@ -180,16 +191,16 @@ class IssuesEventHandler(EventHandler):
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
         branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
-        if "branch" in issue_entries:
-            branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
-            for branch in branches:
-                labels.append(f"{branch_label_prefix}{branch}")
-        elif "version" in issue_entries:
+        if "version" in issue_entries:
             versions = [version.strip() for version in issue_entries["version"].split(",")]
             version_label_prefix = self._metadata_main["label"]["auto_group"]["version"]["prefix"]
             for version in versions:
                 labels.append(f"{version_label_prefix}{version}")
                 branch = self._metadata_main.get_branch_from_version(version)
+                labels.append(f"{branch_label_prefix}{branch}")
+        elif "branch" in issue_entries:
+            branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
+            for branch in branches:
                 labels.append(f"{branch_label_prefix}{branch}")
         else:
             self._logger.error(
