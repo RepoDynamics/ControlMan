@@ -806,6 +806,11 @@ class EventHandler:
         impl_branch_prefix = self._metadata_main.branch__groups__prefixes[BranchType.IMPLEMENT]
         return f"{impl_branch_prefix}{issue_nr}/{base_branch_name}"
 
+    def create_branch_name_development(self, issue_nr: int, base_branch_name: str, task_nr: int) -> str:
+        """Generate the name of the development branch for a given issue number and base branch."""
+        dev_branch_prefix = self._metadata_main.branch__groups__prefixes[BranchType.DEV]
+        return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
+
     @staticmethod
     def _write_tasklist(entries: list[dict[str, bool | str | list]]) -> str:
         """
