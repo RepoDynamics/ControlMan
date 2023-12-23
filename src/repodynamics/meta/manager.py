@@ -176,6 +176,21 @@ class MetaManager:
         }
         return out
 
+    def resolve_labels(self, names: list[str]) -> dict[LabelType, list[Label]]:
+        """
+        Resolve a list of label names to label objects.
+
+        Parameters
+        ----------
+        names : list[str]
+            List of label names.
+        """
+        labels = {}
+        for name in names:
+            label = self.resolve_label(name)
+            labels.setdefault(label.category, []).append(label)
+        return labels
+
     def resolve_label(self, name: str) -> Label:
         """
         Resolve a label name to a label object.
@@ -379,6 +394,22 @@ class MetaManager:
             if status_label_info["suffix"] == status:
                 return IssueStatus(status_label_id)
         raise ValueError(f"Unknown status label suffix '{status}'.")
+
+    def create_label_branch(self, source: Label | str) -> Label:
+        prefix = self._data["label"]["auto_group"]["branch"]["prefix"]
+        if isinstance(source, str):
+            branch_name = source
+        elif isinstance(source, Label):
+            if source.category is not LabelType.VERSION:
+                raise ValueError(f"Label '{source.name}' is not a version label.")
+            branch_name = self.get_branch_from_version(version=source.suffix)
+        else:
+            raise TypeError(f"Invalid type for source: {type(source)}")
+        return Label(
+            category=LabelType.BRANCH,
+            name=f'{prefix}{branch_name}',
+            prefix=prefix,
+        )
 
     def _initialize_commit_data(self):
         commit_type = {}
