@@ -6,7 +6,7 @@ from github_contexts.github.payloads.issue_comment import IssueCommentPayload
 from github_contexts.github.enums import ActionType
 
 from repodynamics.actions.events._base import EventHandler
-from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand
+from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand, BranchType
 from repodynamics.logger import Logger
 from repodynamics.actions import _helpers
 
@@ -96,20 +96,51 @@ class IssueCommentEventHandler(EventHandler):
         if "task" not in kwargs or not isinstance(kwargs["task"], int):
             self._logger.error("Invalid task number.")
             return
-        task_num = kwargs["task"]
-
-
+        task_nr = kwargs["task"]
+        pull_data = self._gh_api.pull(self._issue.number)
+        head_branch = self.resolve_branch(branch_name=pull_data["head"]["ref"])
+        if head_branch.type is not BranchType.IMPLEMENT:
+            self._logger.error("Invalid branch type.")
+            return
+        dev_branch_name = self.create_branch_name_development(
+            issue_nr=head_branch.suffix[0],
+            base_branch_name=head_branch.suffix[1],
+            task_nr=task_nr,
+        )
+        _, branch_names = self._git_base.get_all_branch_names()
+        if dev_branch_name in branch_names:
+            self._logger.error("Branch already exists.")
+            return
         tasklist = self._extract_tasklist(body=self._issue.body)
-        if len(tasklist) < task_num:
+        if len(tasklist) < task_nr:
             self._logger.error("Invalid task number.")
             return
-        task = tasklist[task_num - 1]
+        self._git_base.fetch_remote_branches_by_name(branch_names=head_branch.name)
+        self._git_base.checkout(branch=head_branch.name)
+        self._git_base.checkout(branch=dev_branch_name, create=True)
+        self._git_base.commit(
+            message=(
+                f"init: Create development branch '{dev_branch_name}' "
+                f"from implementation branch '{head_branch.name}' for task {task_nr}"
+            ),
+            allow_empty=True,
+        )
+        self._git_base.push(target="origin", set_upstream=True)
+        task = tasklist[task_nr - 1]
         sub_tasklist_str = self._write_tasklist(entries=[task])
         pull_body = (
-            f"This pull request implements task {task_num} of the "
+            f"This pull request implements task {task_nr} of the "
             f"pull request #{self._issue.number}:\n\n{sub_tasklist_str}"
         )
-
+        pull_data = self._gh_api.pull_create(
+            head=dev_branch_name,
+            base=head_branch.name,
+            title=task["summary"],
+            body=pull_body,
+            maintainer_can_modify=True,
+            draft=True,
+        )
+        self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._issue.label_names)
         return
 
     def _process_comment(self):
