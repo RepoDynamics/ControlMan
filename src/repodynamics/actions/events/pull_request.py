@@ -65,7 +65,13 @@ class PullRequestEventHandler(EventHandler):
         elif action is ActionType.SYNCHRONIZE:
             self._run_synchronize()
         elif action is ActionType.LABELED:
-            self._run_labeled()
+            label = self._metadata_main.resolve_label(self._payload.label.name)
+            if label.category is LabelType.STATUS:
+                status: IssueStatus = label.type
+                if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
+                    self._run_labeled_status_pre()
+                elif status is IssueStatus.DEPLOY_FINAL:
+                    self._run_labeled_status_final()
         elif action is ActionType.READY_FOR_REVIEW:
             self._run_ready_for_review()
         else:
@@ -223,19 +229,6 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _run_labeled(self):
-        label = self._metadata_main.resolve_label(self._payload.label.name)
-        if label.category is LabelType.STATUS:
-            self._run_labeled_status(label.type)
-        return
-
-    def _run_labeled_status(self, status: IssueStatus):
-        if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
-            self._run_labeled_status_pre()
-        elif status is IssueStatus.DEPLOY_FINAL:
-            self._run_labeled_status_final()
-        return
-
     def _run_labeled_status_pre(self):
         if self._branch_head.type is not BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
             self._logger.error(
@@ -255,7 +248,7 @@ class PullRequestEventHandler(EventHandler):
     def _run_labeled_status_final(self):
         if self._branch_head.type is BranchType.DEV:
             if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                return self._run_merge_dev_to_release()
+                return self._run_merge_implementation_to_release()
             elif self._branch_base.type is BranchType.PRERELEASE:
                 return self._run_merge_dev_to_pre()
         elif self._branch_head.type is BranchType.PRERELEASE:
@@ -270,7 +263,7 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _run_merge_dev_to_release(self):
+    def _run_merge_implementation_to_release(self):
         if not self._payload.internal:
             self._logger.error(
                 "Merge not allowed",
@@ -292,6 +285,7 @@ class PullRequestEventHandler(EventHandler):
         else:
             next_ver = self._get_next_version(ver_base, primary_commit_type.action)
             ver_dist = str(next_ver)
+        self._git_base.checkout(branch=self._branch_head.name)
         changelog_manager = ChangelogManager(
             changelog_metadata=self._metadata_main["changelog"],
             ver_dist=ver_dist,
@@ -302,11 +296,11 @@ class PullRequestEventHandler(EventHandler):
             path_root=self._path_root_base,
             logger=self._logger,
         )
-        self._git_base.checkout(branch=self._branch_head.name)
+
         commits = self._get_commits()
         for commit in commits:
             self._logger.info(f"Processing commit: {commit}")
-            if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
+            if commit.group_data.group is CommitGroup.SECONDARY_CUSTOM:
                 changelog_manager.add_change(
                     changelog_id=commit.group_data.changelog_id,
                     section_id=commit.group_data.changelog_section_id,
