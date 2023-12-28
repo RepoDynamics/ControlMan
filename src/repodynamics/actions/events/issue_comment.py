@@ -1,4 +1,4 @@
-"""Event handler for issue comments."""
+"""Event handler for comments on issues and pull requests."""
 
 
 from github_contexts import GitHubContext
