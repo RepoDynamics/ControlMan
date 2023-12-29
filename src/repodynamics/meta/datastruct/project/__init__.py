@@ -1,24 +1,22 @@
-from repodynamics.meta.datastruct.project.intro import Intro
-from repodynamics.meta.datastruct.project.credits import Credits
-from repodynamics.meta.datastruct.project.license import License
+from repodynamics.meta.datastruct.project import intro, credits, license
 
 
 class Project:
 
     def __init__(self, options: dict):
-        self._intro = Intro(options)
-        self._credits = Credits(options)
-        self._license = License(options)
+        self._intro = intro.Intro(options)
+        self._credits = credits.Credits(options)
+        self._license = license.License(options)
         return
 
     @property
-    def intro(self) -> Intro:
+    def intro(self) -> intro.Intro:
         return self._intro
 
     @property
-    def credits(self) -> Credits:
+    def credits(self) -> credits.Credits:
         return self._credits
 
     @property
-    def license(self) -> License:
+    def license(self) -> license.License:
         return self._license
