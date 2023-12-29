@@ -53,7 +53,7 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled(self):
-        label = self._metadata_main.resolve_label(self._payload.label.name)
+        label = self._ccm_main.resolve_label(self._payload.label.name)
         if label.category is LabelType.STATUS:
             self._run_labeled_status(label.type)
         return
@@ -113,7 +113,7 @@ class IssuesEventHandler(EventHandler):
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
-        label_groups = self._metadata_main.resolve_labels(self._issue.label_names)
+        label_groups = self._ccm_main.resolve_labels(self._issue.label_names)
         base_branches_and_labels: list[tuple[str, list[str]]] = []
         common_labels = []
         for label_group, group_labels in label_groups.items():
@@ -121,7 +121,7 @@ class IssuesEventHandler(EventHandler):
                 common_labels.extend([label.name for label in group_labels])
         if label_groups.get(LabelType.VERSION):
             for version_label in label_groups[LabelType.VERSION]:
-                branch_label = self._metadata_main.create_label_branch(source=version_label)
+                branch_label = self._ccm_main.create_label_branch(source=version_label)
                 labels = common_labels + [version_label.name, branch_label.name]
                 base_branches_and_labels.append((branch_label.suffix, labels))
         else:
@@ -186,17 +186,17 @@ class IssuesEventHandler(EventHandler):
 
     def _post_process_issue(self) -> str:
         self._logger.success("Retrieve issue labels", self._issue.label_names)
-        issue_form = self._metadata_main.get_issue_data_from_labels(self._issue.label_names).form
+        issue_form = self._ccm_main.get_issue_data_from_labels(self._issue.label_names).form
         self._logger.success("Retrieve issue form", issue_form)
         issue_entries = self._extract_entries_from_issue_body(issue_form["body"])
         labels = []
-        branch_label_prefix = self._metadata_main["label"]["auto_group"]["branch"]["prefix"]
+        branch_label_prefix = self._ccm_main["label"]["auto_group"]["branch"]["prefix"]
         if "version" in issue_entries:
             versions = [version.strip() for version in issue_entries["version"].split(",")]
-            version_label_prefix = self._metadata_main["label"]["auto_group"]["version"]["prefix"]
+            version_label_prefix = self._ccm_main["label"]["auto_group"]["version"]["prefix"]
             for version in versions:
                 labels.append(f"{version_label_prefix}{version}")
-                branch = self._metadata_main.get_branch_from_version(version)
+                branch = self._ccm_main.get_branch_from_version(version)
                 labels.append(f"{branch_label_prefix}{branch}")
         elif "branch" in issue_entries:
             branches = [branch.strip() for branch in issue_entries["branch"].split(",")]
@@ -274,7 +274,7 @@ class IssuesEventHandler(EventHandler):
         return sections
 
     def _create_dev_protocol(self, issue_body: str) -> str:
-        dev_protocol_template = self._metadata_main["issue"]["dev_protocol"]["template"]
+        dev_protocol_template = self._ccm_main["issue"]["dev_protocol"]["template"]
         today = datetime.date.today().strftime("%Y.%m.%d")
         timeline_entry = (
             f"- {today}: The issue was submitted (actor: @{self._issue.user.login})."
