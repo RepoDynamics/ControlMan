@@ -1,7 +1,7 @@
 from repodynamics.meta.datastruct.dev import branch
 
 
-class DevOptions:
+class Dev:
 
     def __init__(self, options: dict):
         self._options = options
