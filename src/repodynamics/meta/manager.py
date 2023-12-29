@@ -1,3 +1,4 @@
+from repodynamics.meta.datastruct import ControlCenterOptions
 from repodynamics.datatype import (
     BranchType,
     Branch,
@@ -17,34 +18,32 @@ from repodynamics.version import PEP440SemVer
 
 
 class MetaManager:
-    def __init__(self, metadata: dict):
-        self._data = metadata
+    def __init__(self, options: dict):
+        self._dict = options
+        self._options = ControlCenterOptions(options)
+
         self._commit_data: dict = {}
         self._issue_data: dict = {}
         self._version_to_branch_map: dict[str, str] = {}
         return
 
     def __getitem__(self, item):
-        return self._data[item]
+        return self._dict[item]
 
     def __contains__(self, item):
-        return item in self._data
+        return item in self._dict
+
+    @property
+    def settings(self) -> ControlCenterOptions:
+        return self._options
 
     @property
     def as_dict(self) -> dict:
-        return self._data
-
-    @property
-    def tagline(self) -> str:
-        return self._data.get("tagline", "")
-
-    @property
-    def keywords(self) -> list[str]:
-        return self._data.get("keywords", [])
+        return self._dict
 
     @property
     def branch(self) -> dict:
-        return self._data["branch"]
+        return self._dict["branch"]
 
     @property
     def branch__main(self) -> dict:
@@ -76,11 +75,11 @@ class MetaManager:
 
     @property
     def changelog(self) -> dict:
-        return self._data.get("changelog", {})
+        return self._dict.get("changelog", {})
 
     @property
     def issue(self) -> dict:
-        return self._data["issue"]
+        return self._dict["issue"]
 
     @property
     def issue__forms(self) -> list[dict]:
@@ -88,11 +87,11 @@ class MetaManager:
 
     @property
     def label__compiled(self) -> dict:
-        return self._data["label"]["compiled"]
+        return self._dict["label"]["compiled"]
 
     @property
     def maintainer(self) -> dict:
-        return self._data["maintainer"]
+        return self._dict["maintainer"]
 
     @property
     def maintainer__issue(self) -> dict:
@@ -100,11 +99,11 @@ class MetaManager:
 
     @property
     def repo__config(self) -> dict:
-        return self._data["repo"]["config"]
+        return self._dict["repo"]["config"]
 
     @property
     def workflow__init__schedule(self) -> dict[str, str]:
-        return self._data["workflow"]["init"]["schedule"]
+        return self._dict["workflow"]["init"]["schedule"]
 
     @property
     def workflow__init__schedule__test(self) -> str:
@@ -116,7 +115,7 @@ class MetaManager:
 
     @property
     def web(self) -> dict:
-        return self._data["web"]
+        return self._dict["web"]
 
     @property
     def web__base_url(self) -> str | None:
@@ -124,11 +123,11 @@ class MetaManager:
 
     @property
     def package(self) -> dict:
-        return self._data.get("package", {})
+        return self._dict.get("package", {})
 
     @property
     def config__template(self) -> TemplateType:
-        return TemplateType(self._data["config"]["template"])
+        return TemplateType(self._dict["config"]["template"])
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch__main__name:
@@ -167,7 +166,7 @@ class MetaManager:
         description: str
             Description of the label.
         """
-        group = self._data["label"]["group"][group_id]
+        group = self._dict["label"]["group"][group_id]
         label = group["labels"][label_id]
         out = {
             "name": f"{group['prefix']}{label['suffix']}",
@@ -208,7 +207,7 @@ class MetaManager:
                 raise ValueError(f"Unknown label suffix '{label_suffix}' for group '{group_id}'.")
             return label_id
 
-        for autogroup_id, autogroup in self._data["label"]["auto_group"].items():
+        for autogroup_id, autogroup in self._dict["label"]["auto_group"].items():
             prefix = autogroup["prefix"]
             if name.startswith(prefix):
                 return Label(
@@ -216,7 +215,7 @@ class MetaManager:
                     name=name,
                     prefix=prefix,
                 )
-        for group_id, group in self._data["label"]["group"].items():
+        for group_id, group in self._dict["label"]["group"].items():
             prefix = group["prefix"]
             if name.startswith(prefix):
                 label_suffix = name.removeprefix(prefix)
@@ -242,7 +241,7 @@ class MetaManager:
                     prefix=prefix,
                     type=suffix_type,
                 )
-        for label_id, label in self._data["label"]["single"].items():
+        for label_id, label in self._dict["label"]["single"].items():
             if name == label["name"]:
                 return Label(
                     category=LabelType.SINGLE,
@@ -262,7 +261,7 @@ class MetaManager:
         A tuple of (primary_type, subtype) label names for the issue.
         Note that `subtype` may be `None`.
         """
-        for form in self._data["issue"]["forms"]:
+        for form in self._dict["issue"]["forms"]:
             if form["id"] == issue_form_id:
                 issue_form = form
                 break
@@ -295,8 +294,8 @@ class MetaManager:
         The corresponding form metadata in `issue.forms`.
         """
         prefix = {
-            "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
-            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
+            "primary_type": self._dict["label"]["group"]["primary_type"]["prefix"],
+            "subtype": self._dict["label"]["group"].get("subtype", {}).get("prefix"),
         }
         suffix = {}
         for label_name in label_names:
@@ -307,20 +306,20 @@ class MetaManager:
                     suffix[label_type] = label_name.removeprefix(prefix)
                     break
         label_ids = {"primary_type": "", "subtype": ""}
-        for label_id, label in self._data["label"]["group"]["primary_type"]["labels"].items():
+        for label_id, label in self._dict["label"]["group"]["primary_type"]["labels"].items():
             if label["suffix"] == suffix["primary_type"]:
                 label_ids["primary_type"] = label_id
                 break
         else:
             raise ValueError(f"Unknown primary type label suffix '{suffix['primary_type']}'.")
         if suffix["subtype"]:
-            for label_id, label in self._data["label"]["group"]["subtype"]["labels"].items():
+            for label_id, label in self._dict["label"]["group"]["subtype"]["labels"].items():
                 if label["suffix"] == suffix["subtype"]:
                     label_ids["subtype"] = label_id
                     break
             else:
                 raise ValueError(f"Unknown sub type label suffix '{suffix['subtype']}'.")
-        for form in self._data["issue"]["forms"]:
+        for form in self._dict["issue"]["forms"]:
             if (
                 form["primary_type"] == label_ids["primary_type"]
                 and form.get("subtype", "") == label_ids["subtype"]
@@ -333,8 +332,8 @@ class MetaManager:
 
     def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
         type_prefix = {
-            "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
-            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
+            "primary_type": self._dict["label"]["group"]["primary_type"]["prefix"],
+            "subtype": self._dict["label"]["group"].get("subtype", {}).get("prefix"),
         }
         label = {}
         for label_name in label_names:
@@ -377,26 +376,26 @@ class MetaManager:
     def get_branch_from_version(self, version: str) -> str:
         if self._version_to_branch_map:
             return self._version_to_branch_map[version]
-        if not self._data.get("package"):
+        if not self._dict.get("package"):
             raise ValueError("No package metadata found.")
         self._version_to_branch_map = {
             release["version"]: release["branch"]
-            for release in self._data["package"]["releases"]["per_branch"]
+            for release in self._dict["package"]["releases"]["per_branch"]
         }
         return self._version_to_branch_map[version]
 
     def get_issue_status_from_status_label(self, label_name: str):
-        status_prefix = self._data["label"]["group"]["status"]["prefix"]
+        status_prefix = self._dict["label"]["group"]["status"]["prefix"]
         if not label_name.startswith(status_prefix):
             raise ValueError(f"Label '{label_name}' is not a status label.")
         status = label_name.removeprefix(status_prefix)
-        for status_label_id, status_label_info in self._data["label"]["group"]["status"]["labels"].items():
+        for status_label_id, status_label_info in self._dict["label"]["group"]["status"]["labels"].items():
             if status_label_info["suffix"] == status:
                 return IssueStatus(status_label_id)
         raise ValueError(f"Unknown status label suffix '{status}'.")
 
     def create_label_branch(self, source: Label | str) -> Label:
-        prefix = self._data["label"]["auto_group"]["branch"]["prefix"]
+        prefix = self._dict["label"]["auto_group"]["branch"]["prefix"]
         if isinstance(source, str):
             branch_name = source
         elif isinstance(source, Label):
@@ -413,22 +412,22 @@ class MetaManager:
 
     def _initialize_commit_data(self):
         commit_type = {}
-        for group_id, group_data in self._data["commit"]["primary_action"].items():
+        for group_id, group_data in self._dict["commit"]["primary_action"].items():
             commit_type[group_data["type"]] = PrimaryActionCommit(
                 action=PrimaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
-        for group_id, group_data in self._data["commit"]["primary_custom"].items():
+        for group_id, group_data in self._dict["commit"]["primary_custom"].items():
             commit_type[group_data["type"]] = PrimaryCustomCommit(
                 group_id=group_id,
                 conv_type=group_data["type"],
             )
-        for group_id, group_data in self._data["commit"]["secondary_action"].items():
+        for group_id, group_data in self._dict["commit"]["secondary_action"].items():
             commit_type[group_data["type"]] = SecondaryActionCommit(
                 action=SecondaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
-        for conv_type, group_data in self._data["commit"]["secondary_custom"].items():
+        for conv_type, group_data in self._dict["commit"]["secondary_custom"].items():
             commit_type[conv_type] = SecondaryCustomCommit(
                 conv_type=conv_type,
                 changelog_id=group_data["changelog_id"],
@@ -438,19 +437,19 @@ class MetaManager:
 
     def _initialize_issue_data(self):
         issue_data = {}
-        for issue in self._data["issue"]["forms"]:
+        for issue in self._dict["issue"]["forms"]:
             prim_id = issue["primary_type"]
 
-            prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]
-            prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
+            prim_label_prefix = self._dict["label"]["group"]["primary_type"]["prefix"]
+            prim_label_suffix = self._dict["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
             prim_label = f"{prim_label_prefix}{prim_label_suffix}"
 
             type_labels = [prim_label]
 
             sub_id = issue.get("subtype")
             if sub_id:
-                sub_label_prefix = self._data["label"]["group"]["subtype"]["prefix"]
-                sub_label_suffix = self._data["label"]["group"]["subtype"]["labels"][sub_id]["suffix"]
+                sub_label_prefix = self._dict["label"]["group"]["subtype"]["prefix"]
+                sub_label_suffix = self._dict["label"]["group"]["subtype"]["labels"][sub_id]["suffix"]
                 sub_label = f"{sub_label_prefix}{sub_label_suffix}"
                 type_labels.append(sub_label)
             else:
@@ -458,7 +457,7 @@ class MetaManager:
 
             key = (prim_label, sub_label)
 
-            prim_commit = self._data["commit"]["primary_action"].get(prim_id)
+            prim_commit = self._dict["commit"]["primary_action"].get(prim_id)
             if prim_commit:
                 commit = PrimaryActionCommit(
                     action=PrimaryActionCommitType(prim_id),
@@ -467,7 +466,7 @@ class MetaManager:
             else:
                 commit = PrimaryCustomCommit(
                     group_id=prim_id,
-                    conv_type=self._data["commit"]["primary_custom"][prim_id]["type"],
+                    conv_type=self._dict["commit"]["primary_custom"][prim_id]["type"],
                 )
 
             issue_data[key] = Issue(group_data=commit, type_labels=type_labels, form=issue)
