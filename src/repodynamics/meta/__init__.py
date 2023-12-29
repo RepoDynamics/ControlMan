@@ -31,7 +31,7 @@ def read_from_json_file(
     metadata = _util.dict.read(path_json, logger=logger, raise_empty=False)
     if not metadata:
         return None
-    meta_manager = MetaManager(metadata=metadata)
+    meta_manager = MetaManager(options=metadata)
     MetaValidator(metadata=meta_manager, logger=logger).validate()
     return meta_manager
 
@@ -39,6 +39,6 @@ def read_from_json_file(
 def read_from_json_string(content: str, logger: Logger | None = None) -> MetaManager:
     logger = logger or Logger()
     metadata = json.loads(content)
-    meta_manager = MetaManager(metadata=metadata)
+    meta_manager = MetaManager(options=metadata)
     MetaValidator(metadata=meta_manager, logger=logger).validate()
     return meta_manager
