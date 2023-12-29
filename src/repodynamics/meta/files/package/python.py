@@ -30,7 +30,8 @@ class PythonPackageFileGenerator:
         logger: Logger = None,
     ):
         self._logger = logger or Logger()
-        self._meta = metadata
+        self._ccm = metadata
+        self._ccs = metadata.settings
         self._path = paths
 
         self._package_dir_output: tuple[DynamicFile, str] | None = None
@@ -52,10 +53,10 @@ class PythonPackageFileGenerator:
         )
 
     def typing_marker(self) -> list[tuple[DynamicFile, str]]:
-        info = self._path.package_typing_marker(package_name=self._meta["package"]["name"])
+        info = self._path.package_typing_marker(package_name=self._ccm["package"]["name"])
         text = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
-            if self._meta["package"].get("typed")
+            if self._ccm["package"].get("typed")
             else ""
         )
         return [(info, text)]
@@ -64,24 +65,24 @@ class PythonPackageFileGenerator:
         self._logger.h3("Generate File Content: requirements.txt")
         info = self._path.package_requirements
         text = ""
-        if self._meta["package"].get("core_dependencies"):
-            for dep in self._meta["package"]["core_dependencies"]:
+        if self._ccm["package"].get("core_dependencies"):
+            for dep in self._ccm["package"]["core_dependencies"]:
                 text += f"{dep['pip_spec']}\n"
-        if self._meta["package"].get("optional_dependencies"):
-            for dep_group in self._meta["package"]["optional_dependencies"]:
+        if self._ccm["package"].get("optional_dependencies"):
+            for dep_group in self._ccm["package"]["optional_dependencies"]:
                 for dep in dep_group["packages"]:
                     text += f"{dep['pip_spec']}\n"
         return [(info, text)]
 
     def _directories(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h4("Update path: package")
-        package_name = self._meta["package"]["name"]
+        package_name = self._ccm["package"]["name"]
         out = []
         for name, sub_path, func in (
-            (package_name, self._meta["path"]["dir"]["source"], self._path.package_dir),
+            (package_name, self._ccm["path"]["dir"]["source"], self._path.package_dir),
             (
                 f"{package_name}_tests",
-                f'{self._meta["path"]["dir"]["tests"]}/src',
+                f'{self._ccm["path"]["dir"]["tests"]}/src',
                 self._path.package_tests_dir
             ),
         ):
@@ -140,7 +141,7 @@ class PythonPackageFileGenerator:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
                 filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
-                text = _util.dict.fill_template(filepath.read_text(), metadata=self._meta.as_dict)
+                text = _util.dict.fill_template(filepath.read_text(), metadata=self._ccm.as_dict)
                 path = self._path.python_file(
                     (test_package_dir.path / testsuite_filename).with_suffix(".py")
                 )
@@ -201,13 +202,13 @@ class PythonPackageFileGenerator:
 
     def init_docstring(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h3("Generate File Content: __init__.py")
-        docs_config = self._meta["package"].get("docs", {})
+        docs_config = self._ccm["package"].get("docs", {})
         if "main_init" not in docs_config:
             self._logger.skip("No docstring set in package.docs.main_init; skipping.")
             return []
         docstring_text = textwrap.fill(
             docs_config["main_init"].strip(),
-            width=self._meta["package"].get("dev_config", {}).get("max_line_length", 100),
+            width=self._ccm["package"].get("dev_config", {}).get("max_line_length", 100),
             replace_whitespace=False,
         )
         docstring = f'"""{docstring_text}\n"""  # noqa: D400\n'
@@ -231,17 +232,17 @@ __version__ = __version_details__["version"]"""
         else:
             # Replace the existing docstring with the new one
             text = re.sub(pattern, rf"\1{docstring}", file_content)
-        info = self._path.package_init(self._meta["package"]["name"])
+        info = self._path.package_init(self._ccm["package"]["name"])
         return [(info, text)]
 
     def manifest(self) -> list[tuple[DynamicFile, str]]:
         info = self._path.package_manifest
-        text = "\n".join(self._meta["package"].get("manifest", []))
+        text = "\n".join(self._ccm["package"].get("manifest", []))
         return [(info, text)]
 
     def pyproject(self) -> list[tuple[DynamicFile, str]]:
         info = self._path.package_pyproject
-        pyproject = self._meta["package"]["pyproject"]
+        pyproject = self._ccm["package"]["pyproject"]
         project = pyproject.setdefault("project", {})
         for key, val in self.pyproject_project().items():
             if key not in project:
@@ -250,24 +251,24 @@ __version__ = __version_details__["version"]"""
 
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
         info = self._path.test_package_pyproject
-        return [(info, tomlkit.dumps(self._meta["package"]["pyproject_tests"]))]
+        return [(info, tomlkit.dumps(self._ccm["package"]["pyproject_tests"]))]
 
     def pyproject_project(self) -> dict:
         data_type = {
-            "name": ("str", self._meta["package"]["name"]),
+            "name": ("str", self._ccm["package"]["name"]),
             "dynamic": ("array", ["version"]),
-            "description": ("str", self._meta.tagline),
+            "description": ("str", self._ccs.project.intro.tagline),
             "readme": ("str", self._path.readme_pypi.rel_path),
-            "requires-python": ("str", f">= {self._meta['package']['python_version_min']}"),
+            "requires-python": ("str", f">= {self._ccm['package']['python_version_min']}"),
             "license": (
                 "inline_table",
-                {"file": self._path.license.rel_path} if self._meta["license"] else None,
+                {"file": self._path.license.rel_path} if self._ccm["license"] else None,
             ),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
-            "keywords": ("array", self._meta.keywords),
-            "classifiers": ("array", self._meta["package"].get("trove_classifiers")),
-            "urls": ("table", self._meta["package"].get("urls")),
+            "keywords": ("array", self._ccs.project.intro.keywords),
+            "classifiers": ("array", self._ccm["package"].get("trove_classifiers")),
+            "urls": ("table", self._ccm["package"].get("urls")),
             "scripts": ("table", self.pyproject_project_scripts),
             "gui-scripts": ("table", self.pyproject_project_gui_scripts),
             "entry-points": ("table_of_tables", self.pyproject_project_entry_points),
@@ -290,18 +291,18 @@ __version__ = __version_details__["version"]"""
 
     @property
     def pyproject_project_dependencies(self):
-        if not self._meta["package"].get("core_dependencies"):
+        if not self._ccm["package"].get("core_dependencies"):
             return
-        return [dep["pip_spec"] for dep in self._meta["package"]["core_dependencies"]]
+        return [dep["pip_spec"] for dep in self._ccm["package"]["core_dependencies"]]
 
     @property
     def pyproject_project_optional_dependencies(self):
         return (
             {
                 dep_group["name"]: [dep["pip_spec"] for dep in dep_group["packages"]]
-                for dep_group in self._meta["package"]["optional_dependencies"]
+                for dep_group in self._ccm["package"]["optional_dependencies"]
             }
-            if self._meta["package"].get("optional_dependencies")
+            if self._ccm["package"].get("optional_dependencies")
             else None
         )
 
@@ -320,9 +321,9 @@ __version__ = __version_details__["version"]"""
                 entry_group["group_name"]: {
                     entry_point["name"]: entry_point["ref"] for entry_point in entry_group["entry_points"]
                 }
-                for entry_group in self._meta["package"]["entry_points"]
+                for entry_group in self._ccm["package"]["entry_points"]
             }
-            if self._meta["package"].get("entry_points")
+            if self._ccm["package"].get("entry_points")
             else None
         )
 
@@ -336,9 +337,9 @@ __version__ = __version_details__["version"]"""
         """
         people = []
         target_people = (
-            self._meta["maintainer"].get("list", [])
+            self._ccm["maintainer"].get("list", [])
             if role == "maintainers"
-            else self._meta["author"]["entries"]
+            else self._ccm["author"]["entries"]
         )
         for person in target_people:
             if not person["name"]:
@@ -357,8 +358,8 @@ __version__ = __version_details__["version"]"""
     def _scripts(self, gui: bool):
         cat = "gui_scripts" if gui else "scripts"
         return (
-            {script["name"]: script["ref"] for script in self._meta["package"][cat]}
-            if self._meta["package"].get(cat)
+            {script["name"]: script["ref"] for script in self._ccm["package"][cat]}
+            if self._ccm["package"].get(cat)
             else None
         )
 
