@@ -47,7 +47,7 @@ properties:
       - required: [ shortname, fullname, text, notice ]
   copyright:
     type: object
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
       year_start:
