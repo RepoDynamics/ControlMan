@@ -4,6 +4,7 @@ from repodynamics.meta.datastruct.project import intro, credits, license
 class Project:
 
     def __init__(self, options: dict):
+        self._options = options
         self._intro = intro.Intro(options)
         self._credits = credits.Credits(options)
         self._license = license.License(options)
