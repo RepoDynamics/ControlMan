@@ -8,6 +8,7 @@ import re
 
 from markitup import html, md
 import pylinks
+from pylinks.http import WebAPIError
 from github_contexts import GitHubContext
 from github_contexts.github.enums import EventType
 
@@ -71,9 +72,10 @@ class EventHandler:
         self._context = context_manager
         self._path_root_base = path_root_self
         self._path_root_head = path_root_fork
-        self._metadata_main: MetaManager | None = meta.read_from_json_file(
+        self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
+        self._ccs_main = self._ccm_main.settings if self._ccm_main else None
         self._logger = logger or Logger()
 
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
@@ -157,7 +159,7 @@ class EventHandler:
         self._logger.h1(name)
         if not action:
             action = InitCheckAction(
-                self._metadata_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
+                self._ccm_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
             )
         self._logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
@@ -180,7 +182,7 @@ class EventHandler:
                 self.commit(stage="all", amend=True, push=True)
             else:
                 commit_msg = CommitMsg(
-                    typ=self._metadata_main["commit"]["secondary_action"]["meta_sync"]["type"],
+                    typ=self._ccm_main["commit"]["secondary_action"]["meta_sync"]["type"],
                     title="Sync dynamic files with meta content",
                 )
                 self.commit(
@@ -232,7 +234,7 @@ class EventHandler:
         self._logger.h1(name)
         if not action:
             action = InitCheckAction(
-                self._metadata_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
+                self._ccm_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
             )
         self._logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
@@ -243,7 +245,7 @@ class EventHandler:
             )
             self._logger.skip("Hooks are disabled for this event type; skip❗")
             return
-        config = self._metadata_main["workflow"]["pre_commit"].get(self._branch.type.value)
+        config = self._ccm_main["workflow"]["pre_commit"].get(self._branch.type.value)
         if not config:
             oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
             self.add_summary(
@@ -279,7 +281,7 @@ class EventHandler:
         )
         commit_msg = (
             CommitMsg(
-                typ=self._metadata_main["commit"]["secondary_action"]["hook_fix"]["type"],
+                typ=self._ccm_main["commit"]["secondary_action"]["hook_fix"]["type"],
                 title="Apply automatic fixes made by workflow hooks",
             )
             if action in [InitCheckAction.COMMIT, InitCheckAction.PULL]
@@ -369,7 +371,7 @@ class EventHandler:
         return new_hash
 
     def _tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
-        tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
+        tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         tag = f"{tag_prefix}{ver}"
         if not msg:
             msg = f"Release version {ver}"
@@ -380,7 +382,7 @@ class EventHandler:
 
     def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
         current_branch = self._git_head.current_branch_name()
-        new_branch_prefix = self._metadata_main.branch__group["auto-update"]["prefix"]
+        new_branch_prefix = self._ccm_main.branch__group["auto-update"]["prefix"]
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         self._git_head.stash()
         self._git_head.checkout(branch=new_branch_name, reset=True)
@@ -456,7 +458,7 @@ class EventHandler:
         from_fork: bool = False,
     ) -> tuple[PEP440SemVer | None, int | None]:
         git = self._git_head if from_fork else self._git_base
-        ver_tag_prefix = self._metadata_main["tag"]["group"]["version"]["prefix"]
+        ver_tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         if branch:
             git.stash()
             curr_branch = git.current_branch_name()
@@ -488,7 +490,7 @@ class EventHandler:
 
     @property
     def output(self) -> dict:
-        metadata = self._metadata_branch or self._metadata_main
+        metadata = self._metadata_branch or self._ccm_main
         package = metadata.package
         package_name = package.get("name", "")
         if self._failed:
@@ -590,7 +592,7 @@ class EventHandler:
             branch_name = self._context.ref_name
         if branch_name == self._context.event.repository.default_branch:
             return Branch(type=BranchType.MAIN, name=branch_name)
-        return self._metadata_main.get_branch_info_from_name(branch_name=branch_name)
+        return self._ccm_main.get_branch_info_from_name(branch_name=branch_name)
 
     def error_unsupported_triggering_action(self):
         event_name = self._context.event_name
@@ -696,6 +698,75 @@ class EventHandler:
         )
         return change_group
 
+    def _config_repo(self):
+        data = self._ccm_main.repo__config | {
+            "has_issues": True,
+            "allow_squash_merge": True,
+            "squash_merge_commit_title": "PR_TITLE",
+            "squash_merge_commit_message": "PR_BODY",
+        }
+        topics = data.pop("topics")
+        self._gh_api_admin.repo_update(**data)
+        self._gh_api_admin.repo_topics_replace(topics=topics)
+        if not self._gh_api_admin.actions_permissions_workflow_default()["can_approve_pull_request_reviews"]:
+            self._gh_api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
+        return
+
+    def _config_repo_pages(self) -> None:
+        """Activate GitHub Pages (source: workflow) if not activated, update custom domain."""
+        if not self._gh_api.info["has_pages"]:
+            self._gh_api_admin.pages_create(build_type="workflow")
+        cname = self._ccm_main.web__base_url
+        try:
+            self._gh_api_admin.pages_update(
+                cname=cname.removeprefix("https://").removeprefix("http://") if cname else "",
+                build_type="workflow",
+            )
+        except WebAPIError as e:
+            self._logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
+        if cname:
+            try:
+                self._gh_api_admin.pages_update(https_enforced=cname.startswith("https://"))
+            except WebAPIError as e:
+                self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
+        return
+
+    def _config_repo_labels_reset(self):
+        for label in self._gh_api.labels:
+            self._gh_api.label_delete(label["name"])
+        for label_name, label_data in self._ccm_main.label__compiled.items():
+            self._gh_api.label_create(
+                name=label_name, description=label_data["description"], color=label_data["color"]
+            )
+        return
+
+    def _config_repo_branch_names(self) -> dict:
+        if not self._metadata_main_before:
+            self._logger.error("Cannot update branch names as no previous metadata is available.")
+        before = self._metadata_main_before.branch
+        after = self._ccm_main.branch
+        old_to_new_map = {}
+        if before["default"]["name"] != after["default"]["name"]:
+            self._gh_api_admin.branch_rename(
+                old_name=before["default"]["name"], new_name=after["default"]["name"]
+            )
+            old_to_new_map[before["default"]["name"]] = after["default"]["name"]
+        branches = self._gh_api_admin.branches
+        branch_names = [branch["name"] for branch in branches]
+        for group_name in ("release", "development", "auto-update"):
+            prefix_before = before["group"][group_name]["prefix"]
+            prefix_after = after["group"][group_name]["prefix"]
+            if prefix_before != prefix_after:
+                for branch_name in branch_names:
+                    if branch_name.startswith(prefix_before):
+                        new_name = f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
+                        self._gh_api_admin.branch_rename(old_name=branch_name, new_name=new_name)
+                        old_to_new_map[branch_name] = new_name
+        return old_to_new_map
+
+    def _config_rulesets(self, create: bool = False):
+        pass
+
     def _get_commits(self) -> list[Commit]:
         # primary_action = {}
         # primary_action_types = []
@@ -722,7 +793,7 @@ class EventHandler:
         commits = self._git_head.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
         parser = CommitParser(
-            types=self._metadata_main.get_all_conventional_commit_types(), logger=self._logger
+            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
         )
         parsed_commits = []
         for commit in commits:
@@ -730,7 +801,7 @@ class EventHandler:
             if not conv_msg:
                 parsed_commits.append(Commit(**commit, group_data=NonConventionalCommit()))
             else:
-                group = self._metadata_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
+                group = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 commit["msg"] = conv_msg
                 parsed_commits.append(Commit(**commit, group_data=group))
             # elif conv_msg.type in primary_action_types:
@@ -803,12 +874,12 @@ class EventHandler:
 
     def create_branch_name_implementation(self, issue_nr: int, base_branch_name: str) -> str:
         """Generate the name of the implementation branch for a given issue number and base branch."""
-        impl_branch_prefix = self._metadata_main.branch__groups__prefixes[BranchType.IMPLEMENT]
+        impl_branch_prefix = self._ccm_main.branch__groups__prefixes[BranchType.IMPLEMENT]
         return f"{impl_branch_prefix}{issue_nr}/{base_branch_name}"
 
     def create_branch_name_development(self, issue_nr: int, base_branch_name: str, task_nr: int) -> str:
         """Generate the name of the development branch for a given issue number and base branch."""
-        dev_branch_prefix = self._metadata_main.branch__groups__prefixes[BranchType.DEV]
+        dev_branch_prefix = self._ccm_main.branch__groups__prefixes[BranchType.DEV]
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
 
     @staticmethod
