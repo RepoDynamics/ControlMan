@@ -65,13 +65,27 @@ class PullRequestEventHandler(EventHandler):
         elif action is ActionType.SYNCHRONIZE:
             self._run_synchronize()
         elif action is ActionType.LABELED:
-            label = self._metadata_main.resolve_label(self._payload.label.name)
+            label = self._ccm_main.resolve_label(self._payload.label.name)
             if label.category is LabelType.STATUS:
                 status: IssueStatus = label.type
                 if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
                     self._run_labeled_status_pre()
                 elif status is IssueStatus.DEPLOY_FINAL:
-                    self._run_labeled_status_final()
+                    if self._branch_head.type is BranchType.DEV:
+                        if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                            return self._run_merge_implementation_to_release()
+                        elif self._branch_base.type is BranchType.PRERELEASE:
+                            return self._run_merge_dev_to_pre()
+                    elif self._branch_head.type is BranchType.PRERELEASE:
+                        if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                            return self._run_merge_pre_to_release()
+                    elif self._branch_head.type is BranchType.AUTOUPDATE:
+                        return self._run_merge_ci_pull()
+                    self._logger.error(
+                        "Merge not allowed",
+                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                    )
         elif action is ActionType.READY_FOR_REVIEW:
             self._run_ready_for_review()
         else:
@@ -187,7 +201,7 @@ class PullRequestEventHandler(EventHandler):
         if self._branch_head.type is not BranchType.IMPLEMENT or not self._payload.internal:
             self._set_job_run(package_publish_testpypi=False)
             return
-        final_commit_type = self._metadata_main.get_issue_data_from_labels(self._pull.label_names).group_data
+        final_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
         if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
             PrimaryActionCommitType.WEBSITE,
             PrimaryActionCommitType.META,
@@ -245,24 +259,6 @@ class PullRequestEventHandler(EventHandler):
             )
             return
 
-    def _run_labeled_status_final(self):
-        if self._branch_head.type is BranchType.DEV:
-            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                return self._run_merge_implementation_to_release()
-            elif self._branch_base.type is BranchType.PRERELEASE:
-                return self._run_merge_dev_to_pre()
-        elif self._branch_head.type is BranchType.PRERELEASE:
-            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                return self._run_merge_pre_to_release()
-        elif self._branch_head.type is BranchType.AUTOUPDATE:
-            return self._run_merge_ci_pull()
-        self._logger.error(
-            "Merge not allowed",
-            f"Merge from a head branch of type '{self._branch_head.type.value}' "
-            f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-        )
-        return
-
     def _run_merge_implementation_to_release(self):
         if not self._payload.internal:
             self._logger.error(
@@ -275,7 +271,7 @@ class PullRequestEventHandler(EventHandler):
         hash_bash = self._git_base.commit_hash_normal()
         ver_base, dist_base = self._get_latest_version()
         labels = self._pull.label_names
-        primary_commit_type = self._metadata_main.get_issue_data_from_labels(labels).group_data
+        primary_commit_type = self._ccm_main.get_issue_data_from_labels(labels).group_data
         if primary_commit_type.group == CommitGroup.PRIMARY_CUSTOM or primary_commit_type.action in (
             PrimaryActionCommitType.WEBSITE,
             PrimaryActionCommitType.META,
@@ -287,7 +283,7 @@ class PullRequestEventHandler(EventHandler):
             ver_dist = str(next_ver)
         self._git_base.checkout(branch=self._branch_head.name)
         changelog_manager = ChangelogManager(
-            changelog_metadata=self._metadata_main["changelog"],
+            changelog_metadata=self._ccm_main["changelog"],
             ver_dist=ver_dist,
             commit_type=primary_commit_type.conv_type,
             commit_title=self._pull.title,
@@ -368,7 +364,7 @@ class PullRequestEventHandler(EventHandler):
             github_release=True,
         )
         self._set_release(
-            name=f"{self._metadata_main['name']} v{next_ver}",
+            name=f"{self._ccm_main['name']} v{next_ver}",
             body=changelog_manager.get_entry(changelog_id="package_public")[0],
         )
         return
@@ -391,7 +387,7 @@ class PullRequestEventHandler(EventHandler):
 
         branch = self.resolve_branch(self.pull_head_ref_name)
         issue_labels = [label["name"] for label in self.gh_api.issue_labels(number=branch.suffix)]
-        issue_data = self._metadata_main.get_issue_data_from_labels(issue_labels)
+        issue_data = self._ccm_main.get_issue_data_from_labels(issue_labels)
 
         if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
             PrimaryActionCommitType.WEBSITE,
