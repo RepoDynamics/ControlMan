@@ -1,6 +1,5 @@
 import shutil
 
-from pylinks.http import WebAPIError
 from github_contexts import GitHubContext
 from github_contexts.github.enums import RefType, ActionType
 
@@ -47,28 +46,31 @@ class PushEventHandler(EventHandler):
 
     def run_event(self):
         ref_type = self._context.ref_type
+        action = self._context.action
         if ref_type is RefType.BRANCH:
-            self._run_branch()
+            if action is ActionType.CREATED:
+                self._run_branch_created()
+            elif action is ActionType.EDITED:
+                self._run_branch_edited()
+            elif action is ActionType.DELETED:
+                self._run_branch_deleted()
+            else:
+                self.error_unsupported_triggering_action()
         elif ref_type is RefType.TAG:
-            self._run_tag()
+            if action is ActionType.CREATED:
+                self._run_tag_created()
+            elif action is ActionType.DELETED:
+                self._run_tag_deleted()
+            elif action is ActionType.EDITED:
+                self._run_tag_edited()
+            else:
+                self.error_unsupported_triggering_action()
         else:
             self._logger.error(
                 f"Unsupported reference type for 'push' event.",
                 "The workflow was triggered by a 'push' event, "
                 f"but the reference type '{ref_type}' is not supported.",
             )
-        return
-
-    def _run_branch(self):
-        action = self._context.action
-        if action == ActionType.CREATED:
-            self._run_branch_created()
-        elif action == ActionType.EDITED:
-            self._run_branch_edited()
-        elif action == ActionType.DELETED:
-            self._run_branch_deleted()
-        else:
-            self.error_unsupported_triggering_action()
         return
 
     def _run_branch_created(self):
@@ -124,7 +126,7 @@ class PushEventHandler(EventHandler):
             self._event_type = EventType.PUSH_MAIN
             self._branch = Branch(type=BranchType.MAIN, name=self._context.ref_name)
             return self._run_branch_edited_main()
-        self._branch = self._metadata_main.get_branch_info_from_name(branch_name=self._context.ref_name)
+        self._branch = self._ccm_main.get_branch_info_from_name(branch_name=self._context.ref_name)
         self._git_head.fetch_remote_branches_by_name(branch_names=self._context.ref_name)
         self._git_head.checkout(self._context.ref_name)
         self._meta = Meta(
@@ -189,12 +191,12 @@ class PushEventHandler(EventHandler):
             future_versions={self._branch.name: version},
             logger=self._logger,
         )
-        self._metadata_main = self._metadata_branch = self._meta.read_metadata_full()
+        self._ccm_main = self._metadata_branch = self._meta.read_metadata_full()
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
         self._action_meta(action=InitCheckAction.COMMIT)
-        if self._metadata_main["workflow"].get("pre_commit"):
+        if self._ccm_main["workflow"].get("pre_commit"):
             self._action_hooks(action=InitCheckAction.COMMIT)
         self._config_repo_branch_names()
         self._set_job_run(
@@ -239,6 +241,7 @@ class PushEventHandler(EventHandler):
                 package_publish_testpypi=True,
                 package_publish_pypi=True,
             )
+        self._config_rulesets(create=True)
         return
 
     def _run_existing_repository_initialized(self):
@@ -314,123 +317,123 @@ class PushEventHandler(EventHandler):
         return
 
     def _run_branch_edited_dev(self):
-        changed_file_groups = self._action_file_change_detector()
-        for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
-            if changed_file_groups[file_type]:
-                self._action_meta()
-                break
-        else:
-            self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
-        self._action_hooks()
-        commits = self._get_commits()
-        head_commit = commits[0]
-        if head_commit.group_data.group != CommitGroup.NON_CONV:
-            footers = head_commit.msg.footer
-            ready_for_review = footers.get("ready-for-review", False)
-            if not isinstance(ready_for_review, bool):
-                self._logger.error(
-                    f"Footer 'ready-for-review' should be a boolean, but found {ready_for_review}.",
-                    raise_error=False,
-                )
-                self._failed = True
-                return
-            if ready_for_review:
-                if self._metadata_main["repo"]["full_name"] == self._context.repository:
-                    # workflow is running from own repository
-                    matching_pulls = self._gh_api.pull_list(
-                        state="open",
-                        head=f"{self._context.repository_owner}:{self._context.ref_name}",
-                        base=self._branch.suffix[1],
-                    )
-                    if not matching_pulls:
-                        self._gh_api.pull_create(
-                            title=head_commit.msg.title,
-                            body=head_commit.msg.body,
-                            head=self._context.ref_name,
-                            base=self._branch.suffix[1],
-                        )
-                    elif len(matching_pulls) != 1:
-                        self._logger.error(
-                            f"Found {len(matching_pulls)} matching pull requests, but expected 0 or 1.",
-                            raise_error=False,
-                        )
-                        self._failed = True
-                        return
-                    else:
-                        self._gh_api.pull_update(
-                            number=matching_pulls[0]["number"],
-                            draft=False,
-                        )
-                    return
-        if changed_file_groups[RepoFileType.WEBSITE]:
-            self._set_job_run(website_build=True)
-        if changed_file_groups[RepoFileType.TEST]:
-            self._set_job_run(package_test_local=True)
-        if changed_file_groups[RepoFileType.PACKAGE]:
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-                website_build=True,
-                package_publish_testpypi=True,
-            )
-        elif any(
-            filepath in changed_file_groups[RepoFileType.DYNAMIC]
-            for filepath in (
-                RelativePath.file_python_pyproject,
-                RelativePath.file_python_manifest,
-            )
-        ):
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-                package_publish_testpypi=True,
-            )
-        if self._job_run_flag["package_publish_testpypi"]:
-            issue_labels = [
-                label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])
-            ]
-            final_commit_type = self._metadata_main.get_issue_data_from_labels(issue_labels).group_data
-            if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
-                PrimaryActionCommitType.WEBSITE,
-                PrimaryActionCommitType.META,
-            ):
-                self._set_job_run(package_publish_testpypi=False)
-                return
-            self._git_head.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
-            ver_last_target, _ = self._get_latest_version(branch=self._branch.suffix[1])
-            ver_last_dev, _ = self._get_latest_version(dev_only=True)
-            if ver_last_target.pre:
-                next_ver = ver_last_target.next_post
-                if not ver_last_dev or (
-                    ver_last_dev.release != next_ver.release or ver_last_dev.pre != next_ver.pre
-                ):
-                    dev = 0
-                else:
-                    dev = (ver_last_dev.dev or -1) + 1
-                next_ver_str = f"{next_ver}.dev{dev}"
-            else:
-                next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
-                next_ver_str = str(next_ver)
-                if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
-                    next_ver_str += f".a{self._branch.suffix[0]}"
-                if not ver_last_dev:
-                    dev = 0
-                elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
-                    if ver_last_dev.post is not None and ver_last_dev.post == next_ver.post:
-                        dev = ver_last_dev.dev + 1
-                    else:
-                        dev = 0
-                elif ver_last_dev.pre is not None and ver_last_dev.pre == ("a", self._branch.suffix[0]):
-                    dev = ver_last_dev.dev + 1
-                else:
-                    dev = 0
-                next_ver_str += f".dev{dev}"
-            self._tag_version(
-                ver=PEP440SemVer(next_ver_str),
-                msg=f"Developmental release (issue: #{self._branch.suffix[0]}, target: {self._branch.suffix[1]})",
-            )
+        # changed_file_groups = self._action_file_change_detector()
+        # for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
+        #     if changed_file_groups[file_type]:
+        #         self._action_meta()
+        #         break
+        # else:
+        #     self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
+        # self._action_hooks()
+        # commits = self._get_commits()
+        # head_commit = commits[0]
+        # if head_commit.group_data.group != CommitGroup.NON_CONV:
+        #     footers = head_commit.msg.footer
+        #     ready_for_review = footers.get("ready-for-review", False)
+        #     if not isinstance(ready_for_review, bool):
+        #         self._logger.error(
+        #             f"Footer 'ready-for-review' should be a boolean, but found {ready_for_review}.",
+        #             raise_error=False,
+        #         )
+        #         self._failed = True
+        #         return
+        #     if ready_for_review:
+        #         if self._metadata_main["repo"]["full_name"] == self._context.repository:
+        #             # workflow is running from own repository
+        #             matching_pulls = self._gh_api.pull_list(
+        #                 state="open",
+        #                 head=f"{self._context.repository_owner}:{self._context.ref_name}",
+        #                 base=self._branch.suffix[1],
+        #             )
+        #             if not matching_pulls:
+        #                 self._gh_api.pull_create(
+        #                     title=head_commit.msg.title,
+        #                     body=head_commit.msg.body,
+        #                     head=self._context.ref_name,
+        #                     base=self._branch.suffix[1],
+        #                 )
+        #             elif len(matching_pulls) != 1:
+        #                 self._logger.error(
+        #                     f"Found {len(matching_pulls)} matching pull requests, but expected 0 or 1.",
+        #                     raise_error=False,
+        #                 )
+        #                 self._failed = True
+        #                 return
+        #             else:
+        #                 self._gh_api.pull_update(
+        #                     number=matching_pulls[0]["number"],
+        #                     draft=False,
+        #                 )
+        #             return
+        # if changed_file_groups[RepoFileType.WEBSITE]:
+        #     self._set_job_run(website_build=True)
+        # if changed_file_groups[RepoFileType.TEST]:
+        #     self._set_job_run(package_test_local=True)
+        # if changed_file_groups[RepoFileType.PACKAGE]:
+        #     self._set_job_run(
+        #         package_build=True,
+        #         package_lint=True,
+        #         package_test_local=True,
+        #         website_build=True,
+        #         package_publish_testpypi=True,
+        #     )
+        # elif any(
+        #     filepath in changed_file_groups[RepoFileType.DYNAMIC]
+        #     for filepath in (
+        #         RelativePath.file_python_pyproject,
+        #         RelativePath.file_python_manifest,
+        #     )
+        # ):
+        #     self._set_job_run(
+        #         package_build=True,
+        #         package_lint=True,
+        #         package_test_local=True,
+        #         package_publish_testpypi=True,
+        #     )
+        # if self._job_run_flag["package_publish_testpypi"]:
+        #     issue_labels = [
+        #         label["name"] for label in self._gh_api.issue_labels(number=self._branch.suffix[0])
+        #     ]
+        #     final_commit_type = self._metadata_main.get_issue_data_from_labels(issue_labels).group_data
+        #     if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
+        #         PrimaryActionCommitType.WEBSITE,
+        #         PrimaryActionCommitType.META,
+        #     ):
+        #         self._set_job_run(package_publish_testpypi=False)
+        #         return
+        #     self._git_head.fetch_remote_branches_by_name(branch_names=self._branch.suffix[1])
+        #     ver_last_target, _ = self._get_latest_version(branch=self._branch.suffix[1])
+        #     ver_last_dev, _ = self._get_latest_version(dev_only=True)
+        #     if ver_last_target.pre:
+        #         next_ver = ver_last_target.next_post
+        #         if not ver_last_dev or (
+        #             ver_last_dev.release != next_ver.release or ver_last_dev.pre != next_ver.pre
+        #         ):
+        #             dev = 0
+        #         else:
+        #             dev = (ver_last_dev.dev or -1) + 1
+        #         next_ver_str = f"{next_ver}.dev{dev}"
+        #     else:
+        #         next_ver = self._get_next_version(ver_last_target, final_commit_type.action)
+        #         next_ver_str = str(next_ver)
+        #         if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
+        #             next_ver_str += f".a{self._branch.suffix[0]}"
+        #         if not ver_last_dev:
+        #             dev = 0
+        #         elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
+        #             if ver_last_dev.post is not None and ver_last_dev.post == next_ver.post:
+        #                 dev = ver_last_dev.dev + 1
+        #             else:
+        #                 dev = 0
+        #         elif ver_last_dev.pre is not None and ver_last_dev.pre == ("a", self._branch.suffix[0]):
+        #             dev = ver_last_dev.dev + 1
+        #         else:
+        #             dev = 0
+        #         next_ver_str += f".dev{dev}"
+        #     self._tag_version(
+        #         ver=PEP440SemVer(next_ver_str),
+        #         msg=f"Developmental release (issue: #{self._branch.suffix[0]}, target: {self._branch.suffix[1]})",
+        #     )
         return
 
     def _run_branch_edited_other(self):
@@ -470,17 +473,6 @@ class PushEventHandler(EventHandler):
     def _run_branch_deleted(self):
         return
 
-    def _run_tag(self):
-        action = self._context.event.action
-        if action == ActionType.CREATED:
-            self._run_tag_created()
-        elif action == ActionType.DELETED:
-            self._run_tag_deleted()
-        elif action == ActionType.EDITED:
-            self._run_tag_edited()
-        else:
-            self.error_unsupported_triggering_action()
-
     def _run_tag_created(self):
         return
 
@@ -489,69 +481,3 @@ class PushEventHandler(EventHandler):
 
     def _run_tag_edited(self):
         return
-
-    def _config_repo(self):
-        data = self._metadata_main.repo__config | {
-            "has_issues": True,
-            "allow_squash_merge": True,
-            "squash_merge_commit_title": "PR_TITLE",
-            "squash_merge_commit_message": "PR_BODY",
-        }
-        topics = data.pop("topics")
-        self._gh_api_admin.repo_update(**data)
-        self._gh_api_admin.repo_topics_replace(topics=topics)
-        if not self._gh_api_admin.actions_permissions_workflow_default()["can_approve_pull_request_reviews"]:
-            self._gh_api_admin.actions_permissions_workflow_default_set(can_approve_pull_requests=True)
-        return
-
-    def _config_repo_pages(self) -> None:
-        """Activate GitHub Pages (source: workflow) if not activated, update custom domain."""
-        if not self._gh_api.info["has_pages"]:
-            self._gh_api_admin.pages_create(build_type="workflow")
-        cname = self._metadata_main.web__base_url
-        try:
-            self._gh_api_admin.pages_update(
-                cname=cname.removeprefix("https://").removeprefix("http://") if cname else "",
-                build_type="workflow",
-            )
-        except WebAPIError as e:
-            self._logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
-        if cname:
-            try:
-                self._gh_api_admin.pages_update(https_enforced=cname.startswith("https://"))
-            except WebAPIError as e:
-                self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
-        return
-
-    def _config_repo_labels_reset(self):
-        for label in self._gh_api.labels:
-            self._gh_api.label_delete(label["name"])
-        for label_name, label_data in self._metadata_main.label__compiled.items():
-            self._gh_api.label_create(
-                name=label_name, description=label_data["description"], color=label_data["color"]
-            )
-        return
-
-    def _config_repo_branch_names(self) -> dict:
-        if not self._metadata_main_before:
-            self._logger.error("Cannot update branch names as no previous metadata is available.")
-        before = self._metadata_main_before.branch
-        after = self._metadata_main.branch
-        old_to_new_map = {}
-        if before["default"]["name"] != after["default"]["name"]:
-            self._gh_api_admin.branch_rename(
-                old_name=before["default"]["name"], new_name=after["default"]["name"]
-            )
-            old_to_new_map[before["default"]["name"]] = after["default"]["name"]
-        branches = self._gh_api_admin.branches
-        branch_names = [branch["name"] for branch in branches]
-        for group_name in ("release", "development", "auto-update"):
-            prefix_before = before["group"][group_name]["prefix"]
-            prefix_after = after["group"][group_name]["prefix"]
-            if prefix_before != prefix_after:
-                for branch_name in branch_names:
-                    if branch_name.startswith(prefix_before):
-                        new_name = f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
-                        self._gh_api_admin.branch_rename(old_name=branch_name, new_name=new_name)
-                        old_to_new_map[branch_name] = new_name
-        return old_to_new_map
