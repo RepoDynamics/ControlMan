@@ -54,7 +54,7 @@ properties:
   funding:
     description: Funding sources for the project
     type: object
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
       community_bridge:
@@ -77,12 +77,18 @@ properties:
       github:
         oneOf:
           - type: string
+            oneOf:
+              - pattern: ^\${{ *owner\.username *}}$
+              - pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
           - type: array
-            items:
-              type: string
             minItems: 1
             maxItems: 4
             uniqueItems: true
+            items:
+              type: string
+              oneOf:
+                - pattern: ^\${{ *owner\.username *}}$
+                - pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
       custom:
         oneOf:
           - type: string
@@ -92,3 +98,4 @@ properties:
             minItems: 1
             maxItems: 4
             uniqueItems: true
+required: [ author, funding ]
