@@ -70,7 +70,7 @@ class Meta:
             future_versions=self._future_versions,
             logger=self._logger,
         ).generate()
-        self._metadata = MetaManager(metadata=metadata_dict)
+        self._metadata = MetaManager(options=metadata_dict)
         MetaValidator(metadata=self._metadata, logger=self._logger).validate()
         return self._metadata
 
