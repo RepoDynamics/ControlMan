@@ -9,7 +9,7 @@ import json
 import hashlib
 import traceback
 from pylinks import api
-from pylinks.http import WebAPIPersistentStatusCodeError
+from pylinks.exceptions import WebAPIPersistentStatusCodeError
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.path import PathFinder
