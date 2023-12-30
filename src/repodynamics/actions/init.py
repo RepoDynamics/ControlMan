@@ -29,6 +29,7 @@ def init(
     logger=None,
 ):
     logger = logger or Logger("console")
+    logger.h1("Initialize RepoDynamics Init Action")
     try:
         template_type = TemplateType(template)
     except ValueError:
