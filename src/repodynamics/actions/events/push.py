@@ -95,7 +95,6 @@ class PushEventHandler(EventHandler):
             github_token=self._context.token,
             logger=self._logger
         )
-        metadata = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
         shutil.rmtree(meta.paths.dir_meta)
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
@@ -104,7 +103,7 @@ class PushEventHandler(EventHandler):
         meta.paths.file_path_meta.unlink(missing_ok=True)
         for path_dynamic_file in meta.paths.all_files:
             path_dynamic_file.unlink(missing_ok=True)
-        for changelog_data in metadata.changelog.values():
+        for changelog_data in self._ccm_main.changelog.values():
             path_changelog_file = meta.paths.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
         if self._template_type is TemplateType.PYPACKIT:
@@ -179,26 +178,30 @@ class PushEventHandler(EventHandler):
         return self._run_branch_edited_main_normal()
 
     def _run_init_phase(self, version: str = "0.0.0"):
-        self._metadata_main_before = read_from_json_file(
-            path_root=self._path_root_base,
-            commit_hash=self._context.hash_before,
-            git=self._git_base,
-            logger=self._logger,
-        )
         self._meta = Meta(
             path_root=self._path_root_base,
             github_token=self._context.token,
             future_versions={self._branch.name: version},
             logger=self._logger,
         )
-        self._ccm_main = self._metadata_branch = self._meta.read_metadata_full()
+        self._ccm_main = self._ccm_branch = self._meta.read_metadata_full()
+        self._ccs_main = self._ccs_branch = self._ccm_main.settings
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
         self._action_meta(action=InitCheckAction.COMMIT)
         if self._ccm_main["workflow"].get("pre_commit"):
             self._action_hooks(action=InitCheckAction.COMMIT)
-        self._config_repo_branch_names()
+        ccs_main_before = read_from_json_file(
+            path_root=self._path_root_base,
+            commit_hash=self._context.hash_before,
+            git=self._git_base,
+            logger=self._logger,
+        ).settings
+        self._config_repo_branch_names(
+            ccs_new=self._ccs_main,
+            ccs_old=ccs_main_before
+        )
         self._set_job_run(
             package_lint=True,
             package_test_local=True,
@@ -241,7 +244,7 @@ class PushEventHandler(EventHandler):
                 package_publish_testpypi=True,
                 package_publish_pypi=True,
             )
-        self._config_rulesets(create=True)
+        self._config_rulesets(ccs_main_new=self._ccs_main)
         return
 
     def _run_existing_repository_initialized(self):
