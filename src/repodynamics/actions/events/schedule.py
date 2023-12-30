@@ -1,5 +1,7 @@
 from repodynamics.actions.events._base import EventHandler
-from repodynamics.actions.context_manager import ContextManager
+from github_contexts import GitHubContext
+from repodynamics.datatype import TemplateType
+from repodynamics.logger import Logger
 
 
 class ScheduleEventHandler(EventHandler):
@@ -7,7 +9,7 @@ class ScheduleEventHandler(EventHandler):
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         path_root_self: str,
         path_root_fork: str | None = None,
