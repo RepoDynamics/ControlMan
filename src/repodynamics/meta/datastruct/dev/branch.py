@@ -1,6 +1,8 @@
 from typing import NamedTuple
 from enum import Enum
 
+from repodynamics.datatype import BranchType
+
 
 class RulesetEnforcementLevel(Enum):
     """
@@ -181,3 +183,13 @@ class Branch:
     @property
     def auto_update(self) -> GroupedBranch:
         return self._branch_auto_update
+
+    @property
+    def groups(self) -> dict[BranchType, GroupedBranch]:
+        return {
+            BranchType.RELEASE: self.release,
+            BranchType.PRERELEASE: self.pre_release,
+            BranchType.IMPLEMENT: self.implementation,
+            BranchType.DEV: self.development,
+            BranchType.AUTOUPDATE: self.auto_update
+        }
