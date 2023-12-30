@@ -8,7 +8,7 @@ import re
 
 from markitup import html, md
 import pylinks
-from pylinks.http import WebAPIError
+from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
 from github_contexts.github.enums import EventType
 
@@ -24,12 +24,19 @@ from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.actions.repo_config import RepoConfigAction
 from repodynamics.meta.meta import Meta
 from repodynamics.path import RelativePath
+from repodynamics.meta.datastruct import ControlCenterOptions
+from repodynamics.meta.datastruct.dev.branch import (
+    BranchProtectionRuleset,
+    RulesetEnforcementLevel,
+    RulesetBypassActorType,
+    RulesetBypassMode,
+)
+
 
 from repodynamics.datatype import (
     Branch,
     BranchType,
     DynamicFileType,
-    EventType,
     CommitGroup,
     Commit,
     CommitMsg,
@@ -75,7 +82,7 @@ class EventHandler:
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
-        self._ccs_main = self._ccm_main.settings if self._ccm_main else None
+        self._ccs_main: ControlCenterOptions | None = self._ccm_main.settings if self._ccm_main else None
         self._logger = logger or Logger()
 
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
@@ -106,7 +113,8 @@ class EventHandler:
             self._git_head = self._git_base
             self._path_root_head = self._path_root_base
         self._meta: Meta | None = None
-        self._metadata_branch: MetaManager | None = None
+        self._ccm_branch: MetaManager | None = None
+        self._ccs_branch: ControlCenterOptions | None = None
         self._branch: Branch | None = None
         self._event_type: EventType | None = None
         self._summary_oneliners: list[str] = []
@@ -172,7 +180,8 @@ class EventHandler:
             return
         if action == InitCheckAction.PULL:
             pr_branch = self.switch_to_ci_branch("meta")
-        self._metadata_branch = self._meta.read_metadata_full()
+        self._ccm_branch = self._meta.read_metadata_full()
+        self._ccs_branch = self._ccm_branch.settings
         meta_results, meta_changes, meta_summary = self._meta.compare_files()
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
@@ -382,7 +391,7 @@ class EventHandler:
 
     def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
         current_branch = self._git_head.current_branch_name()
-        new_branch_prefix = self._ccm_main.branch__group["auto-update"]["prefix"]
+        new_branch_prefix = self._ccs_main.dev.branch.auto_update.prefix
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         self._git_head.stash()
         self._git_head.checkout(branch=new_branch_name, reset=True)
@@ -490,7 +499,7 @@ class EventHandler:
 
     @property
     def output(self) -> dict:
-        metadata = self._metadata_branch or self._ccm_main
+        metadata = self._ccm_branch or self._ccm_main
         package = metadata.package
         package_name = package.get("name", "")
         if self._failed:
@@ -764,8 +773,98 @@ class EventHandler:
                         old_to_new_map[branch_name] = new_name
         return old_to_new_map
 
-    def _config_rulesets(self, create: bool = False):
-        pass
+    def _config_rulesets(
+        self,
+        ccs_main_new: ControlCenterOptions,
+        ccs_main_old: ControlCenterOptions | None = None
+    ) -> None:
+        """Update branch and tag protection rulesets."""
+        enforcement = {
+            RulesetEnforcementLevel.ENABLED: 'active',
+            RulesetEnforcementLevel.DISABLED: 'disabled',
+            RulesetEnforcementLevel.EVALUATE: 'evaluate',
+        }
+        bypass_actor_type = {
+            RulesetBypassActorType.ORG_ADMIN: 'OrganizationAdmin',
+            RulesetBypassActorType.REPO_ROLE: 'RepositoryRole',
+            RulesetBypassActorType.TEAM: 'Team',
+            RulesetBypassActorType.INTEGRATION: 'Integration',
+        }
+        bypass_actor_mode = {
+            RulesetBypassMode.ALWAYS: True,
+            RulesetBypassMode.PULL: False,
+        }
+
+        def apply(
+            name: str,
+            target: Literal['branch', 'tag'],
+            pattern: str,
+            ruleset: BranchProtectionRuleset,
+        ) -> None:
+            args = {
+                'name': name,
+                'target': target,
+                'enforcement': enforcement[ruleset.enforcement],
+                'bypass_actors': [
+                    (actor.id, bypass_actor_type[actor.type], bypass_actor_mode[actor.mode])
+                    for actor in ruleset.bypass_actors
+                ],
+                'ref_name_include': pattern,
+                'creation': ruleset.rule.protect_creation,
+                'update': ruleset.rule.protect_modification,
+                'update_allows_fetch_and_merge': ruleset.rule.modification_allows_fetch_and_merge,
+                'deletion': ruleset.rule.protect_deletion,
+                'required_linear_history': ruleset.rule.require_linear_history,
+                'required_deployment_environments': ruleset.rule.required_deployment_environments,
+                'required_signatures': ruleset.rule.require_signatures,
+                'required_pull_request': ruleset.rule.require_pull_request,
+                'dismiss_stale_reviews_on_push': ruleset.rule.dismiss_stale_reviews_on_push,
+                'require_code_owner_review': ruleset.rule.require_code_owner_review,
+                'require_last_push_approval': ruleset.rule.require_last_push_approval,
+                'required_approving_review_count': ruleset.rule.required_approving_review_count,
+                'required_review_thread_resolution': ruleset.rule.require_review_thread_resolution,
+                'required_status_checks': [
+                    (
+                        (context.name, context.integration_id) if context.integration_id is not None
+                        else context.name
+                    )
+                    for context in ruleset.rule.status_check_contexts
+                ],
+                'strict_required_status_checks_policy': ruleset.rule.status_check_strict_policy,
+                'non_fast_forward': ruleset.rule.protect_force_push,
+            }
+            if not ccs_main_old:
+                self._gh_api_admin.ruleset_create(**args)
+                return
+            for existing_ruleset in existing_rulesets:
+                if existing_ruleset['name'] == name:
+                    args["ruleset_id"] = existing_ruleset["id"]
+                    args["require_status_checks"] = ruleset.rule.require_status_checks
+                    self._gh_api_admin.ruleset_update(**args)
+                    return
+            self._gh_api_admin.ruleset_create(**args)
+            return
+
+        if ccs_main_old:
+            existing_rulesets = self._gh_api_admin.rulesets(include_parents=False)
+
+        if not ccs_main_old or ccs_main_old.dev.branch.main != ccs_main_new.dev.branch.main:
+            apply(
+                name='Branch: main',
+                target='branch',
+                pattern="~DEFAULT_BRANCH",
+                ruleset=ccs_main_new.dev.branch.main.ruleset,
+            )
+        for branch_group in ("release", "pre_release", "implementation", "development", "auto_update"):
+            group_data = getattr(ccs_main_new.dev.branch, branch_group)
+            if not ccs_main_old or group_data != getattr(ccs_main_old.dev.branch, branch_group):
+                apply(
+                    name=f"Branch Group: {branch_group.replace('_', ' ')}",
+                    target='branch',
+                    pattern=f"{group_data.prefix}**/**/*",
+                    ruleset=group_data.ruleset,
+                )
+        return
 
     def _get_commits(self) -> list[Commit]:
         # primary_action = {}
