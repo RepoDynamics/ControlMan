@@ -749,26 +749,24 @@ class EventHandler:
             )
         return
 
-    def _config_repo_branch_names(self) -> dict:
-        if not self._metadata_main_before:
-            self._logger.error("Cannot update branch names as no previous metadata is available.")
-        before = self._metadata_main_before.branch
-        after = self._ccm_main.branch
+    def _config_repo_branch_names(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions) -> dict:
+        old = ccs_old.dev.branch
+        new = ccs_new.dev.branch
         old_to_new_map = {}
-        if before["default"]["name"] != after["default"]["name"]:
-            self._gh_api_admin.branch_rename(
-                old_name=before["default"]["name"], new_name=after["default"]["name"]
-            )
-            old_to_new_map[before["default"]["name"]] = after["default"]["name"]
+        if old.main.name != new.main.name:
+            self._gh_api_admin.branch_rename(old_name=old.main.name, new_name=new.main.name)
+            old_to_new_map[old.main.name] = new.main.name
         branches = self._gh_api_admin.branches
         branch_names = [branch["name"] for branch in branches]
-        for group_name in ("release", "development", "auto-update"):
-            prefix_before = before["group"][group_name]["prefix"]
-            prefix_after = after["group"][group_name]["prefix"]
-            if prefix_before != prefix_after:
+        old_groups = old.groups
+        new_groups = new.groups
+        for group_type, group_data in new_groups.items():
+            prefix_new = group_data.prefix
+            prefix_old = old_groups[group_type].prefix
+            if prefix_old != prefix_new:
                 for branch_name in branch_names:
-                    if branch_name.startswith(prefix_before):
-                        new_name = f"{prefix_after}{branch_name.removeprefix(prefix_before)}"
+                    if branch_name.startswith(prefix_old):
+                        new_name = f"{prefix_new}{branch_name.removeprefix(prefix_old)}"
                         self._gh_api_admin.branch_rename(old_name=branch_name, new_name=new_name)
                         old_to_new_map[branch_name] = new_name
         return old_to_new_map
@@ -855,11 +853,12 @@ class EventHandler:
                 pattern="~DEFAULT_BRANCH",
                 ruleset=ccs_main_new.dev.branch.main.ruleset,
             )
-        for branch_group in ("release", "pre_release", "implementation", "development", "auto_update"):
-            group_data = getattr(ccs_main_new.dev.branch, branch_group)
-            if not ccs_main_old or group_data != getattr(ccs_main_old.dev.branch, branch_group):
+        groups_new = ccs_main_new.dev.branch.groups
+        groups_old = ccs_main_old.dev.branch.groups if ccs_main_old else {}
+        for group_type, group_data in groups_new.items():
+            if not ccs_main_old or group_data != groups_old[group_type]:
                 apply(
-                    name=f"Branch Group: {branch_group.replace('_', ' ')}",
+                    name=f"Branch Group: {group_type.value}",
                     target='branch',
                     pattern=f"{group_data.prefix}**/**/*",
                     ruleset=group_data.ruleset,
@@ -973,18 +972,18 @@ class EventHandler:
 
     def create_branch_name_implementation(self, issue_nr: int, base_branch_name: str) -> str:
         """Generate the name of the implementation branch for a given issue number and base branch."""
-        impl_branch_prefix = self._ccm_main.branch__groups__prefixes[BranchType.IMPLEMENT]
+        impl_branch_prefix = self._ccs_main.dev.branch.implementation.prefix
         return f"{impl_branch_prefix}{issue_nr}/{base_branch_name}"
 
     def create_branch_name_development(self, issue_nr: int, base_branch_name: str, task_nr: int) -> str:
         """Generate the name of the development branch for a given issue number and base branch."""
-        dev_branch_prefix = self._ccm_main.branch__groups__prefixes[BranchType.DEV]
+        dev_branch_prefix = self._ccs_main.dev.branch.development.prefix
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
 
     @staticmethod
     def _write_tasklist(entries: list[dict[str, bool | str | list]]) -> str:
         """
-        Write the implementation tasklist.
+        Write an implementation tasklist as Markdown string.
 
         Parameters
         ----------
