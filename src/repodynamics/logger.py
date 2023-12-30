@@ -134,7 +134,7 @@ class Logger:
         fully_qualified_name = self._get_fully_qualified_name_of_original_caller(index_stack)
         msg = sgr.format(message, sgr.style(text_color=self._color[level]))
         console = f"{self.emoji[level]} {msg}"
-        details_ = f"- Caller: {fully_qualified_name}\n"
+        details_ = f"- Caller: {fully_qualified_name}\n{'='*50}"
         if details:
             if isinstance(details, list):
                 details = "\n".join(details)
@@ -143,11 +143,11 @@ class Logger:
             else:
                 details = str(details)
             details_ += details
-            if self._output == "github":
-                console = f"::group::{console}\n{details_}\n::endgroup::"
-            else:
-                details_summary = details_ if len(details_) < 300 else f"{details_[:500]} ...[shortened]"
-                console = f"{console}\n{details_summary}"
+        if self._output == "github":
+            console = f"::group::{console}\n{details_}\n::endgroup::"
+        else:
+            details_summary = details_ if len(details_) < 300 else f"{details_[:500]} ...[shortened]"
+            console = f"{console}\n{details_summary}"
         file = html.li(html.details(md.code_block(details_), summary=message))
         self._print(console, str(file), is_error=is_error)
         return console
