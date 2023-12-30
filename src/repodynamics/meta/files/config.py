@@ -4,7 +4,7 @@ from pathlib import Path
 import ruamel.yaml
 from ruamel.yaml import YAML
 import pylinks
-from pylinks.http import WebAPIError
+from pylinks.exceptions import WebAPIError
 from repodynamics.logger import Logger
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
