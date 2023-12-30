@@ -19,6 +19,7 @@ def main():
         action.append(action[0])
     action = [arg.replace("-", "_") for arg in action]
     module_name, function_name = action
+    logger.success("Determine Action", [f"- Module: {module_name}", f"- Function: {function_name}"])
     action_module = importlib.import_module(f"repodynamics.actions.{module_name}")
     action = getattr(action_module, function_name)
     inputs = io.input(module_name=module_name, function=action, logger=logger)
