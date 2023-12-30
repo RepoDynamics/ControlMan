@@ -1,7 +1,6 @@
 import github_contexts
 from github_contexts.github.enums import EventType
 
-from repodynamics.logger import Logger
 from repodynamics.actions.events.issue_comment import IssueCommentEventHandler
 from repodynamics.actions.events.issues import IssuesEventHandler
 from repodynamics.actions.events.pull_request import PullRequestEventHandler
@@ -10,30 +9,7 @@ from repodynamics.actions.events.push import PushEventHandler
 from repodynamics.actions.events.schedule import ScheduleEventHandler
 from repodynamics.actions.events.workflow_dispatch import WorkflowDispatchEventHandler
 from repodynamics.datatype import TemplateType
-
-# class Init:
-#
-#     def __init__(
-#         self,
-#         context: dict,
-#         admin_token: str,
-#         logger: Logger | None = None,
-#     ):
-#         self.state: StateManager | None = None
-#         self.metadata_branch: dict = {}
-#         self.metadata_branch_before: dict = {}
-#         self.changed_files: dict[RepoFileType, list[str]] = {}
-#         return
-#
-#     def categorize_labels(self, label_names: list[str]):
-#         label_dict = {
-#             label_data["name"]: label_key
-#             for label_key, label_data in self.metadata_main["label"]["compiled"].items()
-#         }
-#         out = {}
-#         for label in label_names:
-#             out[label] = label_dict[label]
-#         return out
+from repodynamics.logger import Logger
 
 
 def init(
@@ -52,6 +28,7 @@ def init(
     website_announcement_msg: str = "",
     logger=None,
 ):
+    logger = logger or Logger("console")
     try:
         template_type = TemplateType(template)
     except ValueError:
