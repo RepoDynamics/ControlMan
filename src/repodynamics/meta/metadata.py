@@ -20,6 +20,7 @@ from repodynamics.path import PathFinder
 from repodynamics.datatype import PrimaryActionCommitType
 from repodynamics.meta.manager import MetaManager
 
+
 class MetadataGenerator:
     def __init__(
         self,
