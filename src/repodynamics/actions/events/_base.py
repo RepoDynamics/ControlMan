@@ -31,8 +31,6 @@ from repodynamics.meta.datastruct.dev.branch import (
     RulesetBypassActorType,
     RulesetBypassMode,
 )
-
-
 from repodynamics.datatype import (
     Branch,
     BranchType,
