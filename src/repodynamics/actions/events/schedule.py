@@ -1,5 +1,6 @@
 from repodynamics.actions.events._base import EventHandler
 from github_contexts import GitHubContext
+from github_contexts.github.payloads.schedule import SchedulePayload
 from repodynamics.datatype import TemplateType
 from repodynamics.logger import Logger
 
@@ -23,20 +24,20 @@ class ScheduleEventHandler(EventHandler):
             path_root_fork=path_root_fork,
             logger=logger
         )
-        self._payload: IssuesPayload = self._context.event
+        self._payload: SchedulePayload = self._context.event
         return
 
     def run(self):
-        cron = self.context.payload["schedule"]
-        if cron == self.metadata_main.workflow__init__schedule__sync:
+        cron = self._payload.schedule
+        if cron == self._ccm_main.workflow__init__schedule__sync:
             self.event_schedule_sync()
-        elif cron == self.metadata_main.workflow__init__schedule__test:
+        elif cron == self._ccm_main.workflow__init__schedule__test:
             self.event_schedule_test()
         else:
-            self.logger.error(
+            self._logger.error(
                 f"Unknown cron expression for scheduled workflow: {cron}",
                 f"Valid cron expressions defined in 'workflow.init.schedule' metadata are:\n"
-                f"{self.metadata_main.workflow__init__schedule}",
+                f"{self._ccm_main.workflow__init__schedule}",
             )
 
     def event_schedule_sync(self):
