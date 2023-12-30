@@ -18,7 +18,7 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
             k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty
         }
 
-    logger.h2("Read Inputs")
+    logger.h2("Read Action Inputs")
     params = get_type_hints(function)
     default_args = _default_args(function)
     args = {}
@@ -76,11 +76,14 @@ def input(module_name: str, function: Callable, logger: Logger) -> dict:
                     "- ⛔ ERROR: Invalid integer input: "
                     f"'{param_env_name}' has value '{val}' with type '{type(val)}'"
                 )
+                logger.error(title, logs)
         else:
-            logger.error(
+            logs.append(
                 "- ⛔ ERROR: Unknown input type: "
                 f"'{param_env_name}' has value '{val}' with type '{type(val)}'"
             )
+            logger.error(title, logs)
+        logger.success(title, logs)
     return args
 
 
