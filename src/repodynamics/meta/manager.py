@@ -86,10 +86,6 @@ class MetaManager:
         return self.issue["forms"]
 
     @property
-    def label__compiled(self) -> dict:
-        return self._dict["label"]["compiled"]
-
-    @property
     def maintainer(self) -> dict:
         return self._dict["maintainer"]
 
