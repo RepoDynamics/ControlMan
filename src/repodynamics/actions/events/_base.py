@@ -748,75 +748,81 @@ class EventHandler:
 
     def _config_repo_labels_update(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions):
 
-        def separate_version_labels(
+        def format_labels(
             labels: list[FullLabel]
-        ) -> tuple[dict[tuple[LabelType, str, str], FullLabel], dict[tuple[LabelType, str, str], FullLabel]]:
+        ) -> tuple[
+            dict[tuple[LabelType, str, str], FullLabel],
+            dict[tuple[LabelType, str, str], FullLabel],
+            dict[tuple[LabelType, str, str], FullLabel],
+            dict[tuple[LabelType, str, str], FullLabel],
+        ]:
+            full = {}
             version = {}
-            not_version = {}
+            branch = {}
+            rest = {}
             for label in labels:
                 key = (label.type, label.group_name, label.id)
-                if label.type is LabelType.AUTO_GROUP and label.group_name == "version":
-                    version[key] = label
+                full[key] = label
+                if label.type is LabelType.AUTO_GROUP:
+                    if label.group_name == "version":
+                        version[key] = label
+                    else:
+                        branch[key] = label
                 else:
-                    not_version[key] = label
-            return version, not_version
+                    rest[key] = label
+            return full, version, branch, rest
 
         name = "Repository Labels Synchronizer"
         self._logger.h1(name)
-        current_labels = self._gh_api.labels
-        new_labels = ccs_new.dev.label.full_labels
-        old_labels = ccs_old.dev.label.full_labels
-        old_labels_versions, old_labels_not_versions = separate_version_labels(old_labels)
-        new_labels_versions, new_labels_not_versions = separate_version_labels(new_labels)
 
-        old_ids = set(old_labels_not_versions.keys())
-        new_ids = set(new_labels_not_versions.keys())
-        deleted_ids = old_ids - new_ids
-        added_ids = new_ids - old_ids
-        added_version_ids = set(new_labels_versions.keys()) - set(old_labels_versions.keys())
-        deleted_version_ids = sorted(
-            [PEP440SemVer(ver) for ver in set(old_labels_versions.keys()) - set(new_labels_versions.keys())],
-            reverse=True,
+        labels_old, labels_old_ver, labels_old_branch, labels_old_rest = format_labels(
+            ccs_old.dev.label.full_labels
         )
-        remaining_allowed_number = 1000 - len(new_labels)
-        still_allowed_version_ids = deleted_version_ids[:remaining_allowed_number]
-        outdated_version_ids = deleted_version_ids[remaining_allowed_number:]
-        for outdated_version_id in outdated_version_ids:
-            self._gh_api.label_delete(old_labels_versions[str(outdated_version_id)]["name"])
-        for deleted_id in deleted_ids:
-            self._gh_api.label_delete(old_labels[deleted_id]["name"])
-        for new_label_version_id in added_version_ids:
-            self._gh_api.label_create(**new_labels_versions[new_label_version_id])
-        for added_id in added_ids:
-            self._gh_api.label_create(**new_labels[added_id])
-        possibly_modified_ids = set(old_labels.keys()) & set(new_labels.keys())
-        for possibly_modified_id in possibly_modified_ids:
-            old_label = old_labels[possibly_modified_id]
-            new_label = new_labels[possibly_modified_id]
+        labels_new, labels_new_ver, labels_new_branch, labels_new_rest = format_labels(
+            ccs_new.dev.label.full_labels
+        )
+
+        ids_old = set(labels_old.keys())
+        ids_new = set(labels_new.keys())
+
+        # Update labels that are in both old and new settings,
+        #   when their label data has changed in new settings.
+        ids_shared = ids_old & ids_new
+        for id_shared in ids_shared:
+            old_label = labels_old[id_shared]
+            new_label = labels_new[id_shared]
             if old_label != new_label:
                 self._gh_api.label_update(
-                    name=old_label["name"],
-                    new_name=new_label["name"],
-                    description=new_label["description"],
-                    color=new_label["color"],
+                    name=old_label.name,
+                    new_name=new_label.name,
+                    description=new_label.description,
+                    color=new_label.color,
                 )
-        if not still_allowed_version_ids:
-            return
-        if (
-            self.metadata_before["label"]["auto_group"]["version"]
-            == self.metadata["label"]["auto_group"]["version"]
+        # Add new labels
+        ids_added = ids_new - ids_old
+        for id_added in ids_added:
+            label = labels_new[id_added]
+            self._gh_api.label_create(name=label.name, color=label.color, description=label.description)
+        # Delete old non-auto-group (i.e., not version or branch) labels
+        ids_old_rest = set(labels_old_rest.keys())
+        ids_new_rest = set(labels_new_rest.keys())
+        ids_deleted_rest = ids_old_rest - ids_new_rest
+        for id_deleted in ids_deleted_rest:
+            self._gh_api.label_delete(labels_old_rest[id_deleted].name)
+        # Update old branch and version labels
+        for label_data_new, label_data_old, labels_old in (
+            (ccs_new.dev.label.branch, ccs_old.dev.label.branch, labels_old_branch),
+            (ccs_new.dev.label.version, ccs_old.dev.label.version, labels_old_ver),
         ):
-            return
-        new_prefix = self.metadata["label"]["auto_group"]["version"]["prefix"]
-        new_color = self.metadata["label"]["auto_group"]["version"]["color"]
-        new_description = self.metadata["label"]["auto_group"]["version"]["description"]
-        for still_allowed_version_id in still_allowed_version_ids:
-            self._gh_api.label_update(
-                name=old_labels_versions[str(still_allowed_version_id)]["name"],
-                new_name=f"{new_prefix}{still_allowed_version_id}",
-                description=new_description,
-                color=new_color,
-            )
+            if label_data_new != label_data_old:
+                for label_old in labels_old.values():
+                    label_old_suffix = label_old.name.removeprefix(label_data_old.prefix)
+                    self._gh_api.label_update(
+                        name=label_old.name,
+                        new_name=f"{label_data_new.prefix}{label_old_suffix}",
+                        color=label_data_new.color,
+                        description=label_data_new.description,
+                    )
         return
 
     def _config_repo_branch_names(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions) -> dict:
