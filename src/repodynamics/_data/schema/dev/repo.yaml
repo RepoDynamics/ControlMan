@@ -63,7 +63,7 @@ properties:
         default: false
       allow_merge_commit:
         type: boolean
-        default: true
+        default: false
       allow_rebase_merge:
         type: boolean
         default: true
