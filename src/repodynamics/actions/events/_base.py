@@ -21,7 +21,6 @@ from repodynamics import hook, _util
 from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.actions._changelog import ChangelogManager
-from repodynamics.actions.repo_config import RepoConfigAction
 from repodynamics.meta.meta import Meta
 from repodynamics.path import RelativePath
 from repodynamics.meta.datastruct import ControlCenterOptions
@@ -31,6 +30,7 @@ from repodynamics.meta.datastruct.dev.branch import (
     RulesetBypassActorType,
     RulesetBypassMode,
 )
+from repodynamics.meta.datastruct.dev.label import LabelType, FullLabel
 from repodynamics.datatype import (
     Branch,
     BranchType,
@@ -738,12 +738,84 @@ class EventHandler:
                 self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
         return
 
-    def _config_repo_labels_reset(self):
+    def _config_repo_labels_reset(self, ccs: ControlCenterOptions | None = None):
+        ccs = ccs or self._ccs_main
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
-        for label_name, label_data in self._ccm_main.label__compiled.items():
-            self._gh_api.label_create(
-                name=label_name, description=label_data["description"], color=label_data["color"]
+        for label in ccs.dev.label.full_labels:
+            self._gh_api.label_create(name=label.name, description=label.description, color=label.color)
+        return
+
+    def _config_repo_labels_update(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions):
+
+        def separate_version_labels(
+            labels: list[FullLabel]
+        ) -> tuple[dict[tuple[LabelType, str, str], FullLabel], dict[tuple[LabelType, str, str], FullLabel]]:
+            version = {}
+            not_version = {}
+            for label in labels:
+                key = (label.type, label.group_name, label.id)
+                if label.type is LabelType.AUTO_GROUP and label.group_name == "version":
+                    version[key] = label
+                else:
+                    not_version[key] = label
+            return version, not_version
+
+        name = "Repository Labels Synchronizer"
+        self._logger.h1(name)
+        current_labels = self._gh_api.labels
+        new_labels = ccs_new.dev.label.full_labels
+        old_labels = ccs_old.dev.label.full_labels
+        old_labels_versions, old_labels_not_versions = separate_version_labels(old_labels)
+        new_labels_versions, new_labels_not_versions = separate_version_labels(new_labels)
+
+        old_ids = set(old_labels_not_versions.keys())
+        new_ids = set(new_labels_not_versions.keys())
+        deleted_ids = old_ids - new_ids
+        added_ids = new_ids - old_ids
+        added_version_ids = set(new_labels_versions.keys()) - set(old_labels_versions.keys())
+        deleted_version_ids = sorted(
+            [PEP440SemVer(ver) for ver in set(old_labels_versions.keys()) - set(new_labels_versions.keys())],
+            reverse=True,
+        )
+        remaining_allowed_number = 1000 - len(new_labels)
+        still_allowed_version_ids = deleted_version_ids[:remaining_allowed_number]
+        outdated_version_ids = deleted_version_ids[remaining_allowed_number:]
+        for outdated_version_id in outdated_version_ids:
+            self._gh_api.label_delete(old_labels_versions[str(outdated_version_id)]["name"])
+        for deleted_id in deleted_ids:
+            self._gh_api.label_delete(old_labels[deleted_id]["name"])
+        for new_label_version_id in added_version_ids:
+            self._gh_api.label_create(**new_labels_versions[new_label_version_id])
+        for added_id in added_ids:
+            self._gh_api.label_create(**new_labels[added_id])
+        possibly_modified_ids = set(old_labels.keys()) & set(new_labels.keys())
+        for possibly_modified_id in possibly_modified_ids:
+            old_label = old_labels[possibly_modified_id]
+            new_label = new_labels[possibly_modified_id]
+            if old_label != new_label:
+                self._gh_api.label_update(
+                    name=old_label["name"],
+                    new_name=new_label["name"],
+                    description=new_label["description"],
+                    color=new_label["color"],
+                )
+        if not still_allowed_version_ids:
+            return
+        if (
+            self.metadata_before["label"]["auto_group"]["version"]
+            == self.metadata["label"]["auto_group"]["version"]
+        ):
+            return
+        new_prefix = self.metadata["label"]["auto_group"]["version"]["prefix"]
+        new_color = self.metadata["label"]["auto_group"]["version"]["color"]
+        new_description = self.metadata["label"]["auto_group"]["version"]["description"]
+        for still_allowed_version_id in still_allowed_version_ids:
+            self._gh_api.label_update(
+                name=old_labels_versions[str(still_allowed_version_id)]["name"],
+                new_name=f"{new_prefix}{still_allowed_version_id}",
+                description=new_description,
+                color=new_color,
             )
         return
 
