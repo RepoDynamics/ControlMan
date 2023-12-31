@@ -339,40 +339,49 @@ class MetadataGenerator:
         self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
 
-    def repo_labels(self) -> dict[str, dict[str, str]]:
+    def repo_labels(self) -> list[dict[str, str]]:
         self._logger.h3("Generate metadata: labels")
-        out = {}
+        out = []
         for group_name, group in self._metadata["label"]["group"].items():
             prefix = group["prefix"]
             for label_id, label in group["labels"].items():
                 suffix = label["suffix"]
-                out[f"{prefix}{suffix}"] = {
-                    "type": "group",
-                    "group_name": group_name,
-                    "id": label_id,
-                    "description": label["description"],
-                    "color": group["color"],
-                }
+                out.append(
+                    {
+                        "type": "group",
+                        "group_name": group_name,
+                        "id": label_id,
+                        "name": f"{prefix}{suffix}",
+                        "description": label["description"],
+                        "color": group["color"],
+                    }
+                )
         release_info = self._metadata.get("package", {}).get("releases", {})
         for autogroup_name, release_key in (("version", "package_versions"), ("branch", "branch_names")):
             entries = release_info.get(release_key, [])
             label_data = self._metadata["label"]["auto_group"][autogroup_name]
             for entry in entries:
-                out[f"{label_data['prefix']}{entry}"] = {
-                    "type": "auto_group",
-                    "group_name": autogroup_name,
-                    "id": entry,
+                out.append(
+                    {
+                        "type": "auto_group",
+                        "group_name": autogroup_name,
+                        "id": entry,
+                        "name": f"{label_data['prefix']}{entry}",
+                        "description": label_data["description"],
+                        "color": label_data["color"],
+                    }
+                )
+        for label_id, label_data in self._metadata["label"].get("single").items():
+            out.append(
+                {
+                    "type": "single",
+                    "group_name": None,
+                    "id": label_id,
+                    "name": label_data["name"],
                     "description": label_data["description"],
                     "color": label_data["color"],
                 }
-        for label_id, label_data in self._metadata["label"].get("single").items():
-            out[label_data["name"]] = {
-                "type": "single",
-                "group_name": None,
-                "id": label_id,
-                "description": label_data["description"],
-                "color": label_data["color"],
-            }
+            )
         return out
 
     def _urls_github(self) -> dict:
