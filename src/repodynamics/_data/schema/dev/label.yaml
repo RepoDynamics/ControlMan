@@ -20,16 +20,16 @@ properties:
             description: Prefix for the label name
             type: string
             default: 'Version: '
-          color:
-            description: Color of the label
-            type: string
-            pattern: ^[0-9a-fA-F]{6}$
-            default: '0366d6'
           description:
             type: string
             maxLength: 100
             description: Description of the label
             default: Related to this specific version of the package.
+          color:
+            description: Color of the label
+            type: string
+            pattern: ^[0-9a-fA-F]{6}$
+            default: '0366d6'
         required: [ prefix, color, description ]
       branch:
         type: object
