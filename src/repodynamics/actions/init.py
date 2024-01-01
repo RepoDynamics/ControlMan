@@ -15,8 +15,8 @@ from repodynamics.logger import Logger
 def init(
     template: str,
     context: dict,
-    path_root_self: str,
-    path_root_fork: str = "",
+    path_root_base: str,
+    path_root_head: str,
     admin_token: str = "",
     package_build: bool = False,
     package_lint: bool = False,
@@ -43,8 +43,8 @@ def init(
     args = {
         "template_type": template_type,
         "context_manager": context_manager,
-        "path_root_self": path_root_self,
-        "path_root_fork": path_root_fork,
+        "path_root_base": path_root_base,
+        "path_root_head": path_root_head,
         "admin_token": admin_token,
         "logger": logger
     }
