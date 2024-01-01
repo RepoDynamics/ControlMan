@@ -130,7 +130,8 @@ class IssueCommentEventHandler(EventHandler):
         sub_tasklist_str = self._write_tasklist(entries=[task])
         pull_body = (
             f"This pull request implements task {task_nr} of the "
-            f"pull request #{self._issue.number}:\n\n{sub_tasklist_str}"
+            f"pull request #{self._issue.number}:\n\n"
+            f"{self._MARKER_TASKLIST_START}\n{sub_tasklist_str}\n{self._MARKER_TASKLIST_END}"
         )
         pull_data = self._gh_api.pull_create(
             head=dev_branch_name,
