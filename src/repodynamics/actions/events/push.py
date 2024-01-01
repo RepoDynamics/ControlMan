@@ -29,16 +29,16 @@ class PushEventHandler(EventHandler):
         template_type: TemplateType,
         context_manager: GitHubContext,
         admin_token: str,
-        path_root_self: str,
-        path_root_fork: str | None = None,
+        path_root_base: str,
+        path_root_head: str | None = None,
         logger: Logger | None = None,
     ):
         super().__init__(
             template_type=template_type,
             context_manager=context_manager,
             admin_token=admin_token,
-            path_root_self=path_root_self,
-            path_root_fork=path_root_fork,
+            path_root_base=path_root_base,
+            path_root_head=path_root_head,
             logger=logger
         )
         self._branch: Branch | None = None
