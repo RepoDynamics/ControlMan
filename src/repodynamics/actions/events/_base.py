@@ -69,14 +69,14 @@ class EventHandler:
         template_type: TemplateType,
         context_manager: GitHubContext,
         admin_token: str,
-        path_root_self: str,
-        path_root_fork: str | None = None,
+        path_root_base: str,
+        path_root_head: str | None = None,
         logger: Logger | None = None
     ):
         self._template_type = template_type
         self._context = context_manager
-        self._path_root_base = path_root_self
-        self._path_root_head = path_root_fork
+        self._path_root_base = path_root_base
+        self._path_root_head = path_root_head
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
@@ -94,22 +94,29 @@ class EventHandler:
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
             logger=self._logger,
         )
-        if self._context.event_name is EventType.PULL_REQUEST and not self._context.event.internal:
-            # Event triggered by a pull request from a fork
-            if not self._path_root_head:
-                self._logger.error(
-                    "No fork path provided.",
-                    "The event was triggered by a pull request from a fork, "
-                    "but no local path to the forked repository was provided.",
-                )
-            self._git_head: Git = Git(
-                path_repo=self._path_root_head,
-                user=(self._context.event.sender.login, self._context.event.sender.github_email),
-                logger=self._logger,
-            )
-        else:
-            self._git_head = self._git_base
-            self._path_root_head = self._path_root_base
+
+        # if self._context.event_name is EventType.PULL_REQUEST and not self._context.event.internal:
+        #     # Event triggered by a pull request from a fork
+        #     if not self._path_root_head:
+        #         self._logger.error(
+        #             "No fork path provided.",
+        #             "The event was triggered by a pull request from a fork, "
+        #             "but no local path to the forked repository was provided.",
+        #         )
+        #     self._git_head: Git = Git(
+        #         path_repo=self._path_root_head,
+        #         user=(self._context.event.sender.login, self._context.event.sender.github_email),
+        #         logger=self._logger,
+        #     )
+        # else:
+        #     self._git_head = self._git_base
+        #     self._path_root_head = self._path_root_base
+        self._git_head: Git = Git(
+            path_repo=self._path_root_head,
+            user=(self._context.event.sender.login, self._context.event.sender.github_email),
+            logger=self._logger,
+        )
+
         self._meta: Meta | None = None
         self._ccm_branch: MetaManager | None = None
         self._ccs_branch: ControlCenterOptions | None = None
@@ -1045,6 +1052,11 @@ class EventHandler:
         pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
         match = re.search(pattern, body, flags=re.DOTALL)
         return extract(match.group(1).strip() if match else "")
+
+    def create_branch_name_prerelease(self, version: PEP440SemVer) -> str:
+        """Generate the name of the pre-release branch for a given version."""
+        pre_release_branch_prefix = self._ccs_main.dev.branch.pre_release.prefix
+        return f"{pre_release_branch_prefix}{version}"
 
     def create_branch_name_implementation(self, issue_nr: int, base_branch_name: str) -> str:
         """Generate the name of the implementation branch for a given issue number and base branch."""
