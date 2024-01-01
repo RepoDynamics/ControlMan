@@ -23,6 +23,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
+from repodynamics.commit import CommitParser
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
 from repodynamics.actions._changelog import ChangelogManager
@@ -71,20 +72,78 @@ class PullRequestEventHandler(EventHandler):
                 if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
                     self._run_labeled_status_pre()
                 elif status is IssueStatus.DEPLOY_FINAL:
-                    if self._branch_head.type is BranchType.DEV:
-                        if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                            return self._run_merge_implementation_to_release()
-                        elif self._branch_base.type is BranchType.PRERELEASE:
-                            return self._run_merge_dev_to_pre()
+                    if self._branch_head.type is BranchType.AUTOUPDATE:
+                        if not self._payload.internal:
+                            self._logger.error(
+                                "Merge not allowed",
+                                "Merge from a forked repository is only allowed "
+                                "from an implementation branch to the corresponding implementation branch.",
+                            )
+                            return
+                        if self._branch_base.type not in (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
+                            self._logger.error(
+                                "Merge not allowed",
+                                f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                                f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                            )
+                            return
+                        return self._run_merge_autoupdate()
+                    elif self._branch_head.type is BranchType.DEV:
+                        if not self._payload.internal:
+                            self._logger.error(
+                                "Merge not allowed",
+                                "Merge from a forked repository is only allowed "
+                                "from an implementation branch to the corresponding implementation branch.",
+                            )
+                            return
+                        if self._branch_base.type is not BranchType.IMPLEMENT:
+                            self._logger.error(
+                                "Merge not allowed",
+                                f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                                f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                            )
+                            return
+                        return self._run_merge_dev_to_implement()
+                    elif self._branch_head.type is BranchType.IMPLEMENT:
+                        if self._payload.internal:
+                            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                                return self._run_merge_implementation_to_release()
+                            elif self._branch_base.type is BranchType.PRERELEASE:
+                                return self._run_merge_implementation_to_pre()
+                            else:
+                                self._logger.error(
+                                    "Merge not allowed",
+                                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                                )
+                        else:
+                            if self._branch_base.type is BranchType.IMPLEMENT:
+                                return self._run_merge_fork_to_implement()
+                            else:
+                                self._logger.error(
+                                    "Merge not allowed",
+                                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                                )
                     elif self._branch_head.type is BranchType.PRERELEASE:
                         if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
                             return self._run_merge_pre_to_release()
-                    elif self._branch_head.type is BranchType.AUTOUPDATE:
-                        return self._run_merge_ci_pull()
+                        else:
+                            self._logger.error(
+                                "Merge not allowed",
+                                f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                                f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                            )
+                    else:
+                        self._logger.error(
+                            "Merge not allowed",
+                            f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                            f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                        )
+                else:
                     self._logger.error(
-                        "Merge not allowed",
-                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                        "Unsupported label",
+                        f"Label '{self._payload.label.name}' is not supported for pull requests.",
                     )
         elif action is ActionType.READY_FOR_REVIEW:
             self._run_ready_for_review()
@@ -293,19 +352,23 @@ class PullRequestEventHandler(EventHandler):
             logger=self._logger,
         )
 
-        commits = self._get_commits()
-        for commit in commits:
-            self._logger.info(f"Processing commit: {commit}")
-            if commit.group_data.group is CommitGroup.SECONDARY_CUSTOM:
+        tasklist = self._extract_tasklist(body=self._pull.body)
+        parser = CommitParser(
+            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
+        )
+        for task in tasklist:
+            conv_msg = parser.parse(msg=task["summary"])
+            if conv_msg:
+                group_data = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 changelog_manager.add_change(
-                    changelog_id=commit.group_data.changelog_id,
-                    section_id=commit.group_data.changelog_section_id,
-                    change_title=commit.msg.title,
-                    change_details=commit.msg.body,
+                    changelog_id=group_data.changelog_id,
+                    section_id=group_data.changelog_section_id,
+                    change_title=conv_msg.title,
+                    change_details=conv_msg.body,
                 )
         changelog_manager.write_all_changelogs()
         commit_hash = self.commit(
-            message="Update changelogs",
+            message="auto: Update changelogs",
             push=True,
             set_upstream=True,
         )
@@ -367,6 +430,10 @@ class PullRequestEventHandler(EventHandler):
             name=f"{self._ccm_main['name']} v{next_ver}",
             body=changelog_manager.get_entry(changelog_id="package_public")[0],
         )
+        return
+
+    def _run_merge_dev_to_implement(self):
+
         return
 
     def event_pull_request(self):
