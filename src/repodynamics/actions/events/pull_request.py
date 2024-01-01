@@ -37,16 +37,16 @@ class PullRequestEventHandler(EventHandler):
         template_type: TemplateType,
         context_manager: GitHubContext,
         admin_token: str,
-        path_root_self: str,
-        path_root_fork: str | None = None,
+        path_root_base: str,
+        path_root_head: str | None = None,
         logger: Logger | None = None,
     ):
         super().__init__(
             template_type=template_type,
             context_manager=context_manager,
             admin_token=admin_token,
-            path_root_self=path_root_self,
-            path_root_fork=path_root_fork,
+            path_root_base=path_root_base,
+            path_root_head=path_root_head,
             logger=logger
         )
         self._payload: PullRequestPayload = self._context.event
@@ -83,12 +83,12 @@ class PullRequestEventHandler(EventHandler):
 
     def _run_action_labeled_status(self, status: IssueStatus):
         if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
-            self._run_labeled_status_pre()
+            self._run_labeled_status_pre(status=status)
         elif status is IssueStatus.DEPLOY_FINAL:
             self._run_action_labeled_status_final()
         else:
             self._logger.error(
-                "Unsupported label",
+                "Unsupported status label for pull request",
                 f"Label '{self._payload.label.name}' is not supported for pull requests.",
             )
         return
@@ -315,8 +315,10 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _run_labeled_status_pre(self):
-        if self._branch_head.type is not BranchType.DEV or self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
+    def _run_labeled_status_pre(self, status: IssueStatus):
+        if self._branch_head.type is not BranchType.IMPLEMENT or self._branch_base.type not in (
+            BranchType.RELEASE, BranchType.MAIN
+        ):
             self._logger.error(
                 "Merge not allowed",
                 f"Merge from a head branch of type '{self._branch_head.type.value}' "
@@ -330,6 +332,39 @@ class PullRequestEventHandler(EventHandler):
                 "from a development branch to the corresponding development branch.",
             )
             return
+        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
+        if primary_commit_type.group != CommitGroup.PRIMARY_ACTION or primary_commit_type.action not in (
+            PrimaryActionCommitType.RELEASE_MAJOR,
+            PrimaryActionCommitType.RELEASE_MINOR,
+            PrimaryActionCommitType.RELEASE_PATCH,
+        ):
+            self._logger.error(
+                "Merge not allowed",
+                "Merge from a development branch to a release branch is only allowed "
+                "for release commits.",
+            )
+            return
+        self._git_base.checkout(branch=self._branch_base.name)
+        hash_base = self._git_base.commit_hash_normal()
+        ver_base, dist_base = self._get_latest_version()
+        next_ver_final = self._get_next_version(ver_base, primary_commit_type.action)
+        pre_segment = {
+            IssueStatus.DEPLOY_ALPHA: "a",
+            IssueStatus.DEPLOY_BETA: "b",
+            IssueStatus.DEPLOY_RC: "rc",
+        }[status]
+        next_ver_pre = PEP440SemVer(f"{next_ver_final}.{pre_segment}{self._branch_head.suffix[0]}")
+        pre_release_branch_name = self.create_branch_name_prerelease(version=next_ver_pre)
+        self._git_base.checkout(branch=pre_release_branch_name, create=True)
+        self._git_base.commit(
+            message=(
+                f"init: Create pre-release branch '{pre_release_branch_name}' "
+                f"from base branch '{self._branch_base.name}'."
+            ),
+            allow_empty=True,
+        )
+        self._git_base.push(target="origin", set_upstream=True)
+        return
 
     def _run_merge_implementation_to_release(self):
         if not self._payload.internal:
@@ -340,7 +375,7 @@ class PullRequestEventHandler(EventHandler):
             )
             return
         self._git_base.checkout(branch=self._branch_base.name)
-        hash_bash = self._git_base.commit_hash_normal()
+        hash_base = self._git_base.commit_hash_normal()
         ver_base, dist_base = self._get_latest_version()
         labels = self._pull.label_names
         primary_commit_type = self._ccm_main.get_issue_data_from_labels(labels).group_data
@@ -359,8 +394,8 @@ class PullRequestEventHandler(EventHandler):
             ver_dist=ver_dist,
             commit_type=primary_commit_type.conv_type,
             commit_title=self._pull.title,
-            parent_commit_hash=hash_bash,
-            parent_commit_url=self._gh_link.commit(hash_bash),
+            parent_commit_hash=hash_base,
+            parent_commit_url=self._gh_link.commit(hash_base),
             path_root=self._path_root_base,
             logger=self._logger,
         )
