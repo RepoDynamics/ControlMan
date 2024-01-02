@@ -12,13 +12,9 @@ from repodynamics.datatype import (
     Branch,
     InitCheckAction,
     CommitMsg,
-    RepoFileType,
-    CommitGroup,
-    PrimaryActionCommitType,
     TemplateType,
 )
 from repodynamics.meta.meta import Meta
-from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.commit import CommitParser
 
@@ -41,7 +37,6 @@ class PushEventHandler(EventHandler):
             path_root_head=path_root_head,
             logger=logger
         )
-        self._branch: Branch | None = None
         return
 
     def run_event(self):
@@ -109,10 +104,11 @@ class PushEventHandler(EventHandler):
         if self._template_type is TemplateType.PYPACKIT:
             shutil.rmtree(meta.paths.dir_source)
             shutil.rmtree(meta.paths.dir_tests)
-        self.commit(
+        self._git_base.commit(
             message=f"init: Create repository from RepoDynamics {self._template_name_ver} template",
-            push=True
+            stage="all"
         )
+        self._git_base.push(target="origin")
         self.add_summary(
             name="Init",
             status="pass",
@@ -178,24 +174,34 @@ class PushEventHandler(EventHandler):
         return self._run_branch_edited_main_normal()
 
     def _run_init_phase(self, version: str = "0.0.0"):
-        self._meta = Meta(
-            path_root=self._path_root_base,
+        meta = Meta(
+            path_root=self._path_root_head,
             github_token=self._context.token,
             future_versions={self._branch.name: version},
             logger=self._logger,
         )
-        self._ccm_main = self._ccm_branch = self._meta.read_metadata_full()
+        self._ccm_main = self._ccm_branch = meta.read_metadata_full()
         self._ccs_main = self._ccs_branch = self._ccm_main.settings
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
-        self._action_meta(action=InitCheckAction.COMMIT)
         if self._ccm_main["workflow"].get("pre_commit"):
-            self._action_hooks(action=InitCheckAction.COMMIT)
+            self._action_hooks(
+                action=InitCheckAction.COMMIT,
+                branch=self._branch,
+                base=False,
+                ref_range=(self._context.hash_before, self.hash_latest),
+            )
+        self._action_meta(
+            action=InitCheckAction.COMMIT,
+            meta=meta,
+            base=False,
+        )
+
         ccs_main_before = read_from_json_file(
-            path_root=self._path_root_base,
+            path_root=self._path_root_head,
             commit_hash=self._context.hash_before,
-            git=self._git_base,
+            git=self._git_head,
             logger=self._logger,
         ).settings
         self._config_repo_branch_names(
@@ -208,6 +214,8 @@ class PushEventHandler(EventHandler):
             website_build=True,
             website_deploy=True,
         )
+
+        self._set_output_test_local(ccm_branch=self._ccm_main)
         return
 
     def _run_first_release(self, commit_msg: CommitMsg):
