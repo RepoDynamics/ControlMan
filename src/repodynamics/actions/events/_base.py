@@ -1,9 +1,6 @@
 from pathlib import Path
 import json
-from typing import Literal, NamedTuple
-import datetime
-from enum import Enum
-import shutil
+from typing import Literal
 import re
 
 from markitup import html, md
@@ -17,10 +14,9 @@ from repodynamics import meta
 from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.manager import MetaManager
-from repodynamics import hook, _util
+from repodynamics import hook
 from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
-from repodynamics.actions._changelog import ChangelogManager
 from repodynamics.meta.meta import Meta
 from repodynamics.path import RelativePath
 from repodynamics.meta.datastruct import ControlCenterOptions
@@ -34,23 +30,14 @@ from repodynamics.meta.datastruct.dev.label import LabelType, FullLabel
 from repodynamics.datatype import (
     Branch,
     BranchType,
-    DynamicFileType,
-    CommitGroup,
     Commit,
     CommitMsg,
     RepoFileType,
     PrimaryActionCommitType,
-    SecondaryActionCommitType,
-    PrimaryActionCommit,
-    PrimaryCustomCommit,
-    SecondaryActionCommit,
-    SecondaryCustomCommit,
     NonConventionalCommit,
     FileChangeType,
     Emoji,
-    IssueStatus,
     InitCheckAction,
-    WorkflowDispatchInput,
     TemplateType,
 )
 
@@ -75,8 +62,8 @@ class EventHandler:
     ):
         self._template_type = template_type
         self._context = context_manager
-        self._path_root_base = path_root_base
-        self._path_root_head = path_root_head
+        self._path_root_base = Path(path_root_base)
+        self._path_root_head = Path(path_root_head)
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
@@ -121,10 +108,10 @@ class EventHandler:
         self._ccm_branch: MetaManager | None = None
         self._ccs_branch: ControlCenterOptions | None = None
         self._branch: Branch | None = None
+        self._current_branch_name: str | None = None
         self._event_type: EventType | None = None
         self._summary_oneliners: list[str] = []
         self._summary_sections: list[str | html.ElementCollection | html.Element] = []
-        self._amended: bool = False
         self._tag: str = ""
         self._version: str = ""
         self._failed = False
@@ -152,6 +139,8 @@ class EventHandler:
             "make_latest": "legacy",
             "discussion_category_name": "",
         }
+
+        self._output_test_local: list[dict] = []
         return
 
     def run(self):
@@ -167,13 +156,13 @@ class EventHandler:
         output = self.output
         return output, None, summary
 
-    def _action_meta(self, action: InitCheckAction | None = None):
+    def _action_meta(self, action: InitCheckAction, meta: Meta, base: bool = True) -> str | None:
         name = "Meta Sync"
         self._logger.h1(name)
-        if not action:
-            action = InitCheckAction(
-                self._ccm_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
-            )
+        # if not action:
+        #     action = InitCheckAction(
+        #         self._ccm_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
+        #     )
         self._logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
             self.add_summary(
@@ -183,36 +172,41 @@ class EventHandler:
             )
             self._logger.skip("Meta synchronization is disabled for this event type; skip❗")
             return
+        git = self._git_base if base else self._git_head
+        current_branch = self.resolve_branch(branch_name=git.current_branch_name())
         if action == InitCheckAction.PULL:
-            pr_branch = self.switch_to_ci_branch("meta")
-        self._ccm_branch = self._meta.read_metadata_full()
+            pr_branch_name = self.switch_to_autoupdate_branch(typ="meta", base=base)
+        self._ccm_branch = meta.read_metadata_full()
         self._ccs_branch = self._ccm_branch.settings
-        meta_results, meta_changes, meta_summary = self._meta.compare_files()
+        meta_results, meta_changes, meta_summary = meta.compare_files()
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
+        return_value = None
         if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and meta_changes_any:
-            self._meta.apply_changes()
-            if action == InitCheckAction.AMEND:
-                self.commit(stage="all", amend=True, push=True)
-            else:
-                commit_msg = CommitMsg(
-                    typ=self._ccm_main["commit"]["secondary_action"]["meta_sync"]["type"],
-                    title="Sync dynamic files with meta content",
-                )
-                self.commit(
-                    message=str(commit_msg),
-                    stage="all",
-                    push=True,
-                    set_upstream=action == InitCheckAction.PULL,
-                )
+            meta.apply_changes()
+            commit_msg = CommitMsg(
+                typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
+                title="Sync dynamic files",
+            )
+            commit_hash_before = git.commit_hash_normal()
+            commit_hash = git.commit(message=str(commit_msg), stage="all")
+            self._action_hooks(
+                action=InitCheckAction.AMEND,
+                branch_type=current_branch.type,
+                base=base,
+                ref_range=(commit_hash_before, commit_hash),
+            )
             if action == InitCheckAction.PULL:
-                pull_data = self._gh_api.pull_create(
-                    head=pr_branch,
-                    base=self._context.target_branch_name,
+                git.push(target="origin", set_upstream=True)
+                pull_data = self._gh_api_admin.pull_create(
+                    head=pr_branch_name,
+                    base=self._current_branch_name,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
-                self.switch_to_original_branch()
+                self.switch_to_original_branch(base=base)
+            else:
+                return_value = commit_hash
         if not meta_changes_any:
             oneliner = "All dynamic files are in sync with meta content."
             self._logger.success(oneliner)
@@ -222,10 +216,10 @@ class EventHandler:
                 oneliner += " These were resynchronized and applied to "
                 if action == InitCheckAction.PULL:
                     link = html.a(href=pull_data["url"], content=pull_data["number"])
-                    oneliner += f"branch '{pr_branch}' and a pull request ({link}) was created."
+                    oneliner += f"branch '{pr_branch_name}' and a pull request ({link}) was created."
                 else:
                     link = html.a(
-                        href=str(self._gh_link.commit(self.hash_latest)), content=self.hash_latest[:7]
+                        href=str(self._gh_link.commit(commit_hash)), content=commit_hash[:7]
                     )
                     oneliner += "the current branch " + (
                         f"in a new commit (hash: {link})"
@@ -241,15 +235,21 @@ class EventHandler:
             oneliner=oneliner,
             details=meta_summary,
         )
-        return
+        return return_value
 
-    def _action_hooks(self, action: InitCheckAction | None = None):
+    def _action_hooks(
+        self,
+        action: InitCheckAction,
+        branch: Branch,
+        base: bool,
+        ref_range: tuple[str, str] | None = None,
+    ) -> str | None:
         name = "Workflow Hooks"
         self._logger.h1(name)
-        if not action:
-            action = InitCheckAction(
-                self._ccm_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
-            )
+        # if not action:
+        #     action = InitCheckAction(
+        #         self._ccm_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
+        #     )
         self._logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
             self.add_summary(
@@ -259,7 +259,7 @@ class EventHandler:
             )
             self._logger.skip("Hooks are disabled for this event type; skip❗")
             return
-        config = self._ccm_main["workflow"]["pre_commit"].get(self._branch.type.value)
+        config = self._ccm_main["workflow"]["pre_commit"].get(branch.type.value)
         if not config:
             oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
             self.add_summary(
@@ -287,7 +287,7 @@ class EventHandler:
         # else:
         #     config = self.meta.paths.pre_commit_config.path
         if action == InitCheckAction.PULL:
-            pr_branch = self.switch_to_ci_branch("hooks")
+            pr_branch = self.switch_to_autoupdate_branch(typ="hooks", base=base)
         input_action = (
             action
             if action in [InitCheckAction.REPORT, InitCheckAction.AMEND, InitCheckAction.COMMIT]
@@ -295,39 +295,41 @@ class EventHandler:
         )
         commit_msg = (
             CommitMsg(
-                typ=self._ccm_main["commit"]["secondary_action"]["hook_fix"]["type"],
+                typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
                 title="Apply automatic fixes made by workflow hooks",
             )
             if action in [InitCheckAction.COMMIT, InitCheckAction.PULL]
             else ""
         )
         hooks_output = hook.run(
-            ref_range=(self._context.hash_before, self.hash_latest),
+            ref_range=ref_range,
             action=input_action.value,
             commit_message=str(commit_msg),
-            path_root=self._meta.paths.root,
+            path_root=self._path_root_base if base else self._path_root_head,
             config=config,
-            git=self._git_head,
+            git=self._git_base if base else self._git_head,
             logger=self._logger,
         )
         passed = hooks_output["passed"]
         modified = hooks_output["modified"]
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and modified:
-            self.push(amend=action == InitCheckAction.AMEND, set_upstream=action == InitCheckAction.PULL)
+            # self.push(amend=action == InitCheckAction.AMEND, set_upstream=action == InitCheckAction.PULL)
             if action == InitCheckAction.PULL:
-                pull_data = self._gh_api.pull_create(
+                pull_data = self._gh_api_admin.pull_create(
                     head=pr_branch,
-                    base=self._context.target_branch_name,
+                    base=branch.name,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
                 self.switch_to_original_branch()
+        return_value = None
         if action == InitCheckAction.PULL and modified:
             link = html.a(href=pull_data["url"], content=pull_data["number"])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
         if action in [InitCheckAction.COMMIT, InitCheckAction.AMEND] and modified:
-            link = html.a(href=str(self._gh_link.commit(self.hash_latest)), content=self.hash_latest[:7])
+            return_value = commit_hash = hooks_output["commit_hash"]
+            link = html.a(href=str(self._gh_link.commit(commit_hash)), content=commit_hash[:7])
             target = "the current branch " + (
                 f"in a new commit (hash: {link})"
                 if action == InitCheckAction.COMMIT
@@ -358,7 +360,7 @@ class EventHandler:
             oneliner=oneliner,
             details=hooks_output["summary"],
         )
-        return
+        return return_value
 
     def commit(
         self,
@@ -394,18 +396,20 @@ class EventHandler:
         self._version = str(ver)
         return
 
-    def switch_to_ci_branch(self, typ: Literal["hooks", "meta"]):
-        current_branch = self._git_head.current_branch_name()
+    def switch_to_autoupdate_branch(self, typ: Literal["hooks", "meta"], base: bool = True):
+        git = self._git_base if base else self._git_head
+        self._current_branch_name = git.current_branch_name()
         new_branch_prefix = self._ccs_main.dev.branch.auto_update.prefix
-        new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
-        self._git_head.stash()
-        self._git_head.checkout(branch=new_branch_name, reset=True)
-        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
+        new_branch_name = f"{new_branch_prefix}{self._current_branch_name}/{typ}"
+        git.stash()
+        git.checkout(branch=new_branch_name, reset=True)
+        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{self._current_branch_name}'.")
         return new_branch_name
 
-    def switch_to_original_branch(self):
-        self._git_head.checkout(branch=self._context.ref_name)
-        self._git_head.stash_pop()
+    def switch_to_original_branch(self, base: bool = True):
+        git = self._git_base if base else self._git_head
+        git.checkout(branch=self._current_branch_name)
+        git.stash_pop()
         return
 
     @property
@@ -469,9 +473,9 @@ class EventHandler:
         self,
         branch: str | None = None,
         dev_only: bool = False,
-        from_fork: bool = False,
+        head: bool = False,
     ) -> tuple[PEP440SemVer | None, int | None]:
-        git = self._git_head if from_fork else self._git_base
+        git = self._git_head if head else self._git_base
         ver_tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         if branch:
             git.stash()
@@ -502,6 +506,45 @@ class EventHandler:
             return version.next_post
         return version
 
+    def _set_output_test_local(
+        self,
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
+        version: str = "",
+        max_retries: str = "15",
+        retry_delay: str = "60",
+    ):
+        common = {
+            "repository": repository or self._context.target_repo_fullname,
+            "ref": ref or self._context.ref_name,
+            "path-tests": ccm_branch["path"]["dir"]["tests"],
+            "package-source": source,
+            "package-name": ccm_branch["package"]["name"],
+            "package-version": version,
+            "path-report-pytest": ccm_branch["path"]["dir"]["local"]["report"]["pytest"],
+            "path-report-coverage": ccm_branch["path"]["dir"]["local"]["report"]["coverage"],
+            "path-cache-pytest": ccm_branch["path"]["dir"]["local"]["cache"]["pytest"],
+            "path-cache-coverage": ccm_branch["path"]["dir"]["local"]["cache"]["coverage"],
+            "max-retries": max_retries,
+            "retry-delay": retry_delay,
+        }
+        for github_runner, os in zip(
+            ccm_branch["package"]["github_runners"],
+            ccm_branch["package"]["os_titles"]
+        ):
+            for python_version in ccm_branch["package"]["python_versions"]:
+                self._output_test_local.append(
+                    {
+                        **common,
+                        "runner": github_runner,
+                        "os": os,
+                        "python-version": python_version,
+                    }
+                )
+        return
+
     @property
     def output(self) -> dict:
         metadata = self._ccm_branch or self._ccm_main
@@ -525,6 +568,8 @@ class EventHandler:
         if self._job_run_flag["package_publish_testpypi"] or self._job_run_flag["package_publish_pypi"]:
             self._job_run_flag["package_build"] = True
         out = {
+            "package-test": self._output_test_local or False,
+            
             "config": {
                 "fail": self._failed,
                 "checkout": {
@@ -619,7 +664,7 @@ class EventHandler:
         self._logger.error(action_err_msg, action_err_details)
         return
 
-    def _action_file_change_detector(self) -> dict[RepoFileType, list[str]]:
+    def _action_file_change_detector(self, meta: Meta) -> dict[RepoFileType, list[str]]:
         name = "File Change Detector"
         self._logger.h1(name)
         change_type_map = {
@@ -642,7 +687,7 @@ class EventHandler:
             ref_start=self._context.hash_before, ref_end=self._context.hash_after
         )
         self._logger.success("Detected changed files", json.dumps(changes, indent=3))
-        fixed_paths = [outfile.rel_path for outfile in self._meta.paths.fixed_files]
+        fixed_paths = [outfile.rel_path for outfile in meta.paths.fixed_files]
         for change_type, changed_paths in changes.items():
             # if change_type in ["unknown", "broken"]:
             #     self.logger.warning(
@@ -658,11 +703,11 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == ".github/_README.md" or path.endswith("/README.md"):
                     typ = RepoFileType.README
-                elif path.startswith(self._meta.paths.dir_source_rel):
+                elif path.startswith(meta.paths.dir_source_rel):
                     typ = RepoFileType.PACKAGE
-                elif path.startswith(self._meta.paths.dir_website_rel):
+                elif path.startswith(meta.paths.dir_website_rel):
                     typ = RepoFileType.WEBSITE
-                elif path.startswith(self._meta.paths.dir_tests_rel):
+                elif path.startswith(meta.paths.dir_tests_rel):
                     typ = RepoFileType.TEST
                 elif path.startswith(RelativePath.dir_github_workflows):
                     typ = RepoFileType.WORKFLOW
@@ -675,9 +720,9 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == RelativePath.file_path_meta:
                     typ = RepoFileType.SUPERMETA
-                elif path == f"{self._meta.paths.dir_meta_rel}path.yaml":
+                elif path == f"{meta.paths.dir_meta_rel}path.yaml":
                     typ = RepoFileType.SUPERMETA
-                elif path.startswith(self._meta.paths.dir_meta_rel):
+                elif path.startswith(meta.paths.dir_meta_rel):
                     typ = RepoFileType.META
                 else:
                     typ = RepoFileType.OTHER
@@ -1067,6 +1112,19 @@ class EventHandler:
         """Generate the name of the development branch for a given issue number and base branch."""
         dev_branch_prefix = self._ccs_main.dev.branch.development.prefix
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
+
+    def _read_web_announcement_file(self, base: bool = True) -> str | None:
+        path_root = self._path_root_base if base else self._path_root_head
+        path = path_root / self._ccm_main["path"]["file"]["website_announcement"]
+        return path.read_text() if path.is_file() else None
+
+    def _write_web_announcement_file(self, announcement: str, base: bool = True) -> None:
+        if announcement:
+            announcement = f"{announcement.strip()}\n"
+        path_root = self._path_root_base if base else self._path_root_head
+        with open(path_root / self._ccm_main["path"]["file"]["website_announcement"], "w") as f:
+            f.write(announcement)
+        return
 
     @staticmethod
     def _write_tasklist(entries: list[dict[str, bool | str | list]]) -> str:
