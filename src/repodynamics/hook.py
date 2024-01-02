@@ -273,7 +273,7 @@ def run(
     ref_range: tuple[str, str] = None,
     action: Literal["report", "amend", "commit"] = "amend",
     commit_message: str = "",
-    path_root: str = ".",
+    path_root: str | Path = ".",
     config: dict | str | Path = Path(".github/.pre-commit-config.yaml"),
     git: Git | None = None,
     logger: Logger = None,
