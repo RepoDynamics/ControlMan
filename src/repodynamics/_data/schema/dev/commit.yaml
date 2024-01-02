@@ -146,6 +146,19 @@ properties:
     type: object
     default: { }
     properties:
+      auto-update:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          type:
+            type: string
+            default: auto-update
+          description:
+            type: string
+            default: |
+              Automatically update the repository contents.
+        required: [ type, description ]
       meta_sync:
         type: object
         default: {}
@@ -183,7 +196,7 @@ properties:
             type: string
             default: |
               Automatically refactor the code.
-    required: [ meta_sync, revert, hook_fix ]
+    required: [ auto-update, meta_sync, revert, hook_fix ]
   secondary_custom:
     description: Secondary commit types
     type: object
