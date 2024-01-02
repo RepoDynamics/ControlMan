@@ -8,13 +8,13 @@ from repodynamics.logger import Logger
 class ChangelogManager:
     def __init__(
         self,
+        path_root: str,
         changelog_metadata: dict,
         ver_dist: str,
         commit_type: str,
         commit_title: str,
         parent_commit_hash: str,
         parent_commit_url: str,
-        path_root: str = "repo_self",
         logger: Logger = None,
     ):
         self._meta = changelog_metadata
