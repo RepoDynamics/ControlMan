@@ -27,7 +27,6 @@ from repodynamics.commit import CommitParser
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
 from repodynamics.actions._changelog import ChangelogManager
-from repodynamics.actions import _helpers
 
 
 class PullRequestEventHandler(EventHandler):
@@ -54,10 +53,72 @@ class PullRequestEventHandler(EventHandler):
         self._branch_base = self.resolve_branch(self._context.base_ref)
         self._branch_head = self.resolve_branch(self._context.head_ref)
         self._git_base.fetch_remote_branches_by_name(branch_names=self._context.base_ref)
-        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.head_ref)
+        self._git_base.checkout(branch=self._context.base_ref)
+        # self._git_head.fetch_remote_branches_by_name(branch_names=self._context.head_ref)
         return
 
     def run_event(self):
+        name = "Event Handler"
+        error_title = "Unsupported pull request."
+        if self._payload.internal:
+            if self._branch_head.type is BranchType.AUTOUPDATE:
+                if self._branch_base.type not in (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
+                    error_msg = (
+                        "Pull requests from an auto-update (head) branch "
+                        "are only supported to a main, release, or pre-release (base) branch, "
+                        f"but the base branch has type '{self._branch_base.type.value}'."
+                    )
+                    self._logger.error(error_title, error_msg, raise_error=False)
+                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                    return
+            elif self._branch_head.type is BranchType.DEV:
+                if self._branch_base.type is not BranchType.IMPLEMENT:
+                    error_msg = (
+                        "Pull requests from a development (head) branch "
+                        "are only supported to an implementation (base) branch, "
+                        f"but the base branch has type '{self._branch_base.type.value}'."
+                    )
+                    self._logger.error(error_title, error_msg, raise_error=False)
+                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                    return
+            elif self._branch_head.type is BranchType.IMPLEMENT:
+                if self._branch_base.type not in (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
+                    error_msg = (
+                        "Pull requests from an implementation (head) branch "
+                        "are only supported to a main, release, or pre-release (base) branch, "
+                        f"but the base branch has type '{self._branch_base.type.value}'."
+                    )
+                    self._logger.error(error_title, error_msg, raise_error=False)
+                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                    return
+            elif self._branch_head.type is BranchType.PRERELEASE:
+                if self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
+                    error_msg = (
+                        "Pull requests from a pre-release (head) branch "
+                        "are only supported to a release or main (base) branch, "
+                        f"but the base branch has type '{self._branch_base.type.value}'."
+                    )
+                    self._logger.error(error_title, error_msg, raise_error=False)
+                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                    return
+            else:
+                error_msg = (
+                    "Pull requests from a head branch of type "
+                    f"'{self._branch_head.type.value}' are not supported."
+                )
+                self._logger.error(error_title, error_msg, raise_error=False)
+                self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                return
+        else:
+            if self._branch_base.type is not BranchType.IMPLEMENT or self._branch_head.type is not BranchType.IMPLEMENT:
+                error_msg = (
+                    "Pull requests from a forked repository are only supported "
+                    "from an implementation (head) branch to an implementation (base) branch."
+                )
+                self._logger.error(error_title, error_msg, raise_error=False)
+                self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
+                return
+
         action = self._context.event.action
         if action is ActionType.OPENED:
             self._run_action_opened()
@@ -177,66 +238,27 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_action_synchronize(self):
-        if self._payload.internal:
-            meta_and_hooks_action_type = InitCheckAction.COMMIT
-            if self._branch_head.type is BranchType.DEV:
-                if self._branch_base.type is not BranchType.IMPLEMENT:
-                    self._logger.error(
-                        "Unsupported pull request synchronization",
-                        "Pull request synchronization from a development (head) branch "
-                        "is only supported to an implementation (base) branch, "
-                        f"but the base branch is '{self._branch_base.type.value}'.",
-                        raise_error=False,
-                    )
-                    self._failed = True
-                    return
-            elif self._branch_head.type is BranchType.IMPLEMENT:
-                if self._branch_base.type not in [BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE]:
-                    self._logger.error(
-                        "Unsupported pull request synchronization",
-                        "Pull request synchronization from an implementation (head) branch "
-                        "is only supported to a main, release, or pre-release (base) branch, "
-                        f"but the base branch is '{self._branch_base.type.value}'.",
-                        raise_error=False,
-                    )
-                    self._failed = True
-                    return
-            else:
-                self._logger.error(
-                    "Unsupported pull request synchronization",
-                    "Pull request synchronization is not supported "
-                    f"for pull requests from a '{self._branch_head.type.value}' branch.",
-                    raise_error=False,
-                )
-                self._failed = True
-                return
-        else:
-            meta_and_hooks_action_type = InitCheckAction.FAIL
-            if self._branch_base.type is not BranchType.IMPLEMENT:
-                self._logger.error(
-                    "Unsupported pull request synchronization",
-                    "Pull request synchronization from a forked repository is only supported "
-                    "to an implementation (base) branch.",
-                    raise_error=False,
-                )
-                self._failed = True
-                return
-
-        self._git_head.checkout(branch=self._branch_head.name)
-        self._meta = Meta(
+        meta_and_hooks_action_type = InitCheckAction.COMMIT if self._payload.internal else InitCheckAction.FAIL
+        meta = Meta(
             path_root=self._path_root_head,
             github_token=self._context.token,
             hash_before=self._context.hash_before,
             logger=self._logger,
         )
-        changed_file_groups = self._action_file_change_detector()
+        changed_file_groups = self._action_file_change_detector(meta=meta)
+        self._action_hooks(
+            action=meta_and_hooks_action_type,
+            branch=self._branch_head,
+            base=False,
+            ref_range=(self._context.hash_before, self._context.hash_after),
+        )
         for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
             if changed_file_groups[file_type]:
-                self._action_meta(action=meta_and_hooks_action_type)
+                self._action_meta(action=meta_and_hooks_action_type, meta=meta, base=False)
                 break
         else:
             self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
-        self._action_hooks(action=meta_and_hooks_action_type)
+
         tasks_complete = self._update_implementation_tasklist()
         if tasks_complete and not self._failed:
             self._gh_api.pull_update(
@@ -374,9 +396,8 @@ class PullRequestEventHandler(EventHandler):
                 "from a development branch to the corresponding development branch.",
             )
             return
-        self._git_base.checkout(branch=self._branch_base.name)
         hash_base = self._git_base.commit_hash_normal()
-        ver_base, dist_base = self._get_latest_version()
+        ver_base, dist_base = self._get_latest_version(head=False)
         labels = self._pull.label_names
         primary_commit_type = self._ccm_main.get_issue_data_from_labels(labels).group_data
         if primary_commit_type.group == CommitGroup.PRIMARY_CUSTOM or primary_commit_type.action in (
@@ -388,7 +409,11 @@ class PullRequestEventHandler(EventHandler):
         else:
             next_ver = self._get_next_version(ver_base, primary_commit_type.action)
             ver_dist = str(next_ver)
-        self._git_base.checkout(branch=self._branch_head.name)
+
+        tasklist = self._extract_tasklist(body=self._pull.body)
+        parser = CommitParser(
+            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
+        )
         changelog_manager = ChangelogManager(
             changelog_metadata=self._ccm_main["changelog"],
             ver_dist=ver_dist,
@@ -396,13 +421,8 @@ class PullRequestEventHandler(EventHandler):
             commit_title=self._pull.title,
             parent_commit_hash=hash_base,
             parent_commit_url=self._gh_link.commit(hash_base),
-            path_root=self._path_root_base,
+            path_root=self._path_root_head,
             logger=self._logger,
-        )
-
-        tasklist = self._extract_tasklist(body=self._pull.body)
-        parser = CommitParser(
-            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
         )
         for task in tasklist:
             conv_msg = parser.parse(msg=task["summary"])
@@ -420,7 +440,7 @@ class PullRequestEventHandler(EventHandler):
             push=True,
             set_upstream=True,
         )
-        self._metadata_branch = meta.read_from_json_file(
+        self._ccm_branch = meta.read_from_json_file(
             path_root=self._path_root_base, logger=self._logger
         )
         # Wait 30 s to make sure the push is registered
@@ -428,7 +448,7 @@ class PullRequestEventHandler(EventHandler):
         bare_title = self._pull.title.removeprefix(f'{primary_commit_type.conv_type}: ')
         commit_title = f"{primary_commit_type.conv_type}: {bare_title}"
         try:
-            response = self._gh_api.pull_merge(
+            response = self._gh_api_admin.pull_merge(
                 number=self._payload.number,
                 commit_title=commit_title,
                 commit_message=self._pull.body,
