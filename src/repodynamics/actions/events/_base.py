@@ -7,7 +7,6 @@ from markitup import html, md
 import pylinks
 from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
-from github_contexts.github.enums import EventType
 
 import repodynamics
 from repodynamics import meta
