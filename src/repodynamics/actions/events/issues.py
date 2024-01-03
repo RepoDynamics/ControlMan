@@ -109,7 +109,9 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled_status_implementation(self):
-        self._add_to_timeline(entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).")
+        self._add_to_timeline(
+            entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login})."
+        )
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
