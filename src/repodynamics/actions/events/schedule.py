@@ -9,6 +9,7 @@ from repodynamics.logger import Logger
 from repodynamics.datatype import CommitMsg, InitCheckAction
 from repodynamics.meta.meta import Meta
 
+
 class ScheduleEventHandler(EventHandler):
 
     def __init__(
@@ -65,7 +66,7 @@ class ScheduleEventHandler(EventHandler):
 
     def _web_announcement_expiry_check(self) -> bool:
         name = "Website Announcement Expiry Check"
-        current_announcement = self._read_web_announcement_file()
+        current_announcement = self._read_web_announcement_file(base=True, ccm=self._ccm_main)
         if current_announcement is None:
             self.add_summary(
                 name=name,
@@ -155,7 +156,7 @@ class ScheduleEventHandler(EventHandler):
             content=md.code_block(commit_details),
             summary="📝 Removed Announcement Commit Details",
         )
-        self._write_web_announcement_file(announcement="", base=True)
+        self._write_web_announcement_file(announcement="", base=True, ccm=self._ccm_main)
         commit_msg = CommitMsg(
             typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
             title="Remove expired website announcement",
