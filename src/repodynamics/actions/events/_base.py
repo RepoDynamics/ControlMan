@@ -68,7 +68,6 @@ class EventHandler:
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
-        self._ccs_main: ControlCenterOptions | None = self._ccm_main.settings if self._ccm_main else None
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
         repo_user = self._context.repository_owner
         repo_name = self._context.repository_name
@@ -117,7 +116,12 @@ class EventHandler:
             "discussion_category_name": "",
         }
 
-        self._output_test_local: list[dict] = []
+        self._output_package_test: list[dict] = []
+        self._output_package_build: dict = {}
+        self._output_package_publish_pypi: dict = {}
+        self._output_package_publish_testpypi: dict = {}
+        self._output_package_test_pypi: list[dict] = []
+        self._output_package_test_testpypi: list[dict] = []
         return
 
     def run(self):
@@ -348,6 +352,29 @@ class EventHandler:
             self._hash_latest = new_hash
         return new_hash
 
+    def _get_latest_version(
+        self,
+        branch: str | None = None,
+        dev_only: bool = False,
+        head: bool = False,
+    ) -> tuple[PEP440SemVer | None, int | None]:
+        git = self._git_head if head else self._git_base
+        ver_tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
+        if branch:
+            git.stash()
+            curr_branch = git.current_branch_name()
+            git.checkout(branch=branch)
+        latest_version = git.get_latest_version(tag_prefix=ver_tag_prefix, dev_only=dev_only)
+        distance = git.get_distance(
+            ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}"
+        ) if latest_version else None
+        if branch:
+            git.checkout(branch=curr_branch)
+            git.stash_pop()
+        if not latest_version and not dev_only:
+            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
+        return latest_version, distance
+
     def _tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
         tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         tag = f"{tag_prefix}{ver}"
@@ -360,7 +387,7 @@ class EventHandler:
 
     def switch_to_autoupdate_branch(self, typ: Literal["hooks", "meta"], git: Git) -> str:
         current_branch = git.current_branch_name()
-        new_branch_prefix = self._ccs_main.dev.branch.auto_update.prefix
+        new_branch_prefix = self._ccm_main.settings.dev.branch.auto_update.prefix
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         git.stash()
         git.checkout(branch=new_branch_name, reset=True)
@@ -432,30 +459,64 @@ class EventHandler:
                 self._release_info[key] = val
         return
 
-    def _get_latest_version(
+    def _set_output_package_build_and_publish(
         self,
-        branch: str | None = None,
-        dev_only: bool = False,
-        head: bool = False,
-    ) -> tuple[PEP440SemVer | None, int | None]:
-        git = self._git_head if head else self._git_base
-        ver_tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
-        if branch:
-            git.stash()
-            curr_branch = git.current_branch_name()
-            git.checkout(branch=branch)
-        latest_version = git.get_latest_version(tag_prefix=ver_tag_prefix, dev_only=dev_only)
-        distance = git.get_distance(
-            ref_start=f"refs/tags/{ver_tag_prefix}{latest_version.input}"
-        ) if latest_version else None
-        if branch:
-            git.checkout(branch=curr_branch)
-            git.stash_pop()
-        if not latest_version and not dev_only:
-            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
-        return latest_version, distance
+        ccm_branch: MetaManager,
+        version: str,
+        repository: str = "",
+        ref: str = "",
+        publish_testpypi: bool = False,
+        publish_pypi: bool = False,
+    ):
+        artifact_name = f"Package ({version})"
+        self._output_package_build = {
+            "repository": repository or self._context.target_repo_fullname,
+            "ref": ref or self._context.ref_name,
+            "artifact-name": artifact_name,
+            "pure-python": ccm_branch["package"]["pure_python"],
+            "cibw-matrix-platform": ccm_branch["package"]["cibw_matrix_platform"],
+            "cibw-matrix-python": ccm_branch["package"]["cibw_matrix_python"],
+            "path-readme": ccm_branch["path"]["file"]["readme_pypi"],
+        }
+        if publish_testpypi or publish_pypi:
+            self._output_package_test.extend(
+                self._create_output_package_test(
+                    ccm_branch=ccm_branch,
+                    repository=repository,
+                    ref=ref,
+                    source="GitHub",
+                )
+            )
+            self._output_package_publish_testpypi = {
+                "platform": "TestPyPI",
+                "upload-url": "https://test.pypi.org/legacy/",
+                "download-url": f'https://test.pypi.org/project/{ccm_branch["package"]["name"]}/{version}',
+                "artifact-name": artifact_name,
+            }
+            self._output_package_test_testpypi = self._create_output_package_test(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                source="TestPyPI",
+                version=version,
+            )
+        if publish_pypi:
+            self._output_package_publish_pypi = {
+                "platform": "PyPI",
+                "upload-url": "https://upload.pypi.org/legacy/",
+                "download-url": f'https://pypi.org/project/{ccm_branch["package"]["name"]}/{version}',
+                "artifact-name": artifact_name,
+            }
+            self._output_package_test_pypi = self._create_output_package_test(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                source="PyPI",
+                version=version,
+            )
+        return
 
-    def _set_output_test_local(
+    def _set_output_package_test(
         self,
         ccm_branch: MetaManager,
         repository: str = "",
@@ -465,6 +526,29 @@ class EventHandler:
         max_retries: str = "15",
         retry_delay: str = "60",
     ):
+        self._output_package_test.extend(
+            self._create_output_package_test(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                source=source,
+                version=version,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+            )
+        )
+        return
+
+    def _create_output_package_test(
+        self,
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
+        version: str = "",
+        max_retries: str = "15",
+        retry_delay: str = "60",
+    ) -> list[dict]:
         common = {
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
@@ -479,12 +563,13 @@ class EventHandler:
             "max-retries": max_retries,
             "retry-delay": retry_delay,
         }
+        out = []
         for github_runner, os in zip(
             ccm_branch["package"]["github_runners"],
             ccm_branch["package"]["os_titles"]
         ):
             for python_version in ccm_branch["package"]["python_versions"]:
-                self._output_test_local.append(
+                out.append(
                     {
                         **common,
                         "runner": github_runner,
@@ -492,7 +577,7 @@ class EventHandler:
                         "python-version": python_version,
                     }
                 )
-        return
+        return out
 
     @property
     def output(self) -> dict:
@@ -517,8 +602,13 @@ class EventHandler:
         if self._job_run_flag["package_publish_testpypi"] or self._job_run_flag["package_publish_pypi"]:
             self._job_run_flag["package_build"] = True
         out = {
-            "package-test": self._output_test_local or False,
-            
+            "package-test": self._output_package_test or False,
+            "package-build": self._output_package_build or False,
+            "package-publish-testpypi": self._output_package_publish_testpypi or False,
+            "package-publish-pypi": self._output_package_publish_pypi or False,
+            "package-test-testpypi": self._output_package_test_testpypi or False,
+            "package-test-pypi": self._output_package_test_pypi or False,
+
             "config": {
                 "fail": self._failed,
                 "checkout": {
@@ -746,7 +836,7 @@ class EventHandler:
         return
 
     def _config_repo_labels_reset(self, ccs: ControlCenterOptions | None = None):
-        ccs = ccs or self._ccs_main
+        ccs = ccs or self._ccm_main.settings
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
         for label in ccs.dev.label.full_labels:
@@ -756,7 +846,7 @@ class EventHandler:
     def _config_repo_labels_update(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions):
 
         def format_labels(
-            labels: list[FullLabel]
+            labels: tuple[FullLabel]
         ) -> tuple[
             dict[tuple[LabelType, str, str], FullLabel],
             dict[tuple[LabelType, str, str], FullLabel],
@@ -1020,17 +1110,17 @@ class EventHandler:
 
     def create_branch_name_prerelease(self, version: PEP440SemVer) -> str:
         """Generate the name of the pre-release branch for a given version."""
-        pre_release_branch_prefix = self._ccs_main.dev.branch.pre_release.prefix
+        pre_release_branch_prefix = self._ccm_main.settings.dev.branch.pre_release.prefix
         return f"{pre_release_branch_prefix}{version}"
 
     def create_branch_name_implementation(self, issue_nr: int, base_branch_name: str) -> str:
         """Generate the name of the implementation branch for a given issue number and base branch."""
-        impl_branch_prefix = self._ccs_main.dev.branch.implementation.prefix
+        impl_branch_prefix = self._ccm_main.settings.dev.branch.implementation.prefix
         return f"{impl_branch_prefix}{issue_nr}/{base_branch_name}"
 
     def create_branch_name_development(self, issue_nr: int, base_branch_name: str, task_nr: int) -> str:
         """Generate the name of the development branch for a given issue number and base branch."""
-        dev_branch_prefix = self._ccs_main.dev.branch.development.prefix
+        dev_branch_prefix = self._ccm_main.settings.dev.branch.development.prefix
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
 
     def _read_web_announcement_file(self, base: bool, ccm: MetaManager) -> str | None:
