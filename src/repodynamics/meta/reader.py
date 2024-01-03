@@ -30,6 +30,7 @@ class MetaReader:
         self._metadata["path"] = self._pathfinder.paths_dict
         self._metadata["path"]["file"] = {
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
+            "readme_pypi": f"{self._metadata['path']['dir']['source']}/README_pypi.md",
         }
         self._cache: dict = self._initialize_api_cache()
         self._db = self._read_datafile(_util.file.datafile("db.yaml"))
