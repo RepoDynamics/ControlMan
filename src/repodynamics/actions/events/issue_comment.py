@@ -107,7 +107,7 @@ class IssueCommentEventHandler(EventHandler):
             base_branch_name=head_branch.suffix[1],
             task_nr=task_nr,
         )
-        _, branch_names = self._git_head.get_all_branch_names()
+        _, branch_names = self._git_base.get_all_branch_names()
         if dev_branch_name in branch_names:
             self._logger.error("Branch already exists.")
             return
@@ -115,17 +115,17 @@ class IssueCommentEventHandler(EventHandler):
         if len(tasklist) < task_nr:
             self._logger.error("Invalid task number.")
             return
-        self._git_head.fetch_remote_branches_by_name(branch_names=head_branch.name)
-        self._git_head.checkout(branch=head_branch.name)
-        self._git_head.checkout(branch=dev_branch_name, create=True)
-        self._git_head.commit(
+        self._git_base.fetch_remote_branches_by_name(branch_names=head_branch.name)
+        self._git_base.checkout(branch=head_branch.name)
+        self._git_base.checkout(branch=dev_branch_name, create=True)
+        self._git_base.commit(
             message=(
                 f"init: Create development branch '{dev_branch_name}' "
                 f"from implementation branch '{head_branch.name}' for task {task_nr}"
             ),
             allow_empty=True,
         )
-        self._git_head.push(target="origin", set_upstream=True)
+        self._git_base.push(target="origin", set_upstream=True)
         task = tasklist[task_nr - 1]
         sub_tasklist_str = self._write_tasklist(entries=[task])
         pull_body = (
