@@ -46,25 +46,26 @@ class ScheduleEventHandler(EventHandler):
             )
 
     def _run_sync(self):
-        announcement_removed = self._web_announcement_expiry_check()
+        commit_hash_announce = self._web_announcement_expiry_check()
         meta = Meta(
             path_root=self._path_root_base,
             github_token=self._context.token,
             logger=self._logger,
         )
-        commit_hash = self._action_meta(
+        commit_hash_meta = self._action_meta(
             action=InitCheckAction.PULL,
             meta=meta,
-            base=True
+            base=True,
+            branch=self.resolve_branch()
         )
-        if announcement_removed or commit_hash:
+        if commit_hash_announce or commit_hash_meta:
             self._git_base.push()
         return
 
     def _run_test(self):
         return
 
-    def _web_announcement_expiry_check(self) -> bool:
+    def _web_announcement_expiry_check(self) -> str | None:
         name = "Website Announcement Expiry Check"
         current_announcement = self._read_web_announcement_file(base=True, ccm=self._ccm_main)
         if current_announcement is None:
@@ -79,7 +80,7 @@ class ScheduleEventHandler(EventHandler):
                     ]
                 ),
             )
-            return False
+            return
         (commit_date_relative, commit_date_absolute, commit_date_epoch, commit_details) = (
             self._git_base.log(
                 number=1,
@@ -113,7 +114,7 @@ class ScheduleEventHandler(EventHandler):
                     ]
                 ),
             )
-            return False
+            return
         current_date_epoch = int(_util.shell.run_command(["date", "-u", "+%s"], logger=self._logger)[0])
         elapsed_seconds = current_date_epoch - int(commit_date_epoch)
         elapsed_days = elapsed_seconds / (24 * 60 * 60)
@@ -146,7 +147,7 @@ class ScheduleEventHandler(EventHandler):
                     ]
                 ),
             )
-            return False
+            return
         # Remove the expired announcement
         removed_announcement_html = html.details(
             content=md.code_block(current_announcement, "html"),
@@ -184,4 +185,4 @@ class ScheduleEventHandler(EventHandler):
                 ]
             ),
         )
-        return True
+        return commit_hash
