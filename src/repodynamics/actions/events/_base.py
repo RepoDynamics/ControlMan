@@ -64,12 +64,12 @@ class EventHandler:
         self._context = context_manager
         self._path_root_base = Path(path_root_base)
         self._path_root_head = Path(path_root_head)
+        self._logger = logger or Logger()
+
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
         self._ccs_main: ControlCenterOptions | None = self._ccm_main.settings if self._ccm_main else None
-        self._logger = logger or Logger()
-
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
         repo_user = self._context.repository_owner
         repo_name = self._context.repository_name
@@ -81,35 +81,13 @@ class EventHandler:
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
             logger=self._logger,
         )
-
-        # if self._context.event_name is EventType.PULL_REQUEST and not self._context.event.internal:
-        #     # Event triggered by a pull request from a fork
-        #     if not self._path_root_head:
-        #         self._logger.error(
-        #             "No fork path provided.",
-        #             "The event was triggered by a pull request from a fork, "
-        #             "but no local path to the forked repository was provided.",
-        #         )
-        #     self._git_head: Git = Git(
-        #         path_repo=self._path_root_head,
-        #         user=(self._context.event.sender.login, self._context.event.sender.github_email),
-        #         logger=self._logger,
-        #     )
-        # else:
-        #     self._git_head = self._git_base
-        #     self._path_root_head = self._path_root_base
         self._git_head: Git = Git(
             path_repo=self._path_root_head,
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
             logger=self._logger,
         )
 
-        self._meta: Meta | None = None
-        self._ccm_branch: MetaManager | None = None
-        self._ccs_branch: ControlCenterOptions | None = None
-        self._branch: Branch | None = None
-        self._current_branch_name: str | None = None
-        self._event_type: EventType | None = None
+        self._branch_name_memory_autoupdate: str | None = None
         self._summary_oneliners: list[str] = []
         self._summary_sections: list[str | html.ElementCollection | html.Element] = []
         self._tag: str = ""
@@ -156,7 +134,7 @@ class EventHandler:
         output = self.output
         return output, None, summary
 
-    def _action_meta(self, action: InitCheckAction, meta: Meta, base: bool = True) -> str | None:
+    def _action_meta(self, action: InitCheckAction, meta: Meta, base: bool, branch: Branch) -> str | None:
         name = "Meta Sync"
         self._logger.h1(name)
         # if not action:
@@ -173,15 +151,12 @@ class EventHandler:
             self._logger.skip("Meta synchronization is disabled for this event type; skip❗")
             return
         git = self._git_base if base else self._git_head
-        current_branch = self.resolve_branch(branch_name=git.current_branch_name())
         if action == InitCheckAction.PULL:
-            pr_branch_name = self.switch_to_autoupdate_branch(typ="meta", base=base)
-        self._ccm_branch = meta.read_metadata_full()
-        self._ccs_branch = self._ccm_branch.settings
+            pr_branch_name = self.switch_to_autoupdate_branch(typ="meta", git=git)
         meta_results, meta_changes, meta_summary = meta.compare_files()
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
-        return_value = None
+        commit_hash = None
         if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and meta_changes_any:
             meta.apply_changes()
             commit_msg = CommitMsg(
@@ -189,24 +164,24 @@ class EventHandler:
                 title="Sync dynamic files",
             )
             commit_hash_before = git.commit_hash_normal()
-            commit_hash = git.commit(message=str(commit_msg), stage="all")
-            self._action_hooks(
+            commit_hash_after = git.commit(message=str(commit_msg), stage="all")
+            commit_hash = self._action_hooks(
                 action=InitCheckAction.AMEND,
-                branch_type=current_branch.type,
+                branch=branch,
                 base=base,
-                ref_range=(commit_hash_before, commit_hash),
-            )
+                ref_range=(commit_hash_before, commit_hash_after),
+                internal=True,
+            ) or commit_hash_after
             if action == InitCheckAction.PULL:
                 git.push(target="origin", set_upstream=True)
                 pull_data = self._gh_api_admin.pull_create(
                     head=pr_branch_name,
-                    base=self._current_branch_name,
+                    base=self._branch_name_memory_autoupdate,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
-                self.switch_to_original_branch(base=base)
-            else:
-                return_value = commit_hash
+                self.switch_back_from_autoupdate_branch(git=git)
+                commit_hash = None
         if not meta_changes_any:
             oneliner = "All dynamic files are in sync with meta content."
             self._logger.success(oneliner)
@@ -235,7 +210,7 @@ class EventHandler:
             oneliner=oneliner,
             details=meta_summary,
         )
-        return return_value
+        return commit_hash
 
     def _action_hooks(
         self,
@@ -243,6 +218,7 @@ class EventHandler:
         branch: Branch,
         base: bool,
         ref_range: tuple[str, str] | None = None,
+        internal: bool = False,
     ) -> str | None:
         name = "Workflow Hooks"
         self._logger.h1(name)
@@ -261,33 +237,15 @@ class EventHandler:
             return
         config = self._ccm_main["workflow"]["pre_commit"].get(branch.type.value)
         if not config:
-            oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
-            self.add_summary(
-                name=name,
-                status="fail",
-                oneliner=oneliner,
-            )
-            self._logger.error(oneliner, raise_error=False)
+            if not internal:
+                oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
+                self._logger.error(oneliner, raise_error=False)
+                self.add_summary(
+                    name=name,
+                    status="fail",
+                    oneliner=oneliner,
+                )
             return
-        # if self.meta_changes.get(DynamicFileType.CONFIG, {}).get("pre-commit-config"):
-        #     for result in self.meta_results:
-        #         if result[0].id == "pre-commit-config":
-        #             config = result[1].after
-        #             self._logger.success(
-        #                 "Load pre-commit config from metadata.",
-        #                 "The pre-commit config had been changed in this event, and thus "
-        #                 "the current config file was not valid anymore.",
-        #             )
-        #             break
-        #     else:
-        #         self._logger.error(
-        #             "Could not find pre-commit-config in meta results.",
-        #             "This is an internal error that should not happen; please report it on GitHub.",
-        #         )
-        # else:
-        #     config = self.meta.paths.pre_commit_config.path
-        if action == InitCheckAction.PULL:
-            pr_branch = self.switch_to_autoupdate_branch(typ="hooks", base=base)
         input_action = (
             action
             if action in [InitCheckAction.REPORT, InitCheckAction.AMEND, InitCheckAction.COMMIT]
@@ -301,13 +259,16 @@ class EventHandler:
             if action in [InitCheckAction.COMMIT, InitCheckAction.PULL]
             else ""
         )
+        git = self._git_base if base else self._git_head
+        if action == InitCheckAction.PULL:
+            pr_branch = self.switch_to_autoupdate_branch(typ="hooks", git=git)
         hooks_output = hook.run(
             ref_range=ref_range,
             action=input_action.value,
             commit_message=str(commit_msg),
             path_root=self._path_root_base if base else self._path_root_head,
             config=config,
-            git=self._git_base if base else self._git_head,
+            git=git,
             logger=self._logger,
         )
         passed = hooks_output["passed"]
@@ -316,19 +277,20 @@ class EventHandler:
         if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and modified:
             # self.push(amend=action == InitCheckAction.AMEND, set_upstream=action == InitCheckAction.PULL)
             if action == InitCheckAction.PULL:
+                git.push(target="origin", set_upstream=True)
                 pull_data = self._gh_api_admin.pull_create(
                     head=pr_branch,
                     base=branch.name,
                     title=commit_msg.summary,
                     body=commit_msg.body,
                 )
-                self.switch_to_original_branch()
-        return_value = None
+                self.switch_back_from_autoupdate_branch(git=git)
+        commit_hash = None
         if action == InitCheckAction.PULL and modified:
             link = html.a(href=pull_data["url"], content=pull_data["number"])
             target = f"branch '{pr_branch}' and a pull request ({link}) was created"
         if action in [InitCheckAction.COMMIT, InitCheckAction.AMEND] and modified:
-            return_value = commit_hash = hooks_output["commit_hash"]
+            commit_hash = hooks_output["commit_hash"]
             link = html.a(href=str(self._gh_link.commit(commit_hash)), content=commit_hash[:7])
             target = "the current branch " + (
                 f"in a new commit (hash: {link})"
@@ -354,13 +316,14 @@ class EventHandler:
             )
         else:
             oneliner = "Some hooks failed (failures were not auto-fixable)."
-        self.add_summary(
-            name=name,
-            status="fail" if not passed or (action == InitCheckAction.PULL and modified) else "pass",
-            oneliner=oneliner,
-            details=hooks_output["summary"],
-        )
-        return return_value
+        if not internal:
+            self.add_summary(
+                name=name,
+                status="fail" if not passed or (action == InitCheckAction.PULL and modified) else "pass",
+                oneliner=oneliner,
+                details=hooks_output["summary"],
+            )
+        return commit_hash
 
     def commit(
         self,
@@ -396,20 +359,21 @@ class EventHandler:
         self._version = str(ver)
         return
 
-    def switch_to_autoupdate_branch(self, typ: Literal["hooks", "meta"], base: bool = True):
-        git = self._git_base if base else self._git_head
-        self._current_branch_name = git.current_branch_name()
+    def switch_to_autoupdate_branch(self, typ: Literal["hooks", "meta"], git: Git) -> str:
+        current_branch = git.current_branch_name()
         new_branch_prefix = self._ccs_main.dev.branch.auto_update.prefix
-        new_branch_name = f"{new_branch_prefix}{self._current_branch_name}/{typ}"
+        new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         git.stash()
         git.checkout(branch=new_branch_name, reset=True)
-        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{self._current_branch_name}'.")
+        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
+        self._branch_name_memory_autoupdate = current_branch
         return new_branch_name
 
-    def switch_to_original_branch(self, base: bool = True):
-        git = self._git_base if base else self._git_head
-        git.checkout(branch=self._current_branch_name)
-        git.stash_pop()
+    def switch_back_from_autoupdate_branch(self, git: Git) -> None:
+        if self._branch_name_memory_autoupdate:
+            git.checkout(branch=self._branch_name_memory_autoupdate)
+            git.stash_pop()
+            self._branch_name_memory_autoupdate = None
         return
 
     @property
@@ -491,20 +455,6 @@ class EventHandler:
         if not latest_version and not dev_only:
             self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
         return latest_version, distance
-
-    @staticmethod
-    def _get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
-        if action == PrimaryActionCommitType.RELEASE_MAJOR:
-            if version.major == 0:
-                return version.next_minor
-            return version.next_major
-        if action == PrimaryActionCommitType.RELEASE_MINOR:
-            return version.next_minor
-        if action == PrimaryActionCommitType.RELEASE_PATCH:
-            return version.next_patch
-        if action == PrimaryActionCommitType.RELEASE_POST:
-            return version.next_post
-        return version
 
     def _set_output_test_local(
         self,
@@ -1096,6 +1046,20 @@ class EventHandler:
         with open(path_root / ccm["path"]["file"]["website_announcement"], "w") as f:
             f.write(announcement)
         return
+
+    @staticmethod
+    def _get_next_version(version: PEP440SemVer, action: PrimaryActionCommitType):
+        if action == PrimaryActionCommitType.RELEASE_MAJOR:
+            if version.major == 0:
+                return version.next_minor
+            return version.next_major
+        if action == PrimaryActionCommitType.RELEASE_MINOR:
+            return version.next_minor
+        if action == PrimaryActionCommitType.RELEASE_PATCH:
+            return version.next_patch
+        if action == PrimaryActionCommitType.RELEASE_POST:
+            return version.next_post
+        return version
 
     @staticmethod
     def _write_tasklist(entries: list[dict[str, bool | str | list]]) -> str:
