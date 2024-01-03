@@ -661,7 +661,13 @@ class EventHandler:
         action_err_details = (
             f"The workflow was triggered by an event of type '{event_name}', {action_err_details_sub}"
         )
-        self._logger.error(action_err_msg, action_err_details)
+        self._logger.error(action_err_msg, action_err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=action_err_msg,
+            details=action_err_details,
+        )
         return
 
     def _action_file_change_detector(self, meta: Meta) -> dict[RepoFileType, list[str]]:
@@ -884,7 +890,7 @@ class EventHandler:
         if old.main.name != new.main.name:
             self._gh_api_admin.branch_rename(old_name=old.main.name, new_name=new.main.name)
             old_to_new_map[old.main.name] = new.main.name
-        branches = self._gh_api_admin.branches
+        branches = self._gh_api.branches
         branch_names = [branch["name"] for branch in branches]
         old_groups = old.groups
         new_groups = new.groups
@@ -901,8 +907,8 @@ class EventHandler:
 
     def _config_rulesets(
         self,
-        ccs_main_new: ControlCenterOptions,
-        ccs_main_old: ControlCenterOptions | None = None
+        ccs_new: ControlCenterOptions,
+        ccs_old: ControlCenterOptions | None = None
     ) -> None:
         """Update branch and tag protection rulesets."""
         enforcement = {
@@ -959,7 +965,7 @@ class EventHandler:
                 'strict_required_status_checks_policy': ruleset.rule.status_check_strict_policy,
                 'non_fast_forward': ruleset.rule.protect_force_push,
             }
-            if not ccs_main_old:
+            if not ccs_old:
                 self._gh_api_admin.ruleset_create(**args)
                 return
             for existing_ruleset in existing_rulesets:
@@ -971,20 +977,20 @@ class EventHandler:
             self._gh_api_admin.ruleset_create(**args)
             return
 
-        if ccs_main_old:
+        if ccs_old:
             existing_rulesets = self._gh_api_admin.rulesets(include_parents=False)
 
-        if not ccs_main_old or ccs_main_old.dev.branch.main != ccs_main_new.dev.branch.main:
+        if not ccs_old or ccs_old.dev.branch.main != ccs_new.dev.branch.main:
             apply(
                 name='Branch: main',
                 target='branch',
                 pattern="~DEFAULT_BRANCH",
-                ruleset=ccs_main_new.dev.branch.main.ruleset,
+                ruleset=ccs_new.dev.branch.main.ruleset,
             )
-        groups_new = ccs_main_new.dev.branch.groups
-        groups_old = ccs_main_old.dev.branch.groups if ccs_main_old else {}
+        groups_new = ccs_new.dev.branch.groups
+        groups_old = ccs_old.dev.branch.groups if ccs_old else {}
         for group_type, group_data in groups_new.items():
-            if not ccs_main_old or group_data != groups_old[group_type]:
+            if not ccs_old or group_data != groups_old[group_type]:
                 apply(
                     name=f"Branch Group: {group_type.value}",
                     target='branch',
