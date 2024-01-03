@@ -116,6 +116,7 @@ class EventHandler:
             "discussion_category_name": "",
         }
 
+        self._output_website_build: dict = {}
         self._output_package_test: list[dict] = []
         self._output_package_build: dict = {}
         self._output_package_publish_pypi: dict = {}
@@ -444,7 +445,7 @@ class EventHandler:
                 self._job_run_flag[key] = val
         return
 
-    def _set_release(
+    def _set_output_release(
         self,
         name: str | None = None,
         body: str | None = None,
@@ -458,6 +459,22 @@ class EventHandler:
             if val is not None:
                 self._release_info[key] = val
         return
+
+    def _set_output_website_build(
+        self,
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        deploy: bool = False,
+    ):
+        self._output_website_build = {
+            "url": self._ccm_main["url"]["website"]["base"],
+            "repository": repository or self._context.target_repo_fullname,
+            "ref": ref or self._context.ref_name,
+            "deploy": deploy,
+            "path-website": ccm_branch["path"]["dir"]["website"],
+            "path-package": "."
+        }
 
     def _set_output_package_build_and_publish(
         self,
