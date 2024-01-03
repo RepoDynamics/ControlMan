@@ -993,34 +993,11 @@ class EventHandler:
                 )
         return
 
-    def _get_commits(self) -> list[Commit]:
-        # primary_action = {}
-        # primary_action_types = []
-        # for primary_action_id, primary_action_commit in self.metadata["commit"]["primary_action"].items():
-        #     conv_commit_type = primary_action_commit["type"]
-        #     primary_action_types.append(conv_commit_type)
-        #     primary_action[conv_commit_type] = PrimaryActionCommitType[primary_action_id.upper()]
-        # secondary_action = {}
-        # secondary_action_types = []
-        # for secondary_action_id, secondary_action_commit in self.metadata["commit"]["secondary_action"].items():
-        #     conv_commit_type = secondary_action_commit["type"]
-        #     secondary_action_types.append(conv_commit_type)
-        #     secondary_action[conv_commit_type] = SecondaryActionCommitType[secondary_action_id.upper()]
-        # primary_custom_types = []
-        # for primary_custom_commit in self.metadata["commit"]["primary_custom"].values():
-        #     conv_commit_type = primary_custom_commit["type"]
-        #     primary_custom_types.append(conv_commit_type)
-        # all_conv_commit_types = (
-        #     primary_action_types
-        #     + secondary_action_types
-        #     + primary_custom_types
-        #     + list(self.metadata["commit"]["secondary_custom"].keys())
-        # )
-        commits = self._git_head.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
+    def _get_commits(self, base: bool = False) -> list[Commit]:
+        git = self._git_base if base else self._git_head
+        commits = git.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(
-            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
-        )
+        parser = CommitParser(types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger)
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
@@ -1030,18 +1007,6 @@ class EventHandler:
                 group = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 commit["msg"] = conv_msg
                 parsed_commits.append(Commit(**commit, group_data=group))
-            # elif conv_msg.type in primary_action_types:
-            #     parsed_commits.append(
-            #         Commit(**commit, typ=CommitGroup.PRIMARY_ACTION, action=primary_action[conv_msg.type])
-            #     )
-            # elif conv_msg.type in secondary_action_types:
-            #     parsed_commits.append(
-            #         Commit(**commit, typ=CommitGroup.SECONDARY_ACTION, action=secondary_action[conv_msg.type])
-            #     )
-            # elif conv_msg.type in primary_custom_types:
-            #     parsed_commits.append(Commit(**commit, typ=CommitGroup.PRIMARY_CUSTOM))
-            # else:
-            #     parsed_commits.append(Commit(**commit, typ=CommitGroup.SECONDARY_CUSTOM))
         return parsed_commits
 
     def _extract_tasklist(self, body: str) -> list[dict[str, bool | str | list]]:
@@ -1113,16 +1078,16 @@ class EventHandler:
         dev_branch_prefix = self._ccs_main.dev.branch.development.prefix
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
 
-    def _read_web_announcement_file(self, base: bool = True) -> str | None:
+    def _read_web_announcement_file(self, base: bool, ccm: MetaManager) -> str | None:
         path_root = self._path_root_base if base else self._path_root_head
-        path = path_root / self._ccm_main["path"]["file"]["website_announcement"]
+        path = path_root / ccm["path"]["file"]["website_announcement"]
         return path.read_text() if path.is_file() else None
 
-    def _write_web_announcement_file(self, announcement: str, base: bool = True) -> None:
+    def _write_web_announcement_file(self, announcement: str, base: bool, ccm: MetaManager) -> None:
         if announcement:
             announcement = f"{announcement.strip()}\n"
         path_root = self._path_root_base if base else self._path_root_head
-        with open(path_root / self._ccm_main["path"]["file"]["website_announcement"], "w") as f:
+        with open(path_root / ccm["path"]["file"]["website_announcement"], "w") as f:
             f.write(announcement)
         return
 
