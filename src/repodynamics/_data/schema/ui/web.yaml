@@ -61,28 +61,323 @@ properties:
         attributes:
           type: object
   readthedocs:
-    description: Configuration for ReadTheDocs website
+    title: ReadTheDocs Website Configurations
+    description: |
+      Configurations for the ReadTheDocs website.
+      See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
     type: object
+    additionalProperties: false
     properties:
       name:
         description: Name of the project on ReadTheDocs, i.e. the project slug
         type: string
+      platform:
+        description: ReadTheDocs hosting platform; either 'community' or 'business'
+        type: string
+        enum: [ community, business ]
+        default: community
+      versioning_scheme:
+        title: Versioning Scheme
+        description: |
+          Versioning scheme of the website.
+          See also: https://docs.readthedocs.io/en/stable/versioning-schemes.html
+        type: object
+        additionalProperties: false
+        properties:
+          single_version:
+            title: Single Version
+            description: Whether the website has a single version or multiple versions.
+            type: boolean
+            default: false
+          translation:
+            title: Translation
+            description: Whether the website supports multiple languages.
+            type: boolean
+            default: false
       version:
+        title: Specification Version
+        description: Version of the ReadTheDocs configuration file specification
         type: integer
-        enum: [2]
+        enum: [ 2 ]
         default: 2
       format:
+        title: Output Formats
         description: Additional formats of the documentation to be built, apart from the default HTML.
         oneOf:
           - type: string
-            enum: [all]
+            enum: [ all ]
           - type: array
             uniqueItems: true
             minItems: 1
             items:
               type: string
               enum: [ htmlzip, pdf, epub ]
-    required: [ name, version ]
+      conda:
+        title: Conda
+        description: Configuration for Conda support.
+        type: object
+        properties:
+          environment:
+            title: Environment
+            description: The path to the Conda environment file from the root of the project.
+            type: string
+        required: [ environment ]
+        build:
+          title: Build
+          description: Configuration for the documentation build process.
+          type: object
+          properties:
+            os:
+              title: Operating System
+              description: Operating system to be used in the build.
+              enum: [ ubuntu-20.04, ubuntu-22.04 ]
+            jobs:
+              title: Build jobs
+              description: Run custom commands at any point in the build process
+              type: object
+              properties:
+                post_checkout:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                pre_system_dependencies:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                post_system_dependencies:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                pre_create_environment:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                post_create_environment:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                pre_install:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                post_install:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                pre_build:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+                post_build:
+                  type: array
+                  items:
+                    title: Custom commands
+                    type: string
+              additionalProperties: false
+            tools:
+              title: Tools
+              description: Tools and their version to be used in the build.
+              type: object
+              properties:
+                python:
+                  enum:
+                    - '2.7'
+                    - '3'
+                    - '3.6'
+                    - '3.7'
+                    - '3.8'
+                    - '3.9'
+                    - '3.10'
+                    - '3.11'
+                    - '3.12'
+                    - miniconda3-4.7
+                    - mambaforge-4.10
+                    - mambaforge-22.9
+                nodejs:
+                  enum:
+                    - '14'
+                    - '16'
+                    - '18'
+                    - '19'
+                    - '20'
+                rust:
+                  enum:
+                    - '1.55'
+                    - '1.61'
+                    - '1.64'
+                    - '1.70'
+                golang:
+                  enum:
+                    - '1.17'
+                    - '1.18'
+                    - '1.19'
+                    - '1.20'
+              minProperties: 1
+              additionalProperties: false
+            apt_packages:
+              title: APT Packages
+              description: List of packages to be installed with apt-get.
+              type: array
+              items:
+                title: APT Package
+                type: string
+              default: [ ]
+            commands:
+              title: Build commands
+              description: Override the whole build process with custom commands. When using
+                this option, none of the commands from build.jobs will be executed.
+              type: array
+              items:
+                title: Custom commands
+                type: string
+          required:
+            - os
+            - tools
+          additionalProperties: false
+        python:
+          title: Python
+          description: Configuration of the Python environment to be used.
+          type: object
+          properties:
+            install:
+              title: Install
+              description: Installation of packages and requiremens.
+              type: array
+              items:
+                anyOf:
+                  - properties:
+                      requirements:
+                        title: Requirements
+                        description: The path to the requirements file from the root of the
+                          project.
+                        type: string
+                    required:
+                      - requirements
+                  - properties:
+                      path:
+                        title: Path
+                        description: The path to the project to be installed
+                        type: string
+                      method:
+                        title: Method
+                        description: Install using python setup.py install or pip.
+                        enum:
+                          - pip
+                          - setuptools
+                        default: pip
+                      extra_requirements:
+                        title: Extra Requirements
+                        description: Extra requirements sections to install in addition to
+                          the package dependencies.
+                        type: array
+                        items:
+                          type: string
+                        default: [ ]
+                    required:
+                      - path
+          additionalProperties: false
+        sphinx:
+          title: Sphinx
+          description: Configuration for sphinx documentation.
+          type: object
+          properties:
+            builder:
+              title: Builder
+              description: The builder type for the sphinx documentation.
+              enum:
+                - html
+                - dirhtml
+                - singlehtml
+              default: html
+            configuration:
+              title: Configuration
+              description: The path to the conf.py file.
+              type: string
+            fail_on_warning:
+              title: Fail on Warning
+              description: Add the -W option to sphinx-build.
+              type: boolean
+              default: false
+          additionalProperties: false
+        mkdocs:
+          title: mkdocs
+          description: Configuration for mkdocs documentation.
+          type: object
+          properties:
+            configuration:
+              title: Configuration
+              description: The path to the mkdocs.yml file.
+              type: string
+            fail_on_warning:
+              title: Fail on Warning
+              description: Add the --strict option to mkdocs build.
+              type: boolean
+              default: false
+          additionalProperties: false
+        submodules:
+          title: Submodules
+          description: Submodules configuration.
+          type: object
+          properties:
+            include:
+              title: Include
+              description: List of submodules to be included.
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - enum:
+                    - all
+              default: [ ]
+            exclude:
+              title: Exclude
+              description: List of submodules to be ignored.
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - enum:
+                    - all
+              default: [ ]
+            recursive:
+              title: Recursive
+              description: Do a recursive clone?
+              type: boolean
+              default: false
+          additionalProperties: false
+        search:
+          title: search
+          type: object
+          properties:
+            ranking:
+              title: Ranking
+              description: Map of patterns to ranks.
+              additionalProperties:
+                type: number
+                minimum: -10
+                maximum: 10
+            ignore:
+              title: Ignore
+              description: List of patterns.
+              type: array
+              items:
+                title: Pattern
+                type: string
+              default:
+                - search.html
+                - search/index.html
+                - 404.html
+                - 404/index.html
+          additionalProperties: false
+    required: [ name, platform, version ]
   quicklinks:
     description: Quicklinks for the navbar
     type: array
