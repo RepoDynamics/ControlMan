@@ -134,7 +134,8 @@ class ConfigFileGenerator:
             self._logger.skip("'readthedocs' not set in metadata.")
             return [(info, "")]
         text = YAML(typ=["rt", "string"]).dumps(
-            {key: val for key, val in config.items() if key != "name"}, add_final_eol=True
+            {key: val for key, val in config.items() if key not in ["name", "platform", "versioning_scheme"]},
+            add_final_eol=True
         )
         return [(info, text)]
 
