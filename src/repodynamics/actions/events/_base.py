@@ -68,7 +68,6 @@ class EventHandler:
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
-        self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
         repo_user = self._context.repository_owner
         repo_name = self._context.repository_name
         self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
@@ -84,6 +83,8 @@ class EventHandler:
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
             logger=self._logger,
         )
+        self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
+        self._is_pypackit = self._template_type is TemplateType.PYPACKIT
 
         self._failed = False
         self._branch_name_memory_autoupdate: str | None = None
@@ -364,15 +365,14 @@ class EventHandler:
             self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
         return latest_version, distance
 
-    def _tag_version(self, ver: str | PEP440SemVer, msg: str = ""):
+    def _tag_version(self, ver: str | PEP440SemVer, base: bool, msg: str = "") -> str:
         tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         tag = f"{tag_prefix}{ver}"
         if not msg:
             msg = f"Release version {ver}"
-        self._git_head.create_tag(tag=tag, message=msg)
-        self._tag = tag
-        self._version = str(ver)
-        return
+        git = self._git_base if base else self._git_head
+        git.create_tag(tag=tag, message=msg)
+        return tag
 
     def switch_to_autoupdate_branch(self, typ: Literal["hooks", "meta"], git: Git) -> str:
         current_branch = git.current_branch_name()
@@ -405,43 +405,83 @@ class EventHandler:
             self._summary_sections.append(f"<h2>{name}</h2>\n\n{details}\n\n")
         return
 
-    def _set_job_run(
+    def _set_output(
         self,
-        package_build: bool | None = None,
-        package_lint: bool | None = None,
-        package_test_local: bool | None = None,
-        website_build: bool | None = None,
-        website_deploy: bool | None = None,
-        website_rtd_preview: bool | None = None,
-        package_publish_testpypi: bool | None = None,
-        package_publish_pypi: bool | None = None,
-        package_test_testpypi: bool | None = None,
-        package_test_pypi: bool | None = None,
-        github_release: bool | None = None,
-    ) -> None:
-        data = locals()
-        data.pop("self")
-        for key, val in data.items():
-            if val is not None:
-                self._job_run_flag[key] = val
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        ref_before: str = "",
+        version: str = "",
+        release_name: str = "",
+        release_tag: str = "",
+        release_body: str = "",
+        release_prerelease: bool = False,
+        release_make_latest: Literal["legacy", "latest", "none"] = "legacy",
+        release_discussion_category_name: str = "",
+        website_build: bool = False,
+        website_deploy: bool = False,
+        package_lint: bool = False,
+        package_test: bool = False,
+        package_build: bool = False,
+        package_publish_testpypi: bool = False,
+        package_publish_pypi: bool = False,
+        package_release: bool = False,
+    ):
+        if website_build or website_deploy:
+            self._set_output_website(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                deploy=website_deploy,
+            )
+        if package_lint and not (package_publish_testpypi or package_publish_pypi):
+            self._set_output_lint(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                ref_before=ref_before,
+            )
+        if package_test and not (package_publish_testpypi or package_publish_pypi):
+            self._set_output_package_test(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                version=version,
+            )
+        if package_build or package_publish_testpypi or package_publish_pypi:
+            self._set_output_package_build_and_publish(
+                ccm_branch=ccm_branch,
+                version=version,
+                repository=repository,
+                ref=ref,
+                publish_testpypi=package_publish_testpypi,
+                publish_pypi=package_publish_pypi,
+            )
+        if package_release:
+            self._set_output_release(
+                name=release_name,
+                tag=release_tag,
+                body=release_body,
+                prerelease=release_prerelease,
+                make_latest=release_make_latest,
+                discussion_category_name=release_discussion_category_name,
+            )
         return
 
-    def _set_output_release(
+    def _set_output_website(
         self,
-        name: str,
-        tag: str,
-        body: str | None = None,
-        prerelease: bool | None = None,
-        make_latest: Literal["legacy", "latest", "none"] | None = None,
-        discussion_category_name: str | None = None,
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        deploy: bool = False,
     ):
-        self._output_finalize["release"] = {
-            "name": name,
-            "tag_name": tag,
-            "body": body,
-            "prerelease": prerelease,
-            "make_latest": make_latest,
-            "discussion_category_name": discussion_category_name,
+        self._output_website = {
+            "url": self._ccm_main["url"]["website"]["base"],
+            "repository": repository or self._context.target_repo_fullname,
+            "ref": ref or self._context.ref_name,
+            "deploy": deploy,
+            "path-website": ccm_branch["path"]["dir"]["website"],
+            "path-package": "."
         }
         return
 
@@ -464,21 +504,28 @@ class EventHandler:
         }
         return
 
-    def _set_output_website(
+    def _set_output_package_test(
         self,
         ccm_branch: MetaManager,
         repository: str = "",
         ref: str = "",
-        deploy: bool = False,
+        source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
+        version: str = "",
+        max_retries: str = "15",
+        retry_delay: str = "60",
     ):
-        self._output_website = {
-            "url": self._ccm_main["url"]["website"]["base"],
-            "repository": repository or self._context.target_repo_fullname,
-            "ref": ref or self._context.ref_name,
-            "deploy": deploy,
-            "path-website": ccm_branch["path"]["dir"]["website"],
-            "path-package": "."
-        }
+        self._output_test.extend(
+            self._create_output_package_test(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                source=source,
+                version=version,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+            )
+        )
+        return
 
     def _set_output_package_build_and_publish(
         self,
@@ -486,6 +533,7 @@ class EventHandler:
         version: str,
         repository: str = "",
         ref: str = "",
+        ref_before: str = "",
         publish_testpypi: bool = False,
         publish_pypi: bool = False,
     ):
@@ -500,6 +548,12 @@ class EventHandler:
             "path-readme": ccm_branch["path"]["file"]["readme_pypi"],
         }
         if publish_testpypi or publish_pypi:
+            self._set_output_lint(
+                ccm_branch=ccm_branch,
+                repository=repository,
+                ref=ref,
+                ref_before=ref_before,
+            )
             self._output_test.extend(
                 self._create_output_package_test(
                     ccm_branch=ccm_branch,
@@ -537,27 +591,23 @@ class EventHandler:
             )
         return
 
-    def _set_output_package_test(
+    def _set_output_release(
         self,
-        ccm_branch: MetaManager,
-        repository: str = "",
-        ref: str = "",
-        source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
-        version: str = "",
-        max_retries: str = "15",
-        retry_delay: str = "60",
+        name: str,
+        tag: str,
+        body: str | None = None,
+        prerelease: bool | None = None,
+        make_latest: Literal["legacy", "latest", "none"] | None = None,
+        discussion_category_name: str | None = None,
     ):
-        self._output_test.extend(
-            self._create_output_package_test(
-                ccm_branch=ccm_branch,
-                repository=repository,
-                ref=ref,
-                source=source,
-                version=version,
-                max_retries=max_retries,
-                retry_delay=retry_delay,
-            )
-        )
+        self._output_finalize["release"] = {
+            "name": name,
+            "tag_name": tag,
+            "body": body,
+            "prerelease": prerelease,
+            "make_latest": make_latest,
+            "discussion_category_name": discussion_category_name,
+        }
         return
 
     def _create_output_package_test(
@@ -1159,3 +1209,24 @@ class EventHandler:
     #     if new_hash and self._git_head.current_branch_name() == self._context.ref_name:
     #         self._hash_latest = new_hash
     #     return new_hash
+
+    # def _set_job_run(
+    #     self,
+    #     package_build: bool | None = None,
+    #     package_lint: bool | None = None,
+    #     package_test_local: bool | None = None,
+    #     website_build: bool | None = None,
+    #     website_deploy: bool | None = None,
+    #     website_rtd_preview: bool | None = None,
+    #     package_publish_testpypi: bool | None = None,
+    #     package_publish_pypi: bool | None = None,
+    #     package_test_testpypi: bool | None = None,
+    #     package_test_pypi: bool | None = None,
+    #     github_release: bool | None = None,
+    # ) -> None:
+    #     data = locals()
+    #     data.pop("self")
+    #     for key, val in data.items():
+    #         if val is not None:
+    #             self._job_run_flag[key] = val
+    #     return
