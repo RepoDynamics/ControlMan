@@ -94,6 +94,11 @@ properties:
             description: Whether the website supports multiple languages.
             type: boolean
             default: false
+      language:
+        title: Language
+        description: Language of the website.
+        type: string
+        default: en
       version:
         title: Specification Version
         description: Version of the ReadTheDocs configuration file specification
