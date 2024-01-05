@@ -159,6 +159,7 @@ class IssuesEventHandler(EventHandler):
                 draft=True,
             )
             self._gh_api.issue_labels_set(number=pull_data["number"], labels=labels)
+            self._add_readthedocs_reference_to_pr(pull_nr=pull_data["number"], pull_body=pull_body)
         return
 
     def _add_to_timeline(self, entry: str):
@@ -287,6 +288,7 @@ class IssuesEventHandler(EventHandler):
             "secondary_commits_tasklist": (
                 f"{self._MARKER_TASKLIST_START}\n\n{self._MARKER_TASKLIST_END}"
             ),
+            "references": f"{self._MARKER_REFERENCES_START}\n\n{self._MARKER_REFERENCES_END}",
             "timeline": f"{self._MARKER_TIMELINE_START}\n{timeline_entry}\n{self._MARKER_TIMELINE_END}",
         }
         dev_protocol = dev_protocol_template.format(**args)
