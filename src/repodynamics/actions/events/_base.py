@@ -43,12 +43,14 @@ from repodynamics.datatype import (
 
 class EventHandler:
 
-    _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
-    _MARKER_TIMELINE_END = "<!-- End timeline -->"
-    _MARKER_TASKLIST_START = "<!-- Begin secondary commits tasklist -->"
-    _MARKER_TASKLIST_END = "<!-- End secondary commits tasklist -->"
     _MARKER_COMMIT_START = "<!-- Begin primary commit summary -->"
     _MARKER_COMMIT_END = "<!-- End primary commit summary -->"
+    _MARKER_TASKLIST_START = "<!-- Begin secondary commits tasklist -->"
+    _MARKER_TASKLIST_END = "<!-- End secondary commits tasklist -->"
+    _MARKER_REFERENCES_START = "<!-- Begin references -->"
+    _MARKER_REFERENCES_END = "<!-- End references -->"
+    _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
+    _MARKER_TIMELINE_END = "<!-- End timeline -->"
 
     def __init__(
         self,
@@ -1047,6 +1049,42 @@ class EventHandler:
                     ruleset=group_data.ruleset,
                 )
         return
+
+    def _add_readthedocs_reference_to_pr(
+        self,
+        pull_nr: int,
+        update: bool = True,
+        pull_body: str = ""
+    ) -> str | None:
+        if not self._ccm_main["web"].get("readthedocs"):
+            return
+        url = self._create_readthedocs_preview_url(pull_nr=pull_nr)
+        reference = f"[Website Preview on ReadTheDocs]({url})"
+        if not pull_body:
+            pull_body = self._gh_api.pull(number=pull_nr)["body"]
+        new_body = self._add_reference_to_dev_protocol(protocol=pull_body, reference=reference)
+        if update:
+            self._gh_api.pull_update(number=pull_nr, body=new_body)
+        return new_body
+
+    def _add_reference_to_dev_protocol(self, protocol: str, reference: str) -> str:
+        entry = f"- {reference}"
+        pattern = rf"({self._MARKER_REFERENCES_START})(.*?)({self._MARKER_REFERENCES_END})"
+        replacement = r"\1\2" + entry + "\n" + r"\3"
+        return re.sub(pattern, replacement, protocol, flags=re.DOTALL)
+
+    def _create_readthedocs_preview_url(self, pull_nr: int):
+        # Ref: https://github.com/readthedocs/actions/blob/v1/preview/scripts/edit-description.js
+        # Build the ReadTheDocs website for pull-requests and add a link to the pull request's description.
+        # Note: Enable "Preview Documentation from Pull Requests" in ReadtheDocs project at https://docs.readthedocs.io/en/latest/pull-requests.html
+        config = self._ccm_main["web"]["readthedocs"]
+        domain = "org.readthedocs.build" if config["platform"] == "community" else "com.readthedocs.build"
+        slug = config["name"]
+        url = f"https://{slug}--{pull_nr}.{domain}/"
+        if config["versioning_scheme"]["translation"]:
+            language = config["language"]
+            url += f"{language}/{pull_nr}/"
+        return url
 
     def _get_commits(self, base: bool = False) -> list[Commit]:
         git = self._git_base if base else self._git_head
