@@ -1,6 +1,7 @@
 import shutil
 
 from github_contexts import GitHubContext
+from github_contexts.github.payloads.push import PushPayload
 from github_contexts.github.enums import RefType, ActionType
 
 from repodynamics.meta import read_from_json_file
@@ -37,11 +38,12 @@ class PushEventHandler(EventHandler):
             path_root_head=path_root_head,
             logger=logger
         )
+        self._payload: PushPayload = self._context.event
         return
 
     def run_event(self):
         ref_type = self._context.ref_type
-        action = self._context.action
+        action = self._payload.action
         if ref_type is RefType.BRANCH:
             if action is ActionType.CREATED:
                 self._run_branch_created()
