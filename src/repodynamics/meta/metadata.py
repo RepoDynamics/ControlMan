@@ -99,10 +99,9 @@ class MetadataGenerator:
                 "os_independent": os_info["os_independent"],
                 "pure_python": os_info["pure_python"],
                 "github_runners": os_info["github_runners"],
+                "cibw_matrix_platform": os_info["cibw_matrix_platform"],
+                "cibw_matrix_python": os_info["cibw_matrix_python"],
             }
-            if not os_info["pure_python"]:
-                package["cibw_matrix_platform"] = os_info["cibw_matrix_platform"]
-                package["cibw_matrix_python"] = os_info["cibw_matrix_python"]
 
             release_info = self._package_releases()
             package["releases"] = {
