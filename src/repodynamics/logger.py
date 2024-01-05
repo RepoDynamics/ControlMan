@@ -134,7 +134,7 @@ class Logger:
         fully_qualified_name = self._get_fully_qualified_name_of_original_caller(index_stack)
         msg = sgr.format(message, sgr.style(text_color=self._color[level]))
         console = f"{self.emoji[level]} {msg}"
-        details_ = f"- Caller: {fully_qualified_name}\n{'='*50}"
+        details_ = f"- Caller: {fully_qualified_name}\n{'='*50}\n"
         if details:
             if isinstance(details, list):
                 details = "\n".join(details)
