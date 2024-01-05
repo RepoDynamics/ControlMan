@@ -14,7 +14,9 @@ def format_object(
         case "table":
             return obj
         case "array":
-            return tomlkit.array(obj).multiline(True)
+            array = tomlkit.array().multiline(True)
+            array.extend(obj)
+            return array
         case "inline_table":
             inline = tomlkit.inline_table()
             inline.update(obj)
