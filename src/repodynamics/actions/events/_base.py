@@ -116,13 +116,15 @@ class EventHandler:
             "discussion_category_name": "",
         }
 
-        self._output_website_build: dict = {}
-        self._output_package_test: list[dict] = []
-        self._output_package_build: dict = {}
-        self._output_package_publish_pypi: dict = {}
-        self._output_package_publish_testpypi: dict = {}
-        self._output_package_test_pypi: list[dict] = []
-        self._output_package_test_testpypi: list[dict] = []
+        self._output_website: dict = {}
+        self._output_lint: dict = {}
+        self._output_test: list[dict] = []
+        self._output_build: dict = {}
+        self._output_publish_testpypi: dict = {}
+        self._output_test_testpypi: list[dict] = []
+        self._output_publish_pypi: dict = {}
+        self._output_test_pypi: list[dict] = []
+        self._output_finalize: dict = {}
         return
 
     def run(self):
@@ -460,6 +462,25 @@ class EventHandler:
                 self._release_info[key] = val
         return
 
+    def _set_output_lint(
+        self,
+        ccm_branch: MetaManager,
+        repository: str = "",
+        ref: str = "",
+        ref_before: str = "",
+    ):
+        self._output_lint = {
+            "repository": repository or self._context.target_repo_fullname,
+            "ref": ref or self._context.ref_name,
+            "ref-before": ref_before or self._context.hash_before,
+            "runners": ccm_branch["package"]["github_runners"],
+            "package-name": ccm_branch["package"]["name"],
+            "python-versions": ccm_branch["package"]["python_versions"],
+            "python-max-ver": ccm_branch["package"]["python_version_max"],
+            "path-source": ccm_branch["path"]["dir"]["source"],
+        }
+        return
+
     def _set_output_website_build(
         self,
         ccm_branch: MetaManager,
@@ -467,7 +488,7 @@ class EventHandler:
         ref: str = "",
         deploy: bool = False,
     ):
-        self._output_website_build = {
+        self._output_website = {
             "url": self._ccm_main["url"]["website"]["base"],
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
@@ -486,7 +507,7 @@ class EventHandler:
         publish_pypi: bool = False,
     ):
         artifact_name = f"Package ({version})"
-        self._output_package_build = {
+        self._output_build = {
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
             "artifact-name": artifact_name,
@@ -496,7 +517,7 @@ class EventHandler:
             "path-readme": ccm_branch["path"]["file"]["readme_pypi"],
         }
         if publish_testpypi or publish_pypi:
-            self._output_package_test.extend(
+            self._output_test.extend(
                 self._create_output_package_test(
                     ccm_branch=ccm_branch,
                     repository=repository,
@@ -504,13 +525,13 @@ class EventHandler:
                     source="GitHub",
                 )
             )
-            self._output_package_publish_testpypi = {
+            self._output_publish_testpypi = {
                 "platform": "TestPyPI",
                 "upload-url": "https://test.pypi.org/legacy/",
                 "download-url": f'https://test.pypi.org/project/{ccm_branch["package"]["name"]}/{version}',
                 "artifact-name": artifact_name,
             }
-            self._output_package_test_testpypi = self._create_output_package_test(
+            self._output_test_testpypi = self._create_output_package_test(
                 ccm_branch=ccm_branch,
                 repository=repository,
                 ref=ref,
@@ -518,13 +539,13 @@ class EventHandler:
                 version=version,
             )
         if publish_pypi:
-            self._output_package_publish_pypi = {
+            self._output_publish_pypi = {
                 "platform": "PyPI",
                 "upload-url": "https://upload.pypi.org/legacy/",
                 "download-url": f'https://pypi.org/project/{ccm_branch["package"]["name"]}/{version}',
                 "artifact-name": artifact_name,
             }
-            self._output_package_test_pypi = self._create_output_package_test(
+            self._output_test_pypi = self._create_output_package_test(
                 ccm_branch=ccm_branch,
                 repository=repository,
                 ref=ref,
@@ -543,7 +564,7 @@ class EventHandler:
         max_retries: str = "15",
         retry_delay: str = "60",
     ):
-        self._output_package_test.extend(
+        self._output_test.extend(
             self._create_output_package_test(
                 ccm_branch=ccm_branch,
                 repository=repository,
@@ -619,15 +640,19 @@ class EventHandler:
         if self._job_run_flag["package_publish_testpypi"] or self._job_run_flag["package_publish_pypi"]:
             self._job_run_flag["package_build"] = True
         out = {
-            "package-test": self._output_package_test or False,
-            "package-build": self._output_package_build or False,
-            "package-publish-testpypi": self._output_package_publish_testpypi or False,
-            "package-publish-pypi": self._output_package_publish_pypi or False,
-            "package-test-testpypi": self._output_package_test_testpypi or False,
-            "package-test-pypi": self._output_package_test_pypi or False,
+            "fail": self._failed,
+            "website": self._output_website or False,
+            "lint": self._output_lint or False,
+            "test": self._output_test or False,
+            "build": self._output_build or False,
+            "publish-testpypi": self._output_publish_testpypi or False,
+            "test-testpypi": self._output_test_testpypi or False,
+            "publish-pypi": self._output_publish_pypi or False,
+            "test-pypi": self._output_test_pypi or False,
+            "finalize": self._output_finalize or False,
 
             "config": {
-                "fail": self._failed,
+
                 "checkout": {
                     "ref": self.hash_latest,
                     "ref_before": self._context.hash_before,
