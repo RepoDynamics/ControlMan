@@ -44,7 +44,7 @@ class Label:
                 self._ccs["label"]["auto_group"][auto_group] for auto_group in ("version", "branch")
             ]
         ]
-        self._full = [
+        self._full = tuple(
             FullLabel(
                 type=LabelType(label_data["type"]),
                 group_name=label_data["group_name"],
@@ -53,7 +53,7 @@ class Label:
                 description=label_data["description"],
                 color=label_data["color"],
             ) for label_data in self._ccs["label"]["compiled"]
-        ] if "compiled" in self._ccs["label"] else None
+        ) if "compiled" in self._ccs["label"] else None
         return
 
     @property
@@ -75,5 +75,5 @@ class Label:
         }
 
     @property
-    def full_labels(self) -> list[FullLabel] | None:
+    def full_labels(self) -> tuple[FullLabel] | None:
         return self._full
