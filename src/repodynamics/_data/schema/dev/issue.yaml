@@ -136,6 +136,8 @@ properties:
           TBD
           {primary_commit_summary}
           {secondary_commits_tasklist}
+          ## References
+          {references}
           ## Timeline
           {timeline}
     required: [ template ]
