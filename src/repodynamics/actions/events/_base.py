@@ -705,7 +705,7 @@ class EventHandler:
         return self._ccm_main.get_branch_info_from_name(branch_name=branch_name)
 
     def error_unsupported_triggering_action(self):
-        event_name = self._context.event_name
+        event_name = self._context.event_name.value
         action_name = self._context.event.action.value
         action_err_msg = f"Unsupported triggering action for '{event_name}' event."
         action_err_details_sub = f"but the triggering action '{action_name}' is not supported."
