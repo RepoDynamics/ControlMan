@@ -1,7 +1,9 @@
+from github_contexts import GitHubContext
+
 from repodynamics.datatype import WorkflowDispatchInput
 from repodynamics.actions.events._base import EventHandler
-from repodynamics.actions.context_manager import ContextManager
-from repodynamics.datatype import InitCheckAction
+from repodynamics.datatype import InitCheckAction, TemplateType
+from repodynamics.logger import Logger
 
 
 class WorkflowDispatchEventHandler(EventHandler):
@@ -9,7 +11,7 @@ class WorkflowDispatchEventHandler(EventHandler):
     def __init__(
         self,
         template_type: TemplateType,
-        context_manager: ContextManager,
+        context_manager: GitHubContext,
         admin_token: str,
         package_build: bool,
         package_lint: bool,
