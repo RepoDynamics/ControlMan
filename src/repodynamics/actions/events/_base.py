@@ -496,7 +496,12 @@ class EventHandler:
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
             "ref-before": ref_before or self._context.hash_before,
-            "runners": ccm_branch["package"]["github_runners"],
+            "os": [
+                {"name": name, "runner": runner} for name, runner in zip(
+                    ccm_branch["package"]["os_titles"],
+                    ccm_branch["package"]["github_runners"]
+                )
+            ],
             "package-name": ccm_branch["package"]["name"],
             "python-versions": ccm_branch["package"]["python_versions"],
             "python-max-ver": ccm_branch["package"]["python_version_max"],
