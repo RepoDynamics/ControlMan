@@ -85,37 +85,8 @@ class EventHandler:
             logger=self._logger,
         )
 
-        self._branch_name_memory_autoupdate: str | None = None
-        self._summary_oneliners: list[str] = []
-        self._summary_sections: list[str | html.ElementCollection | html.Element] = []
-        self._tag: str = ""
-        self._version: str = ""
         self._failed = False
-        self._hash_latest: str = ""
-        self._job_run_flag: dict[str, bool] = {
-            job_id: False
-            for job_id in [
-                "package_build",
-                "package_test_local",
-                "package_lint",
-                "website_build",
-                "website_deploy",
-                "website_rtd_preview",
-                "package_publish_testpypi",
-                "package_publish_pypi",
-                "package_test_testpypi",
-                "package_test_pypi",
-                "github_release",
-            ]
-        }
-        self._release_info: dict = {
-            "name": "",
-            "body": "",
-            "prerelease": False,
-            "make_latest": "legacy",
-            "discussion_category_name": "",
-        }
-
+        self._branch_name_memory_autoupdate: str | None = None
         self._output_website: dict = {}
         self._output_lint: dict = {}
         self._output_test: list[dict] = []
@@ -125,20 +96,59 @@ class EventHandler:
         self._output_publish_pypi: dict = {}
         self._output_test_pypi: list[dict] = []
         self._output_finalize: dict = {}
+        self._summary_oneliners: list[str] = []
+        self._summary_sections: list[str | html.ElementCollection | html.Element] = []
+        # self._job_run_flag: dict[str, bool] = {
+        #     job_id: False
+        #     for job_id in [
+        #         "package_build",
+        #         "package_test_local",
+        #         "package_lint",
+        #         "website_build",
+        #         "website_deploy",
+        #         "website_rtd_preview",
+        #         "package_publish_testpypi",
+        #         "package_publish_pypi",
+        #         "package_test_testpypi",
+        #         "package_test_pypi",
+        #         "github_release",
+        #     ]
+        # }
+        # self._tag: str = ""
+        # self._version: str = ""
+        # self._hash_latest: str = ""
         return
 
     def run(self):
         self.run_event()
-        return self._finalize()
+        self._logger.h1("Finalization")
+        if self._failed:
+            # Just to be safe, disable publish/deploy/release jobs if fail is True
+            if self._output_website:
+                self._output_website["deploy"] = False
+            self._output_publish_testpypi = {}
+            self._output_test_testpypi = []
+            self._output_publish_pypi = {}
+            self._output_test_pypi = []
+            if self._output_finalize.get("release"):
+                self._output_finalize["release"] = False
+        output = {
+            "fail": self._failed,
+            "website": self._output_website or False,
+            "lint": self._output_lint or False,
+            "test": self._output_test or False,
+            "build": self._output_build or False,
+            "publish-testpypi": self._output_publish_testpypi or False,
+            "test-testpypi": self._output_test_testpypi or False,
+            "publish-pypi": self._output_publish_pypi or False,
+            "test-pypi": self._output_test_pypi or False,
+            "finalize": self._output_finalize or False,
+        }
+        summary = self.assemble_summary()
+        return output, None, summary
 
     def run_event(self) -> None:
         ...
-
-    def _finalize(self):
-        self._logger.h1("Finalization")
-        summary = self.assemble_summary()
-        output = self.output
-        return output, None, summary
 
     def _action_meta(self, action: InitCheckAction, meta: Meta, base: bool, branch: Branch) -> str | None:
         name = "Meta Sync"
@@ -331,37 +341,13 @@ class EventHandler:
             )
         return commit_hash
 
-    def commit(
-        self,
-        message: str = "",
-        stage: Literal["all", "staged", "unstaged"] = "all",
-        amend: bool = False,
-        push: bool = False,
-        set_upstream: bool = False,
-    ):
-        commit_hash = self._git_head.commit(message=message, stage=stage, amend=amend)
-        if amend:
-            self._amended = True
-        if push:
-            commit_hash = self.push(set_upstream=set_upstream)
-        return commit_hash
-
-    def push(self, amend: bool = False, set_upstream: bool = False):
-        new_hash = self._git_head.push(
-            target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
-        )
-        self._amended = False
-        if new_hash and self._git_head.current_branch_name() == self._context.ref_name:
-            self._hash_latest = new_hash
-        return new_hash
-
     def _get_latest_version(
         self,
         branch: str | None = None,
         dev_only: bool = False,
-        head: bool = False,
+        base: bool = True,
     ) -> tuple[PEP440SemVer | None, int | None]:
-        git = self._git_head if head else self._git_base
+        git = self._git_base if base else self._git_head
         ver_tag_prefix = self._ccm_main["tag"]["group"]["version"]["prefix"]
         if branch:
             git.stash()
@@ -405,13 +391,6 @@ class EventHandler:
             self._branch_name_memory_autoupdate = None
         return
 
-    @property
-    def hash_latest(self) -> str:
-        """The SHA hash of the most recent commit on the branch,
-        including commits made during the workflow run.
-        """
-        return self._hash_latest if self._hash_latest else self._context.hash_after
-
     def add_summary(
         self,
         name: str,
@@ -449,17 +428,21 @@ class EventHandler:
 
     def _set_output_release(
         self,
-        name: str | None = None,
+        name: str,
+        tag: str,
         body: str | None = None,
         prerelease: bool | None = None,
         make_latest: Literal["legacy", "latest", "none"] | None = None,
         discussion_category_name: str | None = None,
     ):
-        data = locals()
-        data.pop("self")
-        for key, val in data.items():
-            if val is not None:
-                self._release_info[key] = val
+        self._output_finalize["release"] = {
+            "name": name,
+            "tag_name": tag,
+            "body": body,
+            "prerelease": prerelease,
+            "make_latest": make_latest,
+            "discussion_category_name": discussion_category_name,
+        }
         return
 
     def _set_output_lint(
@@ -481,7 +464,7 @@ class EventHandler:
         }
         return
 
-    def _set_output_website_build(
+    def _set_output_website(
         self,
         ccm_branch: MetaManager,
         repository: str = "",
@@ -615,76 +598,6 @@ class EventHandler:
                         "python-version": python_version,
                     }
                 )
-        return out
-
-    @property
-    def output(self) -> dict:
-        metadata = self._ccm_branch or self._ccm_main
-        package = metadata.package
-        package_name = package.get("name", "")
-        if self._failed:
-            # Just to be safe, disable publish/deploy/release jobs if fail is True
-            self._set_job_run(
-                website_deploy=False,
-                package_publish_testpypi=False,
-                package_publish_pypi=False,
-                github_release=False,
-            )
-        for job_id, dependent_job_id in (
-            ("package_publish_testpypi", "package_test_testpypi"),
-            ("package_publish_pypi", "package_test_pypi"),
-            ("website_deploy", "website_build"),
-        ):
-            if self._job_run_flag[job_id]:
-                self._job_run_flag[dependent_job_id] = True
-        if self._job_run_flag["package_publish_testpypi"] or self._job_run_flag["package_publish_pypi"]:
-            self._job_run_flag["package_build"] = True
-        out = {
-            "fail": self._failed,
-            "website": self._output_website or False,
-            "lint": self._output_lint or False,
-            "test": self._output_test or False,
-            "build": self._output_build or False,
-            "publish-testpypi": self._output_publish_testpypi or False,
-            "test-testpypi": self._output_test_testpypi or False,
-            "publish-pypi": self._output_publish_pypi or False,
-            "test-pypi": self._output_test_pypi or False,
-            "finalize": self._output_finalize or False,
-
-            "config": {
-
-                "checkout": {
-                    "ref": self.hash_latest,
-                    "ref_before": self._context.hash_before,
-                    "repository": self._context.target_repo_fullname,
-                },
-                "run": self._job_run_flag,
-                "package": {
-                    "version": self._version,
-                    "upload_url_testpypi": "https://test.pypi.org/legacy/",
-                    "upload_url_pypi": "https://upload.pypi.org/legacy/",
-                    "download_url_testpypi": f"https://test.pypi.org/project/{package_name}/{self._version}",
-                    "download_url_pypi": f"https://pypi.org/project/{package_name}/{self._version}",
-                },
-                "release": self._release_info | {"tag_name": self._tag},
-            },
-            "metadata_ci": {
-                "path": metadata["path"],
-                "web": {
-                    "readthedocs": {"name": metadata["web"].get("readthedocs", {}).get("name")},
-                },
-                "url": {"website": {"base": metadata["url"]["website"]["base"]}},
-                "package": {
-                    "name": package_name,
-                    "github_runners": package.get("github_runners", []),
-                    "python_versions": package.get("python_versions", []),
-                    "python_version_max": package.get("python_version_max", ""),
-                    "pure_python": package.get("pure_python", True),
-                    "cibw_matrix_platform": package.get("cibw_matrix_platform", []),
-                    "cibw_matrix_python": package.get("cibw_matrix_python", []),
-                },
-            },
-        }
         return out
 
     def assemble_summary(self) -> str:
@@ -1215,3 +1128,34 @@ class EventHandler:
 
         write(entries)
         return "".join(string).rstrip()
+
+    # @property
+    # def hash_latest(self) -> str:
+    #     """The SHA hash of the most recent commit on the branch,
+    #     including commits made during the workflow run.
+    #     """
+    #     return self._hash_latest if self._hash_latest else self._context.hash_after
+
+    # def commit(
+    #     self,
+    #     message: str = "",
+    #     stage: Literal["all", "staged", "unstaged"] = "all",
+    #     amend: bool = False,
+    #     push: bool = False,
+    #     set_upstream: bool = False,
+    # ):
+    #     commit_hash = self._git_head.commit(message=message, stage=stage, amend=amend)
+    #     if amend:
+    #         self._amended = True
+    #     if push:
+    #         commit_hash = self.push(set_upstream=set_upstream)
+    #     return commit_hash
+    #
+    # def push(self, amend: bool = False, set_upstream: bool = False):
+    #     new_hash = self._git_head.push(
+    #         target="origin", set_upstream=set_upstream, force_with_lease=self._amended or amend
+    #     )
+    #     self._amended = False
+    #     if new_hash and self._git_head.current_branch_name() == self._context.ref_name:
+    #         self._hash_latest = new_hash
+    #     return new_hash
