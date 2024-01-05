@@ -70,7 +70,7 @@ class PushEventHandler(EventHandler):
 
     def _run_branch_created(self):
         if self._context.ref_is_main:
-            if not self._git_base.get_tags():
+            if not self._git_head.get_tags():
                 self._run_repository_created()
             else:
                 self._logger.skip(
@@ -85,11 +85,7 @@ class PushEventHandler(EventHandler):
 
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
-        meta = Meta(
-            path_root=self._path_root_base,
-            github_token=self._context.token,
-            logger=self._logger
-        )
+        meta = Meta(path_root=self._path_root_head, logger=self._logger)
         shutil.rmtree(meta.paths.dir_meta)
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
@@ -101,14 +97,14 @@ class PushEventHandler(EventHandler):
         for changelog_data in self._ccm_main.changelog.values():
             path_changelog_file = meta.paths.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
-        if self._template_type is TemplateType.PYPACKIT:
+        if self._is_pypackit:
             shutil.rmtree(meta.paths.dir_source)
             shutil.rmtree(meta.paths.dir_tests)
-        self._git_base.commit(
+        self._git_head.commit(
             message=f"init: Create repository from RepoDynamics {self._template_name_ver} template",
             stage="all"
         )
-        self._git_base.push(target="origin")
+        self._git_head.push()
         self.add_summary(
             name="Init",
             status="pass",
@@ -118,49 +114,35 @@ class PushEventHandler(EventHandler):
 
     def _run_branch_edited(self):
         if self._context.ref_is_main:
-            self._event_type = EventType.PUSH_MAIN
             self._branch = Branch(type=BranchType.MAIN, name=self._context.ref_name)
             return self._run_branch_edited_main()
-        self._branch = self._ccm_main.get_branch_info_from_name(branch_name=self._context.ref_name)
-        self._git_head.fetch_remote_branches_by_name(branch_names=self._context.ref_name)
-        self._git_head.checkout(self._context.ref_name)
-        self._meta = Meta(
-            path_root=self._path_root_base,
-            github_token=self._context.token,
-            hash_before=self._context.hash_before,
-            logger=self._logger,
-        )
-        if self._branch.type == BranchType.RELEASE:
-            self._event_type = EventType.PUSH_RELEASE
-            return self._run_branch_edited_release()
-        if self._branch.type == BranchType.DEV:
-            self._event_type = EventType.PUSH_DEV
-            return self._run_branch_edited_dev()
-        if self._branch.type == BranchType.AUTOUPDATE:
-            self._event_type = EventType.PUSH_CI_PULL
-            return self._run_branch_edited_ci_pull()
-        self._event_type = EventType.PUSH_OTHER
-        return self._run_branch_edited_other()
+        # self._branch = self._ccm_main.get_branch_info_from_name(branch_name=self._context.ref_name)
+        # self._git_head.fetch_remote_branches_by_name(branch_names=self._context.ref_name)
+        # self._git_head.checkout(self._context.ref_name)
+        # self._meta = Meta(
+        #     path_root=self._path_root_base,
+        #     github_token=self._context.token,
+        #     hash_before=self._context.hash_before,
+        #     logger=self._logger,
+        # )
+        # if self._branch.type == BranchType.RELEASE:
+        #     self._event_type = EventType.PUSH_RELEASE
+        #     return self._run_branch_edited_release()
+        # if self._branch.type == BranchType.DEV:
+        #     self._event_type = EventType.PUSH_DEV
+        #     return self._run_branch_edited_dev()
+        # if self._branch.type == BranchType.AUTOUPDATE:
+        #     self._event_type = EventType.PUSH_CI_PULL
+        #     return self._run_branch_edited_ci_pull()
+        # self._event_type = EventType.PUSH_OTHER
+        # return self._run_branch_edited_other()
 
     def _run_branch_edited_main(self):
-        if not self._git_base.get_tags():
+        if not self._git_head.get_tags():
             # The repository is in the initialization phase
-            head_commit_msg = self._context.event.head_commit.message
-            head_commit_msg_lines = head_commit_msg.splitlines()
-            head_commit_summary = head_commit_msg_lines[0]
-            if head_commit_summary.startswith("init:"):
+            if self._context.event.head_commit.message.startswith("init:"):
                 # User is signaling the end of initialization phase
-                if head_commit_summary.removeprefix("init:").strip():
-                    head_commit_msg_final = head_commit_msg
-                else:
-                    head_commit_msg_lines[0] = (
-                        f"init: Initialize project from RepoDynamics {self._template_name_ver} template"
-                    )
-                    head_commit_msg_final = "\n".join(head_commit_msg_lines)
-                head_commit_msg_parsed = CommitParser(types=["init"], logger=self._logger).parse(
-                    head_commit_msg_final
-                )
-                return self._run_first_release(head_commit_msg_parsed)
+                return self._run_first_release()
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
         self._metadata_main_before = read_from_json_file(
@@ -173,86 +155,111 @@ class PushEventHandler(EventHandler):
             return self._run_existing_repository_initialized()
         return self._run_branch_edited_main_normal()
 
-    def _run_init_phase(self, version: str = "0.0.0"):
+    def _run_init_phase(self, version: str = "0.0.0", finish: bool = True):
         meta = Meta(
             path_root=self._path_root_head,
             github_token=self._context.token,
-            future_versions={self._branch.name: version},
+            future_versions={self._context.ref_name: version},
             logger=self._logger,
         )
-        self._ccm_main = self._ccm_branch = meta.read_metadata_full()
-        self._ccs_main = self._ccs_branch = self._ccm_main.settings
+        self._ccm_main = meta.read_metadata_full()
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
-        if self._ccm_main["workflow"].get("pre_commit"):
-            self._action_hooks(
-                action=InitCheckAction.COMMIT,
-                branch=self._branch,
-                base=False,
-                ref_range=(self._context.hash_before, self.hash_latest),
-            )
-        self._action_meta(
+        hash_hooks = self._action_hooks(
+            action=InitCheckAction.COMMIT,
+            branch=self._branch,
+            base=False,
+            ref_range=(self._context.hash_before, self._context.hash_after),
+        ) if self._ccm_main["workflow"].get("pre_commit", {}).get("main") else None
+        hash_meta = self._action_meta(
             action=InitCheckAction.COMMIT,
             meta=meta,
             base=False,
+            branch=self._branch
         )
-
-        ccs_main_before = read_from_json_file(
-            path_root=self._path_root_head,
-            commit_hash=self._context.hash_before,
-            git=self._git_head,
-            logger=self._logger,
-        ).settings
-        self._config_repo_branch_names(
-            ccs_new=self._ccs_main,
-            ccs_old=ccs_main_before
-        )
-        self._set_job_run(
-            package_lint=True,
-            package_test_local=True,
-            website_build=True,
-            website_deploy=True,
-        )
-
-        self._set_output_test_local(ccm_branch=self._ccm_main)
+        if finish:
+            latest_hash = self._git_head.push() if hash_hooks or hash_meta else self._context.hash_after
+            self._config_repo_branch_names(
+                ccs_new=self._ccm_main.settings,
+                ccs_old=read_from_json_file(
+                    path_root=self._path_root_head,
+                    commit_hash=self._context.hash_before,
+                    git=self._git_head,
+                    logger=self._logger,
+                ).settings
+            )
+            self._set_output(
+                ccm_branch=self._ccm_main,
+                ref=latest_hash,
+                website_deploy=True,
+                package_lint=self._is_pypackit,
+                package_test=self._is_pypackit,
+                package_build=self._is_pypackit,
+            )
+            return
         return
 
-    def _run_first_release(self, commit_msg: CommitMsg):
+    def _run_first_release(self):
+        head_commit_msg = self._context.event.head_commit.message
+        head_commit_msg_lines = head_commit_msg.splitlines()
+        head_commit_summary = head_commit_msg_lines[0]
+        if head_commit_summary.removeprefix("init:").strip():
+            head_commit_msg_final = head_commit_msg
+        else:
+            head_commit_msg_lines[0] = (
+                f"init: Initialize project from RepoDynamics {self._template_name_ver} template"
+            )
+            head_commit_msg_final = "\n".join(head_commit_msg_lines)
+        commit_msg = CommitParser(types=["init"], logger=self._logger).parse(head_commit_msg_final)
         if commit_msg.footer.get("version"):
-            version = commit_msg.footer["version"]
+            version_input = commit_msg.footer["version"]
             try:
-                PEP440SemVer(version)
+                version = str(PEP440SemVer(version_input))
             except ValueError:
                 self._logger.error(
-                    f"Invalid version string in commit footer: {version}",
+                    f"Invalid version string in commit footer: {version_input}",
                     raise_error=False,
                 )
-                self.fail = True
+                self._failed = True
                 return
         else:
             version = "0.0.0"
-        self._run_init_phase(version=version)
+        self._run_init_phase(version=version, finish=False)
         if commit_msg.footer.get("squash", True):
             # Squash all commits into a single commit
             # Ref: https://blog.avneesh.tech/how-to-delete-all-commit-history-in-github
             #      https://stackoverflow.com/questions/55325930/git-how-to-squash-all-commits-on-master-branch
             self._git_head.checkout("temp", orphan=True)
-            self.commit(
+            self._git_head.commit(
                 message=f"init: Initialize project from RepoDynamics {self._template_name_ver} template",
             )
             self._git_head.branch_delete(self._context.ref_name, force=True)
             self._git_head.branch_rename(self._context.ref_name, force=True)
-            self._hash_latest = self._git_head.push(
+            latest_hash = self._git_head.push(
                 target="origin", ref=self._context.ref_name, force_with_lease=True
             )
-        self._tag_version(ver=version, msg=f"Release version {version}")
-        if self._template_type is TemplateType.PYPACKIT:
-            self._set_job_run(
-                package_publish_testpypi=True,
-                package_publish_pypi=True,
-            )
-        self._config_rulesets(ccs_main_new=self._ccs_main)
+        else:
+            latest_hash = self._git_head.push() or self._context.hash_after
+        self._tag_version(ver=version, msg=f"Release version {version}", base=False)
+        self._config_repo_branch_names(
+            ccs_new=self._ccm_main.settings,
+            ccs_old=read_from_json_file(
+                path_root=self._path_root_head,
+                commit_hash=self._context.hash_before,
+                git=self._git_head,
+                logger=self._logger,
+            ).settings
+        )
+        self._config_rulesets(ccs_new=self._ccm_main.settings)
+        self._set_output(
+            ccm_branch=self._ccm_main,
+            ref=latest_hash,
+            version=version,
+            website_deploy=True,
+            package_publish_testpypi=self._is_pypackit,
+            package_publish_pypi=self._is_pypackit,
+        )
         return
 
     def _run_existing_repository_initialized(self):
