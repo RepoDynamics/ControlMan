@@ -48,7 +48,7 @@ def init(
         "admin_token": admin_token,
         "logger": logger
     }
-    event = context_manager.github.event_name
+    event = context_manager.event_name
     if event is EventType.ISSUES:
         event_manager = IssuesEventHandler(**args)
     elif event is EventType.ISSUE_COMMENT:
