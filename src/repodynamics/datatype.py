@@ -360,8 +360,8 @@ class IssueStatus(Enum):
 
 
 class TemplateType(Enum):
-    PYPACKIT = "pypackit"
-    SPHINXIT = "sphinxit"
+    PYPACKIT = "PyPackIT"
+    SPHINXIT = "SphinxIT"
 
 
 class RepoDynamicsBotCommand(Enum):
