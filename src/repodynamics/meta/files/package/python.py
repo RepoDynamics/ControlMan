@@ -247,11 +247,11 @@ __version__ = __version_details__["version"]"""
         for key, val in self.pyproject_project().items():
             if key not in project:
                 project[key] = val
-        return [(info, tomlkit.dumps(pyproject))]
+        return [(info, tomlkit.dumps(pyproject, sort_keys=True))]
 
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
         info = self._path.test_package_pyproject
-        return [(info, tomlkit.dumps(self._ccm["package"]["pyproject_tests"]))]
+        return [(info, tomlkit.dumps(self._ccm["package"]["pyproject_tests"], sort_keys=True))]
 
     def pyproject_project(self) -> dict:
         data_type = {
