@@ -146,16 +146,16 @@ class Branch:
 
         self._options = options
         self._branch_main = MainBranch(
-            name=options["main"]["name"],
-            ruleset=instantiate_ruleset(options["main"]["ruleset"])
+            name=options["branch"]["main"]["name"],
+            ruleset=instantiate_ruleset(options["branch"]["main"]["ruleset"])
         )
         for branch_group in ("release", "pre-release", "implementation", "development", "auto-update"):
             setattr(
                 self,
                 f"_branch_{branch_group.replace('-', '_')}",
                 GroupedBranch(
-                    prefix=options[branch_group]["prefix"],
-                    ruleset=instantiate_ruleset(options[branch_group]["ruleset"])
+                    prefix=options["branch"][branch_group]["prefix"],
+                    ruleset=instantiate_ruleset(options["branch"][branch_group]["ruleset"])
                 )
             )
         return
