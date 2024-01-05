@@ -1,27 +1,28 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Branch Configuration
+title: Branch Configurations
 description: Names, prefixes, and protection rules for different branch types
 type: object
 default: { }
 additionalProperties: false
 properties:
   main:
+    title: Main Branch
     description: Configurations for the main (aka trunk, default) branch
     type: object
     default: { }
     additionalProperties: false
     properties:
       name:
-        description: Name of the default branch
+        title: Name
+        description: Name of the main branch
         type: string
         default: main
       ruleset:
+        $ref: "#/definitions/ruleset"
         default:
           enforcement: enabled
           rule:
             protect_creation: true
-            protect_modification:
-              allow_fetch_and_merge: false
             protect_deletion: true
             protect_force_push: true
             require_linear_history: true
@@ -32,38 +33,135 @@ properties:
               require_last_push_approval: true
               require_review_thread_resolution: true
               required_approving_review_count: 1
-        $ref: "#/definitions/ruleset"
-    required: [ name, protection ]
+    required: [ name, ruleset ]
   release:
+    title: Release Branch
     description: Configurations for release branches
+    type: object
     default: { }
-    $ref: "#/definitions/branch_group"
+    properties:
+      prefix:
+        description: Name prefix of the branch group
+        type: string
+        default: release/v
+      ruleset:
+        $ref: "#/definitions/ruleset"
+        default:
+          enforcement: enabled
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_signatures: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+    required: [ prefix, ruleset ]
   pre-release:
-    description: Pre-release branch
+    title: Pre-release Branch
+    description: Configurations for pre-release branches
+    type: object
     default: { }
-    $ref: "#/definitions/branch_group"
+    properties:
+      prefix:
+        description: Name prefix of the branch group
+        type: string
+        default: pre-release/v
+      ruleset:
+        $ref: "#/definitions/ruleset"
+        default:
+          enforcement: enabled
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_signatures: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+    required: [ prefix, ruleset ]
   implementation:
-    description: Implementation branch
+    title: Implementation Branch
+    description: Configurations for implementation branches
+    type: object
     default: { }
-    $ref: "#/definitions/branch_group"
+    properties:
+      prefix:
+        description: Name prefix of the branch group
+        type: string
+        default: impl/
+      ruleset:
+        $ref: "#/definitions/ruleset"
+        default:
+          enforcement: enabled
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_signatures: true
+    required: [ prefix, ruleset ]
   development:
-    description: Development branch
-    default: {}
-    $ref: "#/definitions/branch_group"
-  auto-update:
-    description: Auto-update branch
+    title: Development Branch
+    description: Configurations for development branches
+    type: object
     default: { }
-    $ref: "#/definitions/branch_group"
+    properties:
+      prefix:
+        description: Name prefix of the branch group
+        type: string
+        default: dev/
+      ruleset:
+        $ref: "#/definitions/ruleset"
+        default:
+          enforcement: enabled
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_signatures: true
+    required: [ prefix, ruleset ]
+  auto-update:
+    title: Auto-update Branch
+    description: Configurations for auto-update branches
+    type: object
+    default: { }
+    properties:
+      prefix:
+        description: Name prefix of the branch group
+        type: string
+        default: auto-update/
+      ruleset:
+        $ref: "#/definitions/ruleset"
+        default:
+          enforcement: enabled
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_signatures: true
+    required: [ prefix, ruleset ]
 required: [ main, release, pre-release, implementation, development, auto-update ]
-
 
 definitions:
   ruleset:
-    description: Configurations for branch protection rules
+    title: Ruleset
+    description: Configurations for branch protection rules.
     type: object
     additionalProperties: false
     properties:
       enforcement:
+        title: Enforcement
         description: |
           The enforcement level of the ruleset; one of:
           - 'enabled': Enforce rules.
@@ -75,24 +173,31 @@ definitions:
         enum: [ disabled, evaluate, enabled ]
         default: enabled
       bypass_actors:
+        title: Bypass Actors
         description: List of roles, teams, or apps allowed to bypass the rules.
         type: array
-        default: [ ]
+        default:
+          - id: 1
+            type: organization_admin
+            mode: always
         uniqueItems: true
         items:
           type: object
           additionalProperties: false
           properties:
             id:
+              title: ID
               description: |
                 The account ID of the actor.
                 If `type` is organization_admin, this should be 1.
               type: integer
             type:
+              title: Type
               description: The type of actor.
               type: string
               enum: [ organization_admin, repository_role, team, integration ]
             mode:
+              title: Mode
               description: |
                 When the specified actor can bypass the ruleset.
                 'pull_request' means that an actor can only bypass rules on pull requests.
@@ -100,6 +205,7 @@ definitions:
               enum: [ always, pull_request ]
           required: [ id, type, mode ]
       rule:
+        title: Rules
         description: Rules to enforce for the branch.
         type: object
         default : { }
@@ -109,6 +215,7 @@ definitions:
             description: |
               Prevent users from creating matching refs.
             type: boolean
+            default: true
           protect_modification:
             description: |
               Prevent users from updating matching refs.
@@ -119,21 +226,26 @@ definitions:
               allow_fetch_and_merge:
                 description: Still allow the branch to pull changes from its upstream repository.
                 type: boolean
+                default: true
             required: [ allow_fetch_and_merge ]
           protect_deletion:
             description: |
               Prevent users from deleting matching refs.
               Omitting this key is equivalent to setting it to `false`.
             type: boolean
+            default: true
           protect_force_push:
             description: Prevent users from force-pushing to matching refs.
             type: boolean
+            default: true
           require_linear_history:
             description: Prevent merge commits from being pushed to matching refs.
             type: boolean
+            default: true
           require_signatures:
             description: Require commits on matching refs to have verified signatures.
             type: boolean
+            default: true
           require_pull_request:
             description: |
               Require all commits be made to a non-target branch
@@ -147,26 +259,31 @@ definitions:
                   Automatically dismiss previous approving pull-request reviews
                   when new reviewable commits are pushed.
                 type: boolean
+                default: true
               require_code_owner_review:
                 description: |
                   Require an approving review in pull requests including files
                   with a designated code owner.
                 type: boolean
+                default: true
               require_last_push_approval:
                 description: |
                   Require an approving review on the most recent reviewable push
                   by someone other than the actor performing the push.
                 type: boolean
+                default: true
               require_review_thread_resolution:
                 description: |
                   Require all conversations on code to be resolved before a pull request
                   can be merged into matching refs.
                 type: boolean
+                default: true
               required_approving_review_count:
                 description: |
                   The number of approving reviews that are required
                   before a pull request can be merged into matching refs.
                 type: integer
+                default: 1
             required:
               - dismiss_stale_reviews_on_push
               - require_code_owner_review
@@ -211,13 +328,3 @@ definitions:
             items:
               type: string
     required: [ enforcement, bypass_actors, rule ]
-  branch_group:
-    type: object
-    default: { }
-    properties:
-      prefix:
-        description: Prefix for the branch name
-        type: string
-      ruleset:
-        $ref: "#/definitions/ruleset"
-    required: [ prefix ]
