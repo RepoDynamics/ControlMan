@@ -38,7 +38,7 @@ class PythonPackageFileGenerator:
         self._test_package_dir_output: tuple[DynamicFile, str] | None = None
         return
 
-    def generate(self):
+    def generate(self) -> list[tuple[DynamicFile, str]]:
         self._package_dir_output, self._test_package_dir_output = self._directories()
         return (
             self.requirements()
