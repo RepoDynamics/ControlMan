@@ -16,7 +16,7 @@ from repodynamics.version import PEP440SemVer
 from repodynamics.meta.files.config import ConfigFileGenerator
 from repodynamics.meta.files.health import HealthFileGenerator
 from repodynamics.meta.files import package
-from repodynamics.meta.files.readme import ReadmeFileGenerator
+from repodynamics.meta.files import readme
 from repodynamics.meta.files.forms import FormGenerator
 
 
@@ -103,9 +103,7 @@ class Meta:
             logger=self._logger,
         )
 
-        generated_files += ReadmeFileGenerator(
-            metadata=metadata, paths=self.paths, logger=self._logger
-        ).generate()
+        generated_files += readme.generate(ccm=metadata, path=self.paths, logger=self._logger)
 
         self._generated_files = generated_files
         return self._generated_files
