@@ -398,6 +398,10 @@ properties:
     additionalProperties:
       type: string
     properties:
+      license:
+        description: Relative path to the license page
+        type: string
+        default: about/license
       contact:
         description: Relative path to the contact page
         type: string
