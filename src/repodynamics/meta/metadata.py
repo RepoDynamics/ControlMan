@@ -63,6 +63,12 @@ class MetadataGenerator:
         # self._metadata["license_txt"] = license_info["license_txt"].format(**self._metadata)
         # self._metadata["license_notice"] = license_info["license_notice"].format(**self._metadata)
 
+        website_main_sections, website_quicklinks = self._process_website_toctrees()
+        self._metadata["web"]["sections"] = website_main_sections
+
+        if self._metadata["web"]["quicklinks"] == "subsections":
+            self._metadata["web"]["quicklinks"] = website_quicklinks
+
         self._metadata["owner"]["publications"] = self._publications()
 
         if self._metadata.get("package"):
@@ -382,6 +388,84 @@ class MetadataGenerator:
                 }
             )
         return out
+
+    def _process_website_toctrees(self) -> tuple[list[dict], list[dict]]:
+        path_docs = self._output_path.dir_website / "source"
+        main_toctree_entries = self._extract_toctree((path_docs / "index.md").read_text())
+        main_sections = []
+        quicklinks = []
+        for main_toctree_entry in main_toctree_entries:
+            text = (path_docs / main_toctree_entry).with_suffix(".md").read_text()
+            title = self._extract_main_heading(text)
+            path = Path(main_toctree_entry)
+            main_dir = path.parent
+            main_sections.append({"title": title, "path": str(path.with_suffix(""))})
+            if str(main_dir) == self._metadata["web"]["path"]["news"]:
+                category_titles = self._get_all_blog_categories()
+                path_template = f'{self._metadata["web"]["path"]["news"]}/category/{{}}'
+                entries = [
+                    {
+                        "title": category_title,
+                        "path": path_template.format(category_title.lower().replace(" ", "-"))
+                    } for category_title in category_titles
+                ]
+                quicklinks.append({"title": title, "entries": entries})
+                continue
+            sub_toctree_entries = self._extract_toctree(text)
+            if sub_toctree_entries:
+                quicklink_entries = []
+                for sub_toctree_entry in sub_toctree_entries:
+                    subpath = main_dir / sub_toctree_entry
+                    sub_text = (path_docs / subpath).with_suffix(".md").read_text()
+                    sub_title = self._extract_main_heading(sub_text)
+                    quicklink_entries.append(
+                        {"title": sub_title, "path": str(subpath.with_suffix(""))}
+                    )
+                quicklinks.append({"title": title, "entries": quicklink_entries})
+        return main_sections, quicklinks
+
+    def _get_all_blog_categories(self) -> tuple[str, ...]:
+        categories = {}
+        path_posts = self._output_path.dir_website / "source" / self._metadata["web"]["path"]["news"] / "post"
+        for path_post in path_posts.glob("*.md"):
+            post_content = path_post.read_text()
+            post_categories = self._extract_blog_categories(post_content)
+            if not post_categories:
+                continue
+            for post_category in post_categories:
+                categories.setdefault(post_category, 0)
+                categories[post_category] += 1
+        return tuple(category[0] for category in sorted(categories.items(), key=lambda i: i[1], reverse=True))
+
+    @staticmethod
+    def _extract_main_heading(file_content: str) -> str | None:
+        match = re.search(r"^# (.*)", file_content, re.MULTILINE)
+        return match.group(1) if match else None
+
+    @staticmethod
+    def _extract_toctree(file_content: str) -> tuple[str, ...] | None:
+        matches = re.findall(r"(:{3,}){toctree}\s((.|\s)*?)\s\1", file_content, re.DOTALL)
+        if not matches:
+            return
+        toctree_str = matches[0][1]
+        toctree_entries = []
+        for line in toctree_str.splitlines():
+            entry = line.strip()
+            if entry and not entry.startswith(":"):
+                toctree_entries.append(entry)
+        return tuple(toctree_entries)
+
+    @staticmethod
+    def _extract_blog_categories(file_content: str) -> tuple[str, ...] | None:
+        front_matter_match = re.search(r'^---[\s\S]*?---', file_content, re.MULTILINE)
+        if front_matter_match:
+            front_matter = front_matter_match.group()
+            match = re.search(
+                r'^---[\s\S]*?\bcategory:\s*["\']?(.*?)["\']?\s*(?:\n|---)', front_matter, re.MULTILINE
+            )
+            if match:
+                return tuple(category.strip() for category in match.group(1).split(","))
+        return
 
     def _urls_github(self) -> dict:
         url = {}
