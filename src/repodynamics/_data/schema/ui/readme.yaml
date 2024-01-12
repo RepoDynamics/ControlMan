@@ -1,33 +1,119 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: meta_dev_issues
-description: GitHub issues settings for the project
+title: README Files Settings
+description: Configurations for README files.
 type: object
-default: {}
+default: { }
 additionalProperties: false
 properties:
   repo:
-    description: Main README file of the repository
-    type: object
-    default: {}
-    additionalProperties: false
-    properties:
-      header:
-        type: object
-      body:
-        type: object
+    title: Repository README
+    description: Main README file of the repository.
+    default: { }
+    oneOf:
+      - type: "null"
+      - type: object
+        additionalProperties: false
+        properties:
+          theme:
+            type: string
+            enum: [ pypackit-default ]
+            default: pypackit-default
+          config:
+            title: Theme Configurations
+            description: Configurations for the theme.
+            type: object
+            default: { }
+            additionalProperties: false
+        required: [ theme, config ]
+        allOf:
+          - if:
+              properties:
+                theme:
+                  const: pypackit-default
+            then:
+              properties:
+                config:
+                  $ref: '#/definitions/theme-pypackit-default'
   package:
-    description: README file of the package used for PyPI/TestPyPI/conda
-    type: object
-    default: {}
-    additionalProperties: false
-    properties:
-      header:
-        type: object
-      body:
-        type: object
+    title: Package README
+    description: README file of the package used for PyPI/TestPyPI/conda.
+    default: { }
+    oneOf:
+      - type: "null"
+      - type: object
+        additionalProperties: false
+        properties:
+          theme:
+            type: string
+            enum: [ pypackit-default ]
+            default: pypackit-default
+          config:
+            title: Theme Configurations
+            description: Configurations for the theme.
+            type: object
+            default: { }
+            additionalProperties: false
+        required: [ theme, config ]
+        allOf:
+          - if:
+              properties:
+                theme:
+                  const: pypackit-default
+            then:
+              properties:
+                config:
+                  $ref: '#/definitions/theme-pypackit-default'
   dir:
-    description: Directory README files
+    title: Directory READMEs
+    description: Directory README files.
     type: object
-    default: {}
+    default: { }
     additionalProperties:
       type: string
+required: [ repo, package, dir ]
+
+definitions:
+  theme-pypackit-default:
+    properties:
+      header:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          style:
+            type: string
+            enum: [ horizontal, vertical ]
+            default: vertical
+          logo:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              alt_text:
+                type: string
+                default: "${{ name }}: ${{ tagline }}"
+              title:
+                type: string
+                default: "Welcome to ${{ name }}! Click to visit our website and learn more."
+              width:
+                type: string
+                default: "80%"
+              height:
+                type: string
+                default: "300px"
+          menu_top:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              num_spaces:
+                type: integer
+                default: 2
+          menu_bottom:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              num_spaces:
+                type: integer
+                default: 2
