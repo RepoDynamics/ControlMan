@@ -56,8 +56,11 @@ class ReadmeFileGenerator:
     def footer(self):
         project_badge = self.project_badge()
         project_badge.set(align="left")
-        license_badge = self.license_badge()
-        license_badge.set(align="left")
+        left_badges = [project_badge]
+        if self._ccm["license"]:
+            license_badge = self.license_badge()
+            license_badge.set(align="left")
+            left_badges.append(license_badge)
         pypackit_badge = self.pypackit_badge()
         pypackit_badge.set(align="right")
         elements = html.DIV(
@@ -65,8 +68,7 @@ class ReadmeFileGenerator:
                 "\n",
                 html.HR(),
                 self.marker(start="Left Side"),
-                project_badge,
-                license_badge,
+                *left_badges,
                 self.marker(end="Left Side"),
                 self.marker(start="Right Side"),
                 pypackit_badge,
@@ -77,11 +79,11 @@ class ReadmeFileGenerator:
 
     def project_badge(self) -> bdg.Badge | bdg.ThemedBadge:
         return self.create_static_badge(
-            text_right=self._ccm["copyright"]["notice"],
+            text_right=f'©{self._ccm["copyright"]["notice"]}',
             color_right_light=self._ccm["theme"]["color"]["primary"][0],
             color_right_dark=self._ccm["theme"]["color"]["primary"][1] if self._is_for_gh else None,
             text_left=self._ccm["name"],
-            logo=f"{self._ccm['path']['dir']['control']}/ui/branding/favicon.png",
+            logo=Path(f"{self._ccm['path']['dir']['control']}/ui/branding/favicon.png"),
             link=self._ccm["url"]["website"]["home"],
             title=f"{self._ccm['name']} is licensed under the {self._ccm['license']['fullname']}",
         )
