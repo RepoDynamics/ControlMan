@@ -28,7 +28,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
         logger: Logger | None = None
     ):
         super().__init__(ccm=ccm, path=path, target=target, logger=logger)
-        self._data = self._ccm["readme"][target]
+        self._data = self._ccm["readme"][target]["config"]
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
         # )
@@ -64,7 +64,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 "\n",
             ]
         )
-        return [(self._path.readme_main, str(file_content))]
+        return [(self._path.readme_main if self._is_for_gh else self._path.readme_pypi, str(file_content))]
 
     def header(self):
         top_menu, bottom_menu = self.menu()
@@ -77,7 +77,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 top_menu,
                 self.marker(end="Top Panel"),
                 self.marker(start="Description"),
-                *self.header_body(),
+                self.header_body(),
                 self.marker(end="Description"),
                 self.marker(start="Bottom Panel"),
                 bottom_menu,
@@ -142,7 +142,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
             )
 
     def menu(self):
-        def get_top_data():
+        def get_top_data(path_docs: Path) -> list[dict[str, str]]:
             with open(path_docs / "index.md") as f:
                 text = f.read()
             toctree = re.findall(r":::{toctree}\s((.|\s)*?)\s:::", text, re.DOTALL)[0][0]
@@ -165,8 +165,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 if item.get("include_in_readme")
             ]
 
-        path_docs = self._path.dir_website / "source"
-        top_data = get_top_data()
+        top_data = get_top_data(path_docs=self._path.dir_website / "source")
         bottom_data = get_bottom_data()
         colors_light, colors_dark = [
             pcit.gradient.interpolate_rgb(
@@ -186,17 +185,16 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
         ]
         menu_top, menu_bottom = [
             html.DIV(
-                content=[
-                    f"{'&nbsp;' * 2} ".join(
-                        [str(badge.as_html_picture(tag_seperator="", content_indent="")) for badge in badges]
-                    )
-                ],
+                content=[f"{'&nbsp;' * num_spaces} ".join([str(badge) for badge in badges])],
                 align="center",
-            ) for badges in (buttons[: len(top_data)], buttons[len(top_data) :])
+            ) for badges, num_spaces in zip(
+                (buttons[:len(top_data)], buttons[len(top_data):]),
+                [self._data["header"][f"menu_{side}"]["num_spaces"] for side in ("top", "bottom")],
+            )
         ]
         menu_bottom.content.elements.insert(0, html.HR(width="100%"))
         menu_bottom.content.elements.append(html.HR(width="80%"))
-        if self._ccm["readme"]["repo"]["header"]["style"] == "vertical":
+        if self._data["header"]["style"] == "vertical":
             menu_top.content.elements.insert(0, html.HR(width="80%"))
             menu_top.content.elements.append(html.HR(width="100%"))
         else:
