@@ -371,30 +371,36 @@ properties:
     required: [ name, platform, versioning_scheme, language, version ]
   quicklinks:
     description: Quicklinks for the navbar
-    type: array
-    uniqueItems: true
-    items:
-      type: array
-      uniqueItems: true
-      minItems: 1
-      items:
-        type: object
-        additionalProperties: false
-        required:
-          - title
-          - path
-        properties:
-          title:
-            type: string
-          path:
-            type: string
-          include_in_readme:
-            type: boolean
-            default: false
+    oneOf:
+      - type: "null"
+      - type: string
+        enum: [ subsections ]
+      - type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+            entries:
+              type: array
+              uniqueItems: true
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  title:
+                    type: string
+                  path:
+                    type: string
+                required: [ title, path ]
+          required: [ title, entries ]
   path:
     description: Relative paths to important pages on the website
     type: object
-    default: {}
+    default: { }
     additionalProperties:
       type: string
     properties:
@@ -415,4 +421,5 @@ properties:
         - required: [ base ]
         - required: [ home ]
         - required: [ announcement ]
+    required: [ license, contact, news ]
 required: [ announcement_retention_days, path ]
