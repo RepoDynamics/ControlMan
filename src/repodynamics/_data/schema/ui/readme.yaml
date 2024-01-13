@@ -23,7 +23,6 @@ properties:
             description: Configurations for the theme.
             type: object
             default: { }
-            additionalProperties: false
         required: [ theme, config ]
         allOf:
           - if:
@@ -52,7 +51,6 @@ properties:
             description: Configurations for the theme.
             type: object
             default: { }
-            additionalProperties: false
         required: [ theme, config ]
         allOf:
           - if:
@@ -74,6 +72,7 @@ required: [ repo, package, dir ]
 
 definitions:
   theme-pypackit-default:
+    additionalProperties: false
     properties:
       header:
         type: object
@@ -106,6 +105,11 @@ definitions:
             default: { }
             additionalProperties: false
             properties:
+              height:
+                title: Height
+                description: Height of the buttons in the top menu.
+                type: string
+                default: 35px
               num_spaces:
                 type: integer
                 default: 2
@@ -128,7 +132,43 @@ definitions:
                       type: string
                     description:
                       type: string
-                    target:
+                    path:
                       type: string
-                  required: [ title, target ]
+                  required: [ title, path ]
             required: [ num_spaces, buttons ]
+      body:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          sections:
+            type: array
+            default:
+              - type: keynotes
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum: [ keynotes ]
+                config:
+                  type: object
+                  default: { }
+              allOf:
+                - if:
+                    properties:
+                      type:
+                        const: keynotes
+                  then:
+                    properties:
+                      config:
+                        $ref: '#/definitions/theme-pypackit-default_body-section-keynotes_config'
+              required: [ type, config ]
+  theme-pypackit-default_body-section-keynotes_config:
+    additionalProperties: false
+    properties:
+      title:
+        type: string
+        default: Key Features
+
