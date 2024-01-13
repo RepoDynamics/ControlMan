@@ -321,7 +321,7 @@ properties:
                 properties:
                   suffix:
                     type: string
-                    default: 'requirement analysis'
+                    default: 'req. analysis'
                   description:
                     type: string
                     maxLength: 100
@@ -429,7 +429,7 @@ properties:
   single:
     type: object
     description: Single labels
-    default: {}
+    default: { }
     additionalProperties:
       type: object
       additionalProperties: false
