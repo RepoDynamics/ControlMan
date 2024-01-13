@@ -137,15 +137,26 @@ class EventHandler:
                 self._output_finalize["release"] = False
         output = {
             "fail": self._failed,
-            "website": self._output_website or False,
-            "lint": self._output_lint or False,
-            "test": self._output_test or False,
-            "build": self._output_build or False,
-            "publish-testpypi": self._output_publish_testpypi or False,
-            "test-testpypi": self._output_test_testpypi or False,
-            "publish-pypi": self._output_publish_pypi or False,
-            "test-pypi": self._output_test_pypi or False,
-            "finalize": self._output_finalize or False,
+            "run": {
+                "website": bool(self._output_website),
+                "lint": bool(self._output_lint),
+                "test": bool(self._output_test),
+                "build": bool(self._output_build),
+                "publish-testpypi": bool(self._output_publish_testpypi),
+                "test-testpypi": bool(self._output_test_testpypi),
+                "publish-pypi": bool(self._output_publish_pypi),
+                "test-pypi": bool(self._output_test_pypi),
+                "finalize": bool(self._output_finalize),
+            },
+            "website": self._output_website,
+            "lint": self._output_lint,
+            "test": self._output_test,
+            "build": self._output_build,
+            "publish-testpypi": self._output_publish_testpypi,
+            "test-testpypi": self._output_test_testpypi,
+            "publish-pypi": self._output_publish_pypi,
+            "test-pypi": self._output_test_pypi,
+            "finalize": self._output_finalize,
         }
         summary = self.assemble_summary()
         return output, None, summary
