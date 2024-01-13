@@ -117,3 +117,18 @@ definitions:
               num_spaces:
                 type: integer
                 default: 2
+              buttons:
+                type: array
+                default: [ ]
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    target:
+                      type: string
+                  required: [ title, target ]
+            required: [ num_spaces, buttons ]
