@@ -52,7 +52,7 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 "\n",
                 self.marker(start="Body", main=True),
                 "\n",
-                # self.body(),
+                self.body(),
                 "\n",
                 self.marker(end="Body", main=True),
                 "\n",
@@ -87,8 +87,17 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
         )
 
     def body(self):
-        data = self._ccm["readme"]["repo"]["body"]
-        return html.DIV(content=[getattr(self, f'{section["id"]}')(section) for section in data])
+        section_gen = {
+            "keynotes": self.body_keynotes
+        }
+        data = self._data["body"]
+        content = []
+        for section in data["sections"]:
+            content.append(self.marker(start=f"Body section: {section['type']}"))
+            content.append(html.h(2, section["config"]["title"]))
+            content.append(section_gen[section["type"]](section["config"]))
+            content.append(self.marker(end=f"Body section: {section['type']}"))
+        return html.DIV(content=content, align="center")
 
     def logo(self) -> html.A:
         style = self._data["header"]["style"]
@@ -130,43 +139,26 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
         )
         return description
 
-    def body_keynotes(self):
+    def body_keynotes(self, config: dict):
+        content = []
         for key_point in self._ccm["keynotes"]:
             content.extend(
                 [
                     # self.spacer(width="10%", align="left"),
                     # self.spacer(width="10%", align="right"),
-                    self.button(text=key_point["title"], color="primary"),
-                    html.P(align="justify", content=[key_point["description"]]),
+                    self.button(
+                        text=key_point["title"],
+                        color_light=self._ccm["theme"]["color"]["primary"][0],
+                        color_dark=self._ccm["theme"]["color"]["primary"][1],
+                    ),
+                    html.P(align="justify", content=[key_point["description"].replace("\n\n", "<br>")]),
                 ]
             )
+        return html.ElementCollection(elements=content)
 
     def menu(self):
-        def get_top_data(path_docs: Path) -> list[dict[str, str]]:
-            with open(path_docs / "index.md") as f:
-                text = f.read()
-            toctree = re.findall(r":::{toctree}\s((.|\s)*?)\s:::", text, re.DOTALL)[0][0]
-            top_section_filenames = [entry for entry in toctree.splitlines() if not entry.startswith(":")]
-            top_section_names = []
-            for filename in top_section_filenames:
-                with open((path_docs / filename).with_suffix(".md")) as f:
-                    text = f.read()
-                top_section_names.append(re.findall(r"^# (.*)", text, re.MULTILINE)[0])
-            return [
-                {"text": text, "link": str(Path(link).with_suffix(""))}
-                for text, link in zip(top_section_names, top_section_filenames)
-            ]
-
-        def get_bottom_data():
-            return [
-                {"text": item["title"], "link": item["path"]}
-                for group in self._ccm["web"].get("quicklinks")
-                for item in group
-                if item.get("include_in_readme")
-            ]
-
-        top_data = get_top_data(path_docs=self._path.dir_website / "source")
-        bottom_data = get_bottom_data()
+        top_data = self._ccm["web"]["sections"]
+        bottom_data = self._data["header"]["menu_bottom"]["buttons"]
         colors_light, colors_dark = [
             pcit.gradient.interpolate_rgb(
                 color_start=pcit.color.hexa(self._ccm["theme"]["color"]["primary"][theme]),
@@ -176,10 +168,10 @@ class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):
         ]
         buttons = [
             self.button(
-                text=data["text"],
+                text=data["title"],
                 color_light=color_light,
                 color_dark=color_dark if self._is_for_gh else None,
-                link=f"{self._ccm['url']['website']['home']}/{data['link']}",
+                link=f"{self._ccm['url']['website']['home']}/{data['path']}",
             )
             for data, color_light, color_dark in zip(top_data + bottom_data, colors_light, colors_dark)
         ]
