@@ -70,7 +70,7 @@ properties:
       prefix:
         description: Name prefix of the branch group
         type: string
-        default: pre-release/v
+        default: prerelease/v
       ruleset:
         $ref: "#/definitions/ruleset"
         default:
