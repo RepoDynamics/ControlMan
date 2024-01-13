@@ -30,127 +30,7 @@ class WebAnnouncement:
         self._path_announcement_file = Path(self._metadata["path"]["file"]["website_announcement"])
         return
 
-    def check_expiry(self):
-        name = "Website Announcement Expiry Check"
-        current_announcement = self._read()
-        if current_announcement is None:
-            self._state.add_summary(
-                name=name,
-                status="skip",
-                oneliner="Announcement file does not exist❗",
-                details=html.ul(
-                    [
-                        f"❎ No changes were made.",
-                        f"🚫 The announcement file was not found at '{self._path_announcement_file}'",
-                    ]
-                ),
-            )
-            return
-        (commit_date_relative, commit_date_absolute, commit_date_epoch, commit_details) = (
-            self._git.log(
-                number=1,
-                simplify_by_decoration=False,
-                pretty=pretty,
-                date=date,
-                paths=str(self._path_announcement_file),
-            )
-            for pretty, date in (
-                ("format:%cd", "relative"),
-                ("format:%cd", None),
-                ("format:%cd", "unix"),
-                (None, None),
-            )
-        )
-        if not current_announcement:
-            last_commit_details_html = html.details(
-                content=md.code_block(commit_details),
-                summary="📝 Removal Commit Details",
-            )
-            self._state.add_summary(
-                name=name,
-                status="skip",
-                oneliner="📭 No announcement to check.",
-                details=html.ul(
-                    [
-                        f"❎ No changes were made."
-                        f"📭 The announcement file at '{self._path_announcement_file}' is empty.\n",
-                        f"📅 The last announcement was removed {commit_date_relative} on {commit_date_absolute}.\n",
-                        last_commit_details_html,
-                    ]
-                ),
-            )
-            return
-        current_date_epoch = int(_util.shell.run_command(["date", "-u", "+%s"], logger=self._logger))
-        elapsed_seconds = current_date_epoch - int(commit_date_epoch)
-        elapsed_days = elapsed_seconds / (24 * 60 * 60)
-        retention_days = self._metadata.web["announcement_retention_days"]
-        retention_seconds = retention_days * 24 * 60 * 60
-        remaining_seconds = retention_seconds - elapsed_seconds
-        remaining_days = retention_days - elapsed_days
-        if remaining_seconds > 0:
-            current_announcement_html = html.details(
-                content=md.code_block(current_announcement, "html"),
-                summary="📣 Current Announcement",
-            )
-            last_commit_details_html = html.details(
-                content=md.code_block(commit_details),
-                summary="📝 Current Announcement Commit Details",
-            )
-            self._state.add_summary(
-                name=name,
-                status="skip",
-                oneliner=f"📬 Announcement is still valid for another {remaining_days:.2f} days.",
-                details=html.ul(
-                    [
-                        "❎ No changes were made.",
-                        "📬 Announcement is still valid.",
-                        f"⏳️ Elapsed Time: {elapsed_days:.2f} days ({elapsed_seconds} seconds)",
-                        f"⏳️ Retention Period: {retention_days} days ({retention_seconds} seconds)",
-                        f"⏳️ Remaining Time: {remaining_days:.2f} days ({remaining_seconds} seconds)",
-                        current_announcement_html,
-                        last_commit_details_html,
-                    ]
-                ),
-            )
-            return
-        # Remove the expired announcement
-        self._write("")
-        commit_title = "Remove expired announcement"
-        commit_body = (
-            f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
-            f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"
-            f"{current_announcement}"
-        )
-        commit_hash, commit_link = self._commit(
-            commit_title=commit_title,
-            commit_body=commit_body,
-            change_title=commit_title,
-            change_body=commit_body,
-        )
-        removed_announcement_html = html.details(
-            content=md.code_block(current_announcement, "html"),
-            summary="📣 Removed Announcement",
-        )
-        last_commit_details_html = html.details(
-            content=md.code_block(commit_details),
-            summary="📝 Removed Announcement Commit Details",
-        )
-        self._state.add_summary(
-            name=name,
-            status="pass",
-            oneliner="🗑 Announcement was expired and thus removed.",
-            details=html.ul(
-                [
-                    f"✅ The announcement was removed (commit {html.a(commit_link, commit_hash)}).",
-                    f"⌛ The announcement had expired {abs(remaining_days):.2f} days ({abs(remaining_seconds)} seconds) ago.",
-                    f"⏳️ Elapsed Time: {elapsed_days:.2f} days ({elapsed_seconds} seconds)",
-                    f"⏳️ Retention Period: {retention_days} days ({retention_seconds} seconds)",
-                    removed_announcement_html,
-                    last_commit_details_html,
-                ]
-            ),
-        )
-        return
+
 
     def update(self):
         name = "Website Announcement Manual Update"
@@ -173,7 +53,7 @@ class WebAnnouncement:
             )
             self.logger.skip("No announcement was provided.")
             return
-        old_announcement = self._read().strip()
+        old_announcement = self._read_web_announcement_file().strip()
         old_announcement_details = self._git.log(
             number=1,
             simplify_by_decoration=False,
@@ -249,19 +129,6 @@ class WebAnnouncement:
         details_list.append(f"✅ Changes were applied (commit {html.a(commit_url, commit_hash)}).")
         self.add_summary(name=name, status="pass", oneliner=oneliner, details=html.ul(details_list))
         return
-
-    def _write(self, announcement: str):
-        if announcement:
-            announcement = f"{announcement.strip()}\n"
-        with open(self._path_announcement_file, "w") as f:
-            f.write(announcement)
-        return
-
-    def _read(self) -> str | None:
-        if not self._path_announcement_file.is_file():
-            return None
-        with open(self._path_announcement_file) as f:
-            return f.read()
 
     def _commit(
         self,
