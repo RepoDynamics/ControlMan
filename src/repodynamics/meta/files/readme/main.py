@@ -83,7 +83,7 @@ class ReadmeFileGenerator:
             color_right_light=self._ccm["theme"]["color"]["primary"][0],
             color_right_dark=self._ccm["theme"]["color"]["primary"][1] if self._is_for_gh else None,
             text_left=self._ccm["name"],
-            logo=Path(f"{self._ccm['path']['dir']['control']}/ui/branding/favicon.png"),
+            logo=self._path.dir_meta / "ui/branding/favicon.svg",
             link=self._ccm["url"]["website"]["home"],
             title=f"{self._ccm['name']} is licensed under the {self._ccm['license']['fullname']}",
         )
