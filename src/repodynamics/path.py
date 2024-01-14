@@ -190,7 +190,7 @@ class PathFinder:
         ]:
             for target_path in [".", "docs", ".github"]:
                 files.append(self.health_file(health_file_name, target_path))
-        for pre_commit_config_type in ["main", "release", "dev", "other"]:
+        for pre_commit_config_type in ["main", "release", "pre-release", "implementation", "development", "auto-update", "other"]:
             files.append(self.pre_commit_config(pre_commit_config_type))
         return files
 
