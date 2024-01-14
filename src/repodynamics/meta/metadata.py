@@ -76,6 +76,9 @@ class MetadataGenerator:
             package_name, import_name = self._package_name()
             package["name"] = package_name
             package["import_name"] = import_name
+            testsuite_name, testsuite_import_name = self._package_testsuite_name()
+            package["testsuite_name"] = testsuite_name
+            package["testsuite_import_name"] = testsuite_import_name
 
             trove_classifiers = package.setdefault("trove_classifiers", [])
             if self._metadata["license"].get("trove_classifier"):
@@ -136,11 +139,6 @@ class MetadataGenerator:
         self._metadata["maintainer"]["list"] = self._maintainers()
 
         self._metadata["custom"] |= self._generate_custom_metadata()
-
-        if self._metadata.get("package"):
-            testsuite_name, testsuite_import_name = self._package_testsuite_name()
-            self._metadata["package"]["testsuite_name"] = testsuite_name
-            self._metadata["package"]["testsuite_import_name"] = testsuite_import_name
 
         self._reader.cache_save()
         return self._metadata
@@ -560,7 +558,9 @@ class MetadataGenerator:
 
     def _package_testsuite_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.testsuite_name")
-        testsuite_name = self._metadata["package"]["pyproject_tests"]["project"]["name"]
+        testsuite_name = _util.dict.fill_template(
+            self._metadata["package"]["pyproject_tests"]["project"]["name"], self._metadata
+        )
         import_name = testsuite_name.replace("-", "_").lower()
         self._logger.success(f"package.testsuite_name: {testsuite_name}")
         return testsuite_name, import_name
