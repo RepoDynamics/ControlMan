@@ -76,9 +76,13 @@ properties:
         $ref: '#/definitions/pre_commit_config'
       release:
         $ref: '#/definitions/pre_commit_config'
-      pre_release:
+      pre-release:
         $ref: '#/definitions/pre_commit_config'
-      dev:
+      implementation:
+        $ref: '#/definitions/pre_commit_config'
+      development:
+        $ref: '#/definitions/pre_commit_config'
+      auto-update:
         $ref: '#/definitions/pre_commit_config'
       other:
         $ref: '#/definitions/pre_commit_config'
