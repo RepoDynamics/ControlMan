@@ -73,7 +73,9 @@ class MetadataGenerator:
 
         if self._metadata.get("package"):
             package = self._metadata["package"]
-            package["name"] = self._package_name()
+            package_name, import_name = self._package_name()
+            package["name"] = package_name
+            package["import_name"] = import_name
 
             trove_classifiers = package.setdefault("trove_classifiers", [])
             if self._metadata["license"].get("trove_classifier"):
@@ -543,12 +545,13 @@ class MetadataGenerator:
             publications.append(publication_data)
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
-    def _package_name(self) -> str:
+    def _package_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.name")
         name = self._metadata["name"]
-        package_name = re.sub(r"[ ._-]+", "-", name.lower())
+        package_name = re.sub(r"[ ._-]+", "-", name)
+        import_name = package_name.replace("-", "_").lower()
         self._logger.success(f"package.name: {package_name}")
-        return package_name
+        return package_name, import_name
 
     def _package_platform_urls(self) -> dict:
         package_name = self._metadata["package"]["name"]
