@@ -644,6 +644,7 @@ class EventHandler:
             "path-tests": ccm_branch["path"]["dir"]["tests"],
             "package-source": source,
             "package-name": ccm_branch["package"]["name"],
+            "testsuite-import-name": ccm_branch["package"]["testsuite_import_name"],
             "package-version": version,
             "path-report-pytest": ccm_branch["path"]["dir"]["local"]["report"]["pytest"],
             "path-report-coverage": ccm_branch["path"]["dir"]["local"]["report"]["coverage"],
