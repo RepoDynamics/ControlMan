@@ -13,7 +13,10 @@ class RelativePath:
     file_funding = ".github/FUNDING.yml"
     file_pre_commit_config_main = ".github/.pre-commit-config-main.yaml"
     file_pre_commit_config_release = ".github/.pre-commit-config-release.yaml"
-    file_pre_commit_config_development = ".github/.pre-commit-config-dev.yaml"
+    file_pre_commit_config_pre_release = ".github/.pre-commit-config-pre-release.yaml"
+    file_pre_commit_config_implementation = ".github/.pre-commit-config-implementation.yaml"
+    file_pre_commit_config_development = ".github/.pre-commit-config-development.yaml"
+    file_pre_commit_config_auto_update = ".github/.pre-commit-config-auto-update.yaml"
     file_pre_commit_config_other = ".github/.pre-commit-config-other.yaml"
     file_readthedocs_config = ".github/.readthedocs.yaml"
     file_issue_template_chooser_config = ".github/ISSUE_TEMPLATE/config.yml"
@@ -262,8 +265,8 @@ class PathFinder:
         path = self._path_root / rel_path
         return DynamicFile("funding", DynamicFileType.CONFIG, rel_path, path)
 
-    def pre_commit_config(self, branch_type: Literal["main", "release", "dev", "other"]) -> DynamicFile:
-        rel_path = getattr(RelativePath, f"file_pre_commit_config_{branch_type}")
+    def pre_commit_config(self, branch_type: Literal["main", "release", "pre-release", "implementation", "development", "auto-update", "other"]) -> DynamicFile:
+        rel_path = getattr(RelativePath, f"file_pre_commit_config_{branch_type.replace('-', '_')}")
         path = self._path_root / rel_path
         return DynamicFile(f"pre-commit-config-{branch_type}", DynamicFileType.CONFIG, rel_path, path)
 
