@@ -137,6 +137,11 @@ class MetadataGenerator:
 
         self._metadata["custom"] |= self._generate_custom_metadata()
 
+        if self._metadata.get("package"):
+            testsuite_name, testsuite_import_name = self._package_testsuite_name()
+            self._metadata["package"]["testsuite_name"] = testsuite_name
+            self._metadata["package"]["testsuite_import_name"] = testsuite_import_name
+
         self._reader.cache_save()
         return self._metadata
 
@@ -552,6 +557,13 @@ class MetadataGenerator:
         import_name = package_name.replace("-", "_").lower()
         self._logger.success(f"package.name: {package_name}")
         return package_name, import_name
+
+    def _package_testsuite_name(self) -> tuple[str, str]:
+        self._logger.h3("Process metadata: package.testsuite_name")
+        testsuite_name = self._metadata["package"]["pyproject_tests"]["project"]["name"]
+        import_name = testsuite_name.replace("-", "_").lower()
+        self._logger.success(f"package.testsuite_name: {testsuite_name}")
+        return testsuite_name, import_name
 
     def _package_platform_urls(self) -> dict:
         package_name = self._metadata["package"]["name"]
