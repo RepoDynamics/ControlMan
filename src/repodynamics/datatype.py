@@ -170,6 +170,9 @@ class CommitMsg:
                 #     commit += f"{key}: {value}\n"
         return commit.strip() + "\n"
 
+    def __repr__(self):
+        return f"CommitMsg(typ='{self.type}', scope={self.scope}, title='{self.title}', body='{self.body}', footer={self.footer})"
+
 
 class CommitGroup(Enum):
     PRIMARY_ACTION = "primary_action"
