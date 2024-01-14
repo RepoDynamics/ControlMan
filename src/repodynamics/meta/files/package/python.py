@@ -53,7 +53,7 @@ class PythonPackageFileGenerator:
         )
 
     def typing_marker(self) -> list[tuple[DynamicFile, str]]:
-        info = self._path.package_typing_marker(package_name=self._ccm["package"]["name"])
+        info = self._path.package_typing_marker(package_name=self._ccm["package"]["import_name"])
         text = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
             if self._ccm["package"].get("typed")
@@ -76,12 +76,11 @@ class PythonPackageFileGenerator:
 
     def _directories(self) -> list[tuple[DynamicFile, str]]:
         self._logger.h4("Update path: package")
-        package_name = self._ccm["package"]["name"]
         out = []
         for name, sub_path, func in (
-            (package_name, self._ccm["path"]["dir"]["source"], self._path.package_dir),
+            (self._ccm["package"]["import_name"], self._ccm["path"]["dir"]["source"], self._path.package_dir),
             (
-                f"{package_name}_tests",
+                self._ccm["package"]["testsuite_import_name"],
                 f'{self._ccm["path"]["dir"]["tests"]}/src',
                 self._path.package_tests_dir
             ),
@@ -232,7 +231,7 @@ __version__ = __version_details__["version"]"""
         else:
             # Replace the existing docstring with the new one
             text = re.sub(pattern, rf"\1{docstring}", file_content)
-        info = self._path.package_init(self._ccm["package"]["name"])
+        info = self._path.package_init(self._ccm["package"]["import_name"])
         return [(info, text)]
 
     def manifest(self) -> list[tuple[DynamicFile, str]]:
