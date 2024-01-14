@@ -245,7 +245,7 @@ class PathFinder:
 
     @property
     def readme_pypi(self) -> DynamicFile:
-        filename = "readme_pypi.md"
+        filename = "README_pypi.md"
         rel_path = f'{self._paths["dir"]["source"]}/{filename}'
         path = self._path_root / rel_path
         return DynamicFile("readme-pypi", DynamicFileType.README, rel_path, path)
