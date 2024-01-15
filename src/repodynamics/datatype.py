@@ -192,6 +192,7 @@ class PrimaryActionCommitType(Enum):
 
 
 class SecondaryActionCommitType(Enum):
+    AUTO_UPDATE = "auto-update"
     META_SYNC = "meta_sync"
     REVERT = "revert"
     HOOK_FIX = "hook_fix"
