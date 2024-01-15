@@ -507,7 +507,7 @@ class PullRequestEventHandler(EventHandler):
             "package_lint": bool(changed_file_groups[RepoFileType.PACKAGE]) or package_setup_files_changed,
             "package_publish_testpypi": (
                 self._branch_head.type is BranchType.IMPLEMENT
-                and not self._payload.internal
+                and self._payload.internal
                 and (bool(changed_file_groups[RepoFileType.PACKAGE]) or package_setup_files_changed)
                 and self._primary_type_is_package_publish(commit_type=final_commit_type)
             ),
