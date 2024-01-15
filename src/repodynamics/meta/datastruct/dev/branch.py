@@ -92,15 +92,28 @@ class Branch:
     def __init__(self, options: dict):
 
         def instantiate_ruleset(ruleset: dict) -> BranchProtectionRuleset:
+            bypass_actor_map = {
+                "organization_admin": (1, "organization_admin"),
+                "repository_admin": (5, "repository_role"),
+                "repository_maintainer": (2, "repository_role"),
+                "repository_writer": (4, "repository_role"),
+            }
+            bypass_actors = []
+            for actor in ruleset["bypass_actors"]:
+                if actor.get("role"):
+                    actor_id, actor_type = bypass_actor_map[actor["role"]]
+                else:
+                    actor_id, actor_type = actor["id"], actor["type"]
+                bypass_actors.append(
+                    RulesetBypassActor(
+                        id=actor_id,
+                        type=RulesetBypassActorType(actor_type),
+                        mode=RulesetBypassMode(actor["mode"])
+                    )
+                )
             return BranchProtectionRuleset(
                 enforcement=RulesetEnforcementLevel(ruleset["enforcement"]),
-                bypass_actors=tuple(
-                    RulesetBypassActor(
-                        id=actor["id"],
-                        type=RulesetBypassActorType(actor["type"]),
-                        mode=RulesetBypassMode(actor["mode"])
-                    ) for actor in ruleset["bypass_actors"]
-                ),
+                bypass_actors=tuple(bypass_actors),
                 rule=Rules(
                     protect_creation=ruleset["rule"].get("protect_creation", False),
                     protect_deletion=ruleset["rule"].get("protect_deletion", False),
