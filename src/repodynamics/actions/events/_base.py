@@ -1062,7 +1062,7 @@ class EventHandler:
                 apply(
                     name=f"Branch Group: {group_type.value}",
                     target='branch',
-                    pattern=[f"{group_data.prefix}**/**/*"],
+                    pattern=[f"refs/heads/{group_data.prefix}**/**/*"],
                     ruleset=group_data.ruleset,
                 )
         return
