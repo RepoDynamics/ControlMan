@@ -358,7 +358,7 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_merge_implementation_to_release(self):
-        ver_base, dist_base = self._get_latest_version(base=False)
+        ver_base, dist_base = self._get_latest_version(base=True)
         primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
         if self._primary_type_is_package_publish(commit_type=primary_commit_type):
             next_ver = self._get_next_version(ver_base, primary_commit_type.action)
