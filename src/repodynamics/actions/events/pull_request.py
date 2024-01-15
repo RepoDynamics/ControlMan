@@ -14,6 +14,8 @@ from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.datatype import (
     EventType,
+    PrimaryActionCommit,
+    PrimaryCustomCommit,
     PrimaryActionCommitType,
     CommitGroup,
     BranchType,
@@ -246,7 +248,7 @@ class PullRequestEventHandler(EventHandler):
             logger=self._logger,
         )
         changed_file_groups = self._action_file_change_detector(meta=meta)
-        self._action_hooks(
+        hash_hooks = self._action_hooks(
             action=meta_and_hooks_action_type,
             branch=self._branch_head,
             base=False,
@@ -254,10 +256,17 @@ class PullRequestEventHandler(EventHandler):
         )
         for file_type in (RepoFileType.SUPERMETA, RepoFileType.META, RepoFileType.DYNAMIC):
             if changed_file_groups[file_type]:
-                self._action_meta(action=meta_and_hooks_action_type, meta=meta, base=False)
+                hash_meta = self._action_meta(
+                    action=meta_and_hooks_action_type, meta=meta, base=False, branch=self._branch_head
+                )
+                ccm_branch = meta.read_metadata_full()
                 break
         else:
-            self._metadata_branch = read_from_json_file(path_root=self._path_root_base, logger=self._logger)
+            hash_meta = None
+            ccm_branch = read_from_json_file(
+                path_root=self._path_root_base, git=self._git_head, logger=self._logger
+            )
+        latest_hash = self._git_head.push() if hash_hooks or hash_meta else self._context.hash_after
 
         tasks_complete = self._update_implementation_tasklist()
         if tasks_complete and not self._failed:
@@ -265,75 +274,23 @@ class PullRequestEventHandler(EventHandler):
                 number=self._payload.number,
                 draft=False,
             )
-        if changed_file_groups[RepoFileType.WEBSITE]:
-            self._set_job_run(website_build=True)
-        if changed_file_groups[RepoFileType.TEST]:
-            self._set_job_run(package_test_local=True)
-        if changed_file_groups[RepoFileType.PACKAGE]:
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-                website_build=True,
-                package_publish_testpypi=True,
-            )
-        elif any(
-            filepath in changed_file_groups[RepoFileType.DYNAMIC]
-            for filepath in (
-                RelativePath.file_python_pyproject,
-                RelativePath.file_python_manifest,
-            )
-        ):
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
-                package_publish_testpypi=True,
-            )
-        if not self._job_run_flag["package_publish_testpypi"]:
-            return
-        if self._branch_head.type is not BranchType.IMPLEMENT or not self._payload.internal:
-            self._set_job_run(package_publish_testpypi=False)
-            return
         final_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
-        if final_commit_type.group == CommitGroup.PRIMARY_CUSTOM or final_commit_type.action in (
-            PrimaryActionCommitType.WEBSITE,
-            PrimaryActionCommitType.META,
-        ):
-            self._set_job_run(package_publish_testpypi=False)
-            return
-        ver_last_head, _ = self._get_latest_version(dev_only=True)
-        ver_last_base, _ = self._get_latest_version(branch=self._branch_base.name)
-        if ver_last_base.pre:
-            # The base branch is a pre-release branch
-            next_ver = ver_last_base.next_post
-            if not ver_last_head or (
-                ver_last_head.release != next_ver.release or ver_last_head.pre != next_ver.pre
-            ):
-                dev = 0
-            else:
-                dev = (ver_last_head.dev or -1) + 1
-            next_ver_str = f"{next_ver}.dev{dev}"
-        else:
-            next_ver = self._get_next_version(ver_last_base, final_commit_type.action)
-            next_ver_str = str(next_ver)
-            if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
-                next_ver_str += f".a{self._branch_head.suffix[0]}"
-            if not ver_last_head:
-                dev = 0
-            elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
-                if ver_last_head.post is not None and ver_last_head.post == next_ver.post:
-                    dev = ver_last_head.dev + 1
-                else:
-                    dev = 0
-            elif ver_last_head.pre is not None and ver_last_head.pre == ("a", self._branch_head.suffix[0]):
-                dev = ver_last_head.dev + 1
-            else:
-                dev = 0
-            next_ver_str += f".dev{dev}"
-        self._tag_version(
-            ver=PEP440SemVer(next_ver_str),
-            msg=f"Developmental release (issue: #{self._branch_head.suffix[0]}, target: {self._branch_base.name})",
+        job_runs = self._determine_job_runs(
+            changed_file_groups=changed_file_groups, final_commit_type=final_commit_type
+        )
+        if job_runs["package_publish_testpypi"]:
+            next_ver = self._calculate_next_dev_version(final_commit_type=final_commit_type)
+            job_runs["version"] = str(next_ver)
+            self._tag_version(
+                ver=next_ver,
+                base=False,
+                msg=f"Developmental release (issue: #{self._branch_head.suffix[0]}, target: {self._branch_base.name})",
+            )
+        self._set_output(
+            ccm_branch=ccm_branch,
+            ref=latest_hash,
+            ref_before=self._context.hash_before,
+            **job_runs,
         )
         return
 
@@ -389,31 +346,17 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_merge_implementation_to_release(self):
-        if not self._payload.internal:
-            self._logger.error(
-                "Merge not allowed",
-                "Merge from a forked repository is only allowed "
-                "from a development branch to the corresponding development branch.",
-            )
-            return
-        hash_base = self._git_base.commit_hash_normal()
         ver_base, dist_base = self._get_latest_version(base=False)
-        labels = self._pull.label_names
-        primary_commit_type = self._ccm_main.get_issue_data_from_labels(labels).group_data
-        if primary_commit_type.group == CommitGroup.PRIMARY_CUSTOM or primary_commit_type.action in (
-            PrimaryActionCommitType.WEBSITE,
-            PrimaryActionCommitType.META,
-        ):
-            ver_dist = f"{ver_base}+{dist_base + 1}"
-            next_ver = None
-        else:
+        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
+        if self._primary_type_is_package_publish(commit_type=primary_commit_type):
             next_ver = self._get_next_version(ver_base, primary_commit_type.action)
             ver_dist = str(next_ver)
+        else:
+            ver_dist = f"{ver_base}+{dist_base + 1}"
+            next_ver = None
 
-        tasklist = self._extract_tasklist(body=self._pull.body)
-        parser = CommitParser(
-            types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger
-        )
+        parser = CommitParser(types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger)
+        hash_base = self._git_base.commit_hash_normal()
         changelog_manager = ChangelogManager(
             changelog_metadata=self._ccm_main["changelog"],
             ver_dist=ver_dist,
@@ -424,6 +367,7 @@ class PullRequestEventHandler(EventHandler):
             path_root=self._path_root_head,
             logger=self._logger,
         )
+        tasklist = self._extract_tasklist(body=self._pull.body)
         for task in tasklist:
             conv_msg = parser.parse(msg=task["summary"])
             if conv_msg:
@@ -432,17 +376,14 @@ class PullRequestEventHandler(EventHandler):
                     changelog_id=group_data.changelog_id,
                     section_id=group_data.changelog_section_id,
                     change_title=conv_msg.title,
-                    change_details=conv_msg.body,
+                    change_details=task["description"],
                 )
         changelog_manager.write_all_changelogs()
-        commit_hash = self.commit(
+        self._git_head.commit(
             message="auto: Update changelogs",
-            push=True,
-            set_upstream=True,
+            stage="all"
         )
-        self._ccm_branch = meta.read_from_json_file(
-            path_root=self._path_root_base, logger=self._logger
-        )
+        latest_hash = self._git_head.push()
         # Wait 30 s to make sure the push is registered
         time.sleep(30)
         bare_title = self._pull.title.removeprefix(f'{primary_commit_type.conv_type}: ')
@@ -452,7 +393,7 @@ class PullRequestEventHandler(EventHandler):
                 number=self._payload.number,
                 commit_title=commit_title,
                 commit_message=self._pull.body,
-                sha=commit_hash,
+                sha=latest_hash,
                 merge_method="squash",
             )
         except WebAPIError as e:
@@ -465,38 +406,45 @@ class PullRequestEventHandler(EventHandler):
             )
             self._failed = True
             return
+        ccm_branch = meta.read_from_json_file(
+            path_root=self._path_root_head, logger=self._logger
+        )
+        hash_latest = response["sha"]
         if not next_ver:
-            self._set_job_run(
-                package_build=True,
-                package_lint=True,
-                package_test_local=True,
+            self._set_output(
+                ccm_branch=ccm_branch,
+                ref=hash_latest,
+                ref_before=hash_base,
                 website_deploy=True,
-                # github_release=True,
+                package_lint=True,
+                package_test=True,
+                package_build=True,
             )
             return
-        self._hash_latest = response["sha"]
-        self._git_base.checkout(branch=self._branch_base.name)
         for i in range(10):
             self._git_base.pull()
-            if self._git_base.commit_hash_normal() == self._hash_latest:
+            if self._git_base.commit_hash_normal() == hash_latest:
                 break
             time.sleep(5)
         else:
             self._logger.error("Failed to pull changes from GitHub. Please pull manually.")
             self._failed = True
             return
-        self._tag_version(ver=next_ver)
-        self._set_job_run(
-            package_lint=True,
-            package_test_local=True,
+        tag = self._tag_version(ver=next_ver, base=True)
+        self._set_output(
+            ccm_branch=ccm_branch,
+            ref=hash_latest,
+            ref_before=hash_base,
+            version=str(next_ver),
+            release_name=f"{ccm_branch['name']} v{next_ver}",
+            release_tag=tag,
+            release_body=changelog_manager.get_entry(changelog_id="package_public")[0],
             website_deploy=True,
+            package_lint=True,
+            package_test=True,
             package_publish_testpypi=True,
             package_publish_pypi=True,
-            github_release=True,
-        )
-        self._set_output_release(
-            name=f"{self._ccm_main['name']} v{next_ver}",
-            body=changelog_manager.get_entry(changelog_id="package_public")[0],
+            package_release=True,
         )
         return
 
@@ -536,6 +484,76 @@ class PullRequestEventHandler(EventHandler):
             merge_method="squash",
         )
         return
+
+    def _determine_job_runs(self, changed_file_groups, final_commit_type):
+        package_setup_files_changed = any(
+            filepath in changed_file_groups[RepoFileType.DYNAMIC]
+            for filepath in (
+                RelativePath.file_python_pyproject,
+                RelativePath.file_python_manifest,
+            )
+        )
+        out = {
+            "website_build": (
+                bool(changed_file_groups[RepoFileType.WEBSITE])
+                or bool(changed_file_groups[RepoFileType.PACKAGE])
+            ),
+            "package_test": (
+                bool(changed_file_groups[RepoFileType.TEST])
+                or bool(changed_file_groups[RepoFileType.PACKAGE])
+                or package_setup_files_changed
+            ),
+            "package_build": bool(changed_file_groups[RepoFileType.PACKAGE]) or package_setup_files_changed,
+            "package_lint": bool(changed_file_groups[RepoFileType.PACKAGE]) or package_setup_files_changed,
+            "package_publish_testpypi": (
+                self._branch_head.type is BranchType.IMPLEMENT
+                and not self._payload.internal
+                and (bool(changed_file_groups[RepoFileType.PACKAGE]) or package_setup_files_changed)
+                and self._primary_type_is_package_publish(commit_type=final_commit_type)
+            ),
+        }
+        return out
+
+    def _calculate_next_dev_version(self, final_commit_type):
+        ver_last_base, _ = self._get_latest_version(dev_only=False, base=True)
+        ver_last_head, _ = self._get_latest_version(dev_only=True, base=False)
+        if ver_last_base.pre:
+            # The base branch is a pre-release branch
+            next_ver = ver_last_base.next_post
+            if not ver_last_head or (
+                ver_last_head.release != next_ver.release or ver_last_head.pre != next_ver.pre
+            ):
+                dev = 0
+            else:
+                dev = (ver_last_head.dev or -1) + 1
+            next_ver_str = f"{next_ver}.dev{dev}"
+        else:
+            next_ver = self._get_next_version(ver_last_base, final_commit_type.action)
+            next_ver_str = str(next_ver)
+            if final_commit_type.action != PrimaryActionCommitType.RELEASE_POST:
+                next_ver_str += f".a{self._branch_head.suffix[0]}"
+            if not ver_last_head:
+                dev = 0
+            elif final_commit_type.action == PrimaryActionCommitType.RELEASE_POST:
+                if ver_last_head.post is not None and ver_last_head.post == next_ver.post:
+                    dev = ver_last_head.dev + 1
+                else:
+                    dev = 0
+            elif ver_last_head.pre is not None and ver_last_head.pre == ("a", self._branch_head.suffix[0]):
+                dev = ver_last_head.dev + 1
+            else:
+                dev = 0
+            next_ver_str += f".dev{dev}"
+        return PEP440SemVer(next_ver_str)
+
+    @staticmethod
+    def _primary_type_is_package_publish(commit_type: PrimaryActionCommit | PrimaryCustomCommit):
+        return commit_type.group is CommitGroup.PRIMARY_ACTION and commit_type.action in (
+            PrimaryActionCommitType.RELEASE_MAJOR,
+            PrimaryActionCommitType.RELEASE_MINOR,
+            PrimaryActionCommitType.RELEASE_PATCH,
+            PrimaryActionCommitType.RELEASE_POST,
+        )
 
     # def event_pull_request(self):
     #     self.event_type = EventType.PULL_MAIN
