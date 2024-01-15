@@ -494,7 +494,8 @@ class EventHandler:
             "ref": ref or self._context.ref_name,
             "deploy": deploy,
             "path-website": ccm_branch["path"]["dir"]["website"],
-            "path-package": "."
+            "path-package": ".",
+            "artifact-name": "Documentation",
         }
         return
 
@@ -617,14 +618,18 @@ class EventHandler:
         prerelease: bool | None = None,
         make_latest: Literal["legacy", "latest", "none"] | None = None,
         discussion_category_name: str | None = None,
+        website_artifact_name: str = "Documentation",
+        package_artifact_name: str = "Package",
     ):
         self._output_finalize["release"] = {
             "name": name,
-            "tag_name": tag,
+            "tag-name": tag,
             "body": body,
             "prerelease": prerelease,
-            "make_latest": make_latest,
+            "make-latest": make_latest,
             "discussion_category_name": discussion_category_name,
+            "website-artifact-name": website_artifact_name,
+            "package-artifact-name": package_artifact_name
         }
         return
 
