@@ -179,8 +179,8 @@ class IssuesEventHandler(EventHandler):
         body = dev_protocol_comment["body"]
         pattern = rf"{self._MARKER_COMMIT_START}(.*?){self._MARKER_COMMIT_END}"
         match = re.search(pattern, body, flags=re.DOTALL)
-        title = match.group(1).strip() if match else self._issue.title
-        return title, body
+        title = match.group(1).strip()
+        return title or self._issue.title, body
 
     def _get_dev_protocol_comment(self):
         comments = self._gh_api.issue_comments(number=self._issue.number, max_count=100)
