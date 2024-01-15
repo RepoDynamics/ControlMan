@@ -34,6 +34,8 @@ class IssuesEventHandler(EventHandler):
         )
         self._payload: IssuesPayload = self._context.event
         self._issue = self._payload.issue
+
+        self._label_groups: dict[LabelType, list[Label]] = {}
         return
 
     def run_event(self):
@@ -55,6 +57,12 @@ class IssuesEventHandler(EventHandler):
     def _run_labeled(self):
         label = self._ccm_main.resolve_label(self._payload.label.name)
         if label.category is LabelType.STATUS:
+            self._label_groups = self._ccm_main.resolve_labels(self._issue.label_names)
+            self._update_issue_status_labels(
+                issue_nr=self._issue.number,
+                labels=self._label_groups[LabelType.STATUS],
+                current_label=label,
+            )
             self._run_labeled_status(label.type)
         return
 
@@ -78,53 +86,53 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled_status_triage(self):
-        self._add_to_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_rejected(self):
-        self._add_to_timeline(entry=f"The issue was rejected and closed (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue was rejected and closed (actor: @{self._payload.sender.login}).")
         self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_duplicate(self):
-        self._add_to_timeline(entry=f"The issue was marked as a duplicate and closed (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue was marked as a duplicate and closed (actor: @{self._payload.sender.login}).")
         self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_invalid(self):
-        self._add_to_timeline(entry=f"The issue was marked as invalid and closed (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue was marked as invalid and closed (actor: @{self._payload.sender.login}).")
         self._gh_api.issue_update(number=self._issue.number, state="closed", state_reason="not_planned")
         return
 
     def _run_labeled_status_planning(self):
-        self._add_to_timeline(entry=f"The issue entered the planning phase (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue entered the planning phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_requirement_analysis(self):
-        self._add_to_timeline(entry=f"The issue entered the requirement analysis phase (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue entered the requirement analysis phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_design(self):
-        self._add_to_timeline(entry=f"The issue entered the design phase (actor: @{self._payload.sender.login}).")
+        self._add_to_issue_timeline(entry=f"The issue entered the design phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_implementation(self):
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
-        label_groups = self._ccm_main.resolve_labels(self._issue.label_names)
+
         base_branches_and_labels: list[tuple[str, list[str]]] = []
         common_labels = []
-        for label_group, group_labels in label_groups.items():
+        for label_group, group_labels in self._label_groups.items():
             if label_group not in [LabelType.BRANCH, LabelType.VERSION]:
                 common_labels.extend([label.name for label in group_labels])
-        if label_groups.get(LabelType.VERSION):
-            for version_label in label_groups[LabelType.VERSION]:
+        if self._label_groups.get(LabelType.VERSION):
+            for version_label in self._label_groups[LabelType.VERSION]:
                 branch_label = self._ccm_main.create_label_branch(source=version_label)
                 labels = common_labels + [version_label.name, branch_label.name]
                 base_branches_and_labels.append((branch_label.suffix, labels))
         else:
-            for branch_label in label_groups[LabelType.BRANCH]:
+            for branch_label in self._label_groups[LabelType.BRANCH]:
                 base_branches_and_labels.append((branch_label.suffix, common_labels + [branch_label.name]))
         implementation_branches_info = []
         for base_branch_name, labels in base_branches_and_labels:
@@ -165,7 +173,7 @@ class IssuesEventHandler(EventHandler):
                 for branch_name, pull_nr in implementation_branches_info
             ]
         )
-        self._add_to_timeline(
+        self._add_to_issue_timeline(
             entry=(
                 f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).\n"
                 f"The implementation is tracked in the following pull requests:\n{timeline_entry_details}"
@@ -173,16 +181,9 @@ class IssuesEventHandler(EventHandler):
         )
         return
 
-    def _add_to_timeline(self, entry: str):
-        now = datetime.datetime.now(tz=datetime.UTC).strftime("%Y.%m.%d %H:%M:%S")
-        timeline_entry = (
-            f"- **{now}**: {entry}"
-        )
+    def _add_to_issue_timeline(self, entry: str):
         comment = self._get_dev_protocol_comment()
-        pattern = rf"({self._MARKER_TIMELINE_START})(.*?)({self._MARKER_TIMELINE_END})"
-        replacement = r"\1\2" + timeline_entry + "\n" + r"\3"
-        new_body = re.sub(pattern, replacement, comment["body"], flags=re.DOTALL)
-        self._gh_api.issue_comment_update(comment_id=comment["id"], body=new_body)
+        self._add_to_timeline(entry=entry, body=comment["body"], comment_id=comment["id"])
         return
 
     def _get_pr_title_and_body(self):
