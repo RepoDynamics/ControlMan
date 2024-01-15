@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 from typing import Literal
 import re
+import datetime
 
 from markitup import html, md
 import pylinks
@@ -31,6 +32,7 @@ from repodynamics.datatype import (
     BranchType,
     Commit,
     CommitMsg,
+    Label,
     RepoFileType,
     PrimaryActionCommitType,
     NonConventionalCommit,
@@ -1172,6 +1174,36 @@ class EventHandler:
         pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
         match = re.search(pattern, body, flags=re.DOTALL)
         return extract(match.group(1).strip()) if match else []
+
+    def _update_issue_status_labels(self, issue_nr: int, labels: list[Label], current_label: Label) -> None:
+        for label in labels:
+            if label.name != current_label.name:
+                self._gh_api.issue_labels_remove(number=issue_nr, label=label.name)
+        return
+
+    def _add_to_timeline(
+        self,
+        entry: str,
+        body: str,
+        issue_nr: int | None = None,
+        comment_id: int | None = None,
+    ):
+        now = datetime.datetime.now(tz=datetime.UTC).strftime("%Y.%m.%d %H:%M:%S")
+        timeline_entry = (
+            f"- **{now}**: {entry}"
+        )
+        pattern = rf"({self._MARKER_TIMELINE_START})(.*?)({self._MARKER_TIMELINE_END})"
+        replacement = r"\1\2" + timeline_entry + "\n" + r"\3"
+        new_body = re.sub(pattern, replacement, body, flags=re.DOTALL)
+        if issue_nr:
+            self._gh_api.issue_update(number=issue_nr, body=new_body)
+        elif comment_id:
+            self._gh_api.issue_comment_update(comment_id=comment_id, body=new_body)
+        else:
+            self._logger.error(
+                "Failed to add to timeline", "Neither issue nor comment ID was provided."
+            )
+        return
 
     def create_branch_name_prerelease(self, version: PEP440SemVer) -> str:
         """Generate the name of the pre-release branch for a given version."""
