@@ -139,6 +139,11 @@ class PullRequestEventHandler(EventHandler):
     def _run_action_labeled(self):
         label = self._ccm_main.resolve_label(self._payload.label.name)
         if label.category is LabelType.STATUS:
+            self._update_issue_status_labels(
+                issue_nr=self._pull.number,
+                labels=self._ccm_main.resolve_labels(self._pull.label_names)[LabelType.STATUS],
+                current_label=label,
+            )
             self._run_action_labeled_status(status=label.type)
         else:
             pass
@@ -240,6 +245,13 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_action_synchronize(self):
+        self._add_to_pr_timeline(
+            entry=(
+                "New commits were pushed to the head branch "
+                f"(workflow run: [{self._context.run_id}]({self._gh_link.workflow_run(run_id=self._context.run_id)}), "
+                f"actor: @{self._payload.sender.login})."
+            )
+        )
         meta_and_hooks_action_type = InitCheckAction.COMMIT if self._payload.internal else InitCheckAction.FAIL
         meta = Meta(
             path_root=self._path_root_head,
@@ -476,7 +488,7 @@ class PullRequestEventHandler(EventHandler):
         task_nr = self._branch_head.suffix[2]
         tasklist_base[task_nr - 1] = task
         self._update_tasklist(entries=tasklist_base, body=parent_pr["body"], number=parent_pr["number"])
-        response = self._gh_api.pull_merge(
+        response = self._gh_api_admin.pull_merge(
             number=self._payload.number,
             commit_title=task["summary"],
             commit_message=self._pull.body,
@@ -679,4 +691,8 @@ class PullRequestEventHandler(EventHandler):
             number=number or self._payload.number,
             body=new_body,
         )
+        return
+
+    def _add_to_pr_timeline(self, entry: str):
+        self._add_to_timeline(entry=entry, body=self._pull.body, issue_nr=self._pull.number)
         return
