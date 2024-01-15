@@ -130,7 +130,7 @@ class ChangelogManager:
         if changelog_id not in self._changes:
             return "", False
         if isinstance(self._changes[changelog_id], str):
-            return self._changes[changelog_id], True
+            return self._changes[changelog_id], False
         changelog_dict = self._changes[changelog_id]
         sorted_sections = [value for key, value in sorted(changelog_dict.items())]
         sections_str = ""
@@ -138,7 +138,7 @@ class ChangelogManager:
             sections_str += f"### {section['title']}\n\n"
             for change in section["changes"]:
                 sections_str += f"#### {change['title']}\n\n{change['details']}\n\n"
-        return sections_str.strip() + "\n", False
+        return sections_str.strip() + "\n", True
 
     @property
     def open_changelogs(self) -> tuple[str]:
