@@ -442,6 +442,7 @@ class EventHandler:
         package_publish_pypi: bool = False,
         package_release: bool = False,
     ):
+        package_artifact_name = f"Package ({version})" if version else "Package"
         if website_build or website_deploy:
             self._set_output_website(
                 ccm_branch=ccm_branch,
@@ -471,6 +472,7 @@ class EventHandler:
                 ref=ref,
                 publish_testpypi=package_publish_testpypi,
                 publish_pypi=package_publish_pypi,
+                artifact_name=package_artifact_name,
             )
         if package_release:
             self._set_output_release(
@@ -480,6 +482,7 @@ class EventHandler:
                 prerelease=release_prerelease,
                 make_latest=release_make_latest,
                 discussion_category_name=release_discussion_category_name,
+                package_artifact_name=package_artifact_name,
             )
         return
 
@@ -557,8 +560,8 @@ class EventHandler:
         ref_before: str = "",
         publish_testpypi: bool = False,
         publish_pypi: bool = False,
+        artifact_name: str = "Package"
     ):
-        artifact_name = f"Package ({version})"
         self._output_build = {
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
