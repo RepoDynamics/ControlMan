@@ -998,7 +998,7 @@ class EventHandler:
         def apply(
             name: str,
             target: Literal['branch', 'tag'],
-            pattern: str,
+            pattern: list[str],
             ruleset: BranchProtectionRuleset,
         ) -> None:
             args = {
@@ -1052,7 +1052,7 @@ class EventHandler:
             apply(
                 name='Branch: main',
                 target='branch',
-                pattern="~DEFAULT_BRANCH",
+                pattern=["~DEFAULT_BRANCH"],
                 ruleset=ccs_new.dev.branch.main.ruleset,
             )
         groups_new = ccs_new.dev.branch.groups
@@ -1062,7 +1062,7 @@ class EventHandler:
                 apply(
                     name=f"Branch Group: {group_type.value}",
                     target='branch',
-                    pattern=f"{group_data.prefix}**/**/*",
+                    pattern=[f"{group_data.prefix}**/**/*"],
                     ruleset=group_data.ruleset,
                 )
         return
