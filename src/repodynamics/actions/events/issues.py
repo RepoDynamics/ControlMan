@@ -109,9 +109,6 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled_status_implementation(self):
-        self._add_to_timeline(
-            entry=f"The issue entered the implementation phase (actor: @{self._payload.sender.login})."
-        )
         branches = self._gh_api.branches
         branch_sha = {branch["name"]: branch["commit"]["sha"] for branch in branches}
         pull_title, pull_body = self._get_pr_title_and_body()
@@ -129,6 +126,7 @@ class IssuesEventHandler(EventHandler):
         else:
             for branch_label in label_groups[LabelType.BRANCH]:
                 base_branches_and_labels.append((branch_label.suffix, common_labels + [branch_label.name]))
+        implementation_branches_info = []
         for base_branch_name, labels in base_branches_and_labels:
             head_branch_name = self.create_branch_name_implementation(
                 issue_nr=self._issue.number, base_branch_name=base_branch_name
@@ -160,12 +158,25 @@ class IssuesEventHandler(EventHandler):
             )
             self._gh_api.issue_labels_set(number=pull_data["number"], labels=labels)
             self._add_readthedocs_reference_to_pr(pull_nr=pull_data["number"], pull_body=pull_body)
+            implementation_branches_info.append((head_branch_name, pull_data["number"]))
+        timeline_entry_details = "\n".join(
+            [
+                f"  - #{pull_nr} (Branch: [{branch_name}]({self._gh_link.branch(branch_name).homepage}))"
+                for branch_name, pull_nr in implementation_branches_info
+            ]
+        )
+        self._add_to_timeline(
+            entry=(
+                f"The issue entered the implementation phase (actor: @{self._payload.sender.login}).\n"
+                f"The implementation is tracked in the following pull requests:\n{timeline_entry_details}"
+            )
+        )
         return
 
     def _add_to_timeline(self, entry: str):
-        today = datetime.date.today().strftime("%Y.%m.%d")
+        now = datetime.datetime.now(tz=datetime.UTC).strftime("%Y.%m.%d %H:%M:%S")
         timeline_entry = (
-            f"- {today}: {entry}"
+            f"- **{now}**: {entry}"
         )
         comment = self._get_dev_protocol_comment()
         pattern = rf"({self._MARKER_TIMELINE_START})(.*?)({self._MARKER_TIMELINE_END})"
