@@ -6,6 +6,7 @@ default: { }
 additionalProperties: false
 properties:
   name:
+    title: Project Name
     description: |
       Name of the project.
       If not set, the project name is derived from the repository name,
@@ -17,14 +18,17 @@ properties:
         maxLength: 0
       - pattern: ^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$
   tagline:
+    title: Project Tagline
     description: A single-sentence description or slogan for the project.
     type: string
     default: ""
   description:
+    title: Project Description
     description: A short description or abstract for the project.
     type: string
     default: ""
   keywords:
+    title: Project Keywords
     description: Keywords of the project
     type: array
     default: [ ]
@@ -35,6 +39,7 @@ properties:
       maxLength: 50
       pattern: ^[A-Za-z0-9][A-Za-z0-9\- ]*$
   keynotes:
+    title: Project Keynotes
     description: Keynotes for the project
     type: array
     default: [ ]
