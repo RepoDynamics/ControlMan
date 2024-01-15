@@ -58,4 +58,5 @@ properties:
       owner:
         description: Name of the copyright owner
         type: string
+        default: "${{ owner.name }}"
 required: [ license, copyright ]
