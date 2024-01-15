@@ -1166,7 +1166,7 @@ class EventHandler:
 
         pattern = rf"{self._MARKER_TASKLIST_START}(.*?){self._MARKER_TASKLIST_END}"
         match = re.search(pattern, body, flags=re.DOTALL)
-        return extract(match.group(1).strip() if match else "")
+        return extract(match.group(1).strip()) if match else []
 
     def create_branch_name_prerelease(self, version: PEP440SemVer) -> str:
         """Generate the name of the pre-release branch for a given version."""
