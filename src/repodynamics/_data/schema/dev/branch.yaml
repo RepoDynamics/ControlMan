@@ -177,14 +177,19 @@ definitions:
         description: List of roles, teams, or apps allowed to bypass the rules.
         type: array
         default:
-          - id: 1
-            type: organization_admin
+          - role: organization_admin
+            mode: always
+          - role: repository_admin
             mode: always
         uniqueItems: true
         items:
           type: object
           additionalProperties: false
           properties:
+            role:
+              title: Role
+              type: string
+              enum: [ organization_admin, repository_admin, repository_maintainer, repository_writer ]
             id:
               title: ID
               description: |
@@ -203,7 +208,10 @@ definitions:
                 'pull_request' means that an actor can only bypass rules on pull requests.
               type: string
               enum: [ always, pull_request ]
-          required: [ id, type, mode ]
+              default: always
+          oneOf:
+            - required: [ role, mode ]
+            - required: [ id, type, mode ]
       rule:
         title: Rules
         description: Rules to enforce for the branch.
