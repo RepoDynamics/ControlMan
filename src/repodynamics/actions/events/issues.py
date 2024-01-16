@@ -294,6 +294,7 @@ class IssuesEventHandler(EventHandler):
             f"- {today}: The issue was submitted (actor: @{self._issue.user.login})."
         )
         args = {
+            "issue_number": f"{self._MARKER_ISSUE_NR_START}{self._issue.number}{self._MARKER_ISSUE_NR_END}",
             "issue_body": issue_body,
             "primary_commit_summary": f"{self._MARKER_COMMIT_START}{self._MARKER_COMMIT_END}",
             "secondary_commits_tasklist": (
