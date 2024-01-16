@@ -289,9 +289,9 @@ class IssuesEventHandler(EventHandler):
         return sections
 
     def _create_dev_protocol(self, issue_body: str) -> str:
-        today = datetime.date.today().strftime("%Y.%m.%d")
+        now = datetime.datetime.now(tz=datetime.UTC).strftime("%Y.%m.%d %H:%M:%S")
         timeline_entry = (
-            f"- {today}: The issue was submitted (actor: @{self._issue.user.login})."
+            f"- **{now}**: The issue was submitted (actor: @{self._issue.user.login})."
         )
         args = {
             "issue_number": f"{self._MARKER_ISSUE_NR_START}{self._issue.number}{self._MARKER_ISSUE_NR_END}",
