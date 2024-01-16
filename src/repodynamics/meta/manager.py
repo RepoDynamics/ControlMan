@@ -2,6 +2,7 @@ from repodynamics.meta.datastruct import ControlCenterOptions
 from repodynamics.datatype import (
     BranchType,
     Branch,
+    CommitGroup,
     PrimaryActionCommit,
     PrimaryActionCommitType,
     PrimaryCustomCommit,
@@ -356,10 +357,15 @@ class MetaManager:
             )
         return issue_data
 
-    def get_all_conventional_commit_types(self) -> list[str]:
+    def get_all_conventional_commit_types(self, secondary_custom_only: bool = False) -> list[str]:
         if not self._commit_data:
             self._commit_data = self._initialize_commit_data()
-        return list(self._commit_data.keys())
+        if not secondary_custom_only:
+            return list(self._commit_data.keys())
+        return [
+            conv_type for conv_type, commit_data in self._commit_data.items()
+            if commit_data.group is CommitGroup.SECONDARY_CUSTOM
+        ]
 
     def get_commit_type_from_conventional_type(
         self, conv_type: str
