@@ -1208,6 +1208,11 @@ class EventHandler:
             )
         return
 
+    def create_branch_name_release(self, major_version: int) -> str:
+        """Generate the name of the release branch for a given major version."""
+        release_branch_prefix = self._ccm_main.settings.dev.branch.release.prefix
+        return f"{release_branch_prefix}{major_version}"
+
     def create_branch_name_prerelease(self, version: PEP440SemVer) -> str:
         """Generate the name of the pre-release branch for a given version."""
         pre_release_branch_prefix = self._ccm_main.settings.dev.branch.pre_release.prefix
