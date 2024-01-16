@@ -6,6 +6,7 @@ from github_contexts.github.enums import RefType, ActionType
 
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import EventHandler
+from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     EventType,
@@ -39,6 +40,8 @@ class PushEventHandler(EventHandler):
             logger=logger
         )
         self._payload: PushPayload = self._context.event
+
+        self._ccm_main_before: MetaManager | None = None
         return
 
     def run_event(self):
@@ -147,13 +150,13 @@ class PushEventHandler(EventHandler):
                 return self._run_first_release()
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
-        self._metadata_main_before = read_from_json_file(
+        self._ccm_main_before = read_from_json_file(
             path_root=self._path_root_base,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
         )
-        if not self._metadata_main_before:
+        if not self._ccm_main_before:
             return self._run_existing_repository_initialized()
         return self._run_branch_edited_main_normal()
 
@@ -268,6 +271,19 @@ class PushEventHandler(EventHandler):
         return
 
     def _run_branch_edited_main_normal(self):
+        self._config_repo_labels_update(
+            ccs_new=self._ccm_main.settings,
+            ccs_old=self._ccm_main_before.settings,
+        )
+        self._config_rulesets(
+            ccs_new=self._ccm_main.settings,
+            ccs_old=self._ccm_main_before.settings,
+        )
+        if self._ccm_main.repo__config != self._ccm_main_before.repo__config:
+            self._config_repo()
+        if self._ccm_main.web__base_url != self._ccm_main_before.web__base_url:
+            self._config_repo_pages()
+
         # self.action_repo_labels_sync()
         #
         # self.action_file_change_detector()
