@@ -25,7 +25,7 @@ class Meta:
         self,
         path_root: str | Path = ".",
         github_token: Optional[str] = None,
-        hash_before: str = "",
+        ccm_before: MetaManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Optional[Logger] = None,
     ):
@@ -33,7 +33,7 @@ class Meta:
         self._logger.h2("Initialize Meta Manager")
         self._path_root = Path(path_root).resolve()
         self._github_token = github_token
-        self._hash_before = hash_before
+        self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
 
         self._pathfinder = PathFinder(path_root=self._path_root, logger=self._logger)
@@ -66,7 +66,7 @@ class Meta:
         metadata_dict = MetadataGenerator(
             reader=self._reader,
             output_path=self.paths,
-            hash_before=self._hash_before,
+            ccm_before=self._ccm_before,
             future_versions=self._future_versions,
             logger=self._logger,
         ).generate()
