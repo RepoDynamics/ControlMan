@@ -162,7 +162,8 @@ properties:
               
               ## Timeline
               {timeline}
-    required: [ path_dir_prerelease, template ]
+        required: [ title, body ]
+    required: [ prerelease_temp_path, template ]
 required: [ blank_enabled, contact_links, forms, dev_protocol ]
 
 definitions:
