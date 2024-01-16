@@ -53,6 +53,8 @@ class EventHandler:
     _MARKER_REFERENCES_END = "<!-- End references -->"
     _MARKER_TIMELINE_START = "<!-- Begin timeline -->"
     _MARKER_TIMELINE_END = "<!-- End timeline -->"
+    _MARKER_ISSUE_NR_START = "<!-- Begin issue number -->"
+    _MARKER_ISSUE_NR_END = "<!-- End issue number -->"
 
     def __init__(
         self,
