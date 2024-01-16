@@ -26,7 +26,7 @@ class MetadataGenerator:
         self,
         reader: MetaReader,
         output_path: PathFinder,
-        hash_before: str = "",
+        ccm_before: MetaManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
@@ -37,7 +37,7 @@ class MetadataGenerator:
         self._logger.h2("Generate Metadata")
         self._output_path = output_path
         self._logger.h3("Detect Git Repository")
-        self._hash_before = hash_before
+        self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
@@ -683,13 +683,7 @@ class MetadataGenerator:
 
     def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
         self._logger.h3("Process metadata: package.releases")
-        if self._hash_before:
-            metadata_old_text = self._git.file_at_hash(
-                commit_hash=self._hash_before, path=self._output_path.metadata.rel_path
-            )
-            source = json.loads(metadata_old_text)
-        else:
-            source = self._metadata
+        source = self._ccm_before if self._ccm_before else self._metadata
         release_prefix, pre_release_prefix = allowed_prefixes = tuple(
             source["branch"][group_name]["prefix"] for group_name in ["release", "pre-release"]
         )
