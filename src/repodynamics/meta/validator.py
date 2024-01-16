@@ -49,6 +49,8 @@ class MetaValidator:
                     f"is already used by another earlier changelog.",
                 )
             changelog_names.append(changelog_data["name"])
+            if changelog_id == "package_public_prerelease":
+                continue
             section_ids = []
             for section in changelog_data["sections"]:
                 if section["id"] in section_ids:
