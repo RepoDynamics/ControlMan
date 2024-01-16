@@ -122,25 +122,47 @@ properties:
     default: { }
     additionalProperties: false
     properties:
-      template:
+      prerelease_temp_path:
+        description: >-
+          Path to the file relative to the repository root
+          for storing pre-release development process protocols.
         type: string
-        default: |
-          # Development Process Protocol
-          ## Plan
-          {issue_body}
-          ## Software Requirements Specification
-          TBD
-          ## Design Specification
-          TBD
-          ## Implementation
-          TBD
-          {primary_commit_summary}
-          {secondary_commits_tasklist}
-          ## References
-          {references}
-          ## Timeline
-          {timeline}
-    required: [ template ]
+        default: docs/prerelease_dev_protocols.md
+      template:
+        type: object
+        additionalProperties: false
+        properties:
+          title:
+            type: string
+            default: Development Process Protocol
+          body:
+            type: string
+            default: |
+              ## Plan
+              {issue_body}
+              
+              
+              ## Software Requirements Specification
+              TBD
+              
+              
+              ## Design Specification
+              TBD
+              
+              
+              ## Implementation
+              TBD
+              {primary_commit_summary}
+              {secondary_commits_tasklist}
+              
+              
+              ## References
+              {references}
+              
+              
+              ## Timeline
+              {timeline}
+    required: [ path_dir_prerelease, template ]
 required: [ blank_enabled, contact_links, forms, dev_protocol ]
 
 definitions:
