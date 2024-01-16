@@ -289,7 +289,6 @@ class IssuesEventHandler(EventHandler):
         return sections
 
     def _create_dev_protocol(self, issue_body: str) -> str:
-        dev_protocol_template = self._ccm_main["issue"]["dev_protocol"]["template"]
         today = datetime.date.today().strftime("%Y.%m.%d")
         timeline_entry = (
             f"- {today}: The issue was submitted (actor: @{self._issue.user.login})."
@@ -303,5 +302,7 @@ class IssuesEventHandler(EventHandler):
             "references": f"{self._MARKER_REFERENCES_START}\n\n{self._MARKER_REFERENCES_END}",
             "timeline": f"{self._MARKER_TIMELINE_START}\n{timeline_entry}\n{self._MARKER_TIMELINE_END}",
         }
-        dev_protocol = dev_protocol_template.format(**args)
-        return dev_protocol
+        dev_protocol_template = self._ccm_main["issue"]["dev_protocol"]["template"]
+        dev_protocol_title = dev_protocol_template["title"]
+        dev_protocol_body = dev_protocol_template["body"].format(**args).strip()
+        return f"# {dev_protocol_title}\n\n{dev_protocol_body}\n"
