@@ -247,6 +247,23 @@ class MetaManager:
                 )
         return Label(category=LabelType.UNKNOWN, name=name)
 
+    def get_primary_action_label_name(self, action_type: PrimaryActionCommitType) -> str:
+        """
+        Get the label name for a primary action commit type.
+
+        Parameters
+        ----------
+        action_type : PrimaryActionCommitType
+            Primary action commit type.
+
+        Returns
+        -------
+        The label name.
+        """
+        prefix = self._dict["label"]["group"]["primary_type"]["prefix"]
+        suffix = self._dict["label"]["group"]["primary_type"]["labels"][action_type.value]["suffix"]
+        return f"{prefix}{suffix}"
+
     def get_issue_form_identifying_labels(self, issue_form_id: str) -> tuple[str, str | None]:
         """
         Get the identifying labels for an issue form.
