@@ -1112,7 +1112,10 @@ class EventHandler:
         git = self._git_base if base else self._git_head
         commits = git.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger)
+        parser = CommitParser(
+            types=self._ccm_main.get_all_conventional_commit_types(secondary_custom_only=False),
+            logger=self._logger
+        )
         parsed_commits = []
         for commit in commits:
             conv_msg = parser.parse(msg=commit["msg"])
