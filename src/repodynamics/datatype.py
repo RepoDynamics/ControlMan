@@ -204,7 +204,7 @@ class GroupedCommit:
         return
 
     @property
-    def group(self):
+    def group(self) -> CommitGroup:
         return self._group
 
 
