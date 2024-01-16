@@ -14,6 +14,7 @@ from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.datatype import (
     EventType,
+    Label,
     PrimaryActionCommit,
     PrimaryCustomCommit,
     PrimaryActionCommitType,
@@ -60,67 +61,8 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def run_event(self):
-        name = "Event Handler"
-        error_title = "Unsupported pull request."
-        if self._payload.internal:
-            if self._branch_head.type is BranchType.AUTOUPDATE:
-                if self._branch_base.type not in (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
-                    error_msg = (
-                        "Pull requests from an auto-update (head) branch "
-                        "are only supported to a main, release, or pre-release (base) branch, "
-                        f"but the base branch has type '{self._branch_base.type.value}'."
-                    )
-                    self._logger.error(error_title, error_msg, raise_error=False)
-                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                    return
-            elif self._branch_head.type is BranchType.DEV:
-                if self._branch_base.type is not BranchType.IMPLEMENT:
-                    error_msg = (
-                        "Pull requests from a development (head) branch "
-                        "are only supported to an implementation (base) branch, "
-                        f"but the base branch has type '{self._branch_base.type.value}'."
-                    )
-                    self._logger.error(error_title, error_msg, raise_error=False)
-                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                    return
-            elif self._branch_head.type is BranchType.IMPLEMENT:
-                if self._branch_base.type not in (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
-                    error_msg = (
-                        "Pull requests from an implementation (head) branch "
-                        "are only supported to a main, release, or pre-release (base) branch, "
-                        f"but the base branch has type '{self._branch_base.type.value}'."
-                    )
-                    self._logger.error(error_title, error_msg, raise_error=False)
-                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                    return
-            elif self._branch_head.type is BranchType.PRERELEASE:
-                if self._branch_base.type not in (BranchType.RELEASE, BranchType.MAIN):
-                    error_msg = (
-                        "Pull requests from a pre-release (head) branch "
-                        "are only supported to a release or main (base) branch, "
-                        f"but the base branch has type '{self._branch_base.type.value}'."
-                    )
-                    self._logger.error(error_title, error_msg, raise_error=False)
-                    self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                    return
-            else:
-                error_msg = (
-                    "Pull requests from a head branch of type "
-                    f"'{self._branch_head.type.value}' are not supported."
-                )
-                self._logger.error(error_title, error_msg, raise_error=False)
-                self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                return
-        else:
-            if self._branch_base.type is not BranchType.IMPLEMENT or self._branch_head.type is not BranchType.IMPLEMENT:
-                error_msg = (
-                    "Pull requests from a forked repository are only supported "
-                    "from an implementation (head) branch to an implementation (base) branch."
-                )
-                self._logger.error(error_title, error_msg, raise_error=False)
-                self.add_summary(name=name, status="fail", oneliner=error_title, details=error_msg)
-                return
-
+        if not self._head_to_base_allowed():
+            return
         action = self._payload.action
         if action is ActionType.OPENED:
             self._run_action_opened()
@@ -136,109 +78,12 @@ class PullRequestEventHandler(EventHandler):
             self.error_unsupported_triggering_action()
         return
 
-    def _run_action_labeled(self):
-        label = self._ccm_main.resolve_label(self._payload.label.name)
-        if label.category is LabelType.STATUS:
-            self._update_issue_status_labels(
-                issue_nr=self._pull.number,
-                labels=self._ccm_main.resolve_labels(self._pull.label_names)[LabelType.STATUS],
-                current_label=label,
-            )
-            self._run_action_labeled_status(status=label.type)
-        else:
-            pass
-        return
-
-    def _run_action_labeled_status(self, status: IssueStatus):
-        if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
-            self._run_labeled_status_pre(status=status)
-        elif status is IssueStatus.DEPLOY_FINAL:
-            self._run_action_labeled_status_final()
-        else:
-            self._logger.error(
-                "Unsupported status label for pull request",
-                f"Label '{self._payload.label.name}' is not supported for pull requests.",
-            )
-        return
-
-    def _run_action_labeled_status_final(self):
-        if self._branch_head.type is BranchType.AUTOUPDATE:
-            if not self._payload.internal:
-                self._logger.error(
-                    "Merge not allowed",
-                    "Merge from a forked repository is only allowed "
-                    "from an implementation branch to the corresponding implementation branch.",
-                )
-                return
-            if self._branch_base.type not in (
-                BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE):
-                self._logger.error(
-                    "Merge not allowed",
-                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-                )
-                return
-            return self._run_merge_autoupdate()
-        elif self._branch_head.type is BranchType.DEV:
-            if not self._payload.internal:
-                self._logger.error(
-                    "Merge not allowed",
-                    "Merge from a forked repository is only allowed "
-                    "from an implementation branch to the corresponding implementation branch.",
-                )
-                return
-            if self._branch_base.type is not BranchType.IMPLEMENT:
-                self._logger.error(
-                    "Merge not allowed",
-                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-                )
-                return
-            return self._run_merge_dev_to_implement()
-        elif self._branch_head.type is BranchType.IMPLEMENT:
-            if self._payload.internal:
-                if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                    return self._run_merge_implementation_to_release()
-                elif self._branch_base.type is BranchType.PRERELEASE:
-                    return self._run_merge_implementation_to_pre()
-                else:
-                    self._logger.error(
-                        "Merge not allowed",
-                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-                    )
-            else:
-                if self._branch_base.type is BranchType.IMPLEMENT:
-                    return self._run_merge_fork_to_implement()
-                else:
-                    self._logger.error(
-                        "Merge not allowed",
-                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-                    )
-        elif self._branch_head.type is BranchType.PRERELEASE:
-            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
-                return self._run_merge_pre_to_release()
-            else:
-                self._logger.error(
-                    "Merge not allowed",
-                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-                )
-        else:
-            self._logger.error(
-                "Merge not allowed",
-                f"Merge from a head branch of type '{self._branch_head.type.value}' "
-                f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
-            )
-
     def _run_action_opened(self):
-        # if self.event_name == "pull_request" and action != "fail" and not self.pull_is_internal:
-        #     self._logger.attention(
-        #         "Meta synchronization cannot be performed as pull request is from a forked repository; "
-        #         f"switching action from '{action}' to 'fail'."
-        #     )
-        #     action = "fail"
+        if self._branch_head.type is BranchType.PRERELEASE and self._branch_base.type in (
+            BranchType.MAIN,
+            BranchType.RELEASE,
+        ):
+            return self._run_open_prerelease_to_release()
         return
 
     def _run_action_reopened(self):
@@ -256,7 +101,7 @@ class PullRequestEventHandler(EventHandler):
         meta = Meta(
             path_root=self._path_root_head,
             github_token=self._context.token,
-            hash_before=self._context.hash_before,
+            ccm_before=self._ccm_main,
             logger=self._logger,
         )
         changed_file_groups = self._action_file_change_detector(meta=meta)
@@ -283,7 +128,7 @@ class PullRequestEventHandler(EventHandler):
         tasks_complete = self._update_implementation_tasklist()
         if tasks_complete and not self._failed:
             self._gh_api.pull_update(
-                number=self._payload.number,
+                number=self._pull.number,
                 draft=False,
             )
         final_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
@@ -306,91 +151,98 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _run_labeled_status_pre(self, status: IssueStatus):
-        if self._branch_head.type is not BranchType.IMPLEMENT or self._branch_base.type not in (
-            BranchType.RELEASE, BranchType.MAIN
-        ):
+    def _run_action_labeled(self):
+        label = self._ccm_main.resolve_label(self._payload.label.name)
+        if label.category is LabelType.STATUS:
+            if not self._status_label_allowed(label=label):
+                return
+            self._update_issue_status_labels(
+                issue_nr=self._pull.number,
+                labels=self._ccm_main.resolve_labels(self._pull.label_names)[LabelType.STATUS],
+                current_label=label,
+            )
+            status = label.type
+            if status in (IssueStatus.DEPLOY_ALPHA, IssueStatus.DEPLOY_BETA, IssueStatus.DEPLOY_RC):
+                if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                    return self._run_create_prerelease_from_implementation(status=status)
+                if self._branch_base.type is BranchType.PRERELEASE:
+                    return self._run_merge_implementation_to_prerelease(status=status)
+            elif status is IssueStatus.DEPLOY_FINAL:
+                self._run_action_labeled_status_final()
+        return
+
+    def _run_action_labeled_status_final(self):
+        if self._branch_head.type is BranchType.AUTOUPDATE:
+            return self._run_merge_autoupdate()
+        elif self._branch_head.type is BranchType.DEV:
+            return self._run_merge_development_to_implementation()
+        elif self._branch_head.type is BranchType.IMPLEMENT:
+            if self._payload.internal:
+                if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                    return self._run_merge_implementation_to_release()
+                elif self._branch_base.type is BranchType.PRERELEASE:
+                    return self._run_merge_implementation_to_prerelease(status=IssueStatus.DEPLOY_FINAL)
+                else:
+                    self._logger.error(
+                        "Merge not allowed",
+                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                    )
+            else:
+                if self._branch_base.type is BranchType.IMPLEMENT:
+                    return self._run_merge_fork_to_implementation()
+                else:
+                    self._logger.error(
+                        "Merge not allowed",
+                        f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                        f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                    )
+        elif self._branch_head.type is BranchType.PRERELEASE:
+            if self._branch_base.type in (BranchType.RELEASE, BranchType.MAIN):
+                return self._run_merge_pre_to_release()
+            else:
+                self._logger.error(
+                    "Merge not allowed",
+                    f"Merge from a head branch of type '{self._branch_head.type.value}' "
+                    f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
+                )
+        else:
             self._logger.error(
                 "Merge not allowed",
                 f"Merge from a head branch of type '{self._branch_head.type.value}' "
                 f"to a branch of type '{self._branch_base.type.value}' is not allowed.",
             )
-            return
-        if not self._payload.internal:
-            self._logger.error(
-                "Merge not allowed",
-                "Merge from a forked repository is only allowed "
-                "from a development branch to the corresponding development branch.",
-            )
-            return
-        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
-        if not self._primary_type_is_package_publish(commit_type=primary_commit_type, include_post_release=False):
-            self._logger.error(
-                "Merge not allowed",
-                "Merge from a development branch to a release branch is only allowed "
-                "for release commits.",
-            )
-            return
-        hash_base = self._git_base.commit_hash_normal()
-        ver_base, dist_base = self._get_latest_version()
-        next_ver_final = self._get_next_version(ver_base, primary_commit_type.action)
-        pre_segment = {
-            IssueStatus.DEPLOY_ALPHA: "a",
-            IssueStatus.DEPLOY_BETA: "b",
-            IssueStatus.DEPLOY_RC: "rc",
-        }[status]
-        next_ver_pre = PEP440SemVer(f"{next_ver_final}.{pre_segment}{self._branch_head.suffix[0]}")
-        pre_release_branch_name = self.create_branch_name_prerelease(version=next_ver_pre)
-        self._git_base.checkout(branch=pre_release_branch_name, create=True)
-        self._git_base.commit(
-            message=(
-                f"init: Create pre-release branch '{pre_release_branch_name}' "
-                f"from base branch '{self._branch_base.name}'."
-            ),
-            allow_empty=True,
+
+    def _run_open_prerelease_to_release(self):
+        main_dev_protocol, sub_dev_protocols = self._read_prerelease_dev_protocols()
+        self._gh_api.issue_comment_create(number=self._pull.number, body=sub_dev_protocols)
+        self._gh_api.pull_update(
+            number=self._pull.number,
+            body=main_dev_protocol,
         )
-        self._git_base.push(target="origin", set_upstream=True)
+        return
+
+    def _run_merge_prerelease_to_release(self):
+        return
+
+    def _run_upgrade_prerelease(self):
         return
 
     def _run_merge_implementation_to_release(self):
-        ver_base, dist_base = self._get_latest_version(base=True)
-        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
-        if self._primary_type_is_package_publish(commit_type=primary_commit_type):
-            next_ver = self._get_next_version(ver_base, primary_commit_type.action)
-            ver_dist = str(next_ver)
-        else:
-            ver_dist = f"{ver_base}+{dist_base + 1}"
-            next_ver = None
-
-        parser = CommitParser(types=self._ccm_main.get_all_conventional_commit_types(), logger=self._logger)
+        primary_commit_type, ver_base, next_ver, ver_dist = self._get_next_ver_dist()
         hash_base = self._git_base.commit_hash_normal()
-        changelog_manager = ChangelogManager(
-            changelog_metadata=self._ccm_main["changelog"],
+        changelog_manager = self._update_changelogs(
             ver_dist=ver_dist,
             commit_type=primary_commit_type.conv_type,
             commit_title=self._pull.title,
-            parent_commit_hash=hash_base,
-            parent_commit_url=self._gh_link.commit(hash_base),
-            path_root=self._path_root_head,
-            logger=self._logger,
+            hash_base=hash_base,
+            prerelease=False,
         )
-        tasklist = self._extract_tasklist(body=self._pull.body)
-        for task in tasklist:
-            conv_msg = parser.parse(msg=task["summary"])
-            if conv_msg:
-                group_data = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
-                changelog_manager.add_change(
-                    changelog_id=group_data.changelog_id,
-                    section_id=group_data.changelog_section_id,
-                    change_title=conv_msg.title,
-                    change_details=task["description"],
-                )
-        changelog_manager.write_all_changelogs()
+
         self._git_head.commit(
-            message="auto: Update changelogs",
+            message=f'{self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"]}: Update changelogs',
             stage="all"
         )
-        latest_hash = self._git_head.push()
 
         if (
             self._branch_base.type is BranchType.MAIN
@@ -404,32 +256,45 @@ class PullRequestEventHandler(EventHandler):
             self._git_base.push(target="origin", set_upstream=True)
             self._git_base.checkout(branch=self._branch_base.name)
 
+        # Update the metadata in main branch to reflect the new release
+        if next_ver:
+            if self._branch_base.type is BranchType.MAIN:
+                meta_gen = Meta(
+                    path_root=self._path_root_head,
+                    github_token=self._context.token,
+                    ccm_before=self._ccm_main,
+                    future_versions={self._branch_base.name: next_ver},
+                    logger=self._logger,
+                )
+                self._action_meta(
+                    action=InitCheckAction.COMMIT, meta=meta_gen, base=False, branch=self._branch_head
+                )
+            else:
+                self._git_base.checkout(branch=self._payload.repository.default_branch)
+                meta_gen = Meta(
+                    path_root=self._path_root_base,
+                    github_token=self._context.token,
+                    future_versions={self._branch_base.name: next_ver},
+                    logger=self._logger,
+                )
+                self._action_meta(
+                    action=InitCheckAction.COMMIT, meta=meta_gen, base=True, branch=self._branch_base
+                )
+                self._git_base.push()
+                self._git_base.checkout(branch=self._branch_base.name)
+
+        latest_hash = self._git_head.push()
         # Wait 30 s to make sure the push to head is registered
         time.sleep(30)
-        bare_title = self._pull.title.removeprefix(f'{primary_commit_type.conv_type}: ')
-        commit_title = f"{primary_commit_type.conv_type}: {bare_title}"
-        try:
-            response = self._gh_api_admin.pull_merge(
-                number=self._payload.number,
-                commit_title=commit_title,
-                commit_message=self._pull.body,
-                sha=latest_hash,
-                merge_method="squash",
-            )
-        except WebAPIError as e:
-            self._gh_api.pull_update(
-                number=self._payload.number,
-                title=commit_title,
-            )
-            self._logger.error(
-                "Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False
-            )
-            self._failed = True
+
+        merge_response = self._merge_pull(conv_type=primary_commit_type.conv_type, sha=latest_hash)
+        if not merge_response:
             return
+
         ccm_branch = meta.read_from_json_file(
             path_root=self._path_root_head, logger=self._logger
         )
-        hash_latest = response["sha"]
+        hash_latest = merge_response["sha"]
         if not next_ver:
             self._set_output(
                 ccm_branch=ccm_branch,
@@ -441,6 +306,7 @@ class PullRequestEventHandler(EventHandler):
                 package_build=True,
             )
             return
+
         for i in range(10):
             self._git_base.pull()
             if self._git_base.commit_hash_normal() == hash_latest:
@@ -450,6 +316,7 @@ class PullRequestEventHandler(EventHandler):
             self._logger.error("Failed to pull changes from GitHub. Please pull manually.")
             self._failed = True
             return
+
         tag = self._tag_version(ver=next_ver, base=True)
         self._set_output(
             ccm_branch=ccm_branch,
@@ -468,7 +335,95 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _run_merge_dev_to_implement(self):
+    def _run_create_prerelease_from_implementation(self, status: IssueStatus):
+        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
+        if not self._primary_type_is_package_publish(
+            commit_type=primary_commit_type, include_post_release=False
+        ):
+            self._logger.error(
+                "Merge not allowed",
+                "Merge from a development branch to a release branch is only allowed "
+                "for release commits.",
+            )
+            return
+
+        ver_base, dist_base = self._get_latest_version(base=True)
+        next_ver_final = self._get_next_version(ver_base, primary_commit_type.action)
+        pre_segment = {
+            IssueStatus.DEPLOY_ALPHA: "a",
+            IssueStatus.DEPLOY_BETA: "b",
+            IssueStatus.DEPLOY_RC: "rc",
+        }[status]
+        next_ver_pre = PEP440SemVer(f"{next_ver_final}.{pre_segment}{self._branch_head.suffix[0]}")
+        pre_release_branch_name = self.create_branch_name_prerelease(version=next_ver_pre)
+        self._git_base.checkout(branch=pre_release_branch_name, create=True)
+        self._git_base.commit(
+            message=(
+                f"init: Create pre-release branch '{pre_release_branch_name}' "
+                f"from base branch '{self._branch_base.name}'."
+            ),
+            allow_empty=True,
+        )
+        self._git_base.push(target="origin", set_upstream=True)
+        # Wait 30 s to make sure the push of the new base branch is registered
+        time.sleep(30)
+        self._gh_api.pull_update(number=self._pull.number, base=pre_release_branch_name)
+        hash_base = self._git_base.commit_hash_normal()
+        changelog_manager = self._update_changelogs(
+            ver_dist=str(next_ver_pre),
+            commit_type=primary_commit_type.conv_type,
+            commit_title=self._pull.title,
+            hash_base=hash_base,
+            prerelease=True,
+        )
+        self._write_prerelease_dev_protocol(ver=str(next_ver_pre))
+        self._git_head.commit(
+            message="auto: Update changelogs",
+            stage="all"
+        )
+        latest_hash = self._git_head.push()
+        # Wait 30 s to make sure the push to head is registered
+        time.sleep(30)
+        merge_response = self._merge_pull(conv_type=primary_commit_type.conv_type, sha=latest_hash)
+        if not merge_response:
+            return
+        hash_latest = merge_response["sha"]
+        for i in range(10):
+            self._git_base.pull()
+            if self._git_base.commit_hash_normal() == hash_latest:
+                break
+            time.sleep(5)
+        else:
+            self._logger.error("Failed to pull changes from GitHub. Please pull manually.")
+            self._failed = True
+            return
+        tag = self._tag_version(ver=next_ver_pre, base=True)
+        ccm_branch = meta.read_from_json_file(
+            path_root=self._path_root_head, logger=self._logger
+        )
+        self._set_output(
+            ccm_branch=ccm_branch,
+            ref=hash_latest,
+            ref_before=hash_base,
+            version=str(next_ver_pre),
+            release_name=f"{ccm_branch['name']} v{next_ver_pre}",
+            release_tag=tag,
+            release_body=changelog_manager.get_entry(changelog_id="package_public_prerelease")[0],
+            release_prerelease=True,
+            website_deploy=True,
+            package_lint=True,
+            package_test=True,
+            package_publish_testpypi=True,
+            package_publish_pypi=True,
+            package_release=True,
+        )
+        return
+
+    def _run_merge_implementation_to_prerelease(self, status: IssueStatus):
+        primary_commit_type, ver_base, next_ver, ver_dist = self._get_next_ver_dist(prerelease_status=status)
+        return
+
+    def _run_merge_development_to_implementation(self):
         tasklist_head = self._extract_tasklist(body=self._pull.body)
         if not tasklist_head or len(tasklist_head) != 1:
             self._logger.error(
@@ -497,13 +452,96 @@ class PullRequestEventHandler(EventHandler):
         tasklist_base[task_nr - 1] = task
         self._update_tasklist(entries=tasklist_base, body=parent_pr["body"], number=parent_pr["number"])
         response = self._gh_api_admin.pull_merge(
-            number=self._payload.number,
+            number=self._pull.number,
             commit_title=task["summary"],
             commit_message=self._pull.body,
             sha=self._pull.head.sha,
             merge_method="squash",
         )
         return
+
+    def _run_merge_autoupdate(self):
+        return
+
+    def _run_merge_fork_to_implementation(self):
+        return
+
+    def _run_merge_fork_to_development(self):
+        return
+
+    def _merge_pull(self, conv_type: str,  sha: str | None = None) -> dict | None:
+        bare_title = self._pull.title.removeprefix(f'{conv_type}: ')
+        commit_title = f"{conv_type}: {bare_title}"
+        try:
+            response = self._gh_api_admin.pull_merge(
+                number=self._pull.number,
+                commit_title=commit_title,
+                commit_message=self._pull.body,
+                sha=sha,
+                merge_method="squash",
+            )
+        except WebAPIError as e:
+            self._gh_api.pull_update(
+                number=self._pull.number,
+                title=commit_title,
+            )
+            self._logger.error(
+                "Failed to merge pull request using GitHub API. Please merge manually.", e, raise_error=False
+            )
+            self._failed = True
+            return
+        return response
+
+    def _update_changelogs(
+        self, ver_dist: str, commit_type: str, commit_title: str, hash_base: str, prerelease: bool = False
+    ):
+        parser = CommitParser(
+            types=self._ccm_main.get_all_conventional_commit_types(secondary_custom_only=True),
+            logger=self._logger
+        )
+        changelog_manager = ChangelogManager(
+            changelog_metadata=self._ccm_main["changelog"],
+            ver_dist=ver_dist,
+            commit_type=commit_type,
+            commit_title=commit_title,
+            parent_commit_hash=hash_base,
+            parent_commit_url=self._gh_link.commit(hash_base),
+            path_root=self._path_root_head,
+            logger=self._logger,
+        )
+        tasklist = self._extract_tasklist(body=self._pull.body)
+        for task in tasklist:
+            conv_msg = parser.parse(msg=task["summary"])
+            if conv_msg:
+                group_data = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
+                if prerelease:
+                    if group_data.changelog_id != "package_public":
+                        continue
+                    changelog_id = "package_prerelease"
+                else:
+                    changelog_id = group_data.changelog_id
+                changelog_manager.add_change(
+                    changelog_id=changelog_id,
+                    section_id=group_data.changelog_section_id,
+                    change_title=conv_msg.title,
+                    change_details=task["description"],
+                )
+        changelog_manager.write_all_changelogs()
+        return changelog_manager
+
+    def _get_next_ver_dist(self, prerelease_status: IssueStatus | None = None):
+        ver_base, dist_base = self._get_latest_version(base=True)
+        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
+        if self._primary_type_is_package_publish(commit_type=primary_commit_type):
+            if prerelease_status:
+                next_ver = "?"
+            else:
+                next_ver = self._get_next_version(ver_base, primary_commit_type.action)
+                ver_dist = str(next_ver)
+        else:
+            ver_dist = f"{ver_base}+{dist_base + 1}"
+            next_ver = None
+        return primary_commit_type, ver_base, next_ver, ver_dist
 
     def _determine_job_runs(self, changed_file_groups, final_commit_type):
         package_setup_files_changed = any(
@@ -566,83 +604,6 @@ class PullRequestEventHandler(EventHandler):
             next_ver_str += f".dev{dev}"
         return PEP440SemVer(next_ver_str)
 
-    @staticmethod
-    def _primary_type_is_package_publish(
-        commit_type: PrimaryActionCommit | PrimaryCustomCommit, include_post_release: bool = True
-    ):
-        actions = [
-            PrimaryActionCommitType.RELEASE_MAJOR,
-            PrimaryActionCommitType.RELEASE_MINOR,
-            PrimaryActionCommitType.RELEASE_PATCH,
-        ]
-        if include_post_release:
-            actions.append(PrimaryActionCommitType.RELEASE_POST)
-        return commit_type.group is CommitGroup.PRIMARY_ACTION and commit_type.action in actions
-
-    # def event_pull_request(self):
-    #     self.event_type = EventType.PULL_MAIN
-    #     branch = self.resolve_branch(self.pull_head_ref_name)
-    #     if branch.type == BranchType.DEV and branch.suffix == 0:
-    #         return
-    #     for job_id in ("package_build", "package_test_local", "package_lint", "website_build"):
-    #         self.set_job_run(job_id)
-    #     self.git.checkout(branch=self.pull_base_ref_name)
-    #     latest_base_hash = self.git.commit_hash_normal()
-    #     base_ver, dist = self._get_latest_version()
-    #     self.git.checkout(branch=self.pull_head_ref_name)
-    #
-    #     self.action_file_change_detector()
-    #     self.action_meta()
-    #     self._action_hooks()
-    #
-    #     branch = self.resolve_branch(self.pull_head_ref_name)
-    #     issue_labels = [label["name"] for label in self.gh_api.issue_labels(number=branch.suffix)]
-    #     issue_data = self._ccm_main.get_issue_data_from_labels(issue_labels)
-    #
-    #     if issue_data.group_data.group == CommitGroup.PRIMARY_CUSTOM or issue_data.group_data.action in [
-    #         PrimaryActionCommitType.WEBSITE,
-    #         PrimaryActionCommitType.META,
-    #     ]:
-    #         ver_dist = f"{base_ver}+{dist+1}"
-    #     else:
-    #         ver_dist = str(self._get_next_version(base_ver, issue_data.group_data.action))
-    #
-    #     changelog_manager = ChangelogManager(
-    #         changelog_metadata=self.metadata_main["changelog"],
-    #         ver_dist=ver_dist,
-    #         commit_type=issue_data.group_data.conv_type,
-    #         commit_title=self.pull_title,
-    #         parent_commit_hash=latest_base_hash,
-    #         parent_commit_url=self._gh_link.commit(latest_base_hash),
-    #         path_root=self._path_root_base,
-    #         logger=self.logger,
-    #     )
-    #
-    #     commits = self._get_commits()
-    #     self.logger.success(f"Found {len(commits)} commits.")
-    #     for commit in commits:
-    #         self.logger.info(f"Processing commit: {commit}")
-    #         if commit.group_data.group == CommitGroup.SECONDARY_CUSTOM:
-    #             changelog_manager.add_change(
-    #                 changelog_id=commit.group_data.changelog_id,
-    #                 section_id=commit.group_data.changelog_section_id,
-    #                 change_title=commit.msg.title,
-    #                 change_details=commit.msg.body,
-    #             )
-    #     entries = changelog_manager.get_all_entries()
-    #     self.logger.success(f"Found {len(entries)} changelog entries.", str(entries))
-    #     curr_body = self.pull_body.strip() if self.pull_body else ""
-    #     if curr_body:
-    #         curr_body += "\n\n"
-    #     for entry, changelog_name in entries:
-    #         curr_body += f"# Changelog: {changelog_name}\n\n{entry}\n\n"
-    #     self.gh_api.pull_update(
-    #         number=self.pull_number,
-    #         title=f"{issue_data.group_data.conv_type}: {self.pull_title.removeprefix(f'{issue_data.group_data.conv_type}: ')}",
-    #         body=curr_body,
-    #     )
-    #     return
-
     def _update_implementation_tasklist(self) -> bool:
 
         def apply(commit_details, tasklist_entries):
@@ -700,7 +661,7 @@ class PullRequestEventHandler(EventHandler):
         replacement = rf"\1\n{tasklist_string}\n\2"
         new_body = re.sub(pattern, replacement, body or self._pull.body, flags=re.DOTALL)
         self._gh_api.pull_update(
-            number=number or self._payload.number,
+            number=number or self._pull.number,
             body=new_body,
         )
         return
@@ -708,3 +669,135 @@ class PullRequestEventHandler(EventHandler):
     def _add_to_pr_timeline(self, entry: str):
         self._add_to_timeline(entry=entry, body=self._pull.body, issue_nr=self._pull.number)
         return
+
+    def _write_prerelease_dev_protocol(self, ver: str):
+        filepath = self._path_root_head / self._ccm_main["issue"]["dev_protocol"]["prerelease_temp_path"]
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        old_title = f'# {self._ccm_main["issue"]["dev_protocol"]["template"]["title"]}'
+        new_title = f"{old_title} (v{ver})"
+        entry = self._pull.body.strip().replace(old_title, new_title, 1)
+        with open(filepath, "a") as f:
+            f.write(f"\n\n{entry}\n")
+        return
+
+    def _read_prerelease_dev_protocols(self) -> tuple[str, str]:
+        filepath = self._path_root_head / self._ccm_main["issue"]["dev_protocol"]["prerelease_temp_path"]
+        protocols = filepath.read_text().strip()
+        main_protocol, sub_protocols = protocols.split("\n# ", 1)
+        return main_protocol.strip(), f"# {sub_protocols.strip()}"
+
+    def _head_to_base_allowed(self) -> bool:
+        internal_head_to_base_map = {
+            BranchType.PRERELEASE: (BranchType.MAIN, BranchType.RELEASE),
+            BranchType.IMPLEMENT: (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE),
+            BranchType.DEV: (BranchType.IMPLEMENT,),
+            BranchType.AUTOUPDATE: (BranchType.MAIN, BranchType.RELEASE, BranchType.PRERELEASE),
+        }
+        external_head_to_base_map = {
+            BranchType.IMPLEMENT: (BranchType.IMPLEMENT,),
+            BranchType.DEV: (BranchType.DEV,),
+        }
+        mapping = internal_head_to_base_map if self._payload.internal else external_head_to_base_map
+        allowed_base_types = mapping.get(self._branch_head.type)
+        if not allowed_base_types:
+            self._error_unsupported_head()
+            return False
+        if self._branch_base.type not in allowed_base_types:
+            self._error_unsupported_head_to_base()
+            return False
+        return True
+
+    def _status_label_allowed(self, label: Label):
+        if label.type not in (
+            IssueStatus.DEPLOY_ALPHA,
+            IssueStatus.DEPLOY_BETA,
+            IssueStatus.DEPLOY_RC,
+            IssueStatus.DEPLOY_FINAL
+        ):
+            self._error_unsupported_status_label()
+            return False
+        if label.type is not IssueStatus.DEPLOY_FINAL and (
+            self._branch_head.type, self._branch_base.type
+        ) not in (
+            (BranchType.PRERELEASE, BranchType.MAIN),
+            (BranchType.PRERELEASE, BranchType.RELEASE),
+            (BranchType.IMPLEMENT, BranchType.MAIN),
+            (BranchType.IMPLEMENT, BranchType.RELEASE),
+        ):
+            self._error_unsupported_prerelease_status_label()
+            return False
+        return True
+
+    def _error_unsupported_head(self):
+        err_msg = "Unsupported pull request head branch."
+        err_details = (
+            f"Pull requests from a head branch of type '{self._branch_head.type.value}' "
+            f"are not allowed for {'internal' if self._payload.internal else 'external'} pull requests."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    def _error_unsupported_head_to_base(self):
+        err_msg = "Unsupported pull request base branch."
+        err_details = (
+            f"Pull requests from a head branch of type '{self._branch_head.type.value}' "
+            f"to a base branch of type '{self._branch_base.type.value}' "
+            f"are not allowed for {'internal' if self._payload.internal else 'external'} pull requests."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    def _error_unsupported_status_label(self):
+        err_msg = "Unsupported pull request status label."
+        err_details = (
+            f"Status label '{self._payload.label.name}' is not supported for pull requests."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    def _error_unsupported_prerelease_status_label(self):
+        err_msg = "Unsupported pull request status label."
+        err_details = (
+            f"Status label '{self._payload.label.name}' is not supported for pull requests "
+            f"from a head branch of type '{self._branch_head.type.value}' "
+            f"to a base branch of type '{self._branch_base.type.value}'."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    @staticmethod
+    def _primary_type_is_package_publish(
+        commit_type: PrimaryActionCommit | PrimaryCustomCommit, include_post_release: bool = True
+    ):
+        actions = [
+            PrimaryActionCommitType.RELEASE_MAJOR,
+            PrimaryActionCommitType.RELEASE_MINOR,
+            PrimaryActionCommitType.RELEASE_PATCH,
+        ]
+        if include_post_release:
+            actions.append(PrimaryActionCommitType.RELEASE_POST)
+        return commit_type.group is CommitGroup.PRIMARY_ACTION and commit_type.action in actions
