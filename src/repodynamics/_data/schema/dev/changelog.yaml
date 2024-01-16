@@ -99,7 +99,46 @@ properties:
                 type: string
           required: [id, title, description]
     required: [name, path, title, intro, entry, sections]
-required: [package_public]
+  package_public_prerelease:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        default: Public API
+      path:
+        type: string
+        default: CHANGELOG.md
+      title:
+        type: string
+        default: "${{name}} Changelog (Public API)"
+      intro:
+        type: string
+        default: |
+          All notable changes to this project will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+      entry:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          title:
+            type: string
+            minLength: 1
+            default: "[{ver_dist}] – {date}"
+          intro:
+            type: string
+            minLength: 1
+            default: |
+              - Commit Type: {commit_type}
+              - Commit Title: {commit_title}
+              - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+        required: [ title, intro ]
+    required: [ name, path, title, intro, entry ]
+required: [ package_public, package_public_prerelease ]
 
 definitions:
   changelog_schema:
