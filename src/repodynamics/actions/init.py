@@ -26,6 +26,7 @@ def init(
     hooks: str = "none",
     website_announcement: str = "",
     website_announcement_msg: str = "",
+    first_major_release: bool = False,
     logger=None,
 ):
     logger = logger or Logger("console")
@@ -71,6 +72,7 @@ def init(
             hooks=hooks,
             website_announcement=website_announcement,
             website_announcement_msg=website_announcement_msg,
+            first_major_release=first_major_release,
             **args,
         )
     else:
