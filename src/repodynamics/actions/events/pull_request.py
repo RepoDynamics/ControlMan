@@ -324,18 +324,13 @@ class PullRequestEventHandler(EventHandler):
             )
             return
         primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
-        if primary_commit_type.group != CommitGroup.PRIMARY_ACTION or primary_commit_type.action not in (
-            PrimaryActionCommitType.RELEASE_MAJOR,
-            PrimaryActionCommitType.RELEASE_MINOR,
-            PrimaryActionCommitType.RELEASE_PATCH,
-        ):
+        if not self._primary_type_is_package_publish(commit_type=primary_commit_type, include_post_release=False):
             self._logger.error(
                 "Merge not allowed",
                 "Merge from a development branch to a release branch is only allowed "
                 "for release commits.",
             )
             return
-        self._git_base.checkout(branch=self._branch_base.name)
         hash_base = self._git_base.commit_hash_normal()
         ver_base, dist_base = self._get_latest_version()
         next_ver_final = self._get_next_version(ver_base, primary_commit_type.action)
@@ -396,7 +391,20 @@ class PullRequestEventHandler(EventHandler):
             stage="all"
         )
         latest_hash = self._git_head.push()
-        # Wait 30 s to make sure the push is registered
+
+        if (
+            self._branch_base.type is BranchType.MAIN
+            and ver_base.major > 0
+            and primary_commit_type.group is CommitGroup.PRIMARY_ACTION
+            and primary_commit_type.action is PrimaryActionCommitType.RELEASE_MAJOR
+        ):
+            self._git_base.checkout(
+                branch=self.create_branch_name_release(major_version=ver_base.major), create=True
+            )
+            self._git_base.push(target="origin", set_upstream=True)
+            self._git_base.checkout(branch=self._branch_base.name)
+
+        # Wait 30 s to make sure the push to head is registered
         time.sleep(30)
         bare_title = self._pull.title.removeprefix(f'{primary_commit_type.conv_type}: ')
         commit_title = f"{primary_commit_type.conv_type}: {bare_title}"
@@ -559,13 +567,17 @@ class PullRequestEventHandler(EventHandler):
         return PEP440SemVer(next_ver_str)
 
     @staticmethod
-    def _primary_type_is_package_publish(commit_type: PrimaryActionCommit | PrimaryCustomCommit):
-        return commit_type.group is CommitGroup.PRIMARY_ACTION and commit_type.action in (
+    def _primary_type_is_package_publish(
+        commit_type: PrimaryActionCommit | PrimaryCustomCommit, include_post_release: bool = True
+    ):
+        actions = [
             PrimaryActionCommitType.RELEASE_MAJOR,
             PrimaryActionCommitType.RELEASE_MINOR,
             PrimaryActionCommitType.RELEASE_PATCH,
-            PrimaryActionCommitType.RELEASE_POST,
-        )
+        ]
+        if include_post_release:
+            actions.append(PrimaryActionCommitType.RELEASE_POST)
+        return commit_type.group is CommitGroup.PRIMARY_ACTION and commit_type.action in actions
 
     # def event_pull_request(self):
     #     self.event_type = EventType.PULL_MAIN
