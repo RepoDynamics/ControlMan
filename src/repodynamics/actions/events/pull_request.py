@@ -57,7 +57,7 @@ class PullRequestEventHandler(EventHandler):
         self._branch_head = self.resolve_branch(self._context.head_ref)
         self._git_base.fetch_remote_branches_by_name(branch_names=self._context.base_ref)
         self._git_base.checkout(branch=self._context.base_ref)
-        # self._git_head.fetch_remote_branches_by_name(branch_names=self._context.head_ref)
+        self._primary_commit_type: PrimaryActionCommit | PrimaryCustomCommit | None = None
         return
 
     def run_event(self):
@@ -154,6 +154,7 @@ class PullRequestEventHandler(EventHandler):
     def _run_action_labeled(self):
         label = self._ccm_main.resolve_label(self._payload.label.name)
         if label.category is LabelType.STATUS:
+            self._primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
             if not self._status_label_allowed(label=label):
                 return
             self._update_issue_status_labels(
@@ -220,9 +221,18 @@ class PullRequestEventHandler(EventHandler):
             number=self._pull.number,
             body=main_dev_protocol,
         )
+        original_issue_nr = self._get_originating_issue_nr(body=main_dev_protocol)
+        issue_labels = self._ccm_main.resolve_labels(
+            names=[label["name"] for label in self._gh_api.issue_labels(number=original_issue_nr)]
+        )
+        label_names_to_add = [
+            label.name for label in issue_labels[LabelType.TYPE] + issue_labels[LabelType.SUBTYPE]
+        ]
+        self._gh_api.issue_labels_add(number=self._pull.number, labels=label_names_to_add)
         return
 
     def _run_merge_prerelease_to_release(self):
+        self._run_merge_implementation_to_release()
         return
 
     def _run_upgrade_prerelease(self):
@@ -336,19 +346,8 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_create_prerelease_from_implementation(self, status: IssueStatus):
-        primary_commit_type = self._ccm_main.get_issue_data_from_labels(self._pull.label_names).group_data
-        if not self._primary_type_is_package_publish(
-            commit_type=primary_commit_type, include_post_release=False
-        ):
-            self._logger.error(
-                "Merge not allowed",
-                "Merge from a development branch to a release branch is only allowed "
-                "for release commits.",
-            )
-            return
-
         ver_base, dist_base = self._get_latest_version(base=True)
-        next_ver_final = self._get_next_version(ver_base, primary_commit_type.action)
+        next_ver_final = self._get_next_version(ver_base, self._primary_commit_type.action)
         pre_segment = {
             IssueStatus.DEPLOY_ALPHA: "a",
             IssueStatus.DEPLOY_BETA: "b",
@@ -371,7 +370,7 @@ class PullRequestEventHandler(EventHandler):
         hash_base = self._git_base.commit_hash_normal()
         changelog_manager = self._update_changelogs(
             ver_dist=str(next_ver_pre),
-            commit_type=primary_commit_type.conv_type,
+            commit_type=self._primary_commit_type.conv_type,
             commit_title=self._pull.title,
             hash_base=hash_base,
             prerelease=True,
@@ -384,7 +383,7 @@ class PullRequestEventHandler(EventHandler):
         latest_hash = self._git_head.push()
         # Wait 30 s to make sure the push to head is registered
         time.sleep(30)
-        merge_response = self._merge_pull(conv_type=primary_commit_type.conv_type, sha=latest_hash)
+        merge_response = self._merge_pull(conv_type=self._primary_commit_type.conv_type, sha=latest_hash)
         if not merge_response:
             return
         hash_latest = merge_response["sha"]
@@ -686,6 +685,12 @@ class PullRequestEventHandler(EventHandler):
         main_protocol, sub_protocols = protocols.split("\n# ", 1)
         return main_protocol.strip(), f"# {sub_protocols.strip()}"
 
+    def _get_originating_issue_nr(self, body: str | None = None) -> int:
+        pattern = rf"{self._MARKER_ISSUE_NR_START}(.*?){self._MARKER_ISSUE_NR_END}"
+        match = re.search(pattern, body or self._pull.body, flags=re.DOTALL)
+        issue_nr = match.group(1).strip()
+        return int(issue_nr)
+
     def _head_to_base_allowed(self) -> bool:
         internal_head_to_base_map = {
             BranchType.PRERELEASE: (BranchType.MAIN, BranchType.RELEASE),
@@ -726,6 +731,21 @@ class PullRequestEventHandler(EventHandler):
         ):
             self._error_unsupported_prerelease_status_label()
             return False
+        if label.type is not IssueStatus.DEPLOY_FINAL and not self._primary_type_is_package_publish(
+            commit_type=self._primary_commit_type, include_post_release=False
+        ):
+            self._error_unsupported_prerelease_status_label_for_primary_type()
+            return False
+        if self._branch_head.type is BranchType.PRERELEASE and label.type is not IssueStatus.DEPLOY_FINAL:
+            head_prerelease_segment = self._branch_head.suffix.pre[0]
+            label_prerelease_segment = {
+                IssueStatus.DEPLOY_ALPHA: "a",
+                IssueStatus.DEPLOY_BETA: "b",
+                IssueStatus.DEPLOY_RC: "rc",
+            }[label.type]
+            if label_prerelease_segment < head_prerelease_segment:
+                self._error_unsupported_prerelease_status_label_for_prerelease_branch()
+                return False
         return True
 
     def _error_unsupported_head(self):
@@ -779,6 +799,37 @@ class PullRequestEventHandler(EventHandler):
             f"Status label '{self._payload.label.name}' is not supported for pull requests "
             f"from a head branch of type '{self._branch_head.type.value}' "
             f"to a base branch of type '{self._branch_base.type.value}'."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    def _error_unsupported_prerelease_status_label_for_primary_type(self):
+        err_msg = "Unsupported pull request status label."
+        err_details = (
+            f"Status label '{self._payload.label.name}' is not supported for pull requests "
+            f"with primary types other than major, minor, or patch releases."
+        )
+        self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
+        self.add_summary(
+            name="Event Handler",
+            status="fail",
+            oneliner=err_msg,
+            details=err_details,
+        )
+        return
+
+    def _error_unsupported_prerelease_status_label_for_prerelease_branch(self):
+        err_msg = "Unsupported pull request status label."
+        err_details = (
+            f"Status label '{self._payload.label.name}' is not supported for pull requests "
+            f"from a head branch of type '{self._branch_head.type.value}' "
+            f"with a lower pre-release segment than the label."
         )
         self._logger.error(f"Pull Request Event Handler: {err_msg}", err_details, raise_error=False)
         self.add_summary(
