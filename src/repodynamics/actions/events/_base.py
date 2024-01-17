@@ -188,9 +188,9 @@ class EventHandler:
         if action == InitCheckAction.PULL:
             pr_branch_name = self.switch_to_autoupdate_branch(typ="meta", git=git)
         meta_results, meta_changes, meta_summary = meta.compare_files()
-        self._logger.success("Meta synchronization completed.", meta_results)
-        self._logger.success("Meta synchronization summary:", meta_summary)
-        self._logger.success("Meta synchronization changes:", meta_changes)
+        # self._logger.success("Meta synchronization completed.", {"result": meta_results})
+        # self._logger.success("Meta synchronization summary:", meta_summary)
+        # self._logger.success("Meta synchronization changes:", meta_changes)
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         commit_hash = None
