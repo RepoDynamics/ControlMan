@@ -635,7 +635,7 @@ class PullRequestEventHandler(EventHandler):
         for commit in commits:
             commit_details = (
                 commit.msg.splitlines() if commit.group_data.group == CommitGroup.NON_CONV
-                else [commit.msg.summary, *commit.msg.body.splitlines()]
+                else [commit.msg.summary, *commit.msg.body.strip().splitlines()]
             )
             apply(commit_details, tasklist)
         complete = update_complete(tasklist)
