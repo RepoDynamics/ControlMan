@@ -90,7 +90,7 @@ class PullRequestEventHandler(EventHandler):
         return
 
     def _run_action_synchronize(self):
-        self._add_to_pr_timeline(
+        new_body = self._add_to_pr_timeline(
             entry=(
                 "New commits were pushed to the head branch "
                 f"(workflow run: [{self._context.run_id}]({self._gh_link.workflow_run(run_id=self._context.run_id)}), "
@@ -125,7 +125,7 @@ class PullRequestEventHandler(EventHandler):
             )
         latest_hash = self._git_head.push() if hash_hooks or hash_meta else self._context.hash_after
 
-        tasks_complete = self._update_implementation_tasklist()
+        tasks_complete = self._update_implementation_tasklist(body=new_body)
         if tasks_complete and not self._failed:
             self._gh_api.pull_update(
                 number=self._pull.number,
@@ -170,6 +170,9 @@ class PullRequestEventHandler(EventHandler):
                     return self._run_merge_implementation_to_prerelease(status=status)
             elif status is IssueStatus.DEPLOY_FINAL:
                 self._run_action_labeled_status_final()
+        return
+
+    def _run_action_ready_for_review(self):
         return
 
     def _run_action_labeled_status_final(self):
@@ -603,7 +606,7 @@ class PullRequestEventHandler(EventHandler):
             next_ver_str += f".dev{dev}"
         return PEP440SemVer(next_ver_str)
 
-    def _update_implementation_tasklist(self) -> bool:
+    def _update_implementation_tasklist(self, body: str | None = None) -> bool:
 
         def apply(commit_details, tasklist_entries):
             for entry in tasklist_entries:
@@ -636,7 +639,7 @@ class PullRequestEventHandler(EventHandler):
             )
             apply(commit_details, tasklist)
         complete = update_complete(tasklist)
-        self._update_tasklist(tasklist)
+        self._update_tasklist(tasklist, body=body)
         return complete
 
     def _update_tasklist(
@@ -665,9 +668,8 @@ class PullRequestEventHandler(EventHandler):
         )
         return
 
-    def _add_to_pr_timeline(self, entry: str):
-        self._add_to_timeline(entry=entry, body=self._pull.body, issue_nr=self._pull.number)
-        return
+    def _add_to_pr_timeline(self, entry: str) -> str:
+        return self._add_to_timeline(entry=entry, body=self._pull.body, issue_nr=self._pull.number)
 
     def _write_prerelease_dev_protocol(self, ver: str):
         filepath = self._path_root_head / self._ccm_main["issue"]["dev_protocol"]["prerelease_temp_path"]
