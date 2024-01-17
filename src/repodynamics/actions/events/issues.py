@@ -86,7 +86,7 @@ class IssuesEventHandler(EventHandler):
         return
 
     def _run_labeled_status_triage(self):
-        self._add_to_issue_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender.login}).")
+        # self._add_to_issue_timeline(entry=f"The issue entered the triage phase (actor: @{self._payload.sender.login}).")
         return
 
     def _run_labeled_status_rejected(self):
