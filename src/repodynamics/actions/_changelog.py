@@ -40,7 +40,11 @@ class ChangelogManager:
             self._logger.error(
                 f"Changelog {changelog_id} is already updated with an entry; cannot add individual changes."
             )
-        for section_idx, section in enumerate(self._meta[changelog_id]["sections"]):
+        for section_idx, section in enumerate(
+            self._meta[
+                changelog_id if changelog_id != "package_public_prerelease" else "package_public"
+            ]["sections"]
+        ):
             if section["id"] == section_id:
                 section_dict = changelog_dict.setdefault(
                     section_idx, {"title": section["title"], "changes": []}
