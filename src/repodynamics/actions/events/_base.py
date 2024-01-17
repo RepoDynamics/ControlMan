@@ -1211,7 +1211,7 @@ class EventHandler:
             self._logger.error(
                 "Failed to add to timeline", "Neither issue nor comment ID was provided."
             )
-        return
+        return new_body
 
     def create_branch_name_release(self, major_version: int) -> str:
         """Generate the name of the release branch for a given major version."""
