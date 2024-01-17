@@ -688,7 +688,7 @@ class PullRequestEventHandler(EventHandler):
     def _get_originating_issue_nr(self, body: str | None = None) -> int:
         pattern = rf"{self._MARKER_ISSUE_NR_START}(.*?){self._MARKER_ISSUE_NR_END}"
         match = re.search(pattern, body or self._pull.body, flags=re.DOTALL)
-        issue_nr = match.group(1).strip()
+        issue_nr = match.group(1).strip().removeprefix("#")
         return int(issue_nr)
 
     def _head_to_base_allowed(self) -> bool:
