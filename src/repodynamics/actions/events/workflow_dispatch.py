@@ -9,6 +9,7 @@ from repodynamics.datatype import (
     BranchType,
 )
 from repodynamics.meta.meta import Meta
+from repodynamics.actions._changelog import ChangelogManager
 
 
 class WorkflowDispatchEventHandler(EventHandler):
@@ -84,19 +85,33 @@ class WorkflowDispatchEventHandler(EventHandler):
             logger=self._logger,
         )
         ccm_main = meta_gen.read_metadata_full()
+        hash_base = self._git_base.commit_hash_normal()
         self._action_meta(
             action=InitCheckAction.COMMIT,
             meta=meta_gen,
             base=True,
             branch=Branch(type=BranchType.MAIN, name=self._context.ref_name)
         )
-        hash_latest = self._git_base.push()
-        tag = self._tag_version(ver="1.0.0", base=True)
+        changelog_manager = ChangelogManager(
+            changelog_metadata=self._ccm_main["changelog"],
+            ver_dist="1.0.0",
+            commit_type=self._ccm_main["commit"]["primary_action"]["release_major"]["type"],
+            commit_title="Release public API",
+            parent_commit_hash=hash_base,
+            parent_commit_url=self._gh_link.commit(hash_base),
+            path_root=self._path_root_base,
+            logger=self._logger,
+        )
         release_body = (
             "This is the first major release of the project, defining the stable public API. "
             "There has been no changes to the public API since the last release, i.e., "
             f"version {latest_ver}."
         )
+        changelog_manager.add_entry(changelog_id="package_public", sections=release_body)
+        changelog_manager.write_all_changelogs()
+        hash_latest = self._git_base.push()
+        tag = self._tag_version(ver="1.0.0", base=True)
+
         self._set_output(
             ccm_branch=ccm_main,
             ref=hash_latest,
