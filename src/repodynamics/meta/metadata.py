@@ -779,6 +779,7 @@ class MetadataGenerator:
             out["interfaces"].append("CLI")
         if all_gui_scripts:
             out["interfaces"].append("GUI")
+        self._logger.success(f"Set package releases data", out)
         return out
 
     def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
