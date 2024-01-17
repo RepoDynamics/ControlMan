@@ -519,7 +519,7 @@ class PullRequestEventHandler(EventHandler):
                 if prerelease:
                     if group_data.changelog_id != "package_public":
                         continue
-                    changelog_id = "package_prerelease"
+                    changelog_id = "package_public_prerelease"
                 else:
                     changelog_id = group_data.changelog_id
                 changelog_manager.add_change(
