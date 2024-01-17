@@ -87,7 +87,7 @@ class WorkflowDispatchEventHandler(EventHandler):
         self._action_meta(
             action=InitCheckAction.COMMIT,
             meta=meta_gen,
-            base=False,
+            base=True,
             branch=Branch(type=BranchType.MAIN, name=self._context.ref_name)
         )
         hash_latest = self._git_base.push()
