@@ -80,7 +80,7 @@ class Git:
             commit_cmd.append("--amend")
             if not message:
                 commit_cmd.append("--no-edit")
-        elif allow_empty:
+        if allow_empty:
             commit_cmd.append("--allow-empty")
         for msg_line in message.splitlines():
             if msg_line:
