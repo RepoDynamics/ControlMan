@@ -99,6 +99,7 @@ class PreCommitHooks:
             message=self._commit_message,
             stage="all",
             amend=self._action == "amend",
+            allow_empty=self._action == "amend",
         )
         self._logger.h3("Run hooks (validation run)")
         results_validate = self._run_hooks()
