@@ -453,6 +453,7 @@ class Git:
         This returns a list of tags ordered by the commit date (newest first).
         Each element is a list itself, containing all tags that point to the same commit.
         """
+        tags_on_branch = self._run(["git", "tag", "--merged"]).splitlines()
         output = self.log(simplify_by_decoration=True, pretty="format:%D")
         tags = []
         for line in output.splitlines():
@@ -461,10 +462,11 @@ class Git:
             for potential_tag in potential_tags:
                 if potential_tag.startswith("tag: "):
                     tag = potential_tag.removeprefix("tag: ")
-                    if not sub_list_added:
-                        tags.append([])
-                        sub_list_added = True
-                    tags[-1].append(tag)
+                    if tag in tags_on_branch:
+                        if not sub_list_added:
+                            tags.append([])
+                            sub_list_added = True
+                        tags[-1].append(tag)
         return tags
 
     def get_latest_version(self, tag_prefix: str, dev_only: bool = False) -> PEP440SemVer | None:
