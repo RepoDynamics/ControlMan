@@ -180,7 +180,7 @@ class Logger:
         return console_msg
 
     @staticmethod
-    def _get_fully_qualified_name_of_original_caller(self, stack_index: int = 3) -> str:
+    def _get_fully_qualified_name_of_original_caller(stack_index: int = 3) -> str:
         stack = inspect.stack()
         # The caller is the second element in the stack list
         caller_frame = stack[stack_index]
