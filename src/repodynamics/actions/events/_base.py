@@ -540,8 +540,8 @@ class EventHandler:
         ref: str = "",
         source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
         version: str = "",
-        max_retries: str = "15",
-        retry_delay: str = "60",
+        retry_sleep_seconds: str = "30",
+        retry_sleep_seconds_total: str = "900",
     ):
         self._output_test.extend(
             self._create_output_package_test(
@@ -550,8 +550,8 @@ class EventHandler:
                 ref=ref,
                 source=source,
                 version=version,
-                max_retries=max_retries,
-                retry_delay=retry_delay,
+                retry_sleep_seconds=retry_sleep_seconds,
+                retry_sleep_seconds_total=retry_sleep_seconds_total,
             )
         )
         return
@@ -650,23 +650,25 @@ class EventHandler:
         ref: str = "",
         source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
         version: str = "",
-        max_retries: str = "15",
-        retry_delay: str = "60",
+        retry_sleep_seconds_total: str = "900",
+        retry_sleep_seconds: str = "30",
     ) -> list[dict]:
         common = {
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
-            "path-tests": ccm_branch["path"]["dir"]["tests"],
+            "path-setup-testsuite": ccm_branch["path"]["dir"]["tests"],
+            "path-setup-package": ".",
+            "testsuite-import-name": ccm_branch["package"]["testsuite_import_name"],
             "package-source": source,
             "package-name": ccm_branch["package"]["name"],
-            "testsuite-import-name": ccm_branch["package"]["testsuite_import_name"],
             "package-version": version,
+            "path-requirements-package": "requirements.txt",
             "path-report-pytest": ccm_branch["path"]["dir"]["local"]["report"]["pytest"],
             "path-report-coverage": ccm_branch["path"]["dir"]["local"]["report"]["coverage"],
             "path-cache-pytest": ccm_branch["path"]["dir"]["local"]["cache"]["pytest"],
             "path-cache-coverage": ccm_branch["path"]["dir"]["local"]["cache"]["coverage"],
-            "max-retries": max_retries,
-            "retry-delay": retry_delay,
+            "retry-sleep-seconds": retry_sleep_seconds,
+            "retry-sleep-seconds-total": retry_sleep_seconds_total,
         }
         out = []
         for github_runner, os in zip(
