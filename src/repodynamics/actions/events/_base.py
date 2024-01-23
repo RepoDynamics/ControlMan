@@ -656,7 +656,7 @@ class EventHandler:
         common = {
             "repository": repository or self._context.target_repo_fullname,
             "ref": ref or self._context.ref_name,
-            "path-setup-testsuite": ccm_branch["path"]["dir"]["tests"],
+            "path-setup-testsuite": f'./{ccm_branch["path"]["dir"]["tests"]}',
             "path-setup-package": ".",
             "testsuite-import-name": ccm_branch["package"]["testsuite_import_name"],
             "package-source": source,
