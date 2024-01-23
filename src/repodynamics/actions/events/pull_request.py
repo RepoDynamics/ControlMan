@@ -5,6 +5,7 @@ from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.pull_request import PullRequestPayload
 from github_contexts.github.enums import ActionType
+import conventional_commits
 
 from repodynamics import meta
 from repodynamics.meta.meta import Meta
@@ -26,7 +27,6 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
-from repodynamics.commit import CommitParser
 from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
 from repodynamics.actions._changelog import ChangelogManager
@@ -497,9 +497,8 @@ class PullRequestEventHandler(EventHandler):
     def _update_changelogs(
         self, ver_dist: str, commit_type: str, commit_title: str, hash_base: str, prerelease: bool = False
     ):
-        parser = CommitParser(
+        parser = conventional_commits.parser.create(
             types=self._ccm_main.get_all_conventional_commit_types(secondary_custom_only=True),
-            logger=self._logger
         )
         changelog_manager = ChangelogManager(
             changelog_metadata=self._ccm_main["changelog"],
@@ -513,7 +512,7 @@ class PullRequestEventHandler(EventHandler):
         )
         tasklist = self._extract_tasklist(body=self._pull.body)
         for task in tasklist:
-            conv_msg = parser.parse(msg=task["summary"])
+            conv_msg = parser.parse(message=task["summary"])
             if conv_msg:
                 group_data = self._ccm_main.get_commit_type_from_conventional_type(conv_type=conv_msg.type)
                 if prerelease:
@@ -525,7 +524,7 @@ class PullRequestEventHandler(EventHandler):
                 changelog_manager.add_change(
                     changelog_id=changelog_id,
                     section_id=group_data.changelog_section_id,
-                    change_title=conv_msg.title,
+                    change_title=conv_msg.description,
                     change_details=task["description"],
                 )
         changelog_manager.write_all_changelogs()

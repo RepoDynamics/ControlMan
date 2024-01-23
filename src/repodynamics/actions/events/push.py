@@ -3,6 +3,7 @@ import shutil
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.push import PushPayload
 from github_contexts.github.enums import RefType, ActionType
+import conventional_commits
 
 from repodynamics.meta import read_from_json_file
 from repodynamics.actions.events._base import EventHandler
@@ -13,12 +14,10 @@ from repodynamics.datatype import (
     BranchType,
     Branch,
     InitCheckAction,
-    CommitMsg,
     TemplateType,
 )
 from repodynamics.meta.meta import Meta
 from repodynamics.version import PEP440SemVer
-from repodynamics.commit import CommitParser
 
 
 class PushEventHandler(EventHandler):
@@ -216,7 +215,7 @@ class PushEventHandler(EventHandler):
                 f"init: Initialize project from RepoDynamics {self._template_name_ver} template"
             )
             head_commit_msg_final = "\n".join(head_commit_msg_lines)
-        commit_msg = CommitParser(types=["init"], logger=self._logger).parse(head_commit_msg_final)
+        commit_msg = conventional_commits.parser.create(types=["init"]).parse(head_commit_msg_final)
         if commit_msg.footer.get("version"):
             version_input = commit_msg.footer["version"]
             try:

@@ -1,3 +1,4 @@
+import conventional_commits.message
 from markitup import html, md
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.schedule import SchedulePayload
@@ -6,7 +7,7 @@ from repodynamics.actions.events._base import EventHandler
 from repodynamics.datatype import TemplateType
 from repodynamics import _util
 from repodynamics.logger import Logger
-from repodynamics.datatype import CommitMsg, InitCheckAction
+from repodynamics.datatype import InitCheckAction
 from repodynamics.meta.meta import Meta
 
 
@@ -158,9 +159,9 @@ class ScheduleEventHandler(EventHandler):
             summary="📝 Removed Announcement Commit Details",
         )
         self._write_web_announcement_file(announcement="", base=True, ccm=self._ccm_main)
-        commit_msg = CommitMsg(
+        commit_msg = conventional_commits.message.create(
             typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
-            title="Remove expired website announcement",
+            description="Remove expired website announcement",
             body=(
                 f"The following announcement made {commit_date_relative} on {commit_date_absolute} "
                 f"was expired after {elapsed_days:.2f} days and thus automatically removed:\n\n"

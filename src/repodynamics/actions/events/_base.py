@@ -8,6 +8,7 @@ from markitup import html, md
 import pylinks
 from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
+import conventional_commits
 
 import repodynamics
 from repodynamics import meta
@@ -15,7 +16,6 @@ from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.manager import MetaManager
 from repodynamics import hook
-from repodynamics.commit import CommitParser
 from repodynamics.version import PEP440SemVer
 from repodynamics.meta.meta import Meta
 from repodynamics.path import RelativePath
@@ -31,7 +31,6 @@ from repodynamics.datatype import (
     Branch,
     BranchType,
     Commit,
-    CommitMsg,
     Label,
     RepoFileType,
     PrimaryActionCommitType,
@@ -196,9 +195,9 @@ class EventHandler:
         commit_hash = None
         if action not in [InitCheckAction.FAIL, InitCheckAction.REPORT] and meta_changes_any:
             meta.apply_changes()
-            commit_msg = CommitMsg(
+            commit_msg = conventional_commits.message.create(
                 typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
-                title="Sync dynamic files",
+                description="Sync dynamic files",
             )
             commit_hash_before = git.commit_hash_normal()
             commit_hash_after = git.commit(message=str(commit_msg), stage="all")
@@ -289,9 +288,9 @@ class EventHandler:
             else (InitCheckAction.REPORT if action == InitCheckAction.FAIL else InitCheckAction.COMMIT)
         )
         commit_msg = (
-            CommitMsg(
+            conventional_commits.message.create(
                 typ=self._ccm_main["commit"]["secondary_action"]["auto-update"]["type"],
-                title="Apply automatic fixes made by workflow hooks",
+                description="Apply automatic fixes made by workflow hooks",
             )
             if action in [InitCheckAction.COMMIT, InitCheckAction.PULL]
             else ""
@@ -1119,13 +1118,12 @@ class EventHandler:
         git = self._git_base if base else self._git_head
         commits = git.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
         self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
-        parser = CommitParser(
+        parser = conventional_commits.parser.create(
             types=self._ccm_main.get_all_conventional_commit_types(secondary_custom_only=False),
-            logger=self._logger
         )
         parsed_commits = []
         for commit in commits:
-            conv_msg = parser.parse(msg=commit["msg"])
+            conv_msg = parser.parse(message=commit["msg"])
             if not conv_msg:
                 parsed_commits.append(Commit(**commit, group_data=NonConventionalCommit()))
             else:

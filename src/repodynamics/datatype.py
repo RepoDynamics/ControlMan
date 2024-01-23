@@ -2,6 +2,9 @@ import json
 from typing import NamedTuple, Any
 from pathlib import Path
 from enum import Enum
+
+import conventional_commits
+
 from repodynamics.version import PEP440SemVer
 
 
@@ -107,71 +110,6 @@ class Diff(NamedTuple):
     after: str
     before: str = ""
     path_before: Path | None = None
-
-
-class CommitMsg:
-    def __init__(
-        self,
-        typ: str,
-        title: str,
-        body: str | None = None,
-        scope: str | tuple[str] | list[str] | None = None,
-        footer: dict[str, Any] | None = None,
-    ):
-        for arg, arg_name in ((typ, "typ"), (title, "title")):
-            if not isinstance(arg, str):
-                raise TypeError(f"Argument '{arg_name}' must be a string, but got {type(arg)}: {arg}")
-            if "\n" in arg:
-                raise ValueError(f'Argument `{arg_name}` must not contain a newline, but got: """{arg}"""')
-            if ":" in arg:
-                raise ValueError(f'Argument `{arg_name}` must not contain a colon, but got: """{arg}"""')
-        self.type = typ
-        self.title = title
-        if isinstance(body, str):
-            self.body = body.strip()
-        elif body is None:
-            self.body = ""
-        else:
-            raise TypeError(f"Argument 'body' must be a string or None, but got {type(body)}: {body}")
-        if scope is None:
-            scope = []
-        if isinstance(scope, (list, tuple)):
-            self.scope = [str(s) for s in scope]
-        elif isinstance(scope, str):
-            self.scope = [scope]
-        else:
-            raise TypeError(
-                f"Argument 'scope' must be a string or list/tuple of strings, but got {type(scope)}: {scope}"
-            )
-        if footer is None:
-            self.footer = {}
-        elif isinstance(footer, dict):
-            self.footer = {str(key): value for key, value in footer.items()}
-        else:
-            raise TypeError(f"Argument 'footer' must be a dict, but got {type(footer)}: {footer}")
-        return
-
-    @property
-    def summary(self):
-        scope = f"({', '.join(self.scope)})" if self.scope else ""
-        return f"{self.type}{scope}: {self.title}"
-
-    def __str__(self):
-        commit = self.summary
-        if self.body:
-            commit += f"\n\n{self.body}"
-        if self.footer:
-            commit += "\n\n-----------\n\n"
-            for key, values in self.footer.items():
-                commit += f"{key}: {json.dumps(values)}\n"
-                # if isinstance(values, str):
-                #     values = [values]
-                # for value in values:
-                #     commit += f"{key}: {value}\n"
-        return commit.strip() + "\n"
-
-    def __repr__(self):
-        return f"CommitMsg(typ='{self.type}', scope={self.scope}, title='{self.title}', body='{self.body}', footer={self.footer})"
 
 
 class CommitGroup(Enum):
@@ -311,7 +249,7 @@ class Commit(NamedTuple):
     author: str
     date: str
     files: list[str]
-    msg: str | CommitMsg
+    msg: str | conventional_commits.message.ConventionalCommitMessage
     group_data: (
         PrimaryActionCommit
         | PrimaryCustomCommit
