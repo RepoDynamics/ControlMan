@@ -336,7 +336,7 @@ class MetaReader:
         return _util.dict.read(path=source, schema=schema, raise_empty=False, logger=self.logger, **kwargs)
 
     def _validate_datafile(self, source: dict, schema: str):
-        return _util.dict.validate_schema(source=source, schema=self._get_schema(schema), logger=self.logger)
+        return pyserials.validate.jsonschema(data=source, schema=self._get_schema(schema), validator=jsonschema.Draft202012Validator, fill_defaults=True)
 
     def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
