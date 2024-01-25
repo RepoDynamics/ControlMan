@@ -8,10 +8,12 @@ from ruamel.yaml import YAML, YAMLError
 import json
 import hashlib
 import traceback
+import pyserials
+from actionman.log import Logger
+
 from pylinks import api
 from pylinks.exceptions import WebAPIPersistentStatusCodeError
 from repodynamics import _util
-from repodynamics.logger import Logger
 from repodynamics.path import PathFinder
 import tomlkit
 
@@ -19,7 +21,7 @@ import tomlkit
 class MetaReader:
     def __init__(self, paths: PathFinder, github_token: Optional[str] = None, logger: Logger = None):
         self.logger = logger or Logger()
-        self.logger.h2("Process Meta Source Files")
+        self.logger.section("Process Meta Source Files")
         self._github_token = github_token
         self._pathfinder = paths
         self._local_config = self._get_local_config()
@@ -185,9 +187,17 @@ class MetaReader:
         metadata = {}
         for entry in ("credits", "intro", "license"):
             section = self._read_single_file(rel_path=f"project/{entry}")
-            self._recursive_update(
-                source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
-            )
+            try:
+                log = pyserials.update.dict_from_addon(
+                    data=metadata,
+                    addon=section,
+                    append_list=False,
+                    append_dict=True,
+                    raise_duplicates=True,
+                )
+            except pyserials.exception.DictUpdateError as e:
+                # TODO
+                pass
         for entry in (
             "custom/custom",
             "dev/branch",
@@ -207,9 +217,17 @@ class MetaReader:
             "ui/web",
         ):
             section = {entry.split("/")[1]: self._read_single_file(rel_path=entry)}
-            self._recursive_update(
-                source=metadata, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
-            )
+            try:
+                log = pyserials.update.dict_from_addon(
+                    data=metadata,
+                    addon=section,
+                    append_list=False,
+                    append_dict=True,
+                    raise_duplicates=True,
+                )
+            except pyserials.exception.DictUpdateError as e:
+                # TODO
+                pass
         package = {}
         if (self._pathfinder.dir_meta / "package_python").is_dir():
             package["type"] = "python"
@@ -222,9 +240,17 @@ class MetaReader:
                 "package_python/requirements",
             ):
                 section = self._read_single_file(rel_path=entry)
-                self._recursive_update(
-                    source=package, add=section, append_list=False, append_dict=True, raise_on_duplicated=True
-                )
+                try:
+                    log = pyserials.update.dict_from_addon(
+                        data=package,
+                        addon=section,
+                        append_list=False,
+                        append_dict=True,
+                        raise_duplicates=True,
+                    )
+                except pyserials.exception.DictUpdateError as e:
+                    # TODO
+                    pass
             package["pyproject"] = self._read_package_python_pyproject()
             package["pyproject_tests"] = self._read_single_file(rel_path="package_python/build_tests", ext="toml")
         else:
@@ -240,13 +266,17 @@ class MetaReader:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
                 extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
                 section_extension = self._read_datafile(extionsion_path, raise_missing=True)
-                self._recursive_update(
-                    source=section,
-                    add=section_extension,
-                    append_list=extension["append_list"],
-                    append_dict=extension["append_dict"],
-                    raise_on_duplicated=extension["raise_duplicate"],
-                )
+                try:
+                    log = pyserials.update.dict_from_addon(
+                        data=section,
+                        addon=section_extension,
+                        append_list=extension["append_list"],
+                        append_dict=extension["append_dict"],
+                        raise_duplicates=extension["raise_duplicate"],
+                    )
+                except pyserials.exception.DictUpdateError as e:
+                    # TODO
+                    pass
         self._validate_datafile(source=section, schema=rel_path)
         return section
 
@@ -259,9 +289,17 @@ class MetaReader:
             config = dict()
             for path_file in paths_config_files:
                 config_section = self._read_datafile(path_file)
-                self._recursive_update(
-                    config, config_section, append_list=True, append_dict=True, raise_on_duplicated=True
-                )
+                try:
+                    log = pyserials.update.dict_from_addon(
+                        data=config,
+                        addon=config_section,
+                        append_list=True,
+                        append_dict=True,
+                        raise_duplicates=True,
+                    )
+                except pyserials.exception.DictUpdateError as e:
+                    # TODO
+                    pass
             return config
 
         build = self._read_single_file(rel_path="package_python/build", ext="toml")
@@ -269,15 +307,29 @@ class MetaReader:
         for idx, extension in enumerate(self._extensions):
             if extension["type"] == "package_python/tools":
                 extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
-                self._recursive_update(
-                    tools,
-                    extension_config,
-                    append_list=extension["append_list"],
-                    append_dict=extension["append_dict"],
-                    raise_on_duplicated=extension["raise_duplicate"],
-                )
+                try:
+                    log = pyserials.update.dict_from_addon(
+                        data=tools,
+                        addon=extension_config,
+                        append_list=extension["append_list"],
+                        append_dict=extension["append_dict"],
+                        raise_duplicates=extension["raise_duplicate"],
+                    )
+                except pyserials.exception.DictUpdateError as e:
+                    # TODO
+                    pass
         self._validate_datafile(source=tools, schema="package_python/tools")
-        self._recursive_update(build, tools, raise_on_duplicated=True)
+        try:
+            log = pyserials.update.dict_from_addon(
+                data=build,
+                addon=tools,
+                append_list=True,
+                append_dict=True,
+                raise_duplicates=True,
+            )
+        except pyserials.exception.DictUpdateError as e:
+            # TODO
+            pass
         return build
 
     def _read_datafile(self, source: Path, schema: Path = None, **kwargs):
@@ -285,10 +337,6 @@ class MetaReader:
 
     def _validate_datafile(self, source: dict, schema: str):
         return _util.dict.validate_schema(source=source, schema=self._get_schema(schema), logger=self.logger)
-
-    @staticmethod
-    def _get_schema(schema: str):
-        return _util.file.datafile(f"schema/{schema}.yaml")
 
     def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
         exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
@@ -298,24 +346,12 @@ class MetaReader:
             return True
         return False
 
+    @staticmethod
+    def _get_schema(rel_path: str) -> dict:
+        schema_path = _util.file.datafile(f"schema/{rel_path}.yaml")
+        schema = pyserials.read.yaml_from_file(path=schema_path, safe=True)
+        return schema
+
     @property
     def _now(self) -> str:
         return datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
-
-    def _recursive_update(
-        self,
-        source: dict,
-        add: dict,
-        append_list: bool = True,
-        append_dict: bool = True,
-        raise_on_duplicated: bool = False,
-    ):
-        _util.dict.update_recursive(
-            source=source,
-            add=add,
-            append_list=append_list,
-            append_dict=append_dict,
-            raise_on_duplicated=raise_on_duplicated,
-            logger=self.logger,
-        )
-        return
