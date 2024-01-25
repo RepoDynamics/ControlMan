@@ -13,6 +13,7 @@ import textwrap
 # Non-standard libraries
 import tomlkit
 import tomlkit.items
+import pyserials
 
 from repodynamics.logger import Logger
 from repodynamics.meta.reader import MetaReader
@@ -277,7 +278,7 @@ __version__ = __version_details__["version"]"""
         project = {}
         for key, (dtype, val) in data_type.items():
             if val:
-                project[key] = _util.toml.format_object(obj=val, toml_type=dtype)
+                project[key] = pyserials.format.to_toml_object(data=val, toml_type=dtype)
         return project
 
     @property
