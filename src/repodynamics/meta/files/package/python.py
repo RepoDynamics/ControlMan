@@ -141,7 +141,9 @@ class PythonPackageFileGenerator:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
                 filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
-                text = _util.dict.fill_template(filepath.read_text(), metadata=self._ccm.as_dict)
+                text = pyserials.update.templated_data_from_source(
+                    templated_data=filepath.read_text(), source_data=self._ccm.as_dict
+                )
                 path = self._path.python_file(
                     (test_package_dir.path / testsuite_filename).with_suffix(".py")
                 )

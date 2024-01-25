@@ -10,6 +10,7 @@ import sys
 # Non-standard libraries
 import pylinks
 import trove_classifiers as _trove_classifiers
+import pyserials
 
 from repodynamics.meta.reader import MetaReader
 from repodynamics import git
@@ -134,7 +135,9 @@ class MetadataGenerator:
             package["trove_classifiers"] = sorted(trove_classifiers)
 
         self._metadata["label"]["compiled"] = self.repo_labels()
-        self._metadata = _util.dict.fill_template(self._metadata, self._metadata)
+        self._metadata = pyserials.update.templated_data_from_source(
+            templated_data=self._metadata, source_data=self._metadata
+        )
 
         self._metadata["maintainer"]["list"] = self._maintainers()
 
@@ -558,8 +561,9 @@ class MetadataGenerator:
 
     def _package_testsuite_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.testsuite_name")
-        testsuite_name = _util.dict.fill_template(
-            self._metadata["package"]["pyproject_tests"]["project"]["name"], self._metadata
+        testsuite_name = pyserials.update.templated_data_from_source(
+            templated_data=self._metadata["package"]["pyproject_tests"]["project"]["name"],
+            source_data=self._metadata
         )
         import_name = testsuite_name.replace("-", "_").lower()
         self._logger.success(f"package.testsuite_name: {testsuite_name}")

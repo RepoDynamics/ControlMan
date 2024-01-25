@@ -93,65 +93,6 @@ def _read_toml(path: str | Path, logger: Optional[Logger] = None):
     return content
 
 
-def fill_template(templated_data: dict | list | str | bool | int | float, metadata: dict):
-    return _DictFiller(templated_data=templated_data, metadata=metadata).fill()
-
-
-class _DictFiller:
-    def __init__(self, templated_data: dict | list | str | bool | int | float, metadata: dict):
-        self._data = templated_data
-        self._meta = metadata
-        return
-
-    def fill(self):
-        return self._recursive_subst(self._data)
-
-    def _recursive_subst(self, value):
-        if isinstance(value, str):
-            match_whole_str = re.match(r"^\${{([\w\.\:\-\[\] ]+)}}$", value)
-            if match_whole_str:
-                return self._substitute_val(match_whole_str.group(1))
-            return re.sub(r"\${{([\w\.\:\-\[\] ]+?)}}", lambda x: str(self._substitute_val(x.group(1))), value)
-        if isinstance(value, list):
-            return [self._recursive_subst(elem) for elem in value]
-        elif isinstance(value, dict):
-            new_dict = {}
-            for key, val in value.items():
-                key_filled = self._recursive_subst(key)
-                new_dict[key_filled] = self._recursive_subst(val)
-            return new_dict
-        return value
-
-    def _substitute_val(self, match):
-        def recursive_retrieve(obj, address):
-            if len(address) == 0:
-                return self._recursive_subst(obj)
-            curr_add = address.pop(0)
-            try:
-                next_layer = obj[curr_add]
-            except (TypeError, KeyError, IndexError) as e:
-                try:
-                    next_layer = self._recursive_subst(obj)[curr_add]
-                except (TypeError, KeyError, IndexError) as e2:
-                    raise KeyError(f"Object '{obj}' has no element '{curr_add}'") from e
-            return recursive_retrieve(next_layer, address)
-
-        parsed_address = []
-        for add in match.strip().split("."):
-            name = re.match(r"^([^[]+)", add).group()
-            indices = re.findall(r"\[([^]]+)]", add)
-            parsed_address.append(name)
-            parsed_ind = []
-            for idx in indices:
-                if ":" not in idx:
-                    parsed_ind.append(int(idx))
-                else:
-                    slice_ = [int(i) if i else None for i in idx.split(":")]
-                    parsed_ind.append(slice(*slice_))
-            parsed_address.extend(parsed_ind)
-        return recursive_retrieve(self._meta, address=parsed_address)
-
-
 def extend_with_default(validator_class):
     # https://python-jsonschema.readthedocs.io/en/stable/faq/#why-doesn-t-my-schema-s-default-property-set-the-default-on-my-instance
 
