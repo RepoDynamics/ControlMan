@@ -2,8 +2,9 @@ from typing import Optional
 from pathlib import Path
 import json
 
+from actionman.log import Logger
 
-from repodynamics.logger import Logger
+from repodynamics.control import files
 from repodynamics.control.generator import MetadataGenerator
 from repodynamics.control.reader import MetaReader
 from repodynamics.control.writer import MetaWriter
@@ -13,11 +14,6 @@ from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile, Diff
 from repodynamics.datatype import DynamicFileType
 from repodynamics.version import PEP440SemVer
-from repodynamics.control.files.config import ConfigFileGenerator
-from repodynamics.control.files.health import HealthFileGenerator
-from repodynamics.control.files import package
-from repodynamics.control.files import readme
-from repodynamics.control.files.forms import FormGenerator
 from repodynamics.control.cache import APICacheManager
 
 
@@ -86,33 +82,11 @@ class ControlCenter:
             return self._generated_files
         metadata = self.read_metadata_full()
         self._logger.h2("Generate Files")
-
-        generated_files = [
-            (self.paths.metadata, json.dumps(metadata.as_dict)),
-            (self.paths.license, metadata["license"].get("text", "")),
-        ]
-
-        generated_files += ConfigFileGenerator(
-            metadata=metadata, output_path=self.paths, logger=self._logger
-        ).generate()
-
-        generated_files += FormGenerator(
-            metadata=metadata, output_path=self.paths, logger=self._logger
-        ).generate()
-
-        generated_files += HealthFileGenerator(
-            metadata=metadata, output_path=self.paths, logger=self._logger
-        ).generate()
-
-        generated_files += package.generate(
-            metadata=metadata,
-            paths=self.paths,
+        self._generated_files = files.generate(
+            content_manager=metadata,
+            path_manager=self.paths,
             logger=self._logger,
         )
-
-        generated_files += readme.generate(ccm=metadata, path=self.paths, logger=self._logger)
-
-        self._generated_files = generated_files
         return self._generated_files
 
     def compare_files(
