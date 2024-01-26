@@ -18,6 +18,7 @@ from repodynamics.meta.files.health import HealthFileGenerator
 from repodynamics.meta.files import package
 from repodynamics.meta.files import readme
 from repodynamics.meta.files.forms import FormGenerator
+from repodynamics.meta.cache import APICacheManager
 
 
 class Meta:
@@ -39,6 +40,7 @@ class Meta:
         self._pathfinder = PathFinder(path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
+        self._cache_manager: APICacheManager | None = None
         self._metadata_raw: dict = {}
         self._metadata: MetaManager | None = None
         self._generated_files: list[tuple[DynamicFile, str]] = []
@@ -56,6 +58,10 @@ class Meta:
         if self._metadata_raw:
             return self._metadata_raw
         self._reader = MetaReader(paths=self.paths, github_token=self._github_token, logger=self._logger)
+        self._cache_manager = APICacheManager(
+            path_cachefile=self._pathfinder.file_local_api_cache,
+            retention_days=self._reader.local_config["cache_retention_days"]["api"]
+        )
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
 
@@ -66,6 +72,7 @@ class Meta:
         metadata_dict = MetadataGenerator(
             reader=self._reader,
             output_path=self.paths,
+            api_cache_manager=self._cache_manager,
             ccm_before=self._ccm_before,
             future_versions=self._future_versions,
             logger=self._logger,
