@@ -1,6 +1,6 @@
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.manager import MetaManager
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.logger import Logger
 from repodynamics.control.files.readme.main import ReadmeFileGenerator
 from repodynamics.control.files.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
@@ -13,7 +13,7 @@ _THEME_GENERATOR = {
 
 def generate(
     ccm: MetaManager,
-    path: PathFinder,
+    path: PathManager,
     logger: Logger = None,
 ) -> list[tuple[DynamicFile, str]]:
     out = ReadmeFileGenerator(ccm=ccm, path=path, logger=logger).generate()

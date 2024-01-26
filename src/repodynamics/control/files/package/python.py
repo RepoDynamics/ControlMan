@@ -14,7 +14,7 @@ import tomlkit.items
 import pyserials
 
 from repodynamics.logger import Logger
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.manager import MetaManager
 from repodynamics import file_io
@@ -24,7 +24,7 @@ class PythonPackageFileGenerator:
     def __init__(
         self,
         metadata: MetaManager,
-        paths: PathFinder,
+        paths: PathManager,
         logger: Logger = None,
     ):
         self._logger = logger or Logger()

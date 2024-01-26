@@ -9,13 +9,13 @@ from actionman.log import Logger
 from pylinks import api
 from pylinks.exceptions import WebAPIPersistentStatusCodeError
 
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics import file_io
 from repodynamics import time
 
 
 class MetaReader:
-    def __init__(self, paths: PathFinder, github_token: Optional[str] = None, logger: Logger = None):
+    def __init__(self, paths: PathManager, github_token: Optional[str] = None, logger: Logger = None):
         self.logger = logger or Logger()
         self.logger.section("Process Meta Source Files")
         self._github_token = github_token

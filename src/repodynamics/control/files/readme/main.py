@@ -13,7 +13,7 @@ from markitup import html
 from readme_renderer.markdown import render
 
 import repodynamics
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
 from repodynamics.control.manager import MetaManager
@@ -23,7 +23,7 @@ class ReadmeFileGenerator:
     def __init__(
         self,
         ccm: MetaManager,
-        path: PathFinder,
+        path: PathManager,
         target: Literal["repo", "package"] = "repo",
         logger: Logger | None = None
     ):

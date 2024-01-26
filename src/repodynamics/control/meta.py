@@ -10,7 +10,7 @@ from repodynamics.control.reader import MetaReader
 from repodynamics.control.writer import MetaWriter
 from repodynamics.control.manager import MetaManager
 from repodynamics.control.validator import MetaValidator
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile, Diff
 from repodynamics.datatype import DynamicFileType
 from repodynamics.version import PEP440SemVer
@@ -33,7 +33,7 @@ class ControlCenter:
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
 
-        self._pathfinder = PathFinder(path_root=self._path_root, logger=self._logger)
+        self._pathfinder = PathManager(path_root=self._path_root, logger=self._logger)
 
         self._reader: MetaReader | None = None
         self._cache_manager: APICacheManager | None = None
@@ -47,7 +47,7 @@ class ControlCenter:
         return
 
     @property
-    def paths(self) -> PathFinder:
+    def paths(self) -> PathManager:
         return self._pathfinder
 
     def read_metadata_raw(self) -> dict:

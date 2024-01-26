@@ -38,7 +38,7 @@ class RelativePath:
     dir_github_discussion_template = ".github/DISCUSSION_TEMPLATE/"
 
 
-class PathFinder:
+class PathManager:
     def __init__(self, path_root: str | Path, logger: Logger | None = None):
         self._path_root = Path(path_root).resolve()
         self._logger = logger or Logger()

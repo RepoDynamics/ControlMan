@@ -6,13 +6,13 @@ from ruamel.yaml import YAML
 import pylinks
 from pylinks.exceptions import WebAPIError
 from repodynamics.logger import Logger
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.manager import MetaManager
 
 
 class ConfigFileGenerator:
-    def __init__(self, metadata: MetaManager, output_path: PathFinder, logger: Logger = None):
+    def __init__(self, metadata: MetaManager, output_path: PathManager, logger: Logger = None):
         self._logger = logger or Logger()
         self._meta = metadata
         self._out_db = output_path

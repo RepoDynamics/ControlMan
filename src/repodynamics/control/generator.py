@@ -17,7 +17,7 @@ from repodynamics import git
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
-from repodynamics.path import PathFinder
+from repodynamics.path import PathManager
 from repodynamics.datatype import PrimaryActionCommitType
 from repodynamics.control.manager import MetaManager
 from repodynamics import file_io
@@ -28,7 +28,7 @@ class MetadataGenerator:
     def __init__(
         self,
         reader: MetaReader,
-        output_path: PathFinder,
+        output_path: PathManager,
         api_cache_manager: APICacheManager,
         ccm_before: MetaManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
