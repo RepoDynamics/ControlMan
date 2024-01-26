@@ -1,9 +1,12 @@
 from typing import Literal
 from pathlib import Path
 
+import pyserials
+
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.datatype import DynamicFile, DynamicFileType
+from repodynamics import file_io
 
 
 class RelativePath:
@@ -41,12 +44,12 @@ class PathFinder:
         self._logger = logger or Logger()
         pathfile = self._path_root / RelativePath.file_path_meta
         rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
-        paths = _util.dict.read(
-            path=self._path_root / rel_path_meta / "path.yaml",
-            schema=_util.file.datafile("schema/path.yaml"),
-            raise_empty=False,
-            logger=self._logger,
-        )
+
+        paths = file_io.read_datafile(
+            path_data=self._path_root / rel_path_meta / "path.yaml",
+            relpath_schema="path",
+        )  # TODO: add logging and error handling
+
         paths["dir"]["control"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
