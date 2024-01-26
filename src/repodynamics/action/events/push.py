@@ -16,7 +16,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     TemplateType,
 )
-from repodynamics.control.meta import Meta
+from repodynamics.control.meta import ControlCenter
 from repodynamics.version import PEP440SemVer
 
 
@@ -89,7 +89,7 @@ class PushEventHandler(EventHandler):
 
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
-        meta = Meta(path_root=self._path_root_head, logger=self._logger)
+        meta = ControlCenter(path_root=self._path_root_head, logger=self._logger)
         shutil.rmtree(meta.paths.dir_meta)
         shutil.rmtree(meta.paths.dir_website)
         (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
@@ -160,7 +160,7 @@ class PushEventHandler(EventHandler):
         return self._run_branch_edited_main_normal()
 
     def _run_init_phase(self, version: str = "0.0.0", finish: bool = True):
-        meta = Meta(
+        meta = ControlCenter(
             path_root=self._path_root_head,
             github_token=self._context.token,
             future_versions={self._context.ref_name: version},

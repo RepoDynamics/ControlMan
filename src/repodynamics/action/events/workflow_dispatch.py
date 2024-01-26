@@ -8,7 +8,7 @@ from repodynamics.datatype import (
     Branch,
     BranchType,
 )
-from repodynamics.control.meta import Meta
+from repodynamics.control.meta import ControlCenter
 from repodynamics.action._changelog import ChangelogManager
 
 
@@ -78,7 +78,7 @@ class WorkflowDispatchEventHandler(EventHandler):
         if latest_ver.major != 0:
             self._logger.error("Cannot create first major release: latest version's major is not 0")
             return
-        meta_gen = Meta(
+        meta_gen = ControlCenter(
             path_root=self._path_root_base,
             github_token=self._context.token,
             future_versions={self._context.ref_name: "1.0.0"},

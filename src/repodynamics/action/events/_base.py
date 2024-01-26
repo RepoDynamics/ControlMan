@@ -17,7 +17,7 @@ from repodynamics.git import Git
 from repodynamics.control.manager import MetaManager
 from repodynamics import hook
 from repodynamics.version import PEP440SemVer
-from repodynamics.control.meta import Meta
+from repodynamics.control.meta import ControlCenter
 from repodynamics.path import RelativePath
 from repodynamics.control.datastruct import ControlCenterOptions
 from repodynamics.control.datastruct.dev.branch import (
@@ -167,7 +167,7 @@ class EventHandler:
     def run_event(self) -> None:
         ...
 
-    def _action_meta(self, action: InitCheckAction, meta: Meta, base: bool, branch: Branch) -> str | None:
+    def _action_meta(self, action: InitCheckAction, meta: ControlCenter, base: bool, branch: Branch) -> str | None:
         name = "Meta Sync"
         self._logger.h1(name)
         # if not action:
@@ -749,7 +749,7 @@ class EventHandler:
         )
         return
 
-    def _action_file_change_detector(self, meta: Meta) -> dict[RepoFileType, list[str]]:
+    def _action_file_change_detector(self, meta: ControlCenter) -> dict[RepoFileType, list[str]]:
         name = "File Change Detector"
         self._logger.h1(name)
         change_type_map = {

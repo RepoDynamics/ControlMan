@@ -21,7 +21,7 @@ from repodynamics.control.files.forms import FormGenerator
 from repodynamics.control.cache import APICacheManager
 
 
-class Meta:
+class ControlCenter:
     def __init__(
         self,
         path_root: str | Path = ".",

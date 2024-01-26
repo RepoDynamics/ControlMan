@@ -8,7 +8,7 @@ from repodynamics.datatype import TemplateType
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.datatype import InitCheckAction
-from repodynamics.control.meta import Meta
+from repodynamics.control.meta import ControlCenter
 
 
 class ScheduleEventHandler(EventHandler):
@@ -48,7 +48,7 @@ class ScheduleEventHandler(EventHandler):
 
     def _run_sync(self):
         commit_hash_announce = self._web_announcement_expiry_check()
-        meta = Meta(
+        meta = ControlCenter(
             path_root=self._path_root_base,
             github_token=self._context.token,
             logger=self._logger,

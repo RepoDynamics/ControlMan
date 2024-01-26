@@ -9,7 +9,7 @@ import conventional_commits
 from actionman.log import Logger, LogStatus
 
 from repodynamics import control
-from repodynamics.control.meta import Meta
+from repodynamics.control.meta import ControlCenter
 from repodynamics.control import read_from_json_file
 from repodynamics.action.events._base import EventHandler
 from repodynamics.path import RelativePath
@@ -110,7 +110,7 @@ class PullRequestEventHandler(EventHandler):
             )
         )
         meta_and_hooks_action_type = InitCheckAction.COMMIT if self._payload.internal else InitCheckAction.FAIL
-        meta = Meta(
+        meta = ControlCenter(
             path_root=self._path_root_head,
             github_token=self._context.token,
             ccm_before=self._ccm_main,
@@ -284,7 +284,7 @@ class PullRequestEventHandler(EventHandler):
         # Update the metadata in main branch to reflect the new release
         if next_ver:
             if self._branch_base.type is BranchType.MAIN:
-                meta_gen = Meta(
+                meta_gen = ControlCenter(
                     path_root=self._path_root_head,
                     github_token=self._context.token,
                     ccm_before=self._ccm_main,
@@ -296,7 +296,7 @@ class PullRequestEventHandler(EventHandler):
                 )
             else:
                 self._git_base.checkout(branch=self._payload.repository.default_branch)
-                meta_gen = Meta(
+                meta_gen = ControlCenter(
                     path_root=self._path_root_base,
                     github_token=self._context.token,
                     future_versions={self._branch_base.name: next_ver},
