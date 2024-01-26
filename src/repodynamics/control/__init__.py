@@ -10,7 +10,6 @@ from repodynamics.control.validator import MetaValidator
 from repodynamics.control import files
 from repodynamics.path import RelativePath
 from repodynamics.control.writer import MetaWriter
-from repodynamics import _util
 from repodynamics.git import Git
 from repodynamics import file_io
 
