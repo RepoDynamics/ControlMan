@@ -5,9 +5,8 @@ from github_contexts.github.payloads.push import PushPayload
 from github_contexts.github.enums import RefType, ActionType
 import conventional_commits
 
-from repodynamics.control import read_from_json_file
 from repodynamics.action.events._base import EventHandler
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.manager import MetaManager, from_json_file
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     EventType,
@@ -149,7 +148,7 @@ class PushEventHandler(EventHandler):
                 return self._run_first_release()
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
-        self._ccm_main_before = read_from_json_file(
+        self._ccm_main_before = from_json_file(
             path_root=self._path_root_base,
             commit_hash=self._context.hash_before,
             git=self._git_base,
@@ -186,7 +185,7 @@ class PushEventHandler(EventHandler):
             latest_hash = self._git_head.push() if hash_hooks or hash_meta else self._context.hash_after
             self._config_repo_branch_names(
                 ccs_new=self._ccm_main.settings,
-                ccs_old=read_from_json_file(
+                ccs_old=from_json_file(
                     path_root=self._path_root_head,
                     commit_hash=self._context.hash_before,
                     git=self._git_head,
@@ -248,7 +247,7 @@ class PushEventHandler(EventHandler):
         self._tag_version(ver=version, msg=f"Release version {version}", base=False)
         self._config_repo_branch_names(
             ccs_new=self._ccm_main.settings,
-            ccs_old=read_from_json_file(
+            ccs_old=from_json_file(
                 path_root=self._path_root_head,
                 commit_hash=self._context.hash_before,
                 git=self._git_head,

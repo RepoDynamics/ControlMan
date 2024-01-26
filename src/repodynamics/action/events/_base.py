@@ -12,6 +12,7 @@ import conventional_commits
 from actionman.log import Logger
 
 import repodynamics
+import repodynamics.control.manager
 from repodynamics import control
 from repodynamics.git import Git
 from repodynamics.control.manager import MetaManager
@@ -70,7 +71,7 @@ class EventHandler:
         self._path_root_head = Path(path_root_head)
         self._logger = logger
 
-        self._ccm_main: MetaManager | None = control.read_from_json_file(
+        self._ccm_main: MetaManager | None = repodynamics.control.manager.from_json_file(
             path_root=self._path_root_base, logger=logger
         )
         repo_user = self._context.repository_owner
