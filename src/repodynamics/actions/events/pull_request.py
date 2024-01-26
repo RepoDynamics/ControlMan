@@ -6,6 +6,7 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.pull_request import PullRequestPayload
 from github_contexts.github.enums import ActionType
 import conventional_commits
+from actionman.log import Logger, LogStatus
 
 from repodynamics import meta
 from repodynamics.meta.meta import Meta
@@ -27,7 +28,6 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
-from repodynamics.logger import Logger
 from repodynamics.meta.manager import MetaManager
 from repodynamics.actions._changelog import ChangelogManager
 
@@ -40,8 +40,8 @@ class PullRequestEventHandler(EventHandler):
         context_manager: GitHubContext,
         admin_token: str,
         path_root_base: str,
-        path_root_head: str | None = None,
-        logger: Logger | None = None,
+        path_root_head: str,
+        logger: Logger,
     ):
         super().__init__(
             template_type=template_type,
@@ -54,7 +54,19 @@ class PullRequestEventHandler(EventHandler):
         self._payload: PullRequestPayload = self._context.event
         self._pull = self._payload.pull_request
         self._branch_base = self.resolve_branch(self._context.base_ref)
+        self._logger.entry(
+            LogStatus.PASS,
+            "Resolve base branch",
+            f"Resolved base branch as a branch of type '{self._branch_base.type.value}'.",
+            str(self._branch_base),
+        )
         self._branch_head = self.resolve_branch(self._context.head_ref)
+        self._logger.entry(
+            LogStatus.PASS,
+            "Resolve head branch",
+            f"Resolved head branch as a branch of type '{self._branch_head.type.value}'.",
+            str(self._branch_head),
+        )
         self._git_base.fetch_remote_branches_by_name(branch_names=self._context.base_ref)
         self._git_base.checkout(branch=self._context.base_ref)
         self._primary_commit_type: PrimaryActionCommit | PrimaryCustomCommit | None = None
