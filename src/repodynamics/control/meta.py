@@ -1,13 +1,12 @@
 from typing import Optional
 from pathlib import Path
-import json
 
 from actionman.log import Logger
 
 from repodynamics.control import files
 from repodynamics.control.generator import MetadataGenerator
 from repodynamics.control.reader import MetaReader
-from repodynamics.control.writer import MetaWriter
+from repodynamics.control.files.writer import MetaWriter
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.control.validator import MetaValidator
 from repodynamics.path import PathManager
