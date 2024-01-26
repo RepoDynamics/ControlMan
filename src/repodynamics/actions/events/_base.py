@@ -9,10 +9,10 @@ import pylinks
 from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
 import conventional_commits
+from actionman.log import Logger
 
 import repodynamics
 from repodynamics import meta
-from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics.meta.manager import MetaManager
 from repodynamics import hook
@@ -61,14 +61,14 @@ class EventHandler:
         context_manager: GitHubContext,
         admin_token: str,
         path_root_base: str,
-        path_root_head: str | None = None,
-        logger: Logger | None = None
+        path_root_head: str,
+        logger: Logger,
     ):
         self._template_type = template_type
         self._context = context_manager
         self._path_root_base = Path(path_root_base)
         self._path_root_head = Path(path_root_head)
-        self._logger = logger or Logger()
+        self._logger = logger
 
         self._ccm_main: MetaManager | None = meta.read_from_json_file(
             path_root=self._path_root_base, logger=logger
