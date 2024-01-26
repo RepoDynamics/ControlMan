@@ -3,8 +3,8 @@ from typing import Literal, Optional
 from pathlib import Path
 import re
 from contextlib import contextmanager
+from actionman.log import Logger
 
-from repodynamics.logger import Logger
 from repodynamics import _util
 from repodynamics.version import PEP440SemVer
 
