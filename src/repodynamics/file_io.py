@@ -43,14 +43,19 @@ def read_datafile(
                     f"Invalid datafile.", f"Expected a dict, but '{path_data}' had:\n{json.dumps(content, indent=3)}"
                 )
     if relpath_schema:
-        pyserials.validate.jsonschema(
-            data=content,
-            schema=get_schema(rel_path=relpath_schema),
-            validator=jsonschema.Draft202012Validator,
-            fill_defaults=True,
-        )
+        validate_data(data=content, schema_relpath=relpath_schema)
     logger.success(f"Data file successfully read from '{path_data}'", json.dumps(content, indent=3))
     return content
+
+
+def validate_data(data: dict | list, schema_relpath: str) -> None:
+    pyserials.validate.jsonschema(
+        data=data,
+        schema=get_schema(rel_path=schema_relpath),
+        validator=jsonschema.Draft202012Validator,
+        fill_defaults=True,
+    )
+    return
 
 
 def get_schema(rel_path: str) -> dict:
