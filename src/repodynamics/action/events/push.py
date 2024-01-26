@@ -6,7 +6,7 @@ from github_contexts.github.enums import RefType, ActionType
 import conventional_commits
 
 from repodynamics.action.events._base import EventHandler
-from repodynamics.control.manager import MetaManager, from_json_file
+from repodynamics.control.content import ControlCenterContentManager, from_json_file
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     EventType,
@@ -39,7 +39,7 @@ class PushEventHandler(EventHandler):
         )
         self._payload: PushPayload = self._context.event
 
-        self._ccm_main_before: MetaManager | None = None
+        self._ccm_main_before: ControlCenterContentManager | None = None
         return
 
     def run_event(self):

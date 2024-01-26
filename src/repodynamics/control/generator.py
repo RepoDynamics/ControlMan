@@ -19,7 +19,7 @@ from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathManager
 from repodynamics.datatype import PrimaryActionCommitType
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics import file_io
 from repodynamics.control.cache import APICacheManager
 
@@ -30,7 +30,7 @@ class MetadataGenerator:
         reader: MetaReader,
         output_path: PathManager,
         api_cache_manager: APICacheManager,
-        ccm_before: MetaManager | dict | None = None,
+        ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
@@ -46,7 +46,7 @@ class MetadataGenerator:
         self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
         self._metadata = copy.deepcopy(reader.metadata)
-        self._meta = MetaManager(self._metadata)
+        self._meta = ControlCenterContentManager(self._metadata)
         self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
         return

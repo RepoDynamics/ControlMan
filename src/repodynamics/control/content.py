@@ -25,7 +25,7 @@ from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 
 
-class MetaManager:
+class ControlCenterContentManager:
     def __init__(self, options: dict):
         self._dict = options
         self._options = ControlCenterSettings(options)
@@ -501,7 +501,7 @@ class MetaManager:
 
 def from_json_file(
     path_root: str | Path = ".", commit_hash: str = "", git: Git | None = None, logger: Logger | None = None
-) -> MetaManager | None:
+) -> ControlCenterContentManager | None:
     logger = logger or Logger()
     path_root = Path(path_root).resolve()
     if commit_hash:
@@ -516,15 +516,15 @@ def from_json_file(
     metadata = file_io.read_datafile(path_data=path_json)  # TODO: add logging and error handling
     if not metadata:
         return None
-    meta_manager = MetaManager(options=metadata)
+    meta_manager = ControlCenterContentManager(options=metadata)
     MetaValidator(metadata=meta_manager, logger=logger).validate()
     return meta_manager
 
 
-def from_json_string(content: str, logger: Logger | None = None) -> MetaManager:
+def from_json_string(content: str, logger: Logger | None = None) -> ControlCenterContentManager:
     logger = logger or Logger()
     metadata = json.loads(content)
-    meta_manager = MetaManager(options=metadata)
+    meta_manager = ControlCenterContentManager(options=metadata)
     MetaValidator(metadata=meta_manager, logger=logger).validate()
     return meta_manager
 

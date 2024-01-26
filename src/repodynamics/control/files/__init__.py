@@ -3,7 +3,7 @@ import json
 from actionman.log import Logger
 
 from repodynamics.datatype import DynamicFile
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
 from repodynamics.control.files import package
 from repodynamics.control.files import readme
@@ -13,7 +13,7 @@ from repodynamics.control.files.health import HealthFileGenerator
 
 
 def generate(
-    content_manager: MetaManager,
+    content_manager: ControlCenterContentManager,
     path_manager: PathManager,
     logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:

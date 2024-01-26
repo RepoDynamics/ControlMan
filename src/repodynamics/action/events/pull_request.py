@@ -8,7 +8,7 @@ from github_contexts.github.enums import ActionType
 import conventional_commits
 from actionman.log import Logger, LogStatus
 
-import repodynamics.control.manager
+import repodynamics.control.content
 from repodynamics import control
 from repodynamics.control.meta import ControlCenter
 from repodynamics.action.events._base import EventHandler
@@ -28,7 +28,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
-from repodynamics.control.manager import MetaManager, from_json_file
+from repodynamics.control.content import ControlCenterContentManager, from_json_file
 from repodynamics.action._changelog import ChangelogManager
 
 

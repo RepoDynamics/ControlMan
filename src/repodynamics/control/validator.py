@@ -1,11 +1,11 @@
 import re
 
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.logger import Logger
 
 
 class MetaValidator:
-    def __init__(self, metadata: MetaManager, logger: Logger = None):
+    def __init__(self, metadata: ControlCenterContentManager, logger: Logger = None):
         self._meta = metadata
         self._logger = logger or Logger()
         return

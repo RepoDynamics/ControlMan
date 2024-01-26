@@ -12,10 +12,10 @@ import conventional_commits
 from actionman.log import Logger
 
 import repodynamics
-import repodynamics.control.manager
+import repodynamics.control.content
 from repodynamics import control
 from repodynamics.git import Git
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics import hook
 from repodynamics.version import PEP440SemVer
 from repodynamics.control.meta import ControlCenter
@@ -71,7 +71,7 @@ class EventHandler:
         self._path_root_head = Path(path_root_head)
         self._logger = logger
 
-        self._ccm_main: MetaManager | None = repodynamics.control.manager.from_json_file(
+        self._ccm_main: ControlCenterContentManager | None = repodynamics.control.manager.from_json_file(
             path_root=self._path_root_base, logger=logger
         )
         repo_user = self._context.repository_owner
@@ -427,7 +427,7 @@ class EventHandler:
 
     def _set_output(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         repository: str = "",
         ref: str = "",
         ref_before: str = "",
@@ -493,7 +493,7 @@ class EventHandler:
 
     def _set_output_website(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         repository: str = "",
         ref: str = "",
         deploy: bool = False,
@@ -511,7 +511,7 @@ class EventHandler:
 
     def _set_output_lint(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         repository: str = "",
         ref: str = "",
         ref_before: str = "",
@@ -535,7 +535,7 @@ class EventHandler:
 
     def _set_output_package_test(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         repository: str = "",
         ref: str = "",
         source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
@@ -558,7 +558,7 @@ class EventHandler:
 
     def _set_output_package_build_and_publish(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         version: str,
         repository: str = "",
         ref: str = "",
@@ -645,7 +645,7 @@ class EventHandler:
 
     def _create_output_package_test(
         self,
-        ccm_branch: MetaManager,
+        ccm_branch: ControlCenterContentManager,
         repository: str = "",
         ref: str = "",
         source: Literal["GitHub", "PyPI", "TestPyPI"] = "GitHub",
@@ -1237,12 +1237,12 @@ class EventHandler:
         dev_branch_prefix = self._ccm_main.settings.dev.branch.development.prefix
         return f"{dev_branch_prefix}{issue_nr}/{base_branch_name}/{task_nr}"
 
-    def _read_web_announcement_file(self, base: bool, ccm: MetaManager) -> str | None:
+    def _read_web_announcement_file(self, base: bool, ccm: ControlCenterContentManager) -> str | None:
         path_root = self._path_root_base if base else self._path_root_head
         path = path_root / ccm["path"]["file"]["website_announcement"]
         return path.read_text() if path.is_file() else None
 
-    def _write_web_announcement_file(self, announcement: str, base: bool, ccm: MetaManager) -> None:
+    def _write_web_announcement_file(self, announcement: str, base: bool, ccm: ControlCenterContentManager) -> None:
         if announcement:
             announcement = f"{announcement.strip()}\n"
         path_root = self._path_root_base if base else self._path_root_head

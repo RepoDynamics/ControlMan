@@ -8,7 +8,7 @@ from repodynamics.control import files
 from repodynamics.control.generator import MetadataGenerator
 from repodynamics.control.reader import MetaReader
 from repodynamics.control.writer import MetaWriter
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.control.validator import MetaValidator
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile, Diff
@@ -22,7 +22,7 @@ class ControlCenter:
         self,
         path_root: str | Path = ".",
         github_token: Optional[str] = None,
-        ccm_before: MetaManager | dict | None = None,
+        ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Optional[Logger] = None,
     ):
@@ -38,7 +38,7 @@ class ControlCenter:
         self._reader: MetaReader | None = None
         self._cache_manager: APICacheManager | None = None
         self._metadata_raw: dict = {}
-        self._metadata: MetaManager | None = None
+        self._metadata: ControlCenterContentManager | None = None
         self._generated_files: list[tuple[DynamicFile, str]] = []
         self._writer: MetaWriter | None = None
         self._results: list[tuple[DynamicFile, Diff]] = []
@@ -61,7 +61,7 @@ class ControlCenter:
         self._metadata_raw = self._reader.metadata
         return self._metadata_raw
 
-    def read_metadata_full(self) -> MetaManager:
+    def read_metadata_full(self) -> ControlCenterContentManager:
         if self._metadata:
             return self._metadata
         self.read_metadata_raw()
@@ -73,7 +73,7 @@ class ControlCenter:
             future_versions=self._future_versions,
             logger=self._logger,
         ).generate()
-        self._metadata = MetaManager(options=metadata_dict)
+        self._metadata = ControlCenterContentManager(options=metadata_dict)
         MetaValidator(metadata=self._metadata, logger=self._logger).validate()
         return self._metadata
 

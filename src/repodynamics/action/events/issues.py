@@ -8,7 +8,7 @@ from github_contexts.github.enums import ActionType
 from actionman.log import Logger
 
 from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.action.events._base import EventHandler
 from repodynamics.control.files.forms import FormGenerator
 

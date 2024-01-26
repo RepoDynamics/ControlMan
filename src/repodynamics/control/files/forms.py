@@ -5,11 +5,11 @@ from ruamel.yaml import YAML
 from repodynamics.logger import Logger
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 
 
 class FormGenerator:
-    def __init__(self, metadata: MetaManager, output_path: PathManager, logger: Logger = None):
+    def __init__(self, metadata: ControlCenterContentManager, output_path: PathManager, logger: Logger = None):
         self._logger = logger or Logger()
         self._out_db = output_path
         self._meta = metadata

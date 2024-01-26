@@ -16,14 +16,14 @@ import pyserials
 from repodynamics.logger import Logger
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 from repodynamics import file_io
 
 
 class PythonPackageFileGenerator:
     def __init__(
         self,
-        metadata: MetaManager,
+        metadata: ControlCenterContentManager,
         paths: PathManager,
         logger: Logger = None,
     ):

@@ -16,13 +16,13 @@ import repodynamics
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
-from repodynamics.control.manager import MetaManager
+from repodynamics.control.content import ControlCenterContentManager
 
 
 class ReadmeFileGenerator:
     def __init__(
         self,
-        ccm: MetaManager,
+        ccm: ControlCenterContentManager,
         path: PathManager,
         target: Literal["repo", "package"] = "repo",
         logger: Logger | None = None
