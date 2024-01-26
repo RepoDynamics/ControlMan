@@ -6,9 +6,9 @@ from github_contexts.github.payloads.issue_comment import IssueCommentPayload
 from github_contexts.github.enums import ActionType
 from actionman.log import Logger
 
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand, BranchType
-from repodynamics.actions import _helpers
+from repodynamics.action import _helpers
 
 
 class IssueCommentEventHandler(EventHandler):

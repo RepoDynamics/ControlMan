@@ -9,7 +9,7 @@ from actionman.log import Logger
 
 from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
 from repodynamics.meta.manager import MetaManager
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.meta.files.forms import FormGenerator
 
 

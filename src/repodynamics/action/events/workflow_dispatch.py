@@ -1,7 +1,7 @@
 from github_contexts import GitHubContext
 
 from repodynamics.datatype import WorkflowDispatchInput
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.datatype import InitCheckAction, TemplateType
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
@@ -9,7 +9,7 @@ from repodynamics.datatype import (
     BranchType,
 )
 from repodynamics.meta.meta import Meta
-from repodynamics.actions._changelog import ChangelogManager
+from repodynamics.action._changelog import ChangelogManager
 
 
 class WorkflowDispatchEventHandler(EventHandler):

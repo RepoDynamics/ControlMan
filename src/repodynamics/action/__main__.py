@@ -5,13 +5,13 @@ import github_contexts
 from github_contexts.github.enums import EventType
 import actionman
 
-from repodynamics.actions.events.issue_comment import IssueCommentEventHandler
-from repodynamics.actions.events.issues import IssuesEventHandler
-from repodynamics.actions.events.pull_request import PullRequestEventHandler
-from repodynamics.actions.events.pull_request_target import PullRequestTargetEventHandler
-from repodynamics.actions.events.push import PushEventHandler
-from repodynamics.actions.events.schedule import ScheduleEventHandler
-from repodynamics.actions.events.workflow_dispatch import WorkflowDispatchEventHandler
+from repodynamics.action.events.issue_comment import IssueCommentEventHandler
+from repodynamics.action.events.issues import IssuesEventHandler
+from repodynamics.action.events.pull_request import PullRequestEventHandler
+from repodynamics.action.events.pull_request_target import PullRequestTargetEventHandler
+from repodynamics.action.events.push import PushEventHandler
+from repodynamics.action.events.schedule import ScheduleEventHandler
+from repodynamics.action.events.workflow_dispatch import WorkflowDispatchEventHandler
 from repodynamics.datatype import TemplateType
 
 

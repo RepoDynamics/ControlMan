@@ -3,7 +3,7 @@ from markitup import html, md
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.schedule import SchedulePayload
 
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.datatype import TemplateType
 from repodynamics import _util
 from repodynamics.logger import Logger

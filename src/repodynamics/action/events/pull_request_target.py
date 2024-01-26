@@ -2,7 +2,7 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.pull_request import PullRequestPayload
 from github_contexts.github.enums import ActionType
 
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.logger import Logger
 from repodynamics.datatype import TemplateType
 

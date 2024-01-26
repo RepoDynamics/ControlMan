@@ -11,7 +11,7 @@ from actionman.log import Logger, LogStatus
 from repodynamics import meta
 from repodynamics.meta.meta import Meta
 from repodynamics.meta import read_from_json_file
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
 from repodynamics.datatype import (
@@ -29,7 +29,7 @@ from repodynamics.datatype import (
     LabelType,
 )
 from repodynamics.meta.manager import MetaManager
-from repodynamics.actions._changelog import ChangelogManager
+from repodynamics.action._changelog import ChangelogManager
 
 
 class PullRequestEventHandler(EventHandler):

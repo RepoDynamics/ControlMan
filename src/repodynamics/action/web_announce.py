@@ -1,13 +1,13 @@
 from pathlib import Path
 from markitup import html, md
 
-from repodynamics.actions.context import ContextManager
-from repodynamics.actions.state_manager import StateManager
+from repodynamics.action.context import ContextManager
+from repodynamics.action.state_manager import StateManager
 from repodynamics.meta.manager import MetaManager
 from repodynamics import _util
 from repodynamics.git import Git
 from repodynamics.logger import Logger
-from repodynamics.actions._changelog import ChangelogManager
+from repodynamics.action._changelog import ChangelogManager
 
 
 class WebAnnouncement:

@@ -6,7 +6,7 @@ from github_contexts.github.enums import RefType, ActionType
 import conventional_commits
 
 from repodynamics.meta import read_from_json_file
-from repodynamics.actions.events._base import EventHandler
+from repodynamics.action.events._base import EventHandler
 from repodynamics.meta.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
