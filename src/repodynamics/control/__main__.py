@@ -1,6 +1,6 @@
 import argparse
 
-from repodynamics import meta
+from repodynamics import control
 
 
 def main():
@@ -83,7 +83,7 @@ path.parent.mkdir(parents=True, exist_ok=True)
 import argparse
 
 from . import readme
-from repodynamics.meta.files.package import pyproject
+from repodynamics.control.files.package import pyproject
 
 
 def update_readme(self):

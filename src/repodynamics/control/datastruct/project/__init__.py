@@ -1,4 +1,4 @@
-from repodynamics.meta.datastruct.project import intro, credits, license
+from repodynamics.control.datastruct.project import intro, credits, license
 
 
 class Project:

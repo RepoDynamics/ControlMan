@@ -1,6 +1,6 @@
 import re
 
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics.logger import Logger
 
 

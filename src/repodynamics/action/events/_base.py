@@ -12,21 +12,21 @@ import conventional_commits
 from actionman.log import Logger
 
 import repodynamics
-from repodynamics import meta
+from repodynamics import control
 from repodynamics.git import Git
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics import hook
 from repodynamics.version import PEP440SemVer
-from repodynamics.meta.meta import Meta
+from repodynamics.control.meta import Meta
 from repodynamics.path import RelativePath
-from repodynamics.meta.datastruct import ControlCenterOptions
-from repodynamics.meta.datastruct.dev.branch import (
+from repodynamics.control.datastruct import ControlCenterOptions
+from repodynamics.control.datastruct.dev.branch import (
     BranchProtectionRuleset,
     RulesetEnforcementLevel,
     RulesetBypassActorType,
     RulesetBypassMode,
 )
-from repodynamics.meta.datastruct.dev.label import LabelType, FullLabel
+from repodynamics.control.datastruct.dev.label import LabelType, FullLabel
 from repodynamics.datatype import (
     Branch,
     BranchType,
@@ -70,7 +70,7 @@ class EventHandler:
         self._path_root_head = Path(path_root_head)
         self._logger = logger
 
-        self._ccm_main: MetaManager | None = meta.read_from_json_file(
+        self._ccm_main: MetaManager | None = control.read_from_json_file(
             path_root=self._path_root_base, logger=logger
         )
         repo_user = self._context.repository_owner

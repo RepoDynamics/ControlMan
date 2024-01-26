@@ -8,7 +8,7 @@ from repodynamics.datatype import (
     Branch,
     BranchType,
 )
-from repodynamics.meta.meta import Meta
+from repodynamics.control.meta import Meta
 from repodynamics.action._changelog import ChangelogManager
 
 

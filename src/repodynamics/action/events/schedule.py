@@ -8,7 +8,7 @@ from repodynamics.datatype import TemplateType
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.datatype import InitCheckAction
-from repodynamics.meta.meta import Meta
+from repodynamics.control.meta import Meta
 
 
 class ScheduleEventHandler(EventHandler):

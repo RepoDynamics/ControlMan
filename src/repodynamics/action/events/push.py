@@ -5,9 +5,9 @@ from github_contexts.github.payloads.push import PushPayload
 from github_contexts.github.enums import RefType, ActionType
 import conventional_commits
 
-from repodynamics.meta import read_from_json_file
+from repodynamics.control import read_from_json_file
 from repodynamics.action.events._base import EventHandler
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     EventType,
@@ -16,7 +16,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     TemplateType,
 )
-from repodynamics.meta.meta import Meta
+from repodynamics.control.meta import Meta
 from repodynamics.version import PEP440SemVer
 
 

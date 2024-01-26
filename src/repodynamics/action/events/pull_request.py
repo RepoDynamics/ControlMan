@@ -8,9 +8,9 @@ from github_contexts.github.enums import ActionType
 import conventional_commits
 from actionman.log import Logger, LogStatus
 
-from repodynamics import meta
-from repodynamics.meta.meta import Meta
-from repodynamics.meta import read_from_json_file
+from repodynamics import control
+from repodynamics.control.meta import Meta
+from repodynamics.control import read_from_json_file
 from repodynamics.action.events._base import EventHandler
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
@@ -28,7 +28,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics.action._changelog import ChangelogManager
 
 
@@ -316,7 +316,7 @@ class PullRequestEventHandler(EventHandler):
         if not merge_response:
             return
 
-        ccm_branch = meta.read_from_json_file(
+        ccm_branch = control.read_from_json_file(
             path_root=self._path_root_head, logger=self._logger
         )
         hash_latest = merge_response["sha"]
@@ -412,7 +412,7 @@ class PullRequestEventHandler(EventHandler):
             self._failed = True
             return
         tag = self._tag_version(ver=next_ver_pre, base=True)
-        ccm_branch = meta.read_from_json_file(
+        ccm_branch = control.read_from_json_file(
             path_root=self._path_root_head, logger=self._logger
         )
         self._set_output(

@@ -3,13 +3,13 @@ from pathlib import Path
 import json
 
 from repodynamics.logger import Logger
-from repodynamics.meta.metadata import MetadataGenerator
-from repodynamics.meta.manager import MetaManager
-from repodynamics.meta.reader import MetaReader
-from repodynamics.meta.validator import MetaValidator
-from repodynamics.meta import files
+from repodynamics.control.metadata import MetadataGenerator
+from repodynamics.control.manager import MetaManager
+from repodynamics.control.reader import MetaReader
+from repodynamics.control.validator import MetaValidator
+from repodynamics.control import files
 from repodynamics.path import RelativePath
-from repodynamics.meta.writer import MetaWriter
+from repodynamics.control.writer import MetaWriter
 from repodynamics import _util
 from repodynamics.git import Git
 from repodynamics import file_io

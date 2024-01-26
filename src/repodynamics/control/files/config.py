@@ -8,7 +8,7 @@ from pylinks.exceptions import WebAPIError
 from repodynamics.logger import Logger
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 
 
 class ConfigFileGenerator:

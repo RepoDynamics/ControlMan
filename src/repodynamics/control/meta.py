@@ -4,21 +4,21 @@ import json
 
 
 from repodynamics.logger import Logger
-from repodynamics.meta.metadata import MetadataGenerator
-from repodynamics.meta.reader import MetaReader
-from repodynamics.meta.writer import MetaWriter
-from repodynamics.meta.manager import MetaManager
-from repodynamics.meta.validator import MetaValidator
+from repodynamics.control.metadata import MetadataGenerator
+from repodynamics.control.reader import MetaReader
+from repodynamics.control.writer import MetaWriter
+from repodynamics.control.manager import MetaManager
+from repodynamics.control.validator import MetaValidator
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile, Diff
 from repodynamics.datatype import DynamicFileType
 from repodynamics.version import PEP440SemVer
-from repodynamics.meta.files.config import ConfigFileGenerator
-from repodynamics.meta.files.health import HealthFileGenerator
-from repodynamics.meta.files import package
-from repodynamics.meta.files import readme
-from repodynamics.meta.files.forms import FormGenerator
-from repodynamics.meta.cache import APICacheManager
+from repodynamics.control.files.config import ConfigFileGenerator
+from repodynamics.control.files.health import HealthFileGenerator
+from repodynamics.control.files import package
+from repodynamics.control.files import readme
+from repodynamics.control.files.forms import FormGenerator
+from repodynamics.control.cache import APICacheManager
 
 
 class Meta:

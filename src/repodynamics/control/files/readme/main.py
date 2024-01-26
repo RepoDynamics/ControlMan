@@ -16,7 +16,7 @@ import repodynamics
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 
 
 class ReadmeFileGenerator:

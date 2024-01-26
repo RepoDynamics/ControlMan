@@ -16,8 +16,8 @@ import repodynamics
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
 from repodynamics.logger import Logger
-from repodynamics.meta.manager import MetaManager
-from repodynamics.meta.files.readme.main import ReadmeFileGenerator
+from repodynamics.control.manager import MetaManager
+from repodynamics.control.files.readme.main import ReadmeFileGenerator
 
 
 class PypackitDefaultReadmeFileGenerator(ReadmeFileGenerator):

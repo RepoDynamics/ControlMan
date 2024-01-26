@@ -12,16 +12,16 @@ import pylinks
 import trove_classifiers as _trove_classifiers
 import pyserials
 
-from repodynamics.meta.reader import MetaReader
+from repodynamics.control.reader import MetaReader
 from repodynamics import git
 from repodynamics import _util
 from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathFinder
 from repodynamics.datatype import PrimaryActionCommitType
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics import file_io
-from repodynamics.meta.cache import APICacheManager
+from repodynamics.control.cache import APICacheManager
 
 
 class MetadataGenerator:

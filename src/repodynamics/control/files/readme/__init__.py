@@ -1,9 +1,9 @@
 from repodynamics.datatype import DynamicFile
-from repodynamics.meta.manager import MetaManager
+from repodynamics.control.manager import MetaManager
 from repodynamics.path import PathFinder
 from repodynamics.logger import Logger
-from repodynamics.meta.files.readme.main import ReadmeFileGenerator
-from repodynamics.meta.files.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
+from repodynamics.control.files.readme.main import ReadmeFileGenerator
+from repodynamics.control.files.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
 
 
 _THEME_GENERATOR = {

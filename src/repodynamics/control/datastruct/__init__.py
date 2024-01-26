@@ -1,4 +1,4 @@
-from repodynamics.meta.datastruct import project, dev, package_python, ui
+from repodynamics.control.datastruct import project, dev, package_python, ui
 
 
 class ControlCenterOptions:
