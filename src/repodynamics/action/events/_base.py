@@ -19,14 +19,14 @@ from repodynamics import hook
 from repodynamics.version import PEP440SemVer
 from repodynamics.control.meta import ControlCenter
 from repodynamics.path import RelativePath
-from repodynamics.control.datastruct import ControlCenterSettings
-from repodynamics.control.datastruct.dev.branch import (
+from repodynamics.control.settings import ControlCenterSettings
+from repodynamics.control.settings.dev.branch import (
     BranchProtectionRuleset,
     RulesetEnforcementLevel,
     RulesetBypassActorType,
     RulesetBypassMode,
 )
-from repodynamics.control.datastruct.dev.label import LabelType, FullLabel
+from repodynamics.control.settings.dev.label import LabelType, FullLabel
 from repodynamics.datatype import (
     Branch,
     BranchType,

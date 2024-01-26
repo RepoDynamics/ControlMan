@@ -1,4 +1,4 @@
-from repodynamics.control.datastruct import ControlCenterSettings
+from repodynamics.control.settings import ControlCenterSettings
 from repodynamics.datatype import (
     BranchType,
     Branch,

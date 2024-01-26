@@ -1,5 +1,5 @@
-from repodynamics.control.datastruct.dev import branch
-from repodynamics.control.datastruct.dev import label
+from repodynamics.control.settings.dev import branch
+from repodynamics.control.settings.dev import label
 
 
 class Dev:
