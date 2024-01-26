@@ -19,40 +19,7 @@ class MetaWriter:
     def __init__(self, path_root: str | Path = ".", logger: Logger | None = None):
         self.path_root = Path(path_root).resolve()
         self._logger = logger or Logger()
-
-        self._results: list[tuple[DynamicFile, Diff]] = []
-        self._applied: bool = False
-        self._commit_hash: str = ""
         return
-
-    def write(
-        self, updates: list[tuple[DynamicFile, str]], action: Literal["report", "apply", "amend", "commit"]
-    ):
-        if action not in ["report", "apply", "amend", "commit"]:
-            self._logger.error(f"Action '{action}' not recognized.")
-        self._results = {}
-        self._applied = False
-        self._commit_hash = ""
-        self.compare(updates)
-        changes = self._changes()
-        if changes["any"]:
-            if action != "report":
-                self.apply()
-                self._applied = True
-            if action in ["amend", "commit"]:
-                self._commit_hash = git.Git(path_repo=self.path_root).commit(
-                    message="" if action == "amend" else "meta: sync dynamic files",
-                    stage="all",
-                    amend=action == "amend",
-                )
-        output = {
-            "passed": not changes["any"],
-            "modified": self._applied,
-            "changes": changes,
-            "summary": self._summary(changes),
-            "commit_hash": self._commit_hash,
-        }
-        return output
 
     def compare(
         self,
