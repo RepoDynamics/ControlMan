@@ -5,10 +5,10 @@ from pylinks.api.github import Repo
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.issues import IssuesPayload
 from github_contexts.github.enums import ActionType
+from actionman.log import Logger
 
 from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
 from repodynamics.meta.manager import MetaManager
-from repodynamics.logger import Logger
 from repodynamics.actions.events._base import EventHandler
 from repodynamics.meta.files.forms import FormGenerator
 
@@ -21,8 +21,8 @@ class IssuesEventHandler(EventHandler):
         context_manager: GitHubContext,
         admin_token: str,
         path_root_base: str,
-        path_root_head: str | None = None,
-        logger: Logger | None = None,
+        path_root_head: str,
+        logger: Logger,
     ):
         super().__init__(
             template_type=template_type,
