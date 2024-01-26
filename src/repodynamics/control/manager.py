@@ -1,4 +1,4 @@
-from repodynamics.control.datastruct import ControlCenterOptions
+from repodynamics.control.datastruct import ControlCenterSettings
 from repodynamics.datatype import (
     BranchType,
     Branch,
@@ -21,7 +21,7 @@ from repodynamics.version import PEP440SemVer
 class MetaManager:
     def __init__(self, options: dict):
         self._dict = options
-        self._options = ControlCenterOptions(options)
+        self._options = ControlCenterSettings(options)
 
         self._commit_data: dict = {}
         self._issue_data: dict = {}
@@ -35,7 +35,7 @@ class MetaManager:
         return item in self._dict
 
     @property
-    def settings(self) -> ControlCenterOptions:
+    def settings(self) -> ControlCenterSettings:
         return self._options
 
     @property

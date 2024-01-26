@@ -19,7 +19,7 @@ from repodynamics import hook
 from repodynamics.version import PEP440SemVer
 from repodynamics.control.meta import ControlCenter
 from repodynamics.path import RelativePath
-from repodynamics.control.datastruct import ControlCenterOptions
+from repodynamics.control.datastruct import ControlCenterSettings
 from repodynamics.control.datastruct.dev.branch import (
     BranchProtectionRuleset,
     RulesetEnforcementLevel,
@@ -875,7 +875,7 @@ class EventHandler:
                 self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
         return
 
-    def _config_repo_labels_reset(self, ccs: ControlCenterOptions | None = None):
+    def _config_repo_labels_reset(self, ccs: ControlCenterSettings | None = None):
         ccs = ccs or self._ccm_main.settings
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
@@ -883,7 +883,7 @@ class EventHandler:
             self._gh_api.label_create(name=label.name, description=label.description, color=label.color)
         return
 
-    def _config_repo_labels_update(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions):
+    def _config_repo_labels_update(self, ccs_new: ControlCenterSettings, ccs_old: ControlCenterSettings):
 
         def format_labels(
             labels: tuple[FullLabel]
@@ -962,7 +962,7 @@ class EventHandler:
                     )
         return
 
-    def _config_repo_branch_names(self, ccs_new: ControlCenterOptions, ccs_old: ControlCenterOptions) -> dict:
+    def _config_repo_branch_names(self, ccs_new: ControlCenterSettings, ccs_old: ControlCenterSettings) -> dict:
         old = ccs_old.dev.branch
         new = ccs_new.dev.branch
         old_to_new_map = {}
@@ -986,8 +986,8 @@ class EventHandler:
 
     def _config_rulesets(
         self,
-        ccs_new: ControlCenterOptions,
-        ccs_old: ControlCenterOptions | None = None
+        ccs_new: ControlCenterSettings,
+        ccs_old: ControlCenterSettings | None = None
     ) -> None:
         """Update branch and tag protection rulesets."""
         enforcement = {
