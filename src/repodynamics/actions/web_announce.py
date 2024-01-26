@@ -30,8 +30,6 @@ class WebAnnouncement:
         self._path_announcement_file = Path(self._metadata["path"]["file"]["website_announcement"])
         return
 
-
-
     def update(self):
         name = "Website Announcement Manual Update"
         self.logger.h1(name)
