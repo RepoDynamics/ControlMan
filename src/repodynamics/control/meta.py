@@ -4,7 +4,7 @@ import json
 
 
 from repodynamics.logger import Logger
-from repodynamics.control.metadata import MetadataGenerator
+from repodynamics.control.generator import MetadataGenerator
 from repodynamics.control.reader import MetaReader
 from repodynamics.control.writer import MetaWriter
 from repodynamics.control.manager import MetaManager

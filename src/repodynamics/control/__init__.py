@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 from repodynamics.logger import Logger
-from repodynamics.control.metadata import MetadataGenerator
+from repodynamics.control.generator import MetadataGenerator
 from repodynamics.control.manager import MetaManager
 from repodynamics.control.reader import MetaReader
 from repodynamics.control.validator import MetaValidator
