@@ -20,6 +20,8 @@ from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathFinder
 from repodynamics.datatype import PrimaryActionCommitType
 from repodynamics.meta.manager import MetaManager
+from repodynamics import file_io
+from repodynamics.meta.cache import APICacheManager
 
 
 class MetadataGenerator:
@@ -27,6 +29,7 @@ class MetadataGenerator:
         self,
         reader: MetaReader,
         output_path: PathFinder,
+        api_cache_manager: APICacheManager,
         ccm_before: MetaManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
@@ -34,6 +37,7 @@ class MetadataGenerator:
         if not isinstance(reader, MetaReader):
             raise TypeError(f"reader must be of type MetaReader, not {type(reader)}")
         self._reader = reader
+        self._cache = api_cache_manager
         self._logger = logger or reader.logger
         self._logger.h2("Generate Metadata")
         self._output_path = output_path
@@ -143,7 +147,7 @@ class MetadataGenerator:
 
         self._metadata["custom"] |= self._generate_custom_metadata()
 
-        self._reader.cache_save()
+        self._cache.save()
         return self._metadata
 
     def _generate_custom_metadata(self) -> dict:
@@ -182,7 +186,7 @@ class MetadataGenerator:
         )
         target_repo = self._metadata["repo"]["target"]
         self._logger.input(f"Target repository", target_repo)
-        repo_info = self._reader.cache_get(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}")
+        repo_info = self._cache.get(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}")
         if repo_info:
             self._logger.success(f"Repo metadata set from cache", json.dumps(repo_info, indent=3))
             return repo_info
@@ -200,7 +204,7 @@ class MetadataGenerator:
             for attr in ["id", "node_id", "name", "full_name", "html_url", "default_branch", "created_at"]
         }
         repo["owner"] = repo_info["owner"]["login"]
-        self._reader.cache_set(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}", repo)
+        self._cache.set(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}", repo)
         self._logger.debug(f"Set 'repo': {repo}")
         return repo
 
@@ -260,7 +264,7 @@ class MetadataGenerator:
 
     def _discussions(self) -> list[dict] | None:
         self._logger.h3("Generate 'discussions' metadata")
-        discussions_info = self._reader.cache_get(f"discussions__{self._metadata['repo']['full_name']}")
+        discussions_info = self._cache.get(f"discussions__{self._metadata['repo']['full_name']}")
         if discussions_info:
             self._logger.debug(f"Set from cache: {discussions_info}")
         elif not self._reader.github.authenticated:
@@ -273,7 +277,7 @@ class MetadataGenerator:
             )
             discussions_info = repo_api.discussion_categories()
             self._logger.debug(f"Set from API: {discussions_info}")
-            self._reader.cache_set(f"discussions__{self._metadata['repo']['full_name']}", discussions_info)
+            self._cache.set(f"discussions__{self._metadata['repo']['full_name']}", discussions_info)
         return discussions_info
 
     def _license(self) -> dict:
@@ -299,10 +303,10 @@ class MetadataGenerator:
             )
             filename = license_id.lower().removesuffix("+")
             license_info["text"] = (
-                data.get("text") or _util.file.datafile(f"license/{filename}.txt").read_text()
+                data.get("text") or file_io.get_package_datafile(f"license/{filename}.txt")
             )
             license_info["notice"] = (
-                data.get("notice") or _util.file.datafile(f"license/{filename}_notice.txt").read_text()
+                data.get("notice") or file_io.get_package_datafile(f"license/{filename}_notice.txt")
             )
         self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
         return license_info
@@ -538,16 +542,16 @@ class MetadataGenerator:
                 "The `get_owner_publications` config is enabled, "
                 "but owner's ORCID ID is not set on their GitHub account."
             )
-        dois = self._reader.cache_get(f"publications_orcid_{orcid_id}")
+        dois = self._cache.get(f"publications_orcid_{orcid_id}")
         if not dois:
             dois = pylinks.api.orcid(orcid_id=orcid_id).doi
-            self._reader.cache_set(f"publications_orcid_{orcid_id}", dois)
+            self._cache.set(f"publications_orcid_{orcid_id}", dois)
         publications = []
         for doi in dois:
-            publication_data = self._reader.cache_get(f"doi_{doi}")
+            publication_data = self._cache.get(f"doi_{doi}")
             if not publication_data:
                 publication_data = pylinks.api.doi(doi=doi).curated
-                self._reader.cache_set(f"doi_{doi}", publication_data)
+                self._cache.set(f"doi_{doi}", publication_data)
             publications.append(publication_data)
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
@@ -711,7 +715,9 @@ class MetadataGenerator:
                 self._logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
             branch_metadata = (
-                _util.dict.read(self._output_path.metadata.path) if branch != curr_branch else self._metadata
+                file_io.read_datafile(  # TODO: add logging and error handling
+                    path_data=self._output_path.metadata.path
+                ) if branch != curr_branch else self._metadata
             )
             if not branch_metadata:
                 self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
@@ -824,7 +830,7 @@ class MetadataGenerator:
         return out_dict, out_list
 
     def _get_user(self, username: str) -> dict:
-        user_info = self._reader.cache_get(f"user__{username}")
+        user_info = self._cache.get(f"user__{username}")
         if user_info:
             return user_info
         self._logger.info(f"Get user info for '{username}' from GitHub API")
@@ -860,14 +866,14 @@ class MetadataGenerator:
                     other_urls = output["url"].setdefault("others", list())
                     other_urls.append(account["url"])
                     self._logger.success(f"Found unknown account for '{username}': {account['url']}")
-        self._reader.cache_set(f"user__{username}", output)
+        self._cache.set(f"user__{username}", output)
         return output
 
     def _get_released_python3_versions(self) -> list[tuple[int, int, int]]:
-        release_versions = self._reader.cache_get("python_versions")
+        release_versions = self._cache.get("python_versions")
         if release_versions:
             return [tuple(ver) for ver in release_versions]
         vers = self._reader.github.user("python").repo("cpython").semantic_versions(tag_prefix="v")
         release_versions = sorted(set([v for v in vers if v[0] >= 3]))
-        self._reader.cache_set("python_versions", release_versions)
+        self._cache.set("python_versions", release_versions)
         return release_versions
