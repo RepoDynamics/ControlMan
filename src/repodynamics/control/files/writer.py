@@ -48,27 +48,6 @@ class MetaWriter:
         changes, summary = self._summary(results)
         return results, changes, summary
 
-    @staticmethod
-    def apply(results: list[tuple[DynamicFile, Diff]]):
-        for info, diff in results:
-            if diff.status in [DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED]:
-                continue
-            if diff.status == DynamicFileChangeType.REMOVED:
-                shutil.rmtree(info.path) if info.is_dir else info.path.unlink()
-                continue
-            if diff.status == DynamicFileChangeType.MOVED:
-                diff.path_before.rename(info.path)
-                continue
-            if info.is_dir:
-                info.path.mkdir(parents=True, exist_ok=True)
-            else:
-                info.path.parent.mkdir(parents=True, exist_ok=True)
-                if diff.status == DynamicFileChangeType.MOVED_MODIFIED:
-                    diff.path_before.unlink()
-                with open(info.path, "w") as f:
-                    f.write(f"{diff.after.strip()}\n")
-        return
-
     def _compare_file(self, path: Path, content: str) -> Diff:
         content = content.strip()
         if not path.exists():

@@ -1,8 +1,8 @@
 import json
-
+import shutil
 from actionman.log import Logger
 
-from repodynamics.datatype import DynamicFile
+from repodynamics.datatype import DynamicFile, Diff, DynamicFileChangeType
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
 from repodynamics.control.files import package
@@ -42,3 +42,24 @@ def generate(
 
     generated_files += readme.generate(ccm=content_manager, path=path_manager, logger=logger)
     return generated_files
+
+
+def apply(results: list[tuple[DynamicFile, Diff]]):
+    for info, diff in results:
+        if diff.status in [DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED]:
+            continue
+        if diff.status == DynamicFileChangeType.REMOVED:
+            shutil.rmtree(info.path) if info.is_dir else info.path.unlink()
+            continue
+        if diff.status == DynamicFileChangeType.MOVED:
+            diff.path_before.rename(info.path)
+            continue
+        if info.is_dir:
+            info.path.mkdir(parents=True, exist_ok=True)
+        else:
+            info.path.parent.mkdir(parents=True, exist_ok=True)
+            if diff.status == DynamicFileChangeType.MOVED_MODIFIED:
+                diff.path_before.unlink()
+            with open(info.path, "w") as f:
+                f.write(f"{diff.after.strip()}\n")
+    return

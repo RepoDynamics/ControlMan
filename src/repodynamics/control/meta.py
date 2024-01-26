@@ -101,5 +101,5 @@ class ControlCenter:
     def apply_changes(self) -> None:
         if not self._results:
             self.compare_files()
-        self._writer.apply(self._results)
+        files.apply(self._results)
         return
