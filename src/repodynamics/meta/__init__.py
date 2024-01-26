@@ -12,6 +12,7 @@ from repodynamics.path import RelativePath
 from repodynamics.meta.writer import MetaWriter
 from repodynamics import _util
 from repodynamics.git import Git
+from repodynamics import file_io
 
 
 def read_from_json_file(
@@ -28,7 +29,7 @@ def read_from_json_file(
         )
         return read_from_json_string(content=content, logger=logger) if content else None
     path_json = path_root / RelativePath.file_metadata
-    metadata = _util.dict.read(path_json, logger=logger, raise_empty=False)
+    metadata = file_io.read_datafile(path_data=path_json)  # TODO: add logging and error handling
     if not metadata:
         return None
     meta_manager = MetaManager(options=metadata)
