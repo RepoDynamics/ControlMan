@@ -1,21 +1,17 @@
-import re
-from pathlib import Path
-import datetime
-
 from typing import Literal, Optional
-import jsonschema
-from ruamel.yaml import YAML, YAMLError
+from pathlib import Path
 import json
 import hashlib
-import traceback
+import re
+
 import pyserials
 from actionman.log import Logger
-
 from pylinks import api
 from pylinks.exceptions import WebAPIPersistentStatusCodeError
-from repodynamics import _util
+
 from repodynamics.path import PathFinder
-import tomlkit
+from repodynamics import file_io
+from repodynamics import time
 
 
 class MetaReader:
@@ -34,8 +30,9 @@ class MetaReader:
             "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
             "readme_pypi": f"{self._metadata['path']['dir']['source']}/README_pypi.md",
         }
-        self._cache: dict = self._initialize_api_cache()
-        self._db = self._read_datafile(_util.file.datafile("db.yaml"))
+        self._db = file_io.read_datafile(
+            path_data=file_io.get_package_datafile("db.yaml", return_content=False)
+        )
         return
 
     @property
@@ -47,45 +44,19 @@ class MetaReader:
         return api.github(self._github_token)
 
     @property
+    def local_config(self) -> dict:
+        return self._local_config
+
+    @property
     def db(self) -> dict:
         return self._db
 
-    def cache_get(self, item):
-        log_title = f"Retrieve '{item}' from cache"
-        item = self._cache.get(item)
-        if not item:
-            self.logger.skip(log_title, "Item not found")
-            return None
-        timestamp = item.get("timestamp")
-        if timestamp and self._is_expired(timestamp):
-            self.logger.skip(log_title, f"Item found with expired timestamp '{timestamp}:\n{item['data']}.")
-            return None
-        self.logger.success(log_title, f"Item found with valid timestamp '{timestamp}':\n{item['data']}.")
-        return item["data"]
-
-    def cache_set(self, key, value):
-        self._cache[key] = {
-            "timestamp": self._now,
-            "data": value,
-        }
-        self.logger.success(f"Set cache for '{key}'", json.dumps(self._cache[key], indent=3))
-        return
-
-    def cache_save(self):
-        path = self._pathfinder.file_local_api_cache
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            YAML(typ="safe").dump(self._cache, f)
-        self.logger.success(f"Cache file saved at {self._pathfinder.file_local_api_cache}.")
-        return
-
     def _read_extensions(self) -> tuple[dict, Path | None]:
-        extensions = _util.dict.read(
-            path=self._pathfinder.file_meta_core_extensions,
-            schema=self._get_schema("extensions"),
-            root_type="list",
-            logger=self.logger,
-        )
+        extensions = file_io.read_datafile(
+            path_data=self._pathfinder.file_meta_core_extensions,
+            relpath_schema="extensions",
+            root_type=list,
+        )  # TODO: add logging and error handling
         if not extensions:
             return extensions, None
         local_path, exists = self._get_local_extensions(extensions)
@@ -102,7 +73,7 @@ class MetaReader:
             r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
             r"([a-fA-F0-9]{32})$"
         )
-        new_path = self._pathfinder.dir_local_meta_extensions / f"{self._now}__{hash}"
+        new_path = self._pathfinder.dir_local_meta_extensions / f"{time.now()}__{hash}"
         if not self._pathfinder.dir_local_meta_extensions.is_dir():
             self.logger.info(
                 f"Local extensions directory not found at '{self._pathfinder.dir_local_meta_extensions}'."
@@ -111,7 +82,10 @@ class MetaReader:
         for path in self._pathfinder.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
-                if match and match.group(2) == hash and not self._is_expired(match.group(1), typ="extensions"):
+                if match and match.group(2) == hash and not time.is_expired(
+                    timestamp=match.group(1),
+                    expiry_days=self._local_config["cache_retention_days"]["extensions"]
+                ):
                     self.logger.success(f"Found non-expired local extensions at '{path}'.")
                     return path, True
         self.logger.info(f"No non-expired local extensions found.")
@@ -120,7 +94,7 @@ class MetaReader:
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
         self.logger.h3("Download Meta Extensions")
         self._pathfinder.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
-        _util.file.delete_dir_content(self._pathfinder.dir_local_meta_extensions, exclude=["README.md"])
+        file_io.delete_dir_content(self._pathfinder.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
             self.logger.h4(f"Download Extension {idx + 1}")
             self.logger.info(f"Input: {extension}")
@@ -156,18 +130,6 @@ class MetaReader:
                 )
         return
 
-    def _initialize_api_cache(self):
-        self.logger.h3("Initialize Cache")
-        if not self._pathfinder.file_local_api_cache.is_file():
-            self.logger.info(f"API cache file not found at '{self._pathfinder.file_local_api_cache}'.")
-            cache = {}
-            return cache
-        cache = self._read_datafile(self._pathfinder.file_local_api_cache)
-        self.logger.success(
-            f"API cache loaded from '{self._pathfinder.file_local_api_cache}'", json.dumps(cache, indent=3)
-        )
-        return cache
-
     def _get_local_config(self):
         self.logger.h3("Read Local Config")
         source_path = (
@@ -175,9 +137,9 @@ class MetaReader:
             if self._pathfinder.file_local_config.is_file()
             else self._pathfinder.dir_meta / "config.yaml"
         )
-        local_config = self._read_datafile(
-            source=source_path,
-            schema=self._get_schema("config"),
+        local_config = file_io.read_datafile(
+            path_data=source_path,
+            relpath_schema="config",
         )
         self.logger.success("Local config set.", json.dumps(local_config, indent=3))
         return local_config
@@ -260,12 +222,14 @@ class MetaReader:
         return metadata
 
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
-        section = self._read_datafile(self._pathfinder.dir_meta / f"{rel_path}.{ext}")
+        section = file_io.read_datafile(path_data=self._pathfinder.dir_meta / f"{rel_path}.{ext}")
         for idx, extension in enumerate(self._extensions):
             if extension["type"] == rel_path:
                 self.logger.h4(f"Read Extension Metadata {idx + 1}")
                 extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
-                section_extension = self._read_datafile(extionsion_path, raise_missing=True)
+                section_extension = file_io.read_datafile(path_data=extionsion_path)
+                if not section_extension:
+                    raise  # TODO
                 try:
                     log = pyserials.update.dict_from_addon(
                         data=section,
@@ -277,7 +241,7 @@ class MetaReader:
                 except pyserials.exception.DictUpdateError as e:
                     # TODO
                     pass
-        self._validate_datafile(source=section, schema=rel_path)
+        file_io.validate_data(data=section, schema_relpath=rel_path)
         return section
 
     def _read_package_python_pyproject(self):
@@ -288,7 +252,7 @@ class MetaReader:
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
-                config_section = self._read_datafile(path_file)
+                config_section = file_io.read_datafile(path_data=path_file)
                 try:
                     log = pyserials.update.dict_from_addon(
                         data=config,
@@ -318,7 +282,7 @@ class MetaReader:
                 except pyserials.exception.DictUpdateError as e:
                     # TODO
                     pass
-        self._validate_datafile(source=tools, schema="package_python/tools")
+        file_io.validate_data(data=tools, schema_relpath="package_python/tools")
         try:
             log = pyserials.update.dict_from_addon(
                 data=build,
@@ -331,27 +295,3 @@ class MetaReader:
             # TODO
             pass
         return build
-
-    def _read_datafile(self, source: Path, schema: Path = None, **kwargs):
-        return _util.dict.read(path=source, schema=schema, raise_empty=False, logger=self.logger, **kwargs)
-
-    def _validate_datafile(self, source: dict, schema: str):
-        return pyserials.validate.jsonschema(data=source, schema=self._get_schema(schema), validator=jsonschema.Draft202012Validator, fill_defaults=True)
-
-    def _is_expired(self, timestamp: str, typ: Literal["api", "extensions"] = "api") -> bool:
-        exp_date = datetime.datetime.strptime(timestamp, "%Y_%m_%d_%H_%M_%S") + datetime.timedelta(
-            days=self._local_config["cache_retention_days"][typ]
-        )
-        if exp_date <= datetime.datetime.now():
-            return True
-        return False
-
-    @staticmethod
-    def _get_schema(rel_path: str) -> dict:
-        schema_path = _util.file.datafile(f"schema/{rel_path}.yaml")
-        schema = pyserials.read.yaml_from_file(path=schema_path, safe=True)
-        return schema
-
-    @property
-    def _now(self) -> str:
-        return datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
