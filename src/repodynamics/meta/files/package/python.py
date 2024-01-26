@@ -4,8 +4,6 @@
 
 
 # Standard libraries
-import datetime
-from pathlib import Path
 from typing import Literal
 import re
 import textwrap
@@ -16,11 +14,10 @@ import tomlkit.items
 import pyserials
 
 from repodynamics.logger import Logger
-from repodynamics.meta.reader import MetaReader
-from repodynamics import _util
 from repodynamics.path import PathFinder
 from repodynamics.datatype import DynamicFile
 from repodynamics.meta.manager import MetaManager
+from repodynamics import file_io
 
 
 class PythonPackageFileGenerator:
@@ -140,7 +137,7 @@ class PythonPackageFileGenerator:
         if not test_package_dir.alt_paths:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
-                filepath = _util.file.datafile(f"template/testsuite/{testsuite_filename}")
+                filepath = file_io.get_package_datafile(f"template/testsuite/{testsuite_filename}", return_content=False)
                 text = pyserials.update.templated_data_from_source(
                     templated_data=filepath.read_text(), source_data=self._ccm.as_dict
                 )
