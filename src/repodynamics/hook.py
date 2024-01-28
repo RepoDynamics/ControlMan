@@ -3,10 +3,10 @@ from pathlib import Path
 import re
 import json
 
-from ruamel.yaml import YAML
+from actionman.log import Logger
+import pyserials
 from markitup import html, md, sgr
 
-from repodynamics.logger import Logger
 from repodynamics.git import Git
 from repodynamics import _util
 
@@ -130,7 +130,7 @@ class PreCommitHooks:
                 config = (
                     self._config
                     if isinstance(self._config, str)
-                    else YAML(typ=["rt", "string"]).dumps(self._config, add_final_eol=True)
+                    else pyserials.write.to_yaml_string(data=self._config, end_of_file_newline=True)
                 )
                 f.write(config)
             self._logger.success(

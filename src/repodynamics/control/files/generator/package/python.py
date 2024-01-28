@@ -9,11 +9,9 @@ import re
 import textwrap
 
 # Non-standard libraries
-import tomlkit
-import tomlkit.items
 import pyserials
+from actionman.log import Logger
 
-from repodynamics.logger import Logger
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
@@ -246,11 +244,12 @@ __version__ = __version_details__["version"]"""
         for key, val in self.pyproject_project().items():
             if key not in project:
                 project[key] = val
-        return [(info, tomlkit.dumps(pyproject, sort_keys=True))]
+        return [(info, pyserials.write.to_toml_string(data=pyproject, sort_keys=True))]
 
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
         info = self._path.test_package_pyproject
-        return [(info, tomlkit.dumps(self._ccm["package"]["pyproject_tests"], sort_keys=True))]
+        file_str = pyserials.write.to_toml_string(data=self._ccm["package"]["pyproject_tests"], sort_keys=True)
+        return [(info, file_str)]
 
     def pyproject_project(self) -> dict:
         data_type = {

@@ -9,25 +9,25 @@ import pylinks
 from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
 import conventional_commits
-from actionman.log import Logger
+from actionman.logger import Logger
 
 import repodynamics
 import repodynamics.control.content
+import repodynamics.control.content.manager
 from repodynamics import control
 from repodynamics.git import Git
-from repodynamics.control.content import ControlCenterContentManager
+from repodynamics.control.content import ControlCenterContentManager, ControlCenterContent
 from repodynamics import hook
 from repodynamics.version import PEP440SemVer
-from repodynamics.control.meta import ControlCenter
+from repodynamics.control.manager import ControlCenterManager
 from repodynamics.path import RelativePath
-from repodynamics.control.settings import ControlCenterSettings
-from repodynamics.control.settings.dev.branch import (
+from repodynamics.control.content.dev.branch import (
     BranchProtectionRuleset,
     RulesetEnforcementLevel,
     RulesetBypassActorType,
     RulesetBypassMode,
 )
-from repodynamics.control.settings.dev.label import LabelType, FullLabel
+from repodynamics.control.content.dev.label import LabelType, FullLabel
 from repodynamics.datatype import (
     Branch,
     BranchType,
@@ -71,9 +71,12 @@ class EventHandler:
         self._path_root_head = Path(path_root_head)
         self._logger = logger
 
-        self._ccm_main: ControlCenterContentManager | None = repodynamics.control.manager.from_json_file(
-            path_root=self._path_root_base, logger=logger
+        self._ccm_main: ControlCenterContentManager | None = repodynamics.control.content.from_json_file(
+            path_repo=self._path_root_base,
+            logger=logger,
+            log_section_title="Read Main Control Center Settings"
         )
+
         repo_user = self._context.repository_owner
         repo_name = self._context.repository_name
         self._gh_api_admin = pylinks.api.github(token=admin_token).user(repo_user).repo(repo_name)
@@ -168,7 +171,7 @@ class EventHandler:
     def run_event(self) -> None:
         ...
 
-    def _action_meta(self, action: InitCheckAction, meta: ControlCenter, base: bool, branch: Branch) -> str | None:
+    def _action_meta(self, action: InitCheckAction, meta: ControlCenterManager, base: bool, branch: Branch) -> str | None:
         name = "Meta Sync"
         self._logger.h1(name)
         # if not action:
@@ -750,7 +753,7 @@ class EventHandler:
         )
         return
 
-    def _action_file_change_detector(self, meta: ControlCenter) -> dict[RepoFileType, list[str]]:
+    def _action_file_change_detector(self, meta: ControlCenterManager) -> dict[RepoFileType, list[str]]:
         name = "File Change Detector"
         self._logger.h1(name)
         change_type_map = {
@@ -773,7 +776,7 @@ class EventHandler:
             ref_start=self._context.hash_before, ref_end=self._context.hash_after
         )
         self._logger.success("Detected changed files", json.dumps(changes, indent=3))
-        fixed_paths = [outfile.rel_path for outfile in meta.paths.fixed_files]
+        fixed_paths = [outfile.rel_path for outfile in meta.path.fixed_files]
         for change_type, changed_paths in changes.items():
             # if change_type in ["unknown", "broken"]:
             #     self.logger.warning(
@@ -789,11 +792,11 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == ".github/_README.md" or path.endswith("/README.md"):
                     typ = RepoFileType.README
-                elif path.startswith(meta.paths.dir_source_rel):
+                elif path.startswith(meta.path.dir_source_rel):
                     typ = RepoFileType.PACKAGE
-                elif path.startswith(meta.paths.dir_website_rel):
+                elif path.startswith(meta.path.dir_website_rel):
                     typ = RepoFileType.WEBSITE
-                elif path.startswith(meta.paths.dir_tests_rel):
+                elif path.startswith(meta.path.dir_tests_rel):
                     typ = RepoFileType.TEST
                 elif path.startswith(RelativePath.dir_github_workflows):
                     typ = RepoFileType.WORKFLOW
@@ -806,9 +809,9 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == RelativePath.file_path_meta:
                     typ = RepoFileType.SUPERMETA
-                elif path == f"{meta.paths.dir_meta_rel}path.yaml":
+                elif path == f"{meta.path.dir_meta_rel}path.yaml":
                     typ = RepoFileType.SUPERMETA
-                elif path.startswith(meta.paths.dir_meta_rel):
+                elif path.startswith(meta.path.dir_meta_rel):
                     typ = RepoFileType.META
                 else:
                     typ = RepoFileType.OTHER
@@ -876,7 +879,7 @@ class EventHandler:
                 self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
         return
 
-    def _config_repo_labels_reset(self, ccs: ControlCenterSettings | None = None):
+    def _config_repo_labels_reset(self, ccs: ControlCenterContent | None = None):
         ccs = ccs or self._ccm_main.settings
         for label in self._gh_api.labels:
             self._gh_api.label_delete(label["name"])
@@ -884,7 +887,7 @@ class EventHandler:
             self._gh_api.label_create(name=label.name, description=label.description, color=label.color)
         return
 
-    def _config_repo_labels_update(self, ccs_new: ControlCenterSettings, ccs_old: ControlCenterSettings):
+    def _config_repo_labels_update(self, ccs_new: ControlCenterContent, ccs_old: ControlCenterContent):
 
         def format_labels(
             labels: tuple[FullLabel]
@@ -963,7 +966,7 @@ class EventHandler:
                     )
         return
 
-    def _config_repo_branch_names(self, ccs_new: ControlCenterSettings, ccs_old: ControlCenterSettings) -> dict:
+    def _config_repo_branch_names(self, ccs_new: ControlCenterContent, ccs_old: ControlCenterContent) -> dict:
         old = ccs_old.dev.branch
         new = ccs_new.dev.branch
         old_to_new_map = {}
@@ -987,8 +990,8 @@ class EventHandler:
 
     def _config_rulesets(
         self,
-        ccs_new: ControlCenterSettings,
-        ccs_old: ControlCenterSettings | None = None
+        ccs_new: ControlCenterContent,
+        ccs_old: ControlCenterContent | None = None
     ) -> None:
         """Update branch and tag protection rulesets."""
         enforcement = {

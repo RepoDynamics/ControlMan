@@ -11,41 +11,51 @@ import sys
 import pylinks
 import trove_classifiers as _trove_classifiers
 import pyserials
+from actionman.logger import Logger
 
-from repodynamics.control.reader import MetaReader
 from repodynamics import git
 from repodynamics import _util
-from repodynamics.logger import Logger
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathManager
-from repodynamics.datatype import PrimaryActionCommitType
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics import file_io
-from repodynamics.control.cache import APICacheManager
+from repodynamics.control.data.cache import APICacheManager
 
 
-class MetadataGenerator:
+def generate(
+    initial_data: dict,
+    output_path: PathManager,
+    api_cache_manager: APICacheManager,
+    github_token: str | None = None,
+    ccm_before: ControlCenterContentManager | dict | None = None,
+    future_versions: dict[str, str | PEP440SemVer] | None = None,
+    logger: Logger = None,
+) -> dict:
+    return _ControlCenterContentGenerator(**locals()).generate()
+
+
+class _ControlCenterContentGenerator:
     def __init__(
         self,
-        reader: MetaReader,
+        initial_data: dict,
         output_path: PathManager,
         api_cache_manager: APICacheManager,
+        github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
-        if not isinstance(reader, MetaReader):
-            raise TypeError(f"reader must be of type MetaReader, not {type(reader)}")
-        self._reader = reader
         self._cache = api_cache_manager
-        self._logger = logger or reader.logger
+        self._github_api = pylinks.api.github(token=github_token)
+
+        self._logger = logger
         self._logger.h2("Generate Metadata")
         self._output_path = output_path
         self._logger.h3("Detect Git Repository")
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
-        self._metadata = copy.deepcopy(reader.metadata)
+        self._metadata = initial_data
         self._meta = ControlCenterContentManager(self._metadata)
         self._metadata["repo"] |= self._repo()
         self._metadata["owner"] = self._owner()
@@ -191,7 +201,7 @@ class MetadataGenerator:
             self._logger.success(f"Repo metadata set from cache", json.dumps(repo_info, indent=3))
             return repo_info
         self._logger.debug("Get repository info from GitHub API")
-        repo_api = self._reader.github.user(owner_username).repo(repo_name)
+        repo_api = self._github_api.user(owner_username).repo(repo_name)
         repo_info = repo_api.info
         if target_repo != "self" and repo_info["fork"]:
             repo_info = repo_info[target_repo]
@@ -267,12 +277,12 @@ class MetadataGenerator:
         discussions_info = self._cache.get(f"discussions__{self._metadata['repo']['full_name']}")
         if discussions_info:
             self._logger.debug(f"Set from cache: {discussions_info}")
-        elif not self._reader.github.authenticated:
+        elif not self._github_api.authenticated:
             self._logger.attention("GitHub token not provided. Cannot get discussions categories.")
             return []
         else:
             self._logger.debug("Get repository discussions from GitHub API")
-            repo_api = self._reader.github.user(self._metadata["repo"]["owner"]).repo(
+            repo_api = self._github_api.user(self._metadata["repo"]["owner"]).repo(
                 self._metadata["repo"]["name"]
             )
             discussions_info = repo_api.discussion_categories()
@@ -290,7 +300,12 @@ class MetadataGenerator:
         if not license_id:
             self._logger.skip(title, "License data already set manually in metadata.")
             return self._metadata["license"]
-        license_info = self._reader.db["license_id"].get(license_id.lower())
+
+        license_db = file_io.read_datafile(
+            path_data=file_io.get_package_datafile("db/license/info.yaml", return_content=False)
+        )
+        license_info = license_db.get(license_id.lower())
+
         if not license_info:
             self._logger.error(title, f"License ID '{license_id}' not found in database.")
         else:
@@ -303,10 +318,10 @@ class MetadataGenerator:
             )
             filename = license_id.lower().removesuffix("+")
             license_info["text"] = (
-                data.get("text") or file_io.get_package_datafile(f"license/{filename}.txt")
+                data.get("text") or file_io.get_package_datafile(f"db/license/text/{filename}.txt")
             )
             license_info["notice"] = (
-                data.get("notice") or file_io.get_package_datafile(f"license/{filename}_notice.txt")
+                data.get("notice") or file_io.get_package_datafile(f"db/license/notice/{filename}.txt")
             )
         self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
         return license_info
@@ -798,7 +813,7 @@ class MetadataGenerator:
         }
         version_label_prefix = self._metadata["label"]["auto_group"]["version"]["prefix"]
         labels = (
-            self._reader.github.user(self._metadata["repo"]["owner"])
+            self._github_api.user(self._metadata["repo"]["owner"])
             .repo(self._metadata["repo"]["name"])
             .issue_labels(number=issue_number)
         )
@@ -835,7 +850,7 @@ class MetadataGenerator:
             return user_info
         self._logger.info(f"Get user info for '{username}' from GitHub API")
         output = {"username": username}
-        user = self._reader.github.user(username=username)
+        user = self._github_api.user(username=username)
         user_info = user.info
         # Get website and social accounts
         for key in ["name", "company", "location", "email", "bio", "id", "node_id", "avatar_url"]:
@@ -873,7 +888,7 @@ class MetadataGenerator:
         release_versions = self._cache.get("python_versions")
         if release_versions:
             return [tuple(ver) for ver in release_versions]
-        vers = self._reader.github.user("python").repo("cpython").semantic_versions(tag_prefix="v")
+        vers = self._github_api.user("python").repo("cpython").semantic_versions(tag_prefix="v")
         release_versions = sorted(set([v for v in vers if v[0] >= 3]))
         self._cache.set("python_versions", release_versions)
         return release_versions

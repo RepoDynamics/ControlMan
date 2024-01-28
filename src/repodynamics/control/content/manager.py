@@ -1,34 +1,31 @@
-import json
-from pathlib import Path
-
-from repodynamics import file_io
-from repodynamics.control import MetaValidator
-from repodynamics.control.settings import ControlCenterSettings
-from repodynamics.datatype import (
-    BranchType,
-    Branch,
-    CommitGroup,
-    PrimaryActionCommit,
-    PrimaryActionCommitType,
-    PrimaryCustomCommit,
-    SecondaryActionCommit,
-    SecondaryActionCommitType,
-    SecondaryCustomCommit,
-    Issue,
-    IssueStatus,
-    TemplateType,
-    Label,
-    LabelType
-)
-from repodynamics.git import Git
-from repodynamics.path import RelativePath
+from repodynamics.control.content import project, dev
+from repodynamics.datatype import BranchType, TemplateType, Branch, LabelType, Label, PrimaryActionCommitType, \
+    IssueStatus, Issue, CommitGroup, PrimaryActionCommit, PrimaryCustomCommit, SecondaryActionCommit, \
+    SecondaryCustomCommit, SecondaryActionCommitType
 from repodynamics.version import PEP440SemVer
 
 
+class ControlCenterContent:
+
+    def __init__(self, data: dict):
+        self._data = data
+        self._project = project.Project(data)
+        self._dev = dev.Dev(data)
+        return
+
+    @property
+    def project(self) -> project.Project:
+        return self._project
+
+    @property
+    def dev(self) -> dev.Dev:
+        return self._dev
+
+
 class ControlCenterContentManager:
-    def __init__(self, options: dict):
-        self._dict = options
-        self._options = ControlCenterSettings(options)
+    def __init__(self, data: dict):
+        self._data = data
+        self._content = ControlCenterContent(data)
 
         self._commit_data: dict = {}
         self._issue_data: dict = {}
@@ -36,22 +33,22 @@ class ControlCenterContentManager:
         return
 
     def __getitem__(self, item):
-        return self._dict[item]
+        return self._data[item]
 
     def __contains__(self, item):
-        return item in self._dict
+        return item in self._data
 
     @property
-    def settings(self) -> ControlCenterSettings:
-        return self._options
+    def settings(self) -> ControlCenterContent:
+        return self._content
 
     @property
     def as_dict(self) -> dict:
-        return self._dict
+        return self._data
 
     @property
     def branch(self) -> dict:
-        return self._dict["branch"]
+        return self._data["branch"]
 
     @property
     def branch__main(self) -> dict:
@@ -83,11 +80,11 @@ class ControlCenterContentManager:
 
     @property
     def changelog(self) -> dict:
-        return self._dict.get("changelog", {})
+        return self._data.get("changelog", {})
 
     @property
     def issue(self) -> dict:
-        return self._dict["issue"]
+        return self._data["issue"]
 
     @property
     def issue__forms(self) -> list[dict]:
@@ -95,7 +92,7 @@ class ControlCenterContentManager:
 
     @property
     def maintainer(self) -> dict:
-        return self._dict["maintainer"]
+        return self._data["maintainer"]
 
     @property
     def maintainer__issue(self) -> dict:
@@ -103,11 +100,11 @@ class ControlCenterContentManager:
 
     @property
     def repo__config(self) -> dict:
-        return self._dict["repo"]["config"]
+        return self._data["repo"]["config"]
 
     @property
     def workflow__init__schedule(self) -> dict[str, str]:
-        return self._dict["workflow"]["init"]["schedule"]
+        return self._data["workflow"]["init"]["schedule"]
 
     @property
     def workflow__init__schedule__test(self) -> str:
@@ -119,7 +116,7 @@ class ControlCenterContentManager:
 
     @property
     def web(self) -> dict:
-        return self._dict["web"]
+        return self._data["web"]
 
     @property
     def web__base_url(self) -> str | None:
@@ -127,11 +124,11 @@ class ControlCenterContentManager:
 
     @property
     def package(self) -> dict:
-        return self._dict.get("package", {})
+        return self._data.get("package", {})
 
     @property
     def config__template(self) -> TemplateType:
-        return TemplateType(self._dict["config"]["template"])
+        return TemplateType(self._data["config"]["template"])
 
     def get_branch_info_from_name(self, branch_name: str) -> Branch:
         if branch_name == self.branch__main__name:
@@ -170,7 +167,7 @@ class ControlCenterContentManager:
         description: str
             Description of the label.
         """
-        group = self._dict["label"]["group"][group_id]
+        group = self._data["label"]["group"][group_id]
         label = group["labels"][label_id]
         out = {
             "name": f"{group['prefix']}{label['suffix']}",
@@ -211,7 +208,7 @@ class ControlCenterContentManager:
                 raise ValueError(f"Unknown label suffix '{label_suffix}' for group '{group_id}'.")
             return label_id
 
-        for autogroup_id, autogroup in self._dict["label"]["auto_group"].items():
+        for autogroup_id, autogroup in self._data["label"]["auto_group"].items():
             prefix = autogroup["prefix"]
             if name.startswith(prefix):
                 return Label(
@@ -219,7 +216,7 @@ class ControlCenterContentManager:
                     name=name,
                     prefix=prefix,
                 )
-        for group_id, group in self._dict["label"]["group"].items():
+        for group_id, group in self._data["label"]["group"].items():
             prefix = group["prefix"]
             if name.startswith(prefix):
                 label_suffix = name.removeprefix(prefix)
@@ -245,7 +242,7 @@ class ControlCenterContentManager:
                     prefix=prefix,
                     type=suffix_type,
                 )
-        for label_id, label in self._dict["label"]["single"].items():
+        for label_id, label in self._data["label"]["single"].items():
             if name == label["name"]:
                 return Label(
                     category=LabelType.SINGLE,
@@ -267,8 +264,8 @@ class ControlCenterContentManager:
         -------
         The label name.
         """
-        prefix = self._dict["label"]["group"]["primary_type"]["prefix"]
-        suffix = self._dict["label"]["group"]["primary_type"]["labels"][action_type.value]["suffix"]
+        prefix = self._data["label"]["group"]["primary_type"]["prefix"]
+        suffix = self._data["label"]["group"]["primary_type"]["labels"][action_type.value]["suffix"]
         return f"{prefix}{suffix}"
 
     def get_issue_form_identifying_labels(self, issue_form_id: str) -> tuple[str, str | None]:
@@ -282,7 +279,7 @@ class ControlCenterContentManager:
         A tuple of (primary_type, subtype) label names for the issue.
         Note that `subtype` may be `None`.
         """
-        for form in self._dict["issue"]["forms"]:
+        for form in self._data["issue"]["forms"]:
             if form["id"] == issue_form_id:
                 issue_form = form
                 break
@@ -315,8 +312,8 @@ class ControlCenterContentManager:
         The corresponding form metadata in `issue.forms`.
         """
         prefix = {
-            "primary_type": self._dict["label"]["group"]["primary_type"]["prefix"],
-            "subtype": self._dict["label"]["group"].get("subtype", {}).get("prefix"),
+            "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
+            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
         }
         suffix = {}
         for label_name in label_names:
@@ -327,20 +324,20 @@ class ControlCenterContentManager:
                     suffix[label_type] = label_name.removeprefix(prefix)
                     break
         label_ids = {"primary_type": "", "subtype": ""}
-        for label_id, label in self._dict["label"]["group"]["primary_type"]["labels"].items():
+        for label_id, label in self._data["label"]["group"]["primary_type"]["labels"].items():
             if label["suffix"] == suffix["primary_type"]:
                 label_ids["primary_type"] = label_id
                 break
         else:
             raise ValueError(f"Unknown primary type label suffix '{suffix['primary_type']}'.")
         if suffix["subtype"]:
-            for label_id, label in self._dict["label"]["group"]["subtype"]["labels"].items():
+            for label_id, label in self._data["label"]["group"]["subtype"]["labels"].items():
                 if label["suffix"] == suffix["subtype"]:
                     label_ids["subtype"] = label_id
                     break
             else:
                 raise ValueError(f"Unknown sub type label suffix '{suffix['subtype']}'.")
-        for form in self._dict["issue"]["forms"]:
+        for form in self._data["issue"]["forms"]:
             if (
                 form["primary_type"] == label_ids["primary_type"]
                 and form.get("subtype", "") == label_ids["subtype"]
@@ -353,8 +350,8 @@ class ControlCenterContentManager:
 
     def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
         type_prefix = {
-            "primary_type": self._dict["label"]["group"]["primary_type"]["prefix"],
-            "subtype": self._dict["label"]["group"].get("subtype", {}).get("prefix"),
+            "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
+            "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
         }
         label = {}
         for label_name in label_names:
@@ -402,26 +399,26 @@ class ControlCenterContentManager:
     def get_branch_from_version(self, version: str) -> str:
         if self._version_to_branch_map:
             return self._version_to_branch_map[version]
-        if not self._dict.get("package"):
+        if not self._data.get("package"):
             raise ValueError("No package metadata found.")
         self._version_to_branch_map = {
             release["version"]: release["branch"]
-            for release in self._dict["package"]["releases"]["per_branch"]
+            for release in self._data["package"]["releases"]["per_branch"]
         }
         return self._version_to_branch_map[version]
 
     def get_issue_status_from_status_label(self, label_name: str):
-        status_prefix = self._dict["label"]["group"]["status"]["prefix"]
+        status_prefix = self._data["label"]["group"]["status"]["prefix"]
         if not label_name.startswith(status_prefix):
             raise ValueError(f"Label '{label_name}' is not a status label.")
         status = label_name.removeprefix(status_prefix)
-        for status_label_id, status_label_info in self._dict["label"]["group"]["status"]["labels"].items():
+        for status_label_id, status_label_info in self._data["label"]["group"]["status"]["labels"].items():
             if status_label_info["suffix"] == status:
                 return IssueStatus(status_label_id)
         raise ValueError(f"Unknown status label suffix '{status}'.")
 
     def create_label_branch(self, source: Label | str) -> Label:
-        prefix = self._dict["label"]["auto_group"]["branch"]["prefix"]
+        prefix = self._data["label"]["auto_group"]["branch"]["prefix"]
         if isinstance(source, str):
             branch_name = source
         elif isinstance(source, Label):
@@ -438,22 +435,22 @@ class ControlCenterContentManager:
 
     def _initialize_commit_data(self):
         commit_type = {}
-        for group_id, group_data in self._dict["commit"]["primary_action"].items():
+        for group_id, group_data in self._data["commit"]["primary_action"].items():
             commit_type[group_data["type"]] = PrimaryActionCommit(
                 action=PrimaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
-        for group_id, group_data in self._dict["commit"]["primary_custom"].items():
+        for group_id, group_data in self._data["commit"]["primary_custom"].items():
             commit_type[group_data["type"]] = PrimaryCustomCommit(
                 group_id=group_id,
                 conv_type=group_data["type"],
             )
-        for group_id, group_data in self._dict["commit"]["secondary_action"].items():
+        for group_id, group_data in self._data["commit"]["secondary_action"].items():
             commit_type[group_data["type"]] = SecondaryActionCommit(
                 action=SecondaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
-        for conv_type, group_data in self._dict["commit"]["secondary_custom"].items():
+        for conv_type, group_data in self._data["commit"]["secondary_custom"].items():
             commit_type[conv_type] = SecondaryCustomCommit(
                 conv_type=conv_type,
                 changelog_id=group_data["changelog_id"],
@@ -463,19 +460,19 @@ class ControlCenterContentManager:
 
     def _initialize_issue_data(self):
         issue_data = {}
-        for issue in self._dict["issue"]["forms"]:
+        for issue in self._data["issue"]["forms"]:
             prim_id = issue["primary_type"]
 
-            prim_label_prefix = self._dict["label"]["group"]["primary_type"]["prefix"]
-            prim_label_suffix = self._dict["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
+            prim_label_prefix = self._data["label"]["group"]["primary_type"]["prefix"]
+            prim_label_suffix = self._data["label"]["group"]["primary_type"]["labels"][prim_id]["suffix"]
             prim_label = f"{prim_label_prefix}{prim_label_suffix}"
 
             type_labels = [prim_label]
 
             sub_id = issue.get("subtype")
             if sub_id:
-                sub_label_prefix = self._dict["label"]["group"]["subtype"]["prefix"]
-                sub_label_suffix = self._dict["label"]["group"]["subtype"]["labels"][sub_id]["suffix"]
+                sub_label_prefix = self._data["label"]["group"]["subtype"]["prefix"]
+                sub_label_suffix = self._data["label"]["group"]["subtype"]["labels"][sub_id]["suffix"]
                 sub_label = f"{sub_label_prefix}{sub_label_suffix}"
                 type_labels.append(sub_label)
             else:
@@ -483,7 +480,7 @@ class ControlCenterContentManager:
 
             key = (prim_label, sub_label)
 
-            prim_commit = self._dict["commit"]["primary_action"].get(prim_id)
+            prim_commit = self._data["commit"]["primary_action"].get(prim_id)
             if prim_commit:
                 commit = PrimaryActionCommit(
                     action=PrimaryActionCommitType(prim_id),
@@ -492,39 +489,8 @@ class ControlCenterContentManager:
             else:
                 commit = PrimaryCustomCommit(
                     group_id=prim_id,
-                    conv_type=self._dict["commit"]["primary_custom"][prim_id]["type"],
+                    conv_type=self._data["commit"]["primary_custom"][prim_id]["type"],
                 )
 
             issue_data[key] = Issue(group_data=commit, type_labels=type_labels, form=issue)
         return issue_data
-
-
-def from_json_file(
-    path_root: str | Path = ".", commit_hash: str = "", git: Git | None = None, logger: Logger | None = None
-) -> ControlCenterContentManager | None:
-    logger = logger or Logger()
-    path_root = Path(path_root).resolve()
-    if commit_hash:
-        git = git or Git(path_repo=path_root)
-        content = git.file_at_hash(
-            commit_hash=commit_hash,
-            path=RelativePath.file_metadata,
-            raise_missing=False,
-        )
-        return from_json_string(content=content, logger=logger) if content else None
-    path_json = path_root / RelativePath.file_metadata
-    metadata = file_io.read_datafile(path_data=path_json)  # TODO: add logging and error handling
-    if not metadata:
-        return None
-    meta_manager = ControlCenterContentManager(options=metadata)
-    MetaValidator(metadata=meta_manager, logger=logger).validate()
-    return meta_manager
-
-
-def from_json_string(content: str, logger: Logger | None = None) -> ControlCenterContentManager:
-    logger = logger or Logger()
-    metadata = json.loads(content)
-    meta_manager = ControlCenterContentManager(options=metadata)
-    MetaValidator(metadata=meta_manager, logger=logger).validate()
-    return meta_manager
-

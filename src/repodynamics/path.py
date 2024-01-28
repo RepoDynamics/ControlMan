@@ -1,10 +1,8 @@
 from typing import Literal
 from pathlib import Path
 
-import pyserials
+from actionman.logger import Logger
 
-from repodynamics import _util
-from repodynamics.logger import Logger
 from repodynamics.datatype import DynamicFile, DynamicFileType
 from repodynamics import file_io
 
@@ -39,16 +37,23 @@ class RelativePath:
 
 
 class PathManager:
-    def __init__(self, path_root: str | Path, logger: Logger | None = None):
-        self._path_root = Path(path_root).resolve()
-        self._logger = logger or Logger()
+    def __init__(
+        self,
+        path_repo: str | Path,
+        logger: Logger,
+        log_section_title: str = "Initialize Path Manager"
+    ):
+        self._logger = logger
+        self._logger.section(log_section_title, group=True)
+        self._path_root = Path(path_repo).resolve()
         pathfile = self._path_root / RelativePath.file_path_meta
         rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
 
         paths = file_io.read_datafile(
             path_data=self._path_root / rel_path_meta / "path.yaml",
             relpath_schema="path",
-        )  # TODO: add logging and error handling
+            log_section_title="Read Path Declaration File"
+        )
 
         paths["dir"]["control"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
@@ -61,14 +66,14 @@ class PathManager:
                     dict_local_dir[key] = full_rel_path
                     fullpath = self._path_root / full_rel_path
                     if fullpath.is_file():
-                        self._logger.error(f"Input local directory '{fullpath}' is a file")
+                        self._logger.critical(f"Input local directory '{fullpath}' is a file")
                     if not fullpath.exists():
-                        self._logger.info(f"Creating input local directory '{fullpath}'.")
+                        self._logger.info(f"Created input local directory '{fullpath}'.")
                         fullpath.mkdir(parents=True, exist_ok=True)
         self._paths = paths
         for path, name in ((self.dir_meta, "control center"), (self.dir_github, "github")):
             if not path.is_dir():
-                self._logger.error(f"Input {name} directory '{path}' not found")
+                self._logger.critical(f"Input {name} directory '{path}' not found")
         return
 
     @property
@@ -349,9 +354,9 @@ class PathManager:
         # Health files are only allowed in the root, docs, and .github directories
         allowed_paths = [".", "docs", ".github"]
         if target_path not in allowed_paths:
-            self._logger.error(f"Path '{target_path}' not allowed for health files.")
+            self._logger.critical(f"Path '{target_path}' not allowed for health files.")
         if name not in ["code_of_conduct", "codeowners", "contributing", "governance", "security", "support"]:
-            self._logger.error(f"Health file '{name}' not recognized.")
+            self._logger.critical(f"Health file '{name}' not recognized.")
         filename = name.upper() + (".md" if name != "codeowners" else "")
         rel_path = ("" if target_path == "." else f"{target_path}/") + filename
         path = self._path_root / rel_path

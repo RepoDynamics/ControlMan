@@ -1,11 +1,10 @@
-from typing import Literal, Optional
 from pathlib import Path
 import json
 import hashlib
 import re
 
 import pyserials
-from actionman.log import Logger
+from actionman.logger import Logger
 from pylinks import api
 from pylinks.exceptions import WebAPIPersistentStatusCodeError
 
@@ -14,44 +13,32 @@ from repodynamics import file_io
 from repodynamics import time
 
 
-class MetaReader:
-    def __init__(self, paths: PathManager, github_token: Optional[str] = None, logger: Logger = None):
-        self.logger = logger or Logger()
-        self.logger.section("Process Meta Source Files")
+class _ControlCenterContentLoader:
+    def __init__(self, path_manager: PathManager, logger: Logger, github_token: str | None = None):
+        self._logger = logger or Logger()
+        self._logger.section("Process Meta Source Files")
         self._github_token = github_token
-        self._pathfinder = paths
-        self._local_config = self._get_local_config()
-
-        self._extensions, self._path_extensions = self._read_extensions()
-        self._metadata: dict = self._read_raw_metadata()
-        self._metadata["extensions"] = self._extensions
-        self._metadata["path"] = self._pathfinder.paths_dict
-        self._metadata["path"]["file"] = {
-            "website_announcement": f"{self._metadata['path']['dir']['website']}/announcement.html",
-            "readme_pypi": f"{self._metadata['path']['dir']['source']}/README_pypi.md",
-        }
-        self._db = file_io.read_datafile(
-            path_data=file_io.get_package_datafile("db.yaml", return_content=False)
-        )
+        self._pathfinder = path_manager
+        self._github_api = api.github(self._github_token)
+        self._extensions: list[dict] | None = None
+        self._path_extensions: Path | None = None
         return
 
-    @property
-    def metadata(self) -> dict:
-        return self._metadata
+    def load(self):
+        local_config = self._get_local_config()
+        self._extensions, self._path_extensions = self._read_extensions(
+            cache_retention_days=local_config["cache_retention_days"]["extensions"]
+        )
+        data: dict = self._read_raw_metadata()
+        data["extensions"] = self._extensions
+        data["path"] = self._pathfinder.paths_dict
+        data["path"]["file"] = {
+            "website_announcement": f"{data['path']['dir']['website']}/announcement.html",
+            "readme_pypi": f"{data['path']['dir']['source']}/README_pypi.md",
+        }
+        return data, local_config
 
-    @property
-    def github(self):
-        return api.github(self._github_token)
-
-    @property
-    def local_config(self) -> dict:
-        return self._local_config
-
-    @property
-    def db(self) -> dict:
-        return self._db
-
-    def _read_extensions(self) -> tuple[dict, Path | None]:
+    def _read_extensions(self, cache_retention_days: float) -> tuple[list[dict], Path | None]:
         extensions = file_io.read_datafile(
             path_data=self._pathfinder.file_meta_core_extensions,
             relpath_schema="extensions",
@@ -59,23 +46,23 @@ class MetaReader:
         )  # TODO: add logging and error handling
         if not extensions:
             return extensions, None
-        local_path, exists = self._get_local_extensions(extensions)
+        local_path, exists = self._get_local_extensions(extensions, cache_retention_days=cache_retention_days)
         if not exists:
             self._download_extensions(extensions, download_path=local_path)
         return extensions, local_path
 
-    def _get_local_extensions(self, extensions: list[dict]) -> tuple[Path, bool]:
-        self.logger.h3("Get Local Extensions")
+    def _get_local_extensions(self, extensions: list[dict], cache_retention_days: float) -> tuple[Path, bool]:
+        self._logger.h3("Get Local Extensions")
         extention_defs = json.dumps(extensions).encode("utf-8")
         hash = hashlib.md5(extention_defs).hexdigest()
-        self.logger.info(f"Looking for non-expired local extensions with hash '{hash}'.")
+        self._logger.info(f"Looking for non-expired local extensions with hash '{hash}'.")
         dir_pattern = re.compile(
             r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
             r"([a-fA-F0-9]{32})$"
         )
         new_path = self._pathfinder.dir_local_meta_extensions / f"{time.now()}__{hash}"
         if not self._pathfinder.dir_local_meta_extensions.is_dir():
-            self.logger.info(
+            self._logger.info(
                 f"Local extensions directory not found at '{self._pathfinder.dir_local_meta_extensions}'."
             )
             return new_path, False
@@ -84,20 +71,20 @@ class MetaReader:
                 match = dir_pattern.match(path.name)
                 if match and match.group(2) == hash and not time.is_expired(
                     timestamp=match.group(1),
-                    expiry_days=self._local_config["cache_retention_days"]["extensions"]
+                    expiry_days=cache_retention_days
                 ):
-                    self.logger.success(f"Found non-expired local extensions at '{path}'.")
+                    self._logger.success(f"Found non-expired local extensions at '{path}'.")
                     return path, True
-        self.logger.info(f"No non-expired local extensions found.")
+        self._logger.info(f"No non-expired local extensions found.")
         return new_path, False
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
-        self.logger.h3("Download Meta Extensions")
+        self._logger.h3("Download Meta Extensions")
         self._pathfinder.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
         file_io.delete_dir_content(self._pathfinder.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
-            self.logger.h4(f"Download Extension {idx + 1}")
-            self.logger.info(f"Input: {extension}")
+            self._logger.h4(f"Download Extension {idx + 1}")
+            self._logger.info(f"Input: {extension}")
             repo_owner, repo_name = extension["repo"].split("/")
             dir_path = download_path / f"{idx + 1 :03}"
             rel_dl_path = Path(extension["type"])
@@ -111,7 +98,7 @@ class MetaReader:
             full_dl_path = dir_path / rel_dl_path
             try:
                 extension_filepath = (
-                    self.github.user(repo_owner)
+                    self._github_api.user(repo_owner)
                     .repo(repo_name)
                     .download_file(
                         path=extension["path"],
@@ -121,17 +108,17 @@ class MetaReader:
                     )
                 )
             except WebAPIPersistentStatusCodeError as e:
-                self.logger.error(f"Error downloading extension data:", str(e))
+                self._logger.error(f"Error downloading extension data:", str(e))
             if not extension_filepath:
-                self.logger.error(f"No files found in extension.")
+                self._logger.error(f"No files found in extension.")
             else:
-                self.logger.success(
+                self._logger.success(
                     f"Downloaded extension file '{extension_filepath}' from '{extension['repo']}'",
                 )
         return
 
     def _get_local_config(self):
-        self.logger.h3("Read Local Config")
+        self._logger.h3("Read Local Config")
         source_path = (
             self._pathfinder.file_local_config
             if self._pathfinder.file_local_config.is_file()
@@ -141,11 +128,11 @@ class MetaReader:
             path_data=source_path,
             relpath_schema="config",
         )
-        self.logger.success("Local config set.", json.dumps(local_config, indent=3))
+        self._logger.success("Local config set.", json.dumps(local_config, indent=3))
         return local_config
 
     def _read_raw_metadata(self):
-        self.logger.h3("Read Raw Metadata")
+        self._logger.h3("Read Raw Metadata")
         metadata = {}
         for entry in ("credits", "intro", "license"):
             section = self._read_single_file(rel_path=f"project/{entry}")
@@ -218,14 +205,14 @@ class MetaReader:
         else:
             package["type"] = None
         metadata["package"] = package
-        self.logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
+        self._logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
         return metadata
 
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
         section = file_io.read_datafile(path_data=self._pathfinder.dir_meta / f"{rel_path}.{ext}")
         for idx, extension in enumerate(self._extensions):
             if extension["type"] == rel_path:
-                self.logger.h4(f"Read Extension Metadata {idx + 1}")
+                self._logger.h4(f"Read Extension Metadata {idx + 1}")
                 extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
                 section_extension = file_io.read_datafile(path_data=extionsion_path)
                 if not section_extension:
@@ -245,7 +232,7 @@ class MetaReader:
         return section
 
     def _read_package_python_pyproject(self):
-        self.logger.h3("Read Package Config")
+        self._logger.h3("Read Package Config")
 
         def read_package_toml(path: Path):
             dirpath_config = Path(path) / "package_python" / "tools"
@@ -295,3 +282,12 @@ class MetaReader:
             # TODO
             pass
         return build
+
+
+def load(path_manager: PathManager, logger: Logger, github_token: str | None = None) -> tuple[dict, dict]:
+    data, local_config = _ControlCenterContentLoader(
+        path_manager=path_manager,
+        logger=logger,
+        github_token=github_token,
+    ).load()
+    return data, local_config

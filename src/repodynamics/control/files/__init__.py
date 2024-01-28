@@ -1,15 +1,12 @@
-import json
+from pathlib import Path
 import shutil
 from actionman.log import Logger
 
-from repodynamics.datatype import DynamicFile, Diff, DynamicFileChangeType
+from repodynamics.datatype import DynamicFile, Diff, DynamicFileChangeType, DynamicFileType
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
-from repodynamics.control.files import package
-from repodynamics.control.files import readme
-from repodynamics.control.files.forms import FormGenerator
-from repodynamics.control.files.config import ConfigFileGenerator
-from repodynamics.control.files.health import HealthFileGenerator
+from repodynamics.control.files import generator
+from repodynamics.control.files.comparer import FileComparer
 
 
 def generate(
@@ -17,31 +14,19 @@ def generate(
     path_manager: PathManager,
     logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    generated_files = [
-        (path_manager.metadata, json.dumps(content_manager.as_dict)),
-        (path_manager.license, content_manager["license"].get("text", "")),
-    ]
-
-    generated_files += ConfigFileGenerator(
-        metadata=content_manager, output_path=path_manager, logger=logger
-    ).generate()
-
-    generated_files += FormGenerator(
-        metadata=content_manager, output_path=path_manager, logger=logger
-    ).generate()
-
-    generated_files += HealthFileGenerator(
-        metadata=content_manager, output_path=path_manager, logger=logger
-    ).generate()
-
-    generated_files += package.generate(
-        metadata=content_manager,
-        paths=path_manager,
+    return generator.generate(
+        content_manager=content_manager,
+        path_manager=path_manager,
         logger=logger,
     )
 
-    generated_files += readme.generate(ccm=content_manager, path=path_manager, logger=logger)
-    return generated_files
+
+def compare(
+    generated_files: list[tuple[DynamicFile, str]],
+    path_root: Path,
+    logger: Logger,
+) -> tuple[list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str]:
+    return FileComparer(path_root=path_root, logger=logger).compare(updates=generated_files)
 
 
 def apply(results: list[tuple[DynamicFile, Diff]]):

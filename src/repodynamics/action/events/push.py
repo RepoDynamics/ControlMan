@@ -6,7 +6,8 @@ from github_contexts.github.enums import RefType, ActionType
 import conventional_commits
 
 from repodynamics.action.events._base import EventHandler
-from repodynamics.control.content import ControlCenterContentManager, from_json_file
+from repodynamics.control.content import from_json_file
+from repodynamics.control import ControlCenterContentManager
 from repodynamics.logger import Logger
 from repodynamics.datatype import (
     EventType,
@@ -15,7 +16,7 @@ from repodynamics.datatype import (
     InitCheckAction,
     TemplateType,
 )
-from repodynamics.control.meta import ControlCenter
+from repodynamics.control.manager import ControlCenterManager
 from repodynamics.version import PEP440SemVer
 
 
@@ -88,21 +89,21 @@ class PushEventHandler(EventHandler):
 
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
-        meta = ControlCenter(path_root=self._path_root_head, logger=self._logger)
-        shutil.rmtree(meta.paths.dir_meta)
-        shutil.rmtree(meta.paths.dir_website)
-        (meta.paths.dir_docs / "website_template").rename(meta.paths.dir_website)
-        (meta.paths.root / ".control_template").rename(meta.paths.dir_meta)
-        shutil.rmtree(meta.paths.dir_local)
-        meta.paths.file_path_meta.unlink(missing_ok=True)
-        for path_dynamic_file in meta.paths.all_files:
+        meta = ControlCenterManager(path_repo=self._path_root_head, logger=self._logger)
+        shutil.rmtree(meta.path.dir_meta)
+        shutil.rmtree(meta.path.dir_website)
+        (meta.path.dir_docs / "website_template").rename(meta.path.dir_website)
+        (meta.path.root / ".control_template").rename(meta.path.dir_meta)
+        shutil.rmtree(meta.path.dir_local)
+        meta.path.file_path_meta.unlink(missing_ok=True)
+        for path_dynamic_file in meta.path.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in self._ccm_main.changelog.values():
-            path_changelog_file = meta.paths.root / changelog_data["path"]
+            path_changelog_file = meta.path.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
         if self._is_pypackit:
-            shutil.rmtree(meta.paths.dir_source)
-            shutil.rmtree(meta.paths.dir_tests)
+            shutil.rmtree(meta.path.dir_source)
+            shutil.rmtree(meta.path.dir_tests)
         self._git_head.commit(
             message=f"init: Create repository from RepoDynamics {self._template_name_ver} template",
             stage="all"
@@ -149,7 +150,7 @@ class PushEventHandler(EventHandler):
             # User is still setting up the repository (still in initialization phase)
             return self._run_init_phase()
         self._ccm_main_before = from_json_file(
-            path_root=self._path_root_base,
+            path_repo=self._path_root_base,
             commit_hash=self._context.hash_before,
             git=self._git_base,
             logger=self._logger,
@@ -159,13 +160,13 @@ class PushEventHandler(EventHandler):
         return self._run_branch_edited_main_normal()
 
     def _run_init_phase(self, version: str = "0.0.0", finish: bool = True):
-        meta = ControlCenter(
-            path_root=self._path_root_head,
+        meta = ControlCenterManager(
+            path_repo=self._path_root_head,
             github_token=self._context.token,
             future_versions={self._context.ref_name: version},
             logger=self._logger,
         )
-        self._ccm_main = meta.read_metadata_full()
+        self._ccm_main = meta.generate_data()
         self._config_repo()
         self._config_repo_pages()
         self._config_repo_labels_reset()
@@ -186,7 +187,7 @@ class PushEventHandler(EventHandler):
             self._config_repo_branch_names(
                 ccs_new=self._ccm_main.settings,
                 ccs_old=from_json_file(
-                    path_root=self._path_root_head,
+                    path_repo=self._path_root_head,
                     commit_hash=self._context.hash_before,
                     git=self._git_head,
                     logger=self._logger,
@@ -248,7 +249,7 @@ class PushEventHandler(EventHandler):
         self._config_repo_branch_names(
             ccs_new=self._ccm_main.settings,
             ccs_old=from_json_file(
-                path_root=self._path_root_head,
+                path_repo=self._path_root_head,
                 commit_hash=self._context.hash_before,
                 git=self._git_head,
                 logger=self._logger,

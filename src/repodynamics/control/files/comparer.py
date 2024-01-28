@@ -2,20 +2,17 @@
 Writer
 """
 
-from typing import Literal
 from pathlib import Path
 import json
 import difflib
-import shutil
 
 from markitup import html, md
+from actionman.log import Logger
 
-from repodynamics.logger import Logger
-from repodynamics import git
 from repodynamics.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType, Diff
 
 
-class MetaWriter:
+class FileComparer:
     def __init__(self, path_root: str | Path = ".", logger: Logger | None = None):
         self.path_root = Path(path_root).resolve()
         self._logger = logger or Logger()

@@ -1,4 +1,5 @@
-from repodynamics.logger import Logger
+from actionman.log import Logger
+
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager

@@ -3,7 +3,7 @@ from markitup import html, md
 
 from repodynamics.action.context import ContextManager
 from repodynamics.action.state_manager import StateManager
-from repodynamics.control.content import ControlCenterContentManager
+from repodynamics.control import ControlCenterContentManager
 from repodynamics import _util
 from repodynamics.git import Git
 from repodynamics.logger import Logger

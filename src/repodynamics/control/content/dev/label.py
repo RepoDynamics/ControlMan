@@ -31,8 +31,8 @@ class FullLabel(NamedTuple):
 
 class Label:
 
-    def __init__(self, settings: dict):
-        self._ccs = settings
+    def __init__(self, data: dict):
+        self._data = data
 
         self._version, self._branch = [
             AutoGroupLabel(
@@ -41,7 +41,7 @@ class Label:
                 color=autogroup_data["color"],
             )
             for autogroup_data in [
-                self._ccs["label"]["auto_group"][auto_group] for auto_group in ("version", "branch")
+                self._data["label"]["auto_group"][auto_group] for auto_group in ("version", "branch")
             ]
         ]
         self._full = tuple(
@@ -52,8 +52,8 @@ class Label:
                 name=label_data["name"],
                 description=label_data["description"],
                 color=label_data["color"],
-            ) for label_data in self._ccs["label"]["compiled"]
-        ) if "compiled" in self._ccs["label"] else None
+            ) for label_data in self._data["label"]["compiled"]
+        ) if "compiled" in self._data["label"] else None
         return
 
     @property
@@ -71,7 +71,7 @@ class Label:
                 name=label_data["name"],
                 description=label_data["description"],
                 color=label_data["color"],
-            ) for label_id, label_data in self._ccs["label"]["single"].items()
+            ) for label_id, label_data in self._data["label"]["single"].items()
         }
 
     @property

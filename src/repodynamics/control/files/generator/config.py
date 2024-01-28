@@ -1,11 +1,8 @@
-from pathlib import Path
-
-# Non-standard libraries
-import ruamel.yaml
-from ruamel.yaml import YAML
+import pyserials
+from actionman.log import Logger
 import pylinks
 from pylinks.exceptions import WebAPIError
-from repodynamics.logger import Logger
+
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
@@ -48,16 +45,13 @@ class ConfigFileGenerator:
         for funding_platform, users in funding.items():
             if funding_platform in ["github", "custom"]:
                 if isinstance(users, list):
-                    flow_list = ruamel.yaml.comments.CommentedSeq()
-                    flow_list.fa.set_flow_style()
-                    flow_list.extend(users)
-                    output[funding_platform] = flow_list
+                    output[funding_platform] = pyserials.format.to_yaml_array(data=users, inline=True)
                 elif isinstance(users, str):
                     output[funding_platform] = users
                 # Other cases are not possible because of the schema
             else:
                 output[funding_platform] = users
-        output_str = YAML(typ=["rt", "string"]).dumps(output, add_final_eol=True)
+        output_str = pyserials.write.to_yaml_string(data=output, end_of_file_newline=True)
         self._logger.success(f"Generated 'FUNDING.yml' file.", output_str)
         return [(info, output_str)]
 
@@ -78,7 +72,7 @@ class ConfigFileGenerator:
                 self._logger.skip("'pre_commit' not set in metadata.")
                 out.append((info, ""))
             else:
-                text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
+                text = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
                 out.append((info, text))
         return out
 
@@ -88,12 +82,12 @@ class ConfigFileGenerator:
         if not config:
             self._logger.skip("'readthedocs' not set in metadata.")
             return [(info, "")]
-        text = YAML(typ=["rt", "string"]).dumps(
-            {
+        text = pyserials.write.to_yaml_string(
+            data={
                 key: val for key, val in config.items()
                 if key not in ["name", "platform", "versioning_scheme", "language"]
             },
-            add_final_eol=True
+            end_of_file_newline=True
         )
         return [(info, text)]
 
@@ -103,7 +97,7 @@ class ConfigFileGenerator:
         if not config:
             self._logger.skip("'codecov' not set in metadata.")
             return [(info, "")]
-        text = YAML(typ=["rt", "string"]).dumps(config, add_final_eol=True)
+        text = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
         try:
             # Validate the config file
             # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
@@ -121,7 +115,7 @@ class ConfigFileGenerator:
         file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
         if self._meta["issue"].get("contact_links"):
             file["contact_links"] = self._meta["issue"]["contact_links"]
-        text = YAML(typ=["rt", "string"]).dumps(file, add_final_eol=True)
+        text = pyserials.write.to_yaml_string(data=file, end_of_file_newline=True)
         return [(info, text)]
 
     def gitignore(self) -> list[tuple[DynamicFile, str]]:

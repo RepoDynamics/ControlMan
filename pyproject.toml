@@ -17,22 +17,22 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev245"
+version = "0.0.0.dev246"
 name = "RepoDynamics"
 dependencies = [
     "packaging >= 23.2, < 24",
     "pre-commit == 3.3.3",
-    "markitup",
     "jsonschema >= 4.19, < 5",
-    "pylinks",
     "trove-classifiers",
     "readme-renderer[md]",
-    "ruamel.yaml >= 0.17.32, < 0.18", # https://yaml.readthedocs.io/en/stable/
-    "ruamel.yaml.string >= 0.1.1, < 1",
-    "tomlkit >= 0.11.8, < 0.12", # https://tomlkit.readthedocs.io/en/stable/
+    "pylinks",
+    "markitup",
     "pycolorit",
     "pybadger",
     "github-contexts",
+    "conventional_commits",
+    "actionman",
+    "pyserials"
 ]
 requires-python = ">=3.10"
 

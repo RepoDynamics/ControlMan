@@ -1,9 +1,10 @@
+from actionman.log import Logger
+
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
-from repodynamics.logger import Logger
-from repodynamics.control.files.readme.main import ReadmeFileGenerator
-from repodynamics.control.files.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
+from repodynamics.control.files.generator.readme.main import ReadmeFileGenerator
+from repodynamics.control.files.generator.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
 
 
 _THEME_GENERATOR = {

@@ -89,7 +89,7 @@ class GroupedBranch(NamedTuple):
 
 class Branch:
 
-    def __init__(self, options: dict):
+    def __init__(self, data: dict):
 
         def instantiate_ruleset(ruleset: dict) -> BranchProtectionRuleset:
             bypass_actor_map = {
@@ -157,18 +157,18 @@ class Branch:
                 )
             )
 
-        self._options = options
+        self._data = data
         self._branch_main = MainBranch(
-            name=options["branch"]["main"]["name"],
-            ruleset=instantiate_ruleset(options["branch"]["main"]["ruleset"])
+            name=data["branch"]["main"]["name"],
+            ruleset=instantiate_ruleset(data["branch"]["main"]["ruleset"])
         )
         for branch_group in ("release", "pre-release", "implementation", "development", "auto-update"):
             setattr(
                 self,
                 f"_branch_{branch_group.replace('-', '_')}",
                 GroupedBranch(
-                    prefix=options["branch"][branch_group]["prefix"],
-                    ruleset=instantiate_ruleset(options["branch"][branch_group]["ruleset"])
+                    prefix=data["branch"][branch_group]["prefix"],
+                    ruleset=instantiate_ruleset(data["branch"][branch_group]["ruleset"])
                 )
             )
         return

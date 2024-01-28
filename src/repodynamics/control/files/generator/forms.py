@@ -1,8 +1,6 @@
-import copy
+import pyserials
+from actionman.log import Logger
 
-from ruamel.yaml import YAML
-
-from repodynamics.logger import Logger
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
@@ -57,7 +55,7 @@ class FormGenerator:
                 form["body"].append(
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                 )
-            text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
+            text = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
             info = self._out_db.issue_form(issue["id"], idx + 1)
             out.append((info, text))
             paths.append(info.path)
@@ -75,7 +73,7 @@ class FormGenerator:
         forms = self._meta["discussion"]["form"]
         for slug, form in forms.items():
             info = self._out_db.discussion_form(slug)
-            text = YAML(typ=["rt", "string"]).dumps(form, add_final_eol=True)
+            text = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
             out.append((info, text))
             paths.append(info.path)
         dir_discussions = self._out_db.dir_discussion_forms

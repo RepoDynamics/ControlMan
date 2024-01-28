@@ -1,4 +1,4 @@
-from repodynamics.control.settings.project import intro, credits, license
+from repodynamics.control.content.project import intro, credits, license
 
 
 class Project:

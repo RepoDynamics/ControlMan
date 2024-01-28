@@ -4,18 +4,18 @@ import datetime
 import itertools
 import re
 from pathlib import Path
-from typing import Literal, Optional, Sequence
+from typing import Literal, Sequence
 
 # Non-standard libraries
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
+from actionman.log import Logger
 from readme_renderer.markdown import render
 
 import repodynamics
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
-from repodynamics.logger import Logger
 from repodynamics.control.content import ControlCenterContentManager
 
 

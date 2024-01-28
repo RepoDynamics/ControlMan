@@ -6,6 +6,7 @@ import shutil
 
 import jsonschema
 import pyserials
+from actionman.logger import Logger
 
 
 def read_datafile(
@@ -13,12 +14,15 @@ def read_datafile(
     relpath_schema: str = "",
     root_type: Type[dict | list] = dict,
     extension: Literal["json", "yaml", "toml"] | None = None,
+    logger: Logger | None = None,
+    log_section_title: str = "Read Data File",
 ) -> dict | list:
-    log = []
+    logger.section(log_section_title, group=True)
     path_data = Path(path_data).resolve()
-    log.append(f"Path: {path_data}")
+    logger.info(title="Path", message=str(path_data))
+    logger.info(title="Root Type", message=root_type.__name__)
     file_exists = path_data.is_file()
-    log.append(f"File Exists: {file_exists}")
+    logger.info(title=f"File Exists", message=str(file_exists))
     if not file_exists:
         content = root_type()
     else:
@@ -29,32 +33,54 @@ def read_datafile(
             extension = extension or path_data.suffix.removeprefix(".")
             if extension == "yml":
                 extension = "yaml"
-            content = pyserials.read.from_string(
-                data=raw_content,
-                data_type=extension,
-                json_strict=True,
-                yaml_safe=True,
-                toml_as_dict=False,
-            )
+            try:
+                content = pyserials.read.from_string(
+                    data=raw_content,
+                    data_type=extension,
+                    json_strict=True,
+                    yaml_safe=True,
+                    toml_as_dict=False,
+                )
+            except pyserials.exception.ReadError as e:
+                logger.critical(
+                    title=f"Failed to read data file at {path_data}",
+                    message=e.message,
+                )
+                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
             if content is None:
+                logger.info("File is empty.")
                 content = root_type()
             if not isinstance(content, root_type):
-                logger.error(
-                    f"Invalid datafile.", f"Expected a dict, but '{path_data}' had:\n{json.dumps(content, indent=3)}"
+                logger.critical(
+                    title=f"Invalid datafile at {path_data}",
+                    message=f"Expected a {root_type.__name__}, but got {type(content).__name__}.",
+                    code=str(content),
                 )
+                # This will never be reached, but is required to satisfy the type checker and IDE.
+                raise TypeError()
     if relpath_schema:
-        validate_data(data=content, schema_relpath=relpath_schema)
-    logger.success(f"Data file successfully read from '{path_data}'", json.dumps(content, indent=3))
+        validate_data(data=content, schema_relpath=relpath_schema, logger=logger)
+    logger.info(f"Successfully read data file at '{path_data}'.")
+    logger.debug("Content:", code=str(content))
+    logger.section_end()
     return content
 
 
-def validate_data(data: dict | list, schema_relpath: str) -> None:
-    pyserials.validate.jsonschema(
-        data=data,
-        schema=get_schema(rel_path=schema_relpath),
-        validator=jsonschema.Draft202012Validator,
-        fill_defaults=True,
-    )
+def validate_data(data: dict | list, schema_relpath: str, logger: Logger) -> None:
+    try:
+        pyserials.validate.jsonschema(
+            data=data,
+            schema=get_schema(rel_path=schema_relpath),
+            validator=jsonschema.Draft202012Validator,
+            fill_defaults=True,
+        )
+    except pyserials.exception.ValidationError as e:
+        logger.critical(
+            title=f"Failed to validate schema",
+            message=e.message,
+        )
+        raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
+    logger.info(f"Successfully validated data against schema '{schema_relpath}'.")
     return
 
 

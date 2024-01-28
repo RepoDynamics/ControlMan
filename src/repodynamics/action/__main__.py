@@ -1,6 +1,3 @@
-import sys
-import traceback
-
 import github_contexts
 from github_contexts.github.enums import EventType
 import actionman
@@ -15,30 +12,20 @@ from repodynamics.action.events.workflow_dispatch import WorkflowDispatchEventHa
 from repodynamics.datatype import TemplateType
 
 
-EVENT_HANDLER = {
-        EventType.ISSUES: IssuesEventHandler,
-        EventType.ISSUE_COMMENT: IssueCommentEventHandler,
-        EventType.PULL_REQUEST: PullRequestEventHandler,
-        EventType.PULL_REQUEST_TARGET: PullRequestTargetEventHandler,
-        EventType.PUSH: PushEventHandler,
-        EventType.SCHEDULE: ScheduleEventHandler,
-        EventType.WORKFLOW_DISPATCH: WorkflowDispatchEventHandler,
-    }
-
-
 def action():
-    logger = actionman.log.logger(output_html_filepath="log.html")
+    logger = actionman.logger.create(output_html_filepath="log.html")
     logger.section("Action")
+    logger.section("Initialize")
     inputs = actionman.io.read_environment_variables(
-        ("TEMPLATE_TYPE", str, False, True),
-        ("GITHUB_CONTEXT", dict, False, True),
-        ("PATH_REPO_BASE", str, False, True),
-        ("PATH_REPO_HEAD", str, False, True),
-        ("ADMIN_TOKEN", str, True, False),
+        ("TEMPLATE_TYPE", str, True, False),
+        ("GITHUB_CONTEXT", dict, True, False),
+        ("PATH_REPO_BASE", str, True, False),
+        ("PATH_REPO_HEAD", str, True, False),
+        ("ADMIN_TOKEN", str, False, True),
         name_prefix="RD_PROMAN__",
-        logger=logger
+        logger=logger,
+        log_section_name="Read Inputs"
     )
-    logger.section("Initialization")
     template_type = get_template_type(input_template_type=inputs.pop("TEMPLATE_TYPE"), logger=logger)
     context_manager = github_contexts.context_github(context=inputs.pop("GITHUB_CONTEXT"))
     event_handler_class = get_event_handler(event=context_manager.event_name, logger=logger)
@@ -53,8 +40,8 @@ def action():
     try:
         outputs, env_vars, summary = event_handler.run()
     except Exception as e:
-        sys.stdout.flush()  # Flush stdout buffer before printing the exception
-        logger.error(f"An unexpected error occurred: {e}", traceback.format_exc())
+        logger.critical(title=f"An unexpected error occurred", message=str(e))
+        raise e  # This will never be reached, but is required to satisfy the type checker and IDE
     logger.section("Outputs & Summary")
     if outputs:
         actionman.io.write_github_outputs(outputs, logger=logger)
@@ -65,49 +52,45 @@ def action():
     return
 
 
-def get_template_type(input_template_type: str, logger: actionman.log.Logger) -> TemplateType:
+def get_template_type(input_template_type: str, logger: actionman.logger.Logger) -> TemplateType:
+    """Parse and verify the input template type."""
+    logger.section("Verify Template Type", group=True)
     try:
         template_type = TemplateType(input_template_type)
-        status = actionman.log.LogStatus.PASS
-        summary = f"Input template type was successfully recognized as '{template_type.value}'."
     except ValueError:
-        status = actionman.log.LogStatus.FAIL
-        summary = f"Input template type was not recognized."
-    logger.entry(
-        status=actionman.log.LogStatus.PASS,
-        title="Verify input template type",
-        summary=summary,
-        details=[f"Input: {input_template_type}"],
-    )
-    if status is actionman.log.LogStatus.FAIL:
         supported_templates = ", ".join([f"'{enum.value}'" for enum in TemplateType])
-        logger.error(
-            summary=f"Failed to recognize input template type '{input_template_type}'.",
-            details=f"Expected one of: {supported_templates}."
+        logger.critical(
+            title="Template type verification failed",
+            message=f"Expected one of {supported_templates}, but got '{input_template_type}'.",
         )
+        raise ValueError()  # This will never be reached, but is required to satisfy the type checker and IDE
+    logger.info(title="Template type", message=template_type.value)
+    logger.section_end()
     return template_type
 
 
-def get_event_handler(event: EventType, logger: actionman.log.Logger):
-    handler = EVENT_HANDLER.get(event)
+def get_event_handler(event: EventType, logger: actionman.logger.Logger):
+    logger.section("Verify Triggering Event", group=True)
+    event_to_handler = {
+        EventType.ISSUES: IssuesEventHandler,
+        EventType.ISSUE_COMMENT: IssueCommentEventHandler,
+        EventType.PULL_REQUEST: PullRequestEventHandler,
+        EventType.PULL_REQUEST_TARGET: PullRequestTargetEventHandler,
+        EventType.PUSH: PushEventHandler,
+        EventType.SCHEDULE: ScheduleEventHandler,
+        EventType.WORKFLOW_DISPATCH: WorkflowDispatchEventHandler,
+    }
+    handler = event_to_handler.get(event)
     if handler:
-        status = actionman.log.LogStatus.PASS
-        summary = f"Event '{event.value}' was successfully recognized."
-    else:
-        status = actionman.log.LogStatus.FAIL
-        summary = f"Event '{event.value}' is not supported."
-    logger.entry(
-        status=status,
-        title="Verify workflow triggering event",
-        summary=summary,
+        logger.info(title="Event handler", message=handler.__name__)
+        logger.section_end()
+        return handler
+    supported_events = ", ".join([f"'{enum.value}'" for enum in event_to_handler.keys()])
+    logger.critical(
+        title="Unsupported workflow triggering event",
+        message=f"Expected one of {supported_events}, but got '{event.value}'.",
     )
-    if status is actionman.log.LogStatus.FAIL:
-        supported_events = ", ".join([f"'{enum.value}'" for enum in EVENT_HANDLER.keys()])
-        logger.error(
-            summary=f"Unsupported workflow triggering event '{event.value}'.",
-            details=f"Expected one of: {supported_events}."
-        )
-    return handler
+    raise ValueError()  # This will never be reached, but is required to satisfy the type checker and IDE
 
 
 if __name__ == "__main__":

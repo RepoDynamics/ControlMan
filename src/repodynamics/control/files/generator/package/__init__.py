@@ -1,8 +1,9 @@
+from actionman.log import Logger
+
 from repodynamics.datatype import DynamicFile
-from repodynamics.control.files.package.python import PythonPackageFileGenerator
+from repodynamics.control.files.generator.package.python import PythonPackageFileGenerator
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
-from repodynamics.logger import Logger
 
 
 def generate(

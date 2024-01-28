@@ -9,8 +9,10 @@ import conventional_commits
 from actionman.log import Logger, LogStatus
 
 import repodynamics.control.content
+import repodynamics.control.content
+import repodynamics.control.content.manager
 from repodynamics import control
-from repodynamics.control.meta import ControlCenter
+from repodynamics.control.manager import ControlCenterManager
 from repodynamics.action.events._base import EventHandler
 from repodynamics.path import RelativePath
 from repodynamics.version import PEP440SemVer
@@ -28,7 +30,8 @@ from repodynamics.datatype import (
     InitCheckAction,
     LabelType,
 )
-from repodynamics.control.content import ControlCenterContentManager, from_json_file
+from repodynamics.control.content import from_json_file
+from repodynamics.control import ControlCenterContentManager
 from repodynamics.action._changelog import ChangelogManager
 
 
@@ -110,8 +113,8 @@ class PullRequestEventHandler(EventHandler):
             )
         )
         meta_and_hooks_action_type = InitCheckAction.COMMIT if self._payload.internal else InitCheckAction.FAIL
-        meta = ControlCenter(
-            path_root=self._path_root_head,
+        meta = ControlCenterManager(
+            path_repo=self._path_root_head,
             github_token=self._context.token,
             ccm_before=self._ccm_main,
             logger=self._logger,
@@ -128,12 +131,12 @@ class PullRequestEventHandler(EventHandler):
                 hash_meta = self._action_meta(
                     action=meta_and_hooks_action_type, meta=meta, base=False, branch=self._branch_head
                 )
-                ccm_branch = meta.read_metadata_full()
+                ccm_branch = meta.generate_data()
                 break
         else:
             hash_meta = None
             ccm_branch = from_json_file(
-                path_root=self._path_root_base, git=self._git_head, logger=self._logger
+                path_repo=self._path_root_base, git=self._git_head, logger=self._logger
             )
         latest_hash = self._git_head.push() if hash_hooks or hash_meta else self._context.hash_after
 
@@ -284,8 +287,8 @@ class PullRequestEventHandler(EventHandler):
         # Update the metadata in main branch to reflect the new release
         if next_ver:
             if self._branch_base.type is BranchType.MAIN:
-                meta_gen = ControlCenter(
-                    path_root=self._path_root_head,
+                meta_gen = ControlCenterManager(
+                    path_repo=self._path_root_head,
                     github_token=self._context.token,
                     ccm_before=self._ccm_main,
                     future_versions={self._branch_base.name: next_ver},
@@ -296,8 +299,8 @@ class PullRequestEventHandler(EventHandler):
                 )
             else:
                 self._git_base.checkout(branch=self._payload.repository.default_branch)
-                meta_gen = ControlCenter(
-                    path_root=self._path_root_base,
+                meta_gen = ControlCenterManager(
+                    path_repo=self._path_root_base,
                     github_token=self._context.token,
                     future_versions={self._branch_base.name: next_ver},
                     logger=self._logger,
@@ -316,8 +319,8 @@ class PullRequestEventHandler(EventHandler):
         if not merge_response:
             return
 
-        ccm_branch = repodynamics.control.manager.from_json_file(
-            path_root=self._path_root_head, logger=self._logger
+        ccm_branch = repodynamics.control.content.from_json_file(
+            path_repo=self._path_root_head, logger=self._logger
         )
         hash_latest = merge_response["sha"]
         if not next_ver:
@@ -412,8 +415,8 @@ class PullRequestEventHandler(EventHandler):
             self._failed = True
             return
         tag = self._tag_version(ver=next_ver_pre, base=True)
-        ccm_branch = repodynamics.control.manager.from_json_file(
-            path_root=self._path_root_head, logger=self._logger
+        ccm_branch = repodynamics.control.content.from_json_file(
+            path_repo=self._path_root_head, logger=self._logger
         )
         self._set_output(
             ccm_branch=ccm_branch,
