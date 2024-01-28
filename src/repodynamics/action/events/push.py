@@ -90,20 +90,20 @@ class PushEventHandler(EventHandler):
     def _run_repository_created(self):
         self._logger.info("Detected event: repository creation")
         meta = ControlCenterManager(path_repo=self._path_root_head, logger=self._logger)
-        shutil.rmtree(meta.path.dir_meta)
-        shutil.rmtree(meta.path.dir_website)
-        (meta.path.dir_docs / "website_template").rename(meta.path.dir_website)
-        (meta.path.root / ".control_template").rename(meta.path.dir_meta)
-        shutil.rmtree(meta.path.dir_local)
-        meta.path.file_path_meta.unlink(missing_ok=True)
-        for path_dynamic_file in meta.path.all_files:
+        shutil.rmtree(meta.path_manager.dir_meta)
+        shutil.rmtree(meta.path_manager.dir_website)
+        (meta.path_manager.dir_docs / "website_template").rename(meta.path_manager.dir_website)
+        (meta.path_manager.root / ".control_template").rename(meta.path_manager.dir_meta)
+        shutil.rmtree(meta.path_manager.dir_local)
+        meta.path_manager.file_path_meta.unlink(missing_ok=True)
+        for path_dynamic_file in meta.path_manager.all_files:
             path_dynamic_file.unlink(missing_ok=True)
         for changelog_data in self._ccm_main.changelog.values():
-            path_changelog_file = meta.path.root / changelog_data["path"]
+            path_changelog_file = meta.path_manager.root / changelog_data["path"]
             path_changelog_file.unlink(missing_ok=True)
         if self._is_pypackit:
-            shutil.rmtree(meta.path.dir_source)
-            shutil.rmtree(meta.path.dir_tests)
+            shutil.rmtree(meta.path_manager.dir_source)
+            shutil.rmtree(meta.path_manager.dir_tests)
         self._git_head.commit(
             message=f"init: Create repository from RepoDynamics {self._template_name_ver} template",
             stage="all"
