@@ -13,6 +13,15 @@ from repodynamics import file_io
 from repodynamics import time
 
 
+def load(path_manager: PathManager, logger: Logger, github_token: str | None = None) -> tuple[dict, dict]:
+    data, local_config = _ControlCenterContentLoader(
+        path_manager=path_manager,
+        logger=logger,
+        github_token=github_token,
+    ).load()
+    return data, local_config
+
+
 class _ControlCenterContentLoader:
     def __init__(self, path_manager: PathManager, logger: Logger, github_token: str | None = None):
         self._logger = logger or Logger()
@@ -282,12 +291,3 @@ class _ControlCenterContentLoader:
             # TODO
             pass
         return build
-
-
-def load(path_manager: PathManager, logger: Logger, github_token: str | None = None) -> tuple[dict, dict]:
-    data, local_config = _ControlCenterContentLoader(
-        path_manager=path_manager,
-        logger=logger,
-        github_token=github_token,
-    ).load()
-    return data, local_config
