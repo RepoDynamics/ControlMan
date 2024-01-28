@@ -776,7 +776,7 @@ class EventHandler:
             ref_start=self._context.hash_before, ref_end=self._context.hash_after
         )
         self._logger.success("Detected changed files", json.dumps(changes, indent=3))
-        fixed_paths = [outfile.rel_path for outfile in meta.path.fixed_files]
+        fixed_paths = [outfile.rel_path for outfile in meta.path_manager.fixed_files]
         for change_type, changed_paths in changes.items():
             # if change_type in ["unknown", "broken"]:
             #     self.logger.warning(
@@ -792,11 +792,11 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == ".github/_README.md" or path.endswith("/README.md"):
                     typ = RepoFileType.README
-                elif path.startswith(meta.path.dir_source_rel):
+                elif path.startswith(meta.path_manager.dir_source_rel):
                     typ = RepoFileType.PACKAGE
-                elif path.startswith(meta.path.dir_website_rel):
+                elif path.startswith(meta.path_manager.dir_website_rel):
                     typ = RepoFileType.WEBSITE
-                elif path.startswith(meta.path.dir_tests_rel):
+                elif path.startswith(meta.path_manager.dir_tests_rel):
                     typ = RepoFileType.TEST
                 elif path.startswith(RelativePath.dir_github_workflows):
                     typ = RepoFileType.WORKFLOW
@@ -809,9 +809,9 @@ class EventHandler:
                     typ = RepoFileType.DYNAMIC
                 elif path == RelativePath.file_path_meta:
                     typ = RepoFileType.SUPERMETA
-                elif path == f"{meta.path.dir_meta_rel}path.yaml":
+                elif path == f"{meta.path_manager.dir_meta_rel}path.yaml":
                     typ = RepoFileType.SUPERMETA
-                elif path.startswith(meta.path.dir_meta_rel):
+                elif path.startswith(meta.path_manager.dir_meta_rel):
                     typ = RepoFileType.META
                 else:
                     typ = RepoFileType.OTHER
