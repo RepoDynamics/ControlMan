@@ -10,7 +10,6 @@ from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile, Diff
 from repodynamics.datatype import DynamicFileType
 from repodynamics.version import PEP440SemVer
-from repodynamics.control.data.cache import APICacheManager
 
 
 class ControlCenterManager:
@@ -32,7 +31,6 @@ class ControlCenterManager:
 
         self._path_manager = PathManager(path_repo=self._path_root, logger=self._logger)
 
-        self._cache_manager: APICacheManager | None = None
         self._metadata_raw: dict = {}
         self._local_config: dict = {}
         self._metadata: ControlCenterContentManager | None = None
@@ -44,18 +42,14 @@ class ControlCenterManager:
         return
 
     @property
-    def path(self) -> PathManager:
+    def path_manager(self) -> PathManager:
         return self._path_manager
 
     def load(self) -> dict:
         if self._metadata_raw:
             return self._metadata_raw
         self._metadata_raw, self._local_config = loader.load(
-            path_manager=self.path, github_token=self._github_token, logger=self._logger
-        )
-        self._cache_manager = APICacheManager(
-            path_cachefile=self._path_manager.file_local_api_cache,
-            retention_days=self._local_config["cache_retention_days"]["api"]
+            path_manager=self.path_manager, github_token=self._github_token, logger=self._logger
         )
         return self._metadata_raw
 
@@ -65,8 +59,8 @@ class ControlCenterManager:
         self.load()
         metadata_dict = generator.generate(
             initial_data=copy.deepcopy(self._metadata_raw),
-            output_path=self.path,
-            api_cache_manager=self._cache_manager,
+            output_path=self.path_manager,
+            api_cache_manager=self._local_config["cache_retention_days"]["api"],
             github_token=self._github_token,
             ccm_before=self._ccm_before,
             future_versions=self._future_versions,
@@ -83,7 +77,7 @@ class ControlCenterManager:
         self._logger.h2("Generate Files")
         self._generated_files = files.generate(
             content_manager=metadata,
-            path_manager=self.path,
+            path_manager=self.path_manager,
             logger=self._logger,
         )
         return self._generated_files
