@@ -38,23 +38,29 @@ class _ControlCenterContentGenerator:
     def __init__(
         self,
         initial_data: dict,
-        output_path: PathManager,
-        api_cache_manager: APICacheManager,
+        path_manager: PathManager,
+        api_cache_retention_days: float,
         github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
-        self._cache = api_cache_manager
         self._github_api = pylinks.api.github(token=github_token)
 
         self._logger = logger
         self._logger.h2("Generate Metadata")
-        self._output_path = output_path
+        self._path_manager = path_manager
         self._logger.h3("Detect Git Repository")
         self._ccm_before = ccm_before
+
+        self._cache = APICacheManager(
+            path_cachefile=self._path_manager.file_local_api_cache,
+            retention_days=api_cache_retention_days,
+            logger=self._logger,
+        )
+
         self._future_versions = future_versions or {}
-        self._git = git.Git(path_repo=self._output_path.root, logger=self._logger)
+        self._git = git.Git(path_repo=self._path_manager.root, logger=self._logger)
         self._metadata = initial_data
         self._meta = ControlCenterContentManager(self._metadata)
         self._metadata["repo"] |= self._repo()
@@ -161,7 +167,7 @@ class _ControlCenterContentGenerator:
         return self._metadata
 
     def _generate_custom_metadata(self) -> dict:
-        dir_path = self._output_path.dir_meta / "custom"
+        dir_path = self._path_manager.dir_meta / "custom"
         if not (dir_path / "generator.py").is_file():
             return {}
         self._logger.h3("Generate custom metadata")
@@ -417,7 +423,7 @@ class _ControlCenterContentGenerator:
         return out
 
     def _process_website_toctrees(self) -> tuple[list[dict], list[dict]]:
-        path_docs = self._output_path.dir_website / "source"
+        path_docs = self._path_manager.dir_website / "source"
         main_toctree_entries = self._extract_toctree((path_docs / "index.md").read_text())
         main_sections = []
         quicklinks = []
@@ -453,7 +459,7 @@ class _ControlCenterContentGenerator:
 
     def _get_all_blog_categories(self) -> tuple[str, ...]:
         categories = {}
-        path_posts = self._output_path.dir_website / "source" / self._metadata["web"]["path"]["news"] / "post"
+        path_posts = self._path_manager.dir_website / "source" / self._metadata["web"]["path"]["news"] / "post"
         for path_post in path_posts.glob("*.md"):
             post_content = path_post.read_text()
             post_categories = self._extract_blog_categories(post_content)
@@ -524,7 +530,7 @@ class _ControlCenterContentGenerator:
         url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
         url["health_file"] = {}
         for health_file_id, health_file_data in self._metadata["health_file"].items():
-            health_file_rel_path = self._output_path.health_file(
+            health_file_rel_path = self._path_manager.health_file(
                 name=health_file_id, target_path=health_file_data["path"]
             ).rel_path
             url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
@@ -731,7 +737,7 @@ class _ControlCenterContentGenerator:
                 continue
             branch_metadata = (
                 file_io.read_datafile(  # TODO: add logging and error handling
-                    path_data=self._output_path.metadata.path
+                    path_data=self._path_manager.metadata.path
                 ) if branch != curr_branch else self._metadata
             )
             if not branch_metadata:
