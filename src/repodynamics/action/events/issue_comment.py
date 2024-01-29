@@ -4,7 +4,7 @@
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.issue_comment import IssueCommentPayload
 from github_contexts.github.enums import ActionType
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.action.events._base import EventHandler
 from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand, BranchType
