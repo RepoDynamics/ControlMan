@@ -11,7 +11,7 @@ import trove_classifiers as _trove_classifiers
 import pyserials
 from actionman.logger import Logger
 
-from repodynamics import git
+from repodynamics.git import Git as _Git
 from repodynamics import _util
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathManager
@@ -22,14 +22,16 @@ from repodynamics.control.data.cache import APICacheManager
 
 def generate(
     initial_data: dict,
-    output_path: PathManager,
-    api_cache_manager: APICacheManager,
+    path_manager: PathManager,
+    api_cache_retention_days: float,
+    git_manager: _Git,
+    logger: Logger,
     github_token: str | None = None,
     ccm_before: ControlCenterContentManager | dict | None = None,
     future_versions: dict[str, str | PEP440SemVer] | None = None,
-    logger: Logger = None,
+    log_section_title: str = "Generate Control Center Contents",
 ) -> dict:
-    logger.section("Generate Control Center Contents", group=True)
+    logger.section(log_section_title, group=True)
     content = _ControlCenterContentGenerator(**locals()).generate()
     logger.section_end()
     return content
@@ -41,37 +43,30 @@ class _ControlCenterContentGenerator:
         initial_data: dict,
         path_manager: PathManager,
         api_cache_retention_days: float,
+        git_manager: _Git,
+        logger: Logger,
         github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
-        logger: Logger = None,
     ):
         self._data = initial_data
-        self._path_manager = path_manager
-
-        self._github_api = pylinks.api.github(token=github_token)
-
+        self._pathman = path_manager
+        self._git = git_manager
         self._logger = logger
-        self._logger.h2("Generate Metadata")
-
-        self._logger.h3("Detect Git Repository")
         self._ccm_before = ccm_before
-
+        self._future_versions = future_versions or {}
         self._cache = APICacheManager(
-            path_cachefile=self._path_manager.file_local_api_cache,
+            path_cachefile=self._pathman.file_local_api_cache,
             retention_days=api_cache_retention_days,
             logger=self._logger,
         )
-
-        self._future_versions = future_versions or {}
-        self._git = git.Git(path_repo=self._path_manager.root, logger=self._logger)
-
-        self._meta = ControlCenterContentManager(self._data)
-        self._data["repo"] |= self._repo()
-        self._data["owner"] = self._owner()
+        self._github_api = pylinks.api.github(token=github_token)
+        self._ccm = ControlCenterContentManager(self._data)
         return
 
     def generate(self) -> dict:
+        self._data["repo"] |= self._repo()
+        self._data["owner"] = self._owner()
         self._data["name"] = self._name()
         self._data["author"]["entries"] = self._authors()
         self._data["discussion"]["categories"] = self._discussions()
@@ -171,7 +166,7 @@ class _ControlCenterContentGenerator:
         return self._data
 
     def _generate_custom_metadata(self) -> dict:
-        dir_path = self._path_manager.dir_meta / "custom"
+        dir_path = self._pathman.dir_meta / "custom"
         if not (dir_path / "generator.py").is_file():
             return {}
         self._logger.h3("Generate custom metadata")
@@ -422,7 +417,7 @@ class _ControlCenterContentGenerator:
         return out
 
     def _process_website_toctrees(self) -> tuple[list[dict], list[dict]]:
-        path_docs = self._path_manager.dir_website / "source"
+        path_docs = self._pathman.dir_website / "source"
         main_toctree_entries = self._extract_toctree((path_docs / "index.md").read_text())
         main_sections = []
         quicklinks = []
@@ -458,7 +453,7 @@ class _ControlCenterContentGenerator:
 
     def _get_all_blog_categories(self) -> tuple[str, ...]:
         categories = {}
-        path_posts = self._path_manager.dir_website / "source" / self._data["web"]["path"]["news"] / "post"
+        path_posts = self._pathman.dir_website / "source" / self._data["web"]["path"]["news"] / "post"
         for path_post in path_posts.glob("*.md"):
             post_content = path_post.read_text()
             post_categories = self._extract_blog_categories(post_content)
@@ -529,7 +524,7 @@ class _ControlCenterContentGenerator:
         url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
         url["health_file"] = {}
         for health_file_id, health_file_data in self._data["health_file"].items():
-            health_file_rel_path = self._path_manager.health_file(
+            health_file_rel_path = self._pathman.health_file(
                 name=health_file_id, target_path=health_file_data["path"]
             ).rel_path
             url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
@@ -546,7 +541,7 @@ class _ControlCenterContentGenerator:
         url["home"] = base
         url["announcement"] = (
             f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/"
-            f"{self._meta.branch__main__name}/{self._data['path']['dir']['website']}/"
+            f"{self._ccm.branch__main__name}/{self._data['path']['dir']['website']}/"
             "announcement.html"
         )
         for path_id, rel_path in self._data["web"]["path"].items():
@@ -736,7 +731,7 @@ class _ControlCenterContentGenerator:
                 continue
             branch_metadata = (
                 file_io.read_datafile(  # TODO: add logging and error handling
-                    path_data=self._path_manager.metadata.path
+                    path_data=self._pathman.metadata.path
                 ) if branch != curr_branch else self._data
             )
             if not branch_metadata:
