@@ -29,12 +29,11 @@ class ConfigFileGenerator:
     ):
         self._ccm = content_manager
         self._path_manager = path_manager
-        self._logger = logger or Logger()
+        self._logger = logger
         self._logger.h2("Generate Files")
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        # label_syncer, pr_labeler = self._labels()
         return (
             self.funding()
             + self.workflow_requirements()
