@@ -56,6 +56,7 @@ class PathManager:
             log_section_title="Read Path Declaration File"
         )
 
+        self._logger.section("Check Paths", group=True)
         paths["dir"]["control"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
@@ -75,6 +76,7 @@ class PathManager:
         for path, name in ((self.dir_meta, "control center"), (self.dir_github, "github")):
             if not path.is_dir():
                 self._logger.critical(f"Input {name} directory '{path}' not found")
+        self._logger.section_end()
         return
 
     @property
