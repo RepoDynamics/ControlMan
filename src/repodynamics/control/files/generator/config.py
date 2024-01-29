@@ -8,11 +8,28 @@ from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
 
 
+def generate(
+    content_manager: ControlCenterContentManager,
+    path_manager: PathManager,
+    logger: Logger,
+) -> list[tuple[DynamicFile, str]]:
+    return ConfigFileGenerator(
+        content_manager=content_manager,
+        path_manager=path_manager,
+        logger=logger,
+    ).generate()
+
+
 class ConfigFileGenerator:
-    def __init__(self, metadata: ControlCenterContentManager, output_path: PathManager, logger: Logger = None):
+    def __init__(
+        self,
+        content_manager: ControlCenterContentManager,
+        path_manager: PathManager,
+        logger: Logger
+    ):
+        self._ccm = content_manager
+        self._path_manager = path_manager
         self._logger = logger or Logger()
-        self._meta = metadata
-        self._out_db = output_path
         self._logger.h2("Generate Files")
         return
 
@@ -36,8 +53,8 @@ class ConfigFileGenerator:
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
         self._logger.h3("Generate File: FUNDING.yml")
-        info = self._out_db.funding
-        funding = self._meta["funding"]
+        info = self._path_manager.funding
+        funding = self._ccm["funding"]
         if not funding:
             self._logger.skip("'funding' not set in metadata; skipping.")
             return [(info, "")]
@@ -56,18 +73,18 @@ class ConfigFileGenerator:
         return [(info, output_str)]
 
     def workflow_requirements(self) -> list[tuple[DynamicFile, str]]:
-        tools = self._meta["workflow"]["tool"]
+        tools = self._ccm["workflow"]["tool"]
         out = []
         for tool_name, tool_spec in tools.items():
             text = "\n".join(tool_spec["pip_spec"])
-            out.append((self._out_db.workflow_requirements(tool_name), text))
+            out.append((self._path_manager.workflow_requirements(tool_name), text))
         return out
 
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
         out = []
         for config_type in ("main", "release", "pre-release", "implementation", "development", "auto-update", "other"):
-            info = self._out_db.pre_commit_config(config_type)
-            config = self._meta["workflow"]["pre_commit"].get(config_type)
+            info = self._path_manager.pre_commit_config(config_type)
+            config = self._ccm["workflow"]["pre_commit"].get(config_type)
             if not config:
                 self._logger.skip("'pre_commit' not set in metadata.")
                 out.append((info, ""))
@@ -77,8 +94,8 @@ class ConfigFileGenerator:
         return out
 
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.read_the_docs_config
-        config = self._meta["web"].get("readthedocs")
+        info = self._path_manager.read_the_docs_config
+        config = self._ccm["web"].get("readthedocs")
         if not config:
             self._logger.skip("'readthedocs' not set in metadata.")
             return [(info, "")]
@@ -92,8 +109,8 @@ class ConfigFileGenerator:
         return [(info, text)]
 
     def codecov_config(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.codecov_config
-        config = self._meta["workflow"].get("codecov")
+        info = self._path_manager.codecov_config
+        config = self._ccm["workflow"].get("codecov")
         if not config:
             self._logger.skip("'codecov' not set in metadata.")
             return [(info, "")]
@@ -111,18 +128,18 @@ class ConfigFileGenerator:
         return [(info, text)]
 
     def issue_template_chooser(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.issue_template_chooser_config
-        file = {"blank_issues_enabled": self._meta["issue"]["blank_enabled"]}
-        if self._meta["issue"].get("contact_links"):
-            file["contact_links"] = self._meta["issue"]["contact_links"]
+        info = self._path_manager.issue_template_chooser_config
+        file = {"blank_issues_enabled": self._ccm["issue"]["blank_enabled"]}
+        if self._ccm["issue"].get("contact_links"):
+            file["contact_links"] = self._ccm["issue"]["contact_links"]
         text = pyserials.write.to_yaml_string(data=file, end_of_file_newline=True)
         return [(info, text)]
 
     def gitignore(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.gitignore
-        local_dir = self._meta["path"]["dir"]["local"]["root"]
+        info = self._path_manager.gitignore
+        local_dir = self._ccm["path"]["dir"]["local"]["root"]
         text = "\n".join(
-            self._meta["repo"].get("gitignore", [])
+            self._ccm["repo"].get("gitignore", [])
             + [
                 f"{local_dir}/**",
                 f"!{local_dir}/**/",
@@ -132,9 +149,9 @@ class ConfigFileGenerator:
         return [(info, text)]
 
     def gitattributes(self) -> list[tuple[DynamicFile, str]]:
-        info = self._out_db.gitattributes
+        info = self._path_manager.gitattributes
         text = ""
-        attributes = self._meta["repo"].get("gitattributes", [])
+        attributes = self._ccm["repo"].get("gitattributes", [])
         max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
         max_len_attr = max(
             [max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes]
