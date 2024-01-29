@@ -3,13 +3,13 @@ from pathlib import Path as _Path
 
 from actionman.logger import Logger as _Logger
 
+from repodynamics.control.content.manager import ControlCenterContent, ControlCenterContentManager
+from repodynamics.control.content import project, dev
+
 from repodynamics import file_io as _file_io
 from repodynamics.control.data import validator as _validator
 from repodynamics.git import Git as _Git
 from repodynamics.path import RelativePath as _RelativePath
-
-from repodynamics.control.content import project, dev
-from repodynamics.control.content.manager import ControlCenterContent, ControlCenterContentManager
 
 
 def from_json_file(
