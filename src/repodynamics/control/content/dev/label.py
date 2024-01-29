@@ -1,26 +1,26 @@
-from typing import NamedTuple
-from enum import Enum
+from typing import NamedTuple as _NamedTuple
+from enum import Enum as _Enum
 
 
-class LabelType(Enum):
+class LabelType(_Enum):
     AUTO_GROUP = "auto_group"
     GROUP = "group"
     SINGLE = "single"
 
 
-class SingleLabel(NamedTuple):
+class SingleLabel(_NamedTuple):
     name: str
     description: str | None
     color: str
 
 
-class AutoGroupLabel(NamedTuple):
+class AutoGroupLabel(_NamedTuple):
     prefix: str
     description: str | None
     color: str
 
 
-class FullLabel(NamedTuple):
+class FullLabel(_NamedTuple):
     type: LabelType
     group_name: str | None
     id: str
