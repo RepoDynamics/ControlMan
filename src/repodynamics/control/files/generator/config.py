@@ -1,5 +1,5 @@
 import pyserials
-from actionman.log import Logger
+from actionman.logger import Logger
 import pylinks
 from pylinks.exceptions import WebAPIError
 
