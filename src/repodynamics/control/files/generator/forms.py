@@ -6,23 +6,30 @@ from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
 
 
-class FormGenerator:
-    def __init__(self, metadata: ControlCenterContentManager, output_path: PathManager, logger: Logger = None):
-        self._logger = logger or Logger()
-        self._out_db = output_path
-        self._meta = metadata
+def generate(
+    content_manager: ControlCenterContentManager,
+    path_manager: PathManager,
+    logger: Logger,
+) -> list[tuple[DynamicFile, str]]:
+    return _FormGenerator(content_manager=content_manager, path_manager=path_manager, logger=logger).generate()
+
+
+class _FormGenerator:
+    def __init__(self, content_manager: ControlCenterContentManager, path_manager: PathManager, logger):
+        self._ccm = content_manager
+        self._pathman = path_manager
+        self._logger = logger
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        # label_syncer, pr_labeler = self._labels()
         return self.issue_forms() + self.discussion_forms() + self.pull_request_templates()
 
     def issue_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
-        issues = self._meta["issue"]["forms"]
-        issue_maintainers = self._meta["maintainer"].get("issue", {})
+        issues = self._ccm["issue"]["forms"]
+        issue_maintainers = self._ccm["maintainer"].get("issue", {})
         paths = []
-        label_meta = self._meta["label"]["group"]
+        label_meta = self._ccm["label"]["group"]
         for idx, issue in enumerate(issues):
             pre_process = issue.get("pre_process")
             if pre_process and not self._pre_process_existence(pre_process):
@@ -56,46 +63,46 @@ class FormGenerator:
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                 )
             text = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
-            info = self._out_db.issue_form(issue["id"], idx + 1)
+            info = self._pathman.issue_form(issue["id"], idx + 1)
             out.append((info, text))
             paths.append(info.path)
-        dir_issues = self._out_db.dir_issue_forms
-        path_template_chooser = self._out_db.issue_template_chooser_config.path
+        dir_issues = self._pathman.dir_issue_forms
+        path_template_chooser = self._pathman.issue_template_chooser_config.path
         if dir_issues.is_dir():
             for file in dir_issues.glob("*.yaml"):
                 if file not in paths and file != path_template_chooser:
-                    out.append((self._out_db.issue_form_outdated(path=file), ""))
+                    out.append((self._pathman.issue_form_outdated(path=file), ""))
         return out
 
     def discussion_forms(self) -> list[tuple[DynamicFile, str]]:
         out = []
         paths = []
-        forms = self._meta["discussion"]["form"]
+        forms = self._ccm["discussion"]["form"]
         for slug, form in forms.items():
-            info = self._out_db.discussion_form(slug)
+            info = self._pathman.discussion_form(slug)
             text = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
             out.append((info, text))
             paths.append(info.path)
-        dir_discussions = self._out_db.dir_discussion_forms
+        dir_discussions = self._pathman.dir_discussion_forms
         if dir_discussions.is_dir():
             for file in dir_discussions.glob("*.yaml"):
                 if file not in paths:
-                    out.append((self._out_db.discussion_form_outdated(path=file), ""))
+                    out.append((self._pathman.discussion_form_outdated(path=file), ""))
         return out
 
     def pull_request_templates(self) -> list[tuple[DynamicFile, str]]:
         out = []
         paths = []
-        templates = self._meta["pull"]["template"]
+        templates = self._ccm["pull"]["template"]
         for name, text in templates.items():
-            info = self._out_db.pull_request_template(name=name)
+            info = self._pathman.pull_request_template(name=name)
             out.append((info, text))
             paths.append(info.path)
-        dir_templates = self._out_db.dir_pull_request_templates
+        dir_templates = self._pathman.dir_pull_request_templates
         if dir_templates.is_dir():
             for file in dir_templates.glob("*.md"):
                 if file not in paths and file.name != "README.md":
-                    out.append((self._out_db.pull_request_template_outdated(path=file), ""))
+                    out.append((self._pathman.pull_request_template_outdated(path=file), ""))
         return out
 
     @staticmethod
