@@ -45,11 +45,14 @@ class _ControlCenterContentGenerator:
         future_versions: dict[str, str | PEP440SemVer] | None = None,
         logger: Logger = None,
     ):
+        self._data = initial_data
+        self._path_manager = path_manager
+
         self._github_api = pylinks.api.github(token=github_token)
 
         self._logger = logger
         self._logger.h2("Generate Metadata")
-        self._path_manager = path_manager
+
         self._logger.h3("Detect Git Repository")
         self._ccm_before = ccm_before
 
@@ -61,20 +64,20 @@ class _ControlCenterContentGenerator:
 
         self._future_versions = future_versions or {}
         self._git = git.Git(path_repo=self._path_manager.root, logger=self._logger)
-        self._metadata = initial_data
-        self._meta = ControlCenterContentManager(self._metadata)
-        self._metadata["repo"] |= self._repo()
-        self._metadata["owner"] = self._owner()
+
+        self._meta = ControlCenterContentManager(self._data)
+        self._data["repo"] |= self._repo()
+        self._data["owner"] = self._owner()
         return
 
     def generate(self) -> dict:
-        self._metadata["name"] = self._name()
-        self._metadata["author"]["entries"] = self._authors()
-        self._metadata["discussion"]["categories"] = self._discussions()
-        self._metadata["license"] = self._license()
-        self._metadata["keyword_slugs"] = self._keywords()
-        self._metadata["url"] = {"github": self._urls_github(), "website": self._urls_website()}
-        self._metadata["copyright"] |= self._copyright()
+        self._data["name"] = self._name()
+        self._data["author"]["entries"] = self._authors()
+        self._data["discussion"]["categories"] = self._discussions()
+        self._data["license"] = self._license()
+        self._data["keyword_slugs"] = self._keywords()
+        self._data["url"] = {"github": self._urls_github(), "website": self._urls_website()}
+        self._data["copyright"] |= self._copyright()
 
         # if license_info:
         #     self._metadata |= {
@@ -85,15 +88,15 @@ class _ControlCenterContentGenerator:
         # self._metadata["license_notice"] = license_info["license_notice"].format(**self._metadata)
 
         website_main_sections, website_quicklinks = self._process_website_toctrees()
-        self._metadata["web"]["sections"] = website_main_sections
+        self._data["web"]["sections"] = website_main_sections
 
-        if self._metadata["web"]["quicklinks"] == "subsections":
-            self._metadata["web"]["quicklinks"] = website_quicklinks
+        if self._data["web"]["quicklinks"] == "subsections":
+            self._data["web"]["quicklinks"] = website_quicklinks
 
-        self._metadata["owner"]["publications"] = self._publications()
+        self._data["owner"]["publications"] = self._publications()
 
-        if self._metadata.get("package"):
-            package = self._metadata["package"]
+        if self._data.get("package"):
+            package = self._data["package"]
             package_name, import_name = self._package_name()
             package["name"] = package_name
             package["import_name"] = import_name
@@ -102,13 +105,13 @@ class _ControlCenterContentGenerator:
             package["testsuite_import_name"] = testsuite_import_name
 
             trove_classifiers = package.setdefault("trove_classifiers", [])
-            if self._metadata["license"].get("trove_classifier"):
-                trove_classifiers.append(self._metadata["license"]["trove_classifier"])
-            if self._metadata["package"].get("typed"):
+            if self._data["license"].get("trove_classifier"):
+                trove_classifiers.append(self._data["license"]["trove_classifier"])
+            if self._data["package"].get("typed"):
                 trove_classifiers.append("Typing :: Typed")
 
             package_urls = self._package_platform_urls()
-            self._metadata["url"] |= {"pypi": package_urls["pypi"], "conda": package_urls["conda"]}
+            self._data["url"] |= {"pypi": package_urls["pypi"], "conda": package_urls["conda"]}
 
             # dev_info = self._package_development_status()
             # package |= {
@@ -154,17 +157,17 @@ class _ControlCenterContentGenerator:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
 
-        self._metadata["label"]["compiled"] = self.repo_labels()
-        self._metadata = pyserials.update.templated_data_from_source(
-            templated_data=self._metadata, source_data=self._metadata
+        self._data["label"]["compiled"] = self.repo_labels()
+        self._data = pyserials.update.templated_data_from_source(
+            templated_data=self._data, source_data=self._data
         )
 
-        self._metadata["maintainer"]["list"] = self._maintainers()
+        self._data["maintainer"]["list"] = self._maintainers()
 
-        self._metadata["custom"] |= self._generate_custom_metadata()
+        self._data["custom"] |= self._generate_custom_metadata()
 
         self._cache.save()
-        return self._metadata
+        return self._data
 
     def _generate_custom_metadata(self) -> dict:
         dir_path = self._path_manager.dir_meta / "custom"
@@ -184,7 +187,7 @@ class _ControlCenterContentGenerator:
         module = importlib.util.module_from_spec(spec)
         sys.modules["generator"] = module
         spec.loader.exec_module(module)
-        return module.run(self._metadata)
+        return module.run(self._data)
 
     def _repo(self) -> dict:
         self._logger.h3("Generate 'repo' metadata")
@@ -200,7 +203,7 @@ class _ControlCenterContentGenerator:
             "Extract remote GitHub repository address",
             f"Owner Username: {owner_username}\nRepository Mame: {repo_name}",
         )
-        target_repo = self._metadata["repo"]["target"]
+        target_repo = self._data["repo"]["target"]
         self._logger.input(f"Target repository", target_repo)
         repo_info = self._cache.get(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}")
         if repo_info:
@@ -226,28 +229,28 @@ class _ControlCenterContentGenerator:
 
     def _owner(self) -> dict:
         self._logger.h3("Generate 'owner' metadata")
-        owner_info = self._get_user(self._metadata["repo"]["owner"].lower())
+        owner_info = self._get_user(self._data["repo"]["owner"].lower())
         self._logger.debug(f"Set 'owner': {json.dumps(owner_info)}")
         return owner_info
 
     def _name(self) -> str:
         title = "Process Metadata: 'name'"
-        name = self._metadata["name"]
+        name = self._data["name"]
         if name:
             self._logger.skip(title, f"Already set manually in metadata: '{name}'")
             return name
-        name = self._metadata["repo"]["name"].replace("-", " ")
+        name = self._data["repo"]["name"].replace("-", " ")
         self._logger.success(title, f"Set from repository name: {name}")
         return name
 
     def _authors(self) -> list[dict]:
         self._logger.h3("Generate 'authors' metadata")
         authors = []
-        if not self._metadata["author"]["entries"]:
-            authors.append(self._metadata["owner"])
+        if not self._data["author"]["entries"]:
+            authors.append(self._data["owner"])
             self._logger.success(f"Set from owner: {json.dumps(authors)}")
             return authors
-        for author in self._metadata["author"]["entries"]:
+        for author in self._data["author"]["entries"]:
             authors.append(author | self._get_user(author["username"].lower()))
             self._logger.debug(f"Set author '{author['username']}': {json.dumps(author)}")
         return authors
@@ -259,13 +262,13 @@ class _ControlCenterContentGenerator:
         self._logger.h3("Generate 'maintainers' metadata")
         maintainers = dict()
         for role in ["issue", "discussion"]:
-            if not self._metadata["maintainer"].get(role):
+            if not self._data["maintainer"].get(role):
                 continue
-            for assignees in self._metadata["maintainer"][role].values():
+            for assignees in self._data["maintainer"][role].values():
                 for assignee in assignees:
                     entry = maintainers.setdefault(assignee, {"issue": 0, "pull": 0, "discussion": 0})
                     entry[role] += 1
-        codeowners_entries = self._metadata["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
+        codeowners_entries = self._data["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
         if codeowners_entries:
             for codeowners_entry in codeowners_entries:
                 for reviewer in codeowners_entry[list(codeowners_entry.keys())[0]]:
@@ -280,7 +283,7 @@ class _ControlCenterContentGenerator:
 
     def _discussions(self) -> list[dict] | None:
         self._logger.h3("Generate 'discussions' metadata")
-        discussions_info = self._cache.get(f"discussions__{self._metadata['repo']['full_name']}")
+        discussions_info = self._cache.get(f"discussions__{self._data['repo']['full_name']}")
         if discussions_info:
             self._logger.debug(f"Set from cache: {discussions_info}")
         elif not self._github_api.authenticated:
@@ -288,24 +291,24 @@ class _ControlCenterContentGenerator:
             return []
         else:
             self._logger.debug("Get repository discussions from GitHub API")
-            repo_api = self._github_api.user(self._metadata["repo"]["owner"]).repo(
-                self._metadata["repo"]["name"]
+            repo_api = self._github_api.user(self._data["repo"]["owner"]).repo(
+                self._data["repo"]["name"]
             )
             discussions_info = repo_api.discussion_categories()
             self._logger.debug(f"Set from API: {discussions_info}")
-            self._cache.set(f"discussions__{self._metadata['repo']['full_name']}", discussions_info)
+            self._cache.set(f"discussions__{self._data['repo']['full_name']}", discussions_info)
         return discussions_info
 
     def _license(self) -> dict:
         title = "Process metadata: 'license'"
-        data = self._metadata["license"]
+        data = self._data["license"]
         if not data:
             self._logger.skip(title, "No license specified.")
             return {}
-        license_id = self._metadata["license"].get("id")
+        license_id = self._data["license"].get("id")
         if not license_id:
             self._logger.skip(title, "License data already set manually in metadata.")
-            return self._metadata["license"]
+            return self._data["license"]
 
         license_db = file_io.read_datafile(
             path_data=file_io.get_package_datafile("db/license/info.yaml", return_content=False)
@@ -336,11 +339,11 @@ class _ControlCenterContentGenerator:
         title = "Process metadata: 'copyright'"
         log_details = []
         output = {}
-        data = self._metadata["copyright"]
+        data = self._data["copyright"]
         current_year = datetime.date.today().year
         if not data.get("year_start"):
             output["year_start"] = year_start = datetime.datetime.strptime(
-                self._metadata["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
+                self._data["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
             ).year
             log_details.append(f"- 'copyright.year_start' set from repository creation date: {year_start}")
         else:
@@ -359,7 +362,7 @@ class _ControlCenterContentGenerator:
             output["owner"] = data["owner"]
             log_details.append(f"- 'copyright.owner' already set manually in metadata: {data['owner']}")
         else:
-            output["owner"] = self._metadata["owner"]["name"]
+            output["owner"] = self._data["owner"]["name"]
             log_details.append(f"- 'copyright.owner' set from repository owner name: {output['owner']}")
         output["notice"] = f"{year_range} {output['owner']}"
         log_details.append(f"- 'copyright.notice' set: {output['notice']}")
@@ -369,10 +372,10 @@ class _ControlCenterContentGenerator:
     def _keywords(self) -> list:
         title = "Process Metadata: 'keywords'"
         slugs = []
-        if not self._metadata["keywords"]:
+        if not self._data["keywords"]:
             self._logger.skip(title, "No keywords specified.")
             return slugs
-        for keyword in self._metadata["keywords"]:
+        for keyword in self._data["keywords"]:
             slugs.append(keyword.lower().replace(" ", "-"))
         self._logger.success(title, f"Set from metadata: {slugs}")
         return slugs
@@ -380,7 +383,7 @@ class _ControlCenterContentGenerator:
     def repo_labels(self) -> list[dict[str, str]]:
         self._logger.h3("Generate metadata: labels")
         out = []
-        for group_name, group in self._metadata["label"]["group"].items():
+        for group_name, group in self._data["label"]["group"].items():
             prefix = group["prefix"]
             for label_id, label in group["labels"].items():
                 suffix = label["suffix"]
@@ -394,10 +397,10 @@ class _ControlCenterContentGenerator:
                         "color": group["color"],
                     }
                 )
-        release_info = self._metadata.get("package", {}).get("releases", {})
+        release_info = self._data.get("package", {}).get("releases", {})
         for autogroup_name, release_key in (("version", "package_versions"), ("branch", "branch_names")):
             entries = release_info.get(release_key, [])
-            label_data = self._metadata["label"]["auto_group"][autogroup_name]
+            label_data = self._data["label"]["auto_group"][autogroup_name]
             for entry in entries:
                 out.append(
                     {
@@ -409,7 +412,7 @@ class _ControlCenterContentGenerator:
                         "color": label_data["color"],
                     }
                 )
-        for label_id, label_data in self._metadata["label"].get("single").items():
+        for label_id, label_data in self._data["label"].get("single").items():
             out.append(
                 {
                     "type": "single",
@@ -433,9 +436,9 @@ class _ControlCenterContentGenerator:
             path = Path(main_toctree_entry)
             main_dir = path.parent
             main_sections.append({"title": title, "path": str(path.with_suffix(""))})
-            if str(main_dir) == self._metadata["web"]["path"]["news"]:
+            if str(main_dir) == self._data["web"]["path"]["news"]:
                 category_titles = self._get_all_blog_categories()
-                path_template = f'{self._metadata["web"]["path"]["news"]}/category/{{}}'
+                path_template = f'{self._data["web"]["path"]["news"]}/category/{{}}'
                 entries = [
                     {
                         "title": category_title,
@@ -459,7 +462,7 @@ class _ControlCenterContentGenerator:
 
     def _get_all_blog_categories(self) -> tuple[str, ...]:
         categories = {}
-        path_posts = self._path_manager.dir_website / "source" / self._metadata["web"]["path"]["news"] / "post"
+        path_posts = self._path_manager.dir_website / "source" / self._data["web"]["path"]["news"] / "post"
         for path_post in path_posts.glob("*.md"):
             post_content = path_post.read_text()
             post_categories = self._extract_blog_categories(post_content)
@@ -502,26 +505,26 @@ class _ControlCenterContentGenerator:
 
     def _urls_github(self) -> dict:
         url = {}
-        home = url["home"] = self._metadata["repo"]["html_url"]
-        main_branch = self._metadata["repo"]["default_branch"]
+        home = url["home"] = self._data["repo"]["html_url"]
+        main_branch = self._data["repo"]["default_branch"]
         # Main sections
         for key in ["issues", "pulls", "discussions", "actions", "releases", "security"]:
             url[key] = {"home": f"{home}/{key}"}
 
         url["tree"] = f"{home}/tree/{main_branch}"
         url["blob"] = f"{home}/blob/{main_branch}"
-        url["raw"] = f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/{main_branch}"
+        url["raw"] = f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/{main_branch}"
 
         # Issues
         url["issues"]["template_chooser"] = f"{url['issues']['home']}/new/choose"
         url["issues"]["new"] = {
             issue_type["id"]: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type['id']}.yaml"
-            for idx, issue_type in enumerate(self._metadata["issue"]["forms"])
+            for idx, issue_type in enumerate(self._data["issue"]["forms"])
         }
         # Discussions
         url["discussions"]["new"] = {
             slug: f"{url['discussions']['home']}/new?category={slug}"
-            for slug in self._metadata["discussion"]["form"]
+            for slug in self._data["discussion"]["form"]
         }
 
         # Security
@@ -529,7 +532,7 @@ class _ControlCenterContentGenerator:
         url["security"]["advisories"] = f"{url['security']['home']}/advisories"
         url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
         url["health_file"] = {}
-        for health_file_id, health_file_data in self._metadata["health_file"].items():
+        for health_file_id, health_file_data in self._data["health_file"].items():
             health_file_rel_path = self._path_manager.health_file(
                 name=health_file_id, target_path=health_file_data["path"]
             ).rel_path
@@ -538,26 +541,26 @@ class _ControlCenterContentGenerator:
 
     def _urls_website(self) -> dict:
         url = {}
-        base = self._metadata["web"].get("base_url")
+        base = self._data["web"].get("base_url")
         if not base:
-            base = f"https://{self._metadata['owner']['username']}.github.io"
-            if self._metadata["repo"]["name"] != f"{self._metadata['owner']['username']}.github.io":
-                base += f"/{self._metadata['repo']['name']}"
+            base = f"https://{self._data['owner']['username']}.github.io"
+            if self._data["repo"]["name"] != f"{self._data['owner']['username']}.github.io":
+                base += f"/{self._data['repo']['name']}"
         url["base"] = base
         url["home"] = base
         url["announcement"] = (
-            f"https://raw.githubusercontent.com/{self._metadata['repo']['full_name']}/"
-            f"{self._meta.branch__main__name}/{self._metadata['path']['dir']['website']}/"
+            f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/"
+            f"{self._meta.branch__main__name}/{self._data['path']['dir']['website']}/"
             "announcement.html"
         )
-        for path_id, rel_path in self._metadata["web"]["path"].items():
+        for path_id, rel_path in self._data["web"]["path"].items():
             url[path_id] = f"{base}/{rel_path}"
         return url
 
     def _publications(self) -> list[dict]:
-        if not self._metadata["workflow"]["init"].get("get_owner_publications"):
+        if not self._data["workflow"]["init"].get("get_owner_publications"):
             return []
-        orcid_id = self._metadata["owner"]["url"].get("orcid")
+        orcid_id = self._data["owner"]["url"].get("orcid")
         if not orcid_id:
             self._logger.error(
                 "The `get_owner_publications` config is enabled, "
@@ -578,7 +581,7 @@ class _ControlCenterContentGenerator:
 
     def _package_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.name")
-        name = self._metadata["name"]
+        name = self._data["name"]
         package_name = re.sub(r"[ ._-]+", "-", name)
         import_name = package_name.replace("-", "_").lower()
         self._logger.success(f"package.name: {package_name}")
@@ -587,15 +590,15 @@ class _ControlCenterContentGenerator:
     def _package_testsuite_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.testsuite_name")
         testsuite_name = pyserials.update.templated_data_from_source(
-            templated_data=self._metadata["package"]["pyproject_tests"]["project"]["name"],
-            source_data=self._metadata
+            templated_data=self._data["package"]["pyproject_tests"]["project"]["name"],
+            source_data=self._data
         )
         import_name = testsuite_name.replace("-", "_").lower()
         self._logger.success(f"package.testsuite_name: {testsuite_name}")
         return testsuite_name, import_name
 
     def _package_platform_urls(self) -> dict:
-        package_name = self._metadata["package"]["name"]
+        package_name = self._data["package"]["name"]
         url = {
             "conda": f"https://anaconda.org/conda-forge/{package_name}/",
             "pypi": f"https://pypi.org/project/{package_name}/",
@@ -613,7 +616,7 @@ class _ControlCenterContentGenerator:
             6: "Mature",
             7: "Inactive",
         }
-        status_code = self._metadata["package"]["development_status"]
+        status_code = self._data["package"]["development_status"]
         output = {
             "major_ready": status_code in [5, 6],
             "dev_phase": phase[status_code],
@@ -624,7 +627,7 @@ class _ControlCenterContentGenerator:
 
     def _package_python_versions(self) -> dict:
         self._logger.h3("Process metadata: package.python_version_min")
-        min_ver_str = self._metadata["package"]["python_version_min"]
+        min_ver_str = self._data["package"]["python_version_min"]
         min_ver = list(map(int, min_ver_str.split(".")))
         if len(min_ver) < 3:
             min_ver.extend([0] * (3 - len(min_ver)))
@@ -679,7 +682,7 @@ class _ControlCenterContentGenerator:
             "macos": "macOS",
             "windows": "Windows",
         }
-        if not self._metadata["package"].get("operating_systems"):
+        if not self._data["package"].get("operating_systems"):
             self._logger.attention("No operating systems provided.")
             output["trove_classifiers"].append(
                 trove_classifier_template.format(trove_classifiers_postfix["independent"])
@@ -688,7 +691,7 @@ class _ControlCenterContentGenerator:
             output["os_titles"].extend(list(os_title.values()))
             return output
         output["os_independent"] = False
-        for os_name, specs in self._metadata["package"]["operating_systems"].items():
+        for os_name, specs in self._data["package"]["operating_systems"].items():
             output["os_titles"].append(os_title[os_name])
             output["trove_classifiers"].append(
                 trove_classifier_template.format(trove_classifiers_postfix[os_name])
@@ -706,13 +709,13 @@ class _ControlCenterContentGenerator:
         if output["cibw_matrix_platform"]:
             output["pure_python"] = False
             output["cibw_matrix_python"].extend(
-                [f"cp{ver.replace('.', '')}" for ver in self._metadata["package"]["python_versions"]]
+                [f"cp{ver.replace('.', '')}" for ver in self._data["package"]["python_versions"]]
             )
         return output
 
     def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
         self._logger.h3("Process metadata: package.releases")
-        source = self._ccm_before if self._ccm_before else self._metadata
+        source = self._ccm_before if self._ccm_before else self._data
         release_prefix, pre_release_prefix = allowed_prefixes = tuple(
             source["branch"][group_name]["prefix"] for group_name in ["release", "pre-release"]
         )
@@ -738,7 +741,7 @@ class _ControlCenterContentGenerator:
             branch_metadata = (
                 file_io.read_datafile(  # TODO: add logging and error handling
                     path_data=self._path_manager.metadata.path
-                ) if branch != curr_branch else self._metadata
+                ) if branch != curr_branch else self._data
             )
             if not branch_metadata:
                 self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
@@ -750,12 +753,12 @@ class _ControlCenterContentGenerator:
                 self._logger.warning(f"No operating systems specified for branch '{branch}'; skipping branch.")
                 continue
             if branch == main_branch_name:
-                branch_name = self._metadata["branch"]["main"]["name"]
+                branch_name = self._data["branch"]["main"]["name"]
             elif branch.startswith(release_prefix):
-                new_prefix = self._metadata["branch"]["release"]["prefix"]
+                new_prefix = self._data["branch"]["release"]["prefix"]
                 branch_name = f"{new_prefix}{branch.removeprefix(release_prefix)}"
             else:
-                new_prefix = self._metadata["branch"]["pre-release"]["prefix"]
+                new_prefix = self._data["branch"]["pre-release"]["prefix"]
                 branch_name = f"{new_prefix}{branch.removeprefix(pre_release_prefix)}"
             release_info = {
                 "branch": branch_name,
@@ -815,12 +818,12 @@ class _ControlCenterContentGenerator:
 
     def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
         label_prefix = {
-            group_id: group_data["prefix"] for group_id, group_data in self._metadata["label"]["group"].items()
+            group_id: group_data["prefix"] for group_id, group_data in self._data["label"]["group"].items()
         }
-        version_label_prefix = self._metadata["label"]["auto_group"]["version"]["prefix"]
+        version_label_prefix = self._data["label"]["auto_group"]["version"]["prefix"]
         labels = (
-            self._github_api.user(self._metadata["repo"]["owner"])
-            .repo(self._metadata["repo"]["name"])
+            self._github_api.user(self._data["repo"]["owner"])
+            .repo(self._data["repo"]["name"])
             .issue_labels(number=issue_number)
         )
         out_dict = {}
