@@ -16,13 +16,18 @@ def generate(
     path_manager: PathManager,
     logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    generated_files = [
+    logger.section("Generate Dynamic Repository Files", group=True)
+
+    generated_files = []
+
+    logger.section("Generate Metadata")
+
         (path_manager.metadata, json.dumps(content_manager.as_dict)),
         (path_manager.license, content_manager["license"].get("text", "")),
-    ]
+
 
     generated_files += ConfigFileGenerator(
-        metadata=content_manager, output_path=path_manager, logger=logger
+        content_manager=content_manager, path_manager=path_manager, logger=logger
     ).generate()
 
     generated_files += FormGenerator(
@@ -30,7 +35,7 @@ def generate(
     ).generate()
 
     generated_files += HealthFileGenerator(
-        metadata=content_manager, output_path=path_manager, logger=logger
+        content_manager=content_manager, path_manager=path_manager, logger=logger
     ).generate()
 
     generated_files += package.generate(
@@ -40,4 +45,5 @@ def generate(
     )
 
     generated_files += readme.generate(ccm=content_manager, path=path_manager, logger=logger)
+    logger.section_end()
     return generated_files
