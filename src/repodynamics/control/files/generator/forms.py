@@ -1,5 +1,5 @@
 import pyserials
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.path import PathManager
 from repodynamics.datatype import DynamicFile
