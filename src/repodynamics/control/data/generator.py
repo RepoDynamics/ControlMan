@@ -68,20 +68,12 @@ class _ControlCenterContentGenerator:
         self._data["repo"] |= self._repo()
         self._data["owner"] = self._owner()
         self._data["name"] = self._name()
-        self._data["author"]["entries"] = self._authors()
-        self._data["discussion"]["categories"] = self._discussions()
-        self._data["license"] = self._license()
         self._data["keyword_slugs"] = self._keywords()
-        self._data["url"] = {"github": self._urls_github(), "website": self._urls_website()}
+        self._data["license"] = self._license()
         self._data["copyright"] |= self._copyright()
-
-        # if license_info:
-        #     self._metadata |= {
-        #         "license_name_short": license_info['name'],
-        #         "license_name_full": license_info['fullname'],
-        #     }
-        # self._metadata["license_txt"] = license_info["license_txt"].format(**self._metadata)
-        # self._metadata["license_notice"] = license_info["license_notice"].format(**self._metadata)
+        self._data["author"]["entries"] = self._authors()
+        self._data["discussion"]["categories"] = self._discussion_categories()
+        self._data["url"] = {"github": self._urls_github(), "website": self._urls_website()}
 
         website_main_sections, website_quicklinks = self._process_website_toctrees()
         self._data["web"]["sections"] = website_main_sections
@@ -153,7 +145,7 @@ class _ControlCenterContentGenerator:
                     self._logger.error(f"Trove classifier '{classifier}' is not supported.")
             package["trove_classifiers"] = sorted(trove_classifiers)
 
-        self._data["label"]["compiled"] = self.repo_labels()
+        self._data["label"]["compiled"] = self._repo_labels()
         self._data = pyserials.update.templated_data_from_source(
             templated_data=self._data, source_data=self._data
         )
@@ -165,49 +157,31 @@ class _ControlCenterContentGenerator:
         self._cache.save()
         return self._data
 
-    def _generate_custom_metadata(self) -> dict:
-        dir_path = self._pathman.dir_meta / "custom"
-        if not (dir_path / "generator.py").is_file():
-            return {}
-        self._logger.h3("Generate custom metadata")
-        if (dir_path / "requirements.txt").is_file():
-            self._logger.debug("Install custom metadata generator requirements")
-            _util.shell.run_command(
-                command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
-                raise_stderr=False,
-            )
-        custom_generator = file_io.import_module(name="generator", path=dir_path / "generator.py")
-        custom_metadata = custom_generator.run(self._data)
-        return custom_metadata
-
     def _repo(self) -> dict:
-        self._logger.h3("Generate 'repo' metadata")
+        self._logger.section("Repository Data")
         repo_address = self._git.repo_name(fallback_name=False, fallback_purpose=False)
         if not repo_address:
-            self._logger.error(
+            self._logger.critical(
                 "Failed to determine repository GitHub address from 'origin' remote for push events. "
                 "Following remotes were found:",
                 str(self._git.remotes),
             )
         owner_username, repo_name = repo_address
-        self._logger.success(
-            "Extract remote GitHub repository address",
-            f"Owner Username: {owner_username}\nRepository Mame: {repo_name}",
-        )
+        self._logger.info(title="Owner Username", message=owner_username)
+        self._logger.info(title="Name", message=repo_name)
         target_repo = self._data["repo"]["target"]
-        self._logger.input(f"Target repository", target_repo)
+        self._logger.info(title="Target", message=target_repo)
         repo_info = self._cache.get(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}")
         if repo_info:
-            self._logger.success(f"Repo metadata set from cache", json.dumps(repo_info, indent=3))
+            self._logger.section_end()
             return repo_info
-        self._logger.debug("Get repository info from GitHub API")
-        repo_api = self._github_api.user(owner_username).repo(repo_name)
-        repo_info = repo_api.info
+        repo_info = self._github_api.user(owner_username).repo(repo_name).info
+        self._logger.info("Retrieved repository info from GitHub API")
         if target_repo != "self" and repo_info["fork"]:
             repo_info = repo_info[target_repo]
-            self._logger.debug(
-                f"Repository is a fork and target is set to '{target_repo}'; "
-                f"set target to {repo_info['full_name']}."
+            self._logger.info(
+                title=f"Set target to {repo_info['full_name']}",
+                message=f"Repository is a fork and target is set to '{target_repo}'.",
             )
         repo = {
             attr: repo_info[attr]
@@ -215,42 +189,207 @@ class _ControlCenterContentGenerator:
         }
         repo["owner"] = repo_info["owner"]["login"]
         self._cache.set(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}", repo)
-        self._logger.debug(f"Set 'repo': {repo}")
+        self._logger.section_end()
         return repo
 
     def _owner(self) -> dict:
-        self._logger.h3("Generate 'owner' metadata")
+        self._logger.section("Repository Owner Data")
         owner_info = self._get_user(self._data["repo"]["owner"].lower())
-        self._logger.debug(f"Set 'owner': {json.dumps(owner_info)}")
+        self._logger.section_end()
         return owner_info
 
     def _name(self) -> str:
-        title = "Process Metadata: 'name'"
+        self._logger.section("Project Name")
         name = self._data["name"]
         if name:
-            self._logger.skip(title, f"Already set manually in metadata: '{name}'")
-            return name
-        name = self._data["repo"]["name"].replace("-", " ")
-        self._logger.success(title, f"Set from repository name: {name}")
+            self._logger.info(f"Already set manually: '{name}'")
+        else:
+            name = self._data["repo"]["name"].replace("-", " ")
+            self._logger.info(f"Set from repository name: {name}")
+        self._logger.section_end()
         return name
 
+    def _keywords(self) -> list:
+        self._logger.section("Keyword Slugs")
+        slugs = []
+        if not self._data["keywords"]:
+            self._logger.info("No keywords specified.")
+        else:
+            for keyword in self._data["keywords"]:
+                slugs.append(keyword.lower().replace(" ", "-"))
+            self._logger.info("Set from keywords.")
+        self._logger.debug("Keyword slugs:", code=str(slugs))
+        self._logger.section_end()
+        return slugs
+
+    def _license(self) -> dict:
+        self._logger.section("Project License")
+        data = self._data["license"]
+        if not data:
+            self._logger.info("No license specified.")
+            self._logger.section_end()
+            return {}
+        license_id = self._data["license"].get("id")
+        if not license_id:
+            self._logger.info("License data already set manually.")
+            self._logger.section_end()
+            return self._data["license"]
+        license_db = file_io.read_datafile(
+            path_data=file_io.get_package_datafile("db/license/info.yaml", return_content=False)
+        )
+        license_info = license_db.get(license_id.lower())
+        if not license_info:
+            self._logger.critical(title=f"License ID not found in database", message=license_id)
+        license_info = _copy.deepcopy(license_info)
+        license_info["shortname"] = data.get("shortname") or license_info["shortname"]
+        license_info["fullname"] = data.get("fullname") or license_info["fullname"]
+        license_info["trove_classifier"] = (
+            data.get("trove_classifier")
+            or f"License :: OSI Approved :: {license_info['trove_classifier']}"
+        )
+        filename = license_id.lower().removesuffix("+")
+        license_info["text"] = (
+            data.get("text") or file_io.get_package_datafile(f"db/license/text/{filename}.txt")
+        )
+        license_info["notice"] = (
+            data.get("notice") or file_io.get_package_datafile(f"db/license/notice/{filename}.txt")
+        )
+        self._logger.info(f"License data set from license ID '{license_id}'.")
+        self._logger.debug("License data:", code=str(license_info))
+        self._logger.section_end()
+        return license_info
+
+    def _copyright(self) -> dict:
+        self._logger.section("Project Copyright")
+        output = {}
+        data = self._data["copyright"]
+        current_year = _datetime.date.today().year
+        if not data.get("year_start"):
+            output["year_start"] = year_start = _datetime.datetime.strptime(
+                self._data["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
+            ).year
+            self._logger.info(f"Project start year set from repository creation date: {year_start}")
+        else:
+            output["year_start"] = year_start = data["year_start"]
+            if year_start > current_year:
+                self._logger.critical(
+                    title="Invalid start year",
+                    message=(
+                        f"Project Start year ({year_start}) cannot be greater "
+                        f"than current year ({current_year})."
+                    ),
+                )
+            self._logger.info(f"Project start year already set manually in metadata: {year_start}")
+        year_range = f"{year_start}{'' if year_start == current_year else f'–{current_year}'}"
+        output["year_range"] = year_range
+        if data.get("owner"):
+            output["owner"] = data["owner"]
+            self._logger.info(f"Copyright owner already set manually in metadata: {data['owner']}")
+        else:
+            output["owner"] = self._data["owner"]["name"]
+            self._logger.info(f"Copyright owner set to repository owner name: {output['owner']}")
+        output["notice"] = f"{year_range} {output['owner']}"
+        self._logger.info(title="Copyright notice set", message=output['notice'])
+        self._logger.section_end()
+        return output
+
     def _authors(self) -> list[dict]:
-        self._logger.h3("Generate 'authors' metadata")
+        self._logger.section("Project Authors")
         authors = []
         if not self._data["author"]["entries"]:
             authors.append(self._data["owner"])
-            self._logger.success(f"Set from owner: {json.dumps(authors)}")
-            return authors
-        for author in self._data["author"]["entries"]:
-            authors.append(author | self._get_user(author["username"].lower()))
-            self._logger.debug(f"Set author '{author['username']}': {json.dumps(author)}")
+            self._logger.info(f"No authors defined; setting owner as sole author.")
+        else:
+            for author in self._data["author"]["entries"]:
+                authors.append(author | self._get_user(author["username"].lower()))
+        self._logger.section_end()
         return authors
+
+    def _discussion_categories(self) -> list[dict] | None:
+        self._logger.section("GitHub Discussions Categories")
+        discussions_info = self._cache.get(f"discussions__{self._data['repo']['full_name']}")
+        if discussions_info:
+            self._logger.info(f"Set from cache.")
+        elif not self._github_api.authenticated:
+            self._logger.notice("GitHub token not provided. Cannot get discussions categories.")
+            discussions_info = []
+        else:
+            self._logger.info("Get repository discussions from GitHub API")
+            repo_api = self._github_api.user(self._data["repo"]["owner"]).repo(
+                self._data["repo"]["name"]
+            )
+            discussions_info = repo_api.discussion_categories()
+            self._cache.set(f"discussions__{self._data['repo']['full_name']}", discussions_info)
+        self._logger.section_end()
+        return discussions_info
+
+    def _urls_github(self) -> dict:
+        self._logger.section("GitHub URLs")
+        url = {}
+        home = url["home"] = self._data["repo"]["html_url"]
+        main_branch = self._data["repo"]["default_branch"]
+        # Main sections
+        for key in ["issues", "pulls", "discussions", "actions", "releases", "security"]:
+            url[key] = {"home": f"{home}/{key}"}
+
+        url["tree"] = f"{home}/tree/{main_branch}"
+        url["blob"] = f"{home}/blob/{main_branch}"
+        url["raw"] = f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/{main_branch}"
+
+        # Issues
+        url["issues"]["template_chooser"] = f"{url['issues']['home']}/new/choose"
+        url["issues"]["new"] = {
+            issue_type["id"]: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type['id']}.yaml"
+            for idx, issue_type in enumerate(self._data["issue"]["forms"])
+        }
+        # Discussions
+        url["discussions"]["new"] = {
+            slug: f"{url['discussions']['home']}/new?category={slug}"
+            for slug in self._data["discussion"]["form"]
+        }
+
+        # Security
+        url["security"]["policy"] = f"{url['security']['home']}/policy"
+        url["security"]["advisories"] = f"{url['security']['home']}/advisories"
+        url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
+        url["health_file"] = {}
+        for health_file_id, health_file_data in self._data["health_file"].items():
+            health_file_rel_path = self._pathman.health_file(
+                name=health_file_id, target_path=health_file_data["path"]
+            ).rel_path
+            url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
+        self._logger.info("Successfully generated all URLs")
+        self._logger.debug("Generated data:", code=str(url))
+        self._logger.section_end()
+        return url
+
+    def _urls_website(self) -> dict:
+        self._logger.section("Website URLs")
+        url = {}
+        base = self._data["web"].get("base_url")
+        if not base:
+            base = f"https://{self._data['owner']['username']}.github.io"
+            if self._data["repo"]["name"] != f"{self._data['owner']['username']}.github.io":
+                base += f"/{self._data['repo']['name']}"
+        url["base"] = base
+        url["home"] = base
+        url["announcement"] = (
+            f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/"
+            f"{self._ccm.branch__main__name}/{self._data['path']['dir']['website']}/"
+            "announcement.html"
+        )
+        for path_id, rel_path in self._data["web"]["path"].items():
+            url[path_id] = f"{base}/{rel_path}"
+        self._logger.info("Successfully generated all URLs")
+        self._logger.debug("Generated data:", code=str(url))
+        self._logger.section_end()
+        return url
 
     def _maintainers(self) -> list[dict]:
         def sort_key(val):
             return val[1]["issue"] + val[1]["pull"] + val[1]["discussion"]
 
-        self._logger.h3("Generate 'maintainers' metadata")
+        self._logger.section("Repository Maintainers")
         maintainers = dict()
         for role in ["issue", "discussion"]:
             if not self._data["maintainer"].get(role):
@@ -269,110 +408,13 @@ class _ControlCenterContentGenerator:
             {**self._get_user(username.lower()), "roles": roles}
             for username, roles in sorted(maintainers.items(), key=sort_key, reverse=True)
         ]
-        self._logger.success("Set 'maintainers'", json.dumps(maintainers_list, indent=3))
+        self._logger.info("Successfully generated all maintainers data")
+        self._logger.debug("Generated data:", code=str(maintainers_list))
+        self._logger.section_end()
         return maintainers_list
 
-    def _discussions(self) -> list[dict] | None:
-        self._logger.h3("Generate 'discussions' metadata")
-        discussions_info = self._cache.get(f"discussions__{self._data['repo']['full_name']}")
-        if discussions_info:
-            self._logger.debug(f"Set from cache: {discussions_info}")
-        elif not self._github_api.authenticated:
-            self._logger.attention("GitHub token not provided. Cannot get discussions categories.")
-            return []
-        else:
-            self._logger.debug("Get repository discussions from GitHub API")
-            repo_api = self._github_api.user(self._data["repo"]["owner"]).repo(
-                self._data["repo"]["name"]
-            )
-            discussions_info = repo_api.discussion_categories()
-            self._logger.debug(f"Set from API: {discussions_info}")
-            self._cache.set(f"discussions__{self._data['repo']['full_name']}", discussions_info)
-        return discussions_info
-
-    def _license(self) -> dict:
-        title = "Process metadata: 'license'"
-        data = self._data["license"]
-        if not data:
-            self._logger.skip(title, "No license specified.")
-            return {}
-        license_id = self._data["license"].get("id")
-        if not license_id:
-            self._logger.skip(title, "License data already set manually in metadata.")
-            return self._data["license"]
-
-        license_db = file_io.read_datafile(
-            path_data=file_io.get_package_datafile("db/license/info.yaml", return_content=False)
-        )
-        license_info = license_db.get(license_id.lower())
-
-        if not license_info:
-            self._logger.error(title, f"License ID '{license_id}' not found in database.")
-        else:
-            license_info = _copy.deepcopy(license_info)
-            license_info["shortname"] = data.get("shortname") or license_info["shortname"]
-            license_info["fullname"] = data.get("fullname") or license_info["fullname"]
-            license_info["trove_classifier"] = (
-                data.get("trove_classifier")
-                or f"License :: OSI Approved :: {license_info['trove_classifier']}"
-            )
-            filename = license_id.lower().removesuffix("+")
-            license_info["text"] = (
-                data.get("text") or file_io.get_package_datafile(f"db/license/text/{filename}.txt")
-            )
-            license_info["notice"] = (
-                data.get("notice") or file_io.get_package_datafile(f"db/license/notice/{filename}.txt")
-            )
-        self._logger.success(title, f"License metadata set from license ID '{license_id}'.")
-        return license_info
-
-    def _copyright(self) -> dict:
-        title = "Process metadata: 'copyright'"
-        log_details = []
-        output = {}
-        data = self._data["copyright"]
-        current_year = _datetime.date.today().year
-        if not data.get("year_start"):
-            output["year_start"] = year_start = _datetime.datetime.strptime(
-                self._data["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
-            ).year
-            log_details.append(f"- 'copyright.year_start' set from repository creation date: {year_start}")
-        else:
-            output["year_start"] = year_start = data["year_start"]
-            if year_start > current_year:
-                self._logger.error(
-                    title,
-                    f"'year_start' cannot be greater than current year ({current_year}), "
-                    f"but got {year_start}.",
-                )
-            log_details.append(f"- 'copyright.year_start' already set manually in metadata: {year_start}")
-        year_range = f"{year_start}{'' if year_start == current_year else f'–{current_year}'}"
-        output["year_range"] = year_range
-        log_details.append(f"- 'copyright.year_range' set: {year_range}")
-        if data.get("owner"):
-            output["owner"] = data["owner"]
-            log_details.append(f"- 'copyright.owner' already set manually in metadata: {data['owner']}")
-        else:
-            output["owner"] = self._data["owner"]["name"]
-            log_details.append(f"- 'copyright.owner' set from repository owner name: {output['owner']}")
-        output["notice"] = f"{year_range} {output['owner']}"
-        log_details.append(f"- 'copyright.notice' set: {output['notice']}")
-        self._logger.success(title, "\n".join(log_details))
-        return output
-
-    def _keywords(self) -> list:
-        title = "Process Metadata: 'keywords'"
-        slugs = []
-        if not self._data["keywords"]:
-            self._logger.skip(title, "No keywords specified.")
-            return slugs
-        for keyword in self._data["keywords"]:
-            slugs.append(keyword.lower().replace(" ", "-"))
-        self._logger.success(title, f"Set from metadata: {slugs}")
-        return slugs
-
-    def repo_labels(self) -> list[dict[str, str]]:
-        self._logger.h3("Generate metadata: labels")
+    def _repo_labels(self) -> list[dict[str, str]]:
+        self._logger.section("Repository Labels")
         out = []
         for group_name, group in self._data["label"]["group"].items():
             prefix = group["prefix"]
@@ -414,9 +456,13 @@ class _ControlCenterContentGenerator:
                     "color": label_data["color"],
                 }
             )
+        self._logger.info("Successfully compiled all labels")
+        self._logger.debug("Generated data:", code=str(out))
+        self._logger.section_end()
         return out
 
     def _process_website_toctrees(self) -> tuple[list[dict], list[dict]]:
+        self._logger.section("Website Sections")
         path_docs = self._pathman.dir_website / "source"
         main_toctree_entries = self._extract_toctree((path_docs / "index.md").read_text())
         main_sections = []
@@ -449,6 +495,9 @@ class _ControlCenterContentGenerator:
                         {"title": sub_title, "path": str(subpath.with_suffix(""))}
                     )
                 quicklinks.append({"title": title, "entries": quicklink_entries})
+        self._logger.info("Extracted main sections:", code=str(main_sections))
+        self._logger.info("Extracted quicklinks:", code=str(quicklinks))
+        self._logger.section_end()
         return main_sections, quicklinks
 
     def _get_all_blog_categories(self) -> tuple[str, ...]:
@@ -494,63 +543,10 @@ class _ControlCenterContentGenerator:
                 return tuple(category.strip() for category in match.group(1).split(","))
         return
 
-    def _urls_github(self) -> dict:
-        url = {}
-        home = url["home"] = self._data["repo"]["html_url"]
-        main_branch = self._data["repo"]["default_branch"]
-        # Main sections
-        for key in ["issues", "pulls", "discussions", "actions", "releases", "security"]:
-            url[key] = {"home": f"{home}/{key}"}
-
-        url["tree"] = f"{home}/tree/{main_branch}"
-        url["blob"] = f"{home}/blob/{main_branch}"
-        url["raw"] = f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/{main_branch}"
-
-        # Issues
-        url["issues"]["template_chooser"] = f"{url['issues']['home']}/new/choose"
-        url["issues"]["new"] = {
-            issue_type["id"]: f"{url['issues']['home']}/new?template={idx + 1:02}_{issue_type['id']}.yaml"
-            for idx, issue_type in enumerate(self._data["issue"]["forms"])
-        }
-        # Discussions
-        url["discussions"]["new"] = {
-            slug: f"{url['discussions']['home']}/new?category={slug}"
-            for slug in self._data["discussion"]["form"]
-        }
-
-        # Security
-        url["security"]["policy"] = f"{url['security']['home']}/policy"
-        url["security"]["advisories"] = f"{url['security']['home']}/advisories"
-        url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
-        url["health_file"] = {}
-        for health_file_id, health_file_data in self._data["health_file"].items():
-            health_file_rel_path = self._pathman.health_file(
-                name=health_file_id, target_path=health_file_data["path"]
-            ).rel_path
-            url["health_file"][health_file_id] = f"{url['blob']}/{health_file_rel_path}"
-        return url
-
-    def _urls_website(self) -> dict:
-        url = {}
-        base = self._data["web"].get("base_url")
-        if not base:
-            base = f"https://{self._data['owner']['username']}.github.io"
-            if self._data["repo"]["name"] != f"{self._data['owner']['username']}.github.io":
-                base += f"/{self._data['repo']['name']}"
-        url["base"] = base
-        url["home"] = base
-        url["announcement"] = (
-            f"https://raw.githubusercontent.com/{self._data['repo']['full_name']}/"
-            f"{self._ccm.branch__main__name}/{self._data['path']['dir']['website']}/"
-            "announcement.html"
-        )
-        for path_id, rel_path in self._data["web"]["path"].items():
-            url[path_id] = f"{base}/{rel_path}"
-        return url
-
     def _publications(self) -> list[dict]:
         if not self._data["workflow"]["init"].get("get_owner_publications"):
             return []
+        self._logger.section("Publications")
         orcid_id = self._data["owner"]["url"].get("orcid")
         if not orcid_id:
             self._logger.error(
@@ -568,36 +564,45 @@ class _ControlCenterContentGenerator:
                 publication_data = pylinks.api.doi(doi=doi).curated
                 self._cache.set(f"doi_{doi}", publication_data)
             publications.append(publication_data)
+        self._logger.section_end()
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
     def _package_name(self) -> tuple[str, str]:
-        self._logger.h3("Process metadata: package.name")
+        self._logger.section("Package Name")
         name = self._data["name"]
         package_name = _re.sub(r"[ ._-]+", "-", name)
         import_name = package_name.replace("-", "_").lower()
-        self._logger.success(f"package.name: {package_name}")
+        self._logger.info(title=f"Package name", message=package_name)
+        self._logger.info(title="Package import name", message=import_name)
+        self._logger.section_end()
         return package_name, import_name
 
     def _package_testsuite_name(self) -> tuple[str, str]:
-        self._logger.h3("Process metadata: package.testsuite_name")
+        self._logger.section("Package Test-Suite Name")
         testsuite_name = pyserials.update.templated_data_from_source(
             templated_data=self._data["package"]["pyproject_tests"]["project"]["name"],
             source_data=self._data
         )
         import_name = testsuite_name.replace("-", "_").lower()
-        self._logger.success(f"package.testsuite_name: {testsuite_name}")
+        self._logger.info(title="Test-suite name", message=testsuite_name)
+        self._logger.section_end()
         return testsuite_name, import_name
 
     def _package_platform_urls(self) -> dict:
+        self._logger.section("Package Platform URLs")
         package_name = self._data["package"]["name"]
         url = {
             "conda": f"https://anaconda.org/conda-forge/{package_name}/",
             "pypi": f"https://pypi.org/project/{package_name}/",
         }
+        self._logger.info(title="PyPI", message=url["pypi"])
+        self._logger.info(title="Conda Forge", message=url["conda"])
+        self._logger.section_end()
         return url
 
     def _package_development_status(self) -> dict:
-        self._logger.h3("Process metadata: package.development_status")
+        # TODO: add to data
+        self._logger.section("Package Development Status")
         phase = {
             1: "Planning",
             2: "Pre-Alpha",
@@ -613,18 +618,19 @@ class _ControlCenterContentGenerator:
             "dev_phase": phase[status_code],
             "trove_classifier": f"Development Status :: {status_code} - {phase[status_code]}",
         }
-        self._logger.success(f"Development info: {output}")
+        self._logger.info(f"Development info: {output}")
+        self._logger.section_end()
         return output
 
     def _package_python_versions(self) -> dict:
-        self._logger.h3("Process metadata: package.python_version_min")
+        self._logger.section("Package Python Versions")
         min_ver_str = self._data["package"]["python_version_min"]
         min_ver = list(map(int, min_ver_str.split(".")))
         if len(min_ver) < 3:
             min_ver.extend([0] * (3 - len(min_ver)))
-        if min_ver < [3, 8, 0]:
-            self._logger.error(
-                f"'package.python_version_min' cannot be less than 3.8.0, but got {min_ver_str}."
+        if min_ver < [3, 10, 0]:
+            self._logger.critical(
+                f"Minimum Python version cannot be less than 3.10.0, but got {min_ver_str}."
             )
         min_ver = tuple(min_ver)
         # Get a list of all Python versions that have been released to date.
@@ -647,11 +653,13 @@ class _ControlCenterContentGenerator:
                 "Programming Language :: Python :: {}".format(postfix) for postfix in ["3 :: Only"] + vers
             ],
         }
-        self._logger.success(f"Set package Python versions data: {output}")
+        self._logger.info(title="Supported versions", message=str(output["python_versions"]))
+        self._logger.debug("Generated data:", code=str(output))
+        self._logger.section_end()
         return output
 
     def _package_operating_systems(self):
-        self._logger.h3("Process metadata: package.operating_systems")
+        self._logger.section("Package Operating Systems")
         trove_classifiers_postfix = {
             "windows": "Microsoft :: Windows",
             "macos": "MacOS",
@@ -674,12 +682,13 @@ class _ControlCenterContentGenerator:
             "windows": "Windows",
         }
         if not self._data["package"].get("operating_systems"):
-            self._logger.attention("No operating systems provided.")
+            self._logger.info("No operating systems provided; package is platform independent.")
             output["trove_classifiers"].append(
                 trove_classifier_template.format(trove_classifiers_postfix["independent"])
             )
             output["github_runners"].extend(["ubuntu-latest", "macos-latest", "windows-latest"])
             output["os_titles"].extend(list(os_title.values()))
+            self._logger.section_end()
             return output
         output["os_independent"] = False
         for os_name, specs in self._data["package"]["operating_systems"].items():
@@ -689,7 +698,7 @@ class _ControlCenterContentGenerator:
             )
             default_runner = f"{os_name if os_name != 'linux' else 'ubuntu'}-latest"
             if not specs:
-                self._logger.attention(f"No specifications provided for operating system '{os_name}'.")
+                self._logger.info(f"No specifications provided for operating system '{os_name}'.")
                 output["github_runners"].append(default_runner)
                 continue
             runner = default_runner if not specs.get("runner") else specs["runner"]
@@ -702,10 +711,12 @@ class _ControlCenterContentGenerator:
             output["cibw_matrix_python"].extend(
                 [f"cp{ver.replace('.', '')}" for ver in self._data["package"]["python_versions"]]
             )
+        self._logger.debug("Generated data:", code=str(output))
+        self._logger.section_end()
         return output
 
     def _package_releases(self) -> dict[str, list[str | dict[str, str | list[str] | PEP440SemVer]]]:
-        self._logger.h3("Process metadata: package.releases")
+        self._logger.section("Package Releases")
         source = self._ccm_before if self._ccm_before else self._data
         release_prefix, pre_release_prefix = allowed_prefixes = tuple(
             source["branch"][group_name]["prefix"] for group_name in ["release", "pre-release"]
@@ -804,67 +815,85 @@ class _ControlCenterContentGenerator:
             out["interfaces"].append("CLI")
         if all_gui_scripts:
             out["interfaces"].append("GUI")
-        self._logger.success(f"Set package releases data", out)
+        self._logger.debug(f"Generated data:", code=str(out))
+        self._logger.section_end()
         return out
 
-    def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
-        label_prefix = {
-            group_id: group_data["prefix"] for group_id, group_data in self._data["label"]["group"].items()
-        }
-        version_label_prefix = self._data["label"]["auto_group"]["version"]["prefix"]
-        labels = (
-            self._github_api.user(self._data["repo"]["owner"])
-            .repo(self._data["repo"]["name"])
-            .issue_labels(number=issue_number)
-        )
-        out_dict = {}
-        out_list = []
-        for label in labels:
-            if label["name"].startswith(version_label_prefix):
-                versions = out_dict.setdefault("version", [])
-                versions.append(label["name"].removeprefix(version_label_prefix))
-                continue
-            for group_id, prefix in label_prefix.items():
-                if label["name"].startswith(prefix):
-                    if group_id in out_dict:
-                        self._logger.error(
-                            f"Duplicate label group '{group_id}' found for issue {issue_number}.",
-                            label["name"],
-                        )
-                    else:
-                        out_dict[group_id] = label["name"].removeprefix(prefix)
-                        break
-            else:
-                out_list.append(label["name"])
-        for group_id in ("primary_type", "status"):
-            if group_id not in out_dict:
-                self._logger.error(
-                    f"Missing label group '{group_id}' for issue {issue_number}.",
-                    out_dict,
-                )
-        return out_dict, out_list
+    def _generate_custom_metadata(self) -> dict:
+        dir_path = self._pathman.dir_meta / "custom"
+        if not (dir_path / "generator.py").is_file():
+            return {}
+        self._logger.section("User-Defined Data")
+        if (dir_path / "requirements.txt").is_file():
+            self._logger.info("Install custom metadata generator requirements")
+            _util.shell.run_command(
+                command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
+                raise_stderr=False,
+            )
+        custom_generator = file_io.import_module(name="generator", path=dir_path / "generator.py")
+        custom_metadata = custom_generator.run(self._data)
+        self._logger.section_end()
+        return custom_metadata
+
+    # def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
+    #     label_prefix = {
+    #         group_id: group_data["prefix"] for group_id, group_data in self._data["label"]["group"].items()
+    #     }
+    #     version_label_prefix = self._data["label"]["auto_group"]["version"]["prefix"]
+    #     labels = (
+    #         self._github_api.user(self._data["repo"]["owner"])
+    #         .repo(self._data["repo"]["name"])
+    #         .issue_labels(number=issue_number)
+    #     )
+    #     out_dict = {}
+    #     out_list = []
+    #     for label in labels:
+    #         if label["name"].startswith(version_label_prefix):
+    #             versions = out_dict.setdefault("version", [])
+    #             versions.append(label["name"].removeprefix(version_label_prefix))
+    #             continue
+    #         for group_id, prefix in label_prefix.items():
+    #             if label["name"].startswith(prefix):
+    #                 if group_id in out_dict:
+    #                     self._logger.error(
+    #                         f"Duplicate label group '{group_id}' found for issue {issue_number}.",
+    #                         label["name"],
+    #                     )
+    #                 else:
+    #                     out_dict[group_id] = label["name"].removeprefix(prefix)
+    #                     break
+    #         else:
+    #             out_list.append(label["name"])
+    #     for group_id in ("primary_type", "status"):
+    #         if group_id not in out_dict:
+    #             self._logger.error(
+    #                 f"Missing label group '{group_id}' for issue {issue_number}.",
+    #                 out_dict,
+    #             )
+    #     return out_dict, out_list
 
     def _get_user(self, username: str) -> dict:
+        self._logger.section(f"Get GitHub User Data")
         user_info = self._cache.get(f"user__{username}")
         if user_info:
+            self._logger.section_end()
             return user_info
         self._logger.info(f"Get user info for '{username}' from GitHub API")
         output = {"username": username}
         user = self._github_api.user(username=username)
         user_info = user.info
-        # Get website and social accounts
         for key in ["name", "company", "location", "email", "bio", "id", "node_id", "avatar_url"]:
             output[key] = user_info[key]
         output["url"] = {"website": user_info["blog"], "github": user_info["html_url"]}
-        self._logger.info(f"Get social accounts for '{username}' from GitHub API")
+        self._logger.section(f"Get Social Accounts")
         social_accounts = user.social_accounts
         for account in social_accounts:
             if account["provider"] == "twitter":
                 output["url"]["twitter"] = account["url"]
-                self._logger.success(f"Found Twitter account for '{username}': {account['url']}")
+                self._logger.info(title="Twitter account", message=account['url'])
             elif account["provider"] == "linkedin":
                 output["url"]["linkedin"] = account["url"]
-                self._logger.success(f"Found LinkedIn account for '{username}': {account['url']}")
+                self._logger.info(title=f"LinkedIn account", message=account['url'])
             else:
                 for url, key in [
                     (r"orcid\.org", "orcid"),
@@ -875,20 +904,26 @@ class _ControlCenterContentGenerator:
                     )
                     if match:
                         output["url"][key] = f"https://{match.group(1)}"
-                        self._logger.success(f"Found {key} account for '{username}': {output['url'][key]}")
+                        self._logger.info(title=f"{key} account", message=output['url'][key])
                         break
                 else:
                     other_urls = output["url"].setdefault("others", list())
                     other_urls.append(account["url"])
-                    self._logger.success(f"Found unknown account for '{username}': {account['url']}")
+                    self._logger.info(title=f"Unknown account", message=account['url'])
+        self._logger.section_end()
         self._cache.set(f"user__{username}", output)
+        self._logger.section_end()
         return output
 
     def _get_released_python3_versions(self) -> list[tuple[int, int, int]]:
+        self._logger.section("Current Python Versions")
         release_versions = self._cache.get("python_versions")
         if release_versions:
+            self._logger.section_end()
             return [tuple(ver) for ver in release_versions]
+        self._logger.info("Get Python versions from GitHub API")
         vers = self._github_api.user("python").repo("cpython").semantic_versions(tag_prefix="v")
         release_versions = sorted(set([v for v in vers if v[0] >= 3]))
         self._cache.set("python_versions", release_versions)
+        self._logger.section_end()
         return release_versions
