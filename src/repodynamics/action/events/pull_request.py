@@ -6,7 +6,7 @@ from github_contexts import GitHubContext
 from github_contexts.github.payloads.pull_request import PullRequestPayload
 from github_contexts.github.enums import ActionType
 import conventional_commits
-from actionman.log import Logger, LogStatus
+from actionman.logger import Logger, LogLevel
 
 import repodynamics.control.content
 import repodynamics.control.content
