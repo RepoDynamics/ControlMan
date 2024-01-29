@@ -130,6 +130,7 @@ properties:
         default: docs/prerelease_dev_protocols.md
       template:
         type: object
+        default: { }
         additionalProperties: false
         properties:
           title:
