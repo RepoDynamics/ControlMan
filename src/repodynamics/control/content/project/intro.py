@@ -1,7 +1,7 @@
-from typing import NamedTuple
+from typing import NamedTuple as _NamedTuple
 
 
-class KeyNote(NamedTuple):
+class KeyNote(_NamedTuple):
     title: str
     description: str
 
