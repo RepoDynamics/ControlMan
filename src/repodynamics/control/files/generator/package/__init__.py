@@ -7,11 +7,11 @@ from repodynamics.path import PathManager
 
 
 def generate(
-    metadata: ControlCenterContentManager,
-    paths: PathManager,
-    logger: Logger = None,
+    content_manager: ControlCenterContentManager,
+    path_manager: PathManager,
+    logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    if metadata["package"]["type"] == "python":
-        return PythonPackageFileGenerator(metadata=metadata, paths=paths, logger=logger).generate()
+    if content_manager["package"]["type"] == "python":
+        return PythonPackageFileGenerator(metadata=content_manager, paths=path_manager, logger=logger).generate()
     else:
         return []
