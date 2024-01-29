@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.datatype import DynamicFile, Diff, DynamicFileChangeType, DynamicFileType
 from repodynamics.control.content import ControlCenterContentManager
