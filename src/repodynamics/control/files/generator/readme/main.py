@@ -10,7 +10,7 @@ from typing import Literal, Sequence
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
-from actionman.log import Logger
+from actionman.logger import Logger
 from readme_renderer.markdown import render
 
 import repodynamics
