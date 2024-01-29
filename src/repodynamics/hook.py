@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import json
 
-from actionman.log import Logger
+from actionman.logger import Logger
 import pyserials
 from markitup import html, md, sgr
 
