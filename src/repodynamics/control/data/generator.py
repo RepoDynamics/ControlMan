@@ -1,11 +1,9 @@
 # Standard libraries
-import datetime
-from pathlib import Path
+import datetime as _datetime
+from pathlib import Path as _Path
 import json
-import re
-import copy
-import importlib.util
-import sys
+import re as _re
+import copy as _copy
 
 # Non-standard libraries
 import pylinks
@@ -31,7 +29,10 @@ def generate(
     future_versions: dict[str, str | PEP440SemVer] | None = None,
     logger: Logger = None,
 ) -> dict:
-    return _ControlCenterContentGenerator(**locals()).generate()
+    logger.section("Generate Control Center Contents", group=True)
+    content = _ControlCenterContentGenerator(**locals()).generate()
+    logger.section_end()
+    return content
 
 
 class _ControlCenterContentGenerator:
@@ -180,14 +181,9 @@ class _ControlCenterContentGenerator:
                 command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
                 raise_stderr=False,
             )
-        spec = importlib.util.spec_from_file_location(
-            "generator",
-            dir_path / "generator.py",
-        )
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["generator"] = module
-        spec.loader.exec_module(module)
-        return module.run(self._data)
+        custom_generator = file_io.import_module(name="generator", path=dir_path / "generator.py")
+        custom_metadata = custom_generator.run(self._data)
+        return custom_metadata
 
     def _repo(self) -> dict:
         self._logger.h3("Generate 'repo' metadata")
@@ -318,7 +314,7 @@ class _ControlCenterContentGenerator:
         if not license_info:
             self._logger.error(title, f"License ID '{license_id}' not found in database.")
         else:
-            license_info = copy.deepcopy(license_info)
+            license_info = _copy.deepcopy(license_info)
             license_info["shortname"] = data.get("shortname") or license_info["shortname"]
             license_info["fullname"] = data.get("fullname") or license_info["fullname"]
             license_info["trove_classifier"] = (
@@ -340,9 +336,9 @@ class _ControlCenterContentGenerator:
         log_details = []
         output = {}
         data = self._data["copyright"]
-        current_year = datetime.date.today().year
+        current_year = _datetime.date.today().year
         if not data.get("year_start"):
-            output["year_start"] = year_start = datetime.datetime.strptime(
+            output["year_start"] = year_start = _datetime.datetime.strptime(
                 self._data["repo"]["created_at"], "%Y-%m-%dT%H:%M:%SZ"
             ).year
             log_details.append(f"- 'copyright.year_start' set from repository creation date: {year_start}")
@@ -433,7 +429,7 @@ class _ControlCenterContentGenerator:
         for main_toctree_entry in main_toctree_entries:
             text = (path_docs / main_toctree_entry).with_suffix(".md").read_text()
             title = self._extract_main_heading(text)
-            path = Path(main_toctree_entry)
+            path = _Path(main_toctree_entry)
             main_dir = path.parent
             main_sections.append({"title": title, "path": str(path.with_suffix(""))})
             if str(main_dir) == self._data["web"]["path"]["news"]:
@@ -475,12 +471,12 @@ class _ControlCenterContentGenerator:
 
     @staticmethod
     def _extract_main_heading(file_content: str) -> str | None:
-        match = re.search(r"^# (.*)", file_content, re.MULTILINE)
+        match = _re.search(r"^# (.*)", file_content, _re.MULTILINE)
         return match.group(1) if match else None
 
     @staticmethod
     def _extract_toctree(file_content: str) -> tuple[str, ...] | None:
-        matches = re.findall(r"(:{3,}){toctree}\s((.|\s)*?)\s\1", file_content, re.DOTALL)
+        matches = _re.findall(r"(:{3,}){toctree}\s((.|\s)*?)\s\1", file_content, _re.DOTALL)
         if not matches:
             return
         toctree_str = matches[0][1]
@@ -493,11 +489,11 @@ class _ControlCenterContentGenerator:
 
     @staticmethod
     def _extract_blog_categories(file_content: str) -> tuple[str, ...] | None:
-        front_matter_match = re.search(r'^---[\s\S]*?---', file_content, re.MULTILINE)
+        front_matter_match = _re.search(r'^---[\s\S]*?---', file_content, _re.MULTILINE)
         if front_matter_match:
             front_matter = front_matter_match.group()
-            match = re.search(
-                r'^---[\s\S]*?\bcategory:\s*["\']?(.*?)["\']?\s*(?:\n|---)', front_matter, re.MULTILINE
+            match = _re.search(
+                r'^---[\s\S]*?\bcategory:\s*["\']?(.*?)["\']?\s*(?:\n|---)', front_matter, _re.MULTILINE
             )
             if match:
                 return tuple(category.strip() for category in match.group(1).split(","))
@@ -582,7 +578,7 @@ class _ControlCenterContentGenerator:
     def _package_name(self) -> tuple[str, str]:
         self._logger.h3("Process metadata: package.name")
         name = self._data["name"]
-        package_name = re.sub(r"[ ._-]+", "-", name)
+        package_name = _re.sub(r"[ ._-]+", "-", name)
         import_name = package_name.replace("-", "_").lower()
         self._logger.success(f"package.name: {package_name}")
         return package_name, import_name
@@ -720,7 +716,7 @@ class _ControlCenterContentGenerator:
             source["branch"][group_name]["prefix"] for group_name in ["release", "pre-release"]
         )
         main_branch_name = source["branch"]["main"]["name"]
-        branch_pattern = re.compile(rf"^({release_prefix}|{pre_release_prefix}|{main_branch_name})")
+        branch_pattern = _re.compile(rf"^({release_prefix}|{pre_release_prefix}|{main_branch_name})")
         releases: list[dict] = []
         self._git.fetch_remote_branches_by_pattern(branch_pattern=branch_pattern)
         curr_branch, other_branches = self._git.get_all_branch_names()
@@ -879,7 +875,7 @@ class _ControlCenterContentGenerator:
                     (r"orcid\.org", "orcid"),
                     (r"researchgate\.net/profile", "researchgate"),
                 ]:
-                    match = re.compile(r"(?:https?://)?(?:www\.)?({}/[\w\-]+)".format(url)).fullmatch(
+                    match = _re.compile(r"(?:https?://)?(?:www\.)?({}/[\w\-]+)".format(url)).fullmatch(
                         account["url"]
                     )
                     if match:
