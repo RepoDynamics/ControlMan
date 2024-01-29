@@ -6,7 +6,7 @@ from typing import Literal
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
-from actionman.log import Logger
+from actionman.logger import Logger
 
 import repodynamics
 from repodynamics.path import PathManager
