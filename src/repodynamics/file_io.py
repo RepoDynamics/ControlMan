@@ -1,8 +1,11 @@
 from pathlib import Path
 from typing import Literal, Type
+from types import ModuleType as _ModuleType
 from importlib.resources import files
 import inspect
 import shutil
+import importlib.util as _importlib_util
+import sys as _sys
 
 import jsonschema
 import pyserials
@@ -155,3 +158,24 @@ def delete_dir_content(path: str | Path, exclude: list[str] = None, missing_ok: 
         elif item.is_dir():
             shutil.rmtree(item)
     return
+
+
+def import_module(name: str, path: str | Path) -> _ModuleType:
+    """Import a Python source file directly from a path.
+
+    Parameters
+    ----------
+    name : str
+        Name of the module to import.
+    path : str | Path
+        Path to the Python source file.
+
+    References
+    ----------
+    - [Python Documentation](https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly)
+    """
+    spec = _importlib_util.spec_from_file_location(name=name, location=path)
+    module = _importlib_util.module_from_spec(spec)
+    _sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
