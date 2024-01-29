@@ -1,10 +1,7 @@
 from typing import Optional
 import subprocess
 from pathlib import Path
-from repodynamics.logger import Logger
-
-
-_LOGGER = Logger("console")
+from actionman.logger import Logger
 
 
 def run_command(
@@ -14,7 +11,7 @@ def run_command(
     raise_returncode: bool = True,
     raise_stderr: bool = True,
     text_output: bool = True,
-    logger: Logger = _LOGGER,
+    logger: Logger | None = None,
 ) -> Optional[tuple[str, str, int]]:
     cmd_str = " ".join(command)
     title = f"Run shell command '{cmd_str}'"
