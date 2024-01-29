@@ -8,7 +8,7 @@ from actionman.logger import Logger
 
 from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
 from repodynamics.action.events._base import EventHandler
-from repodynamics.control.files.generator.forms import FormGenerator
+from repodynamics.control.files.generator.forms import _FormGenerator
 
 
 class IssuesEventHandler(EventHandler):
@@ -267,7 +267,7 @@ class IssuesEventHandler(EventHandler):
             if elem["type"] == "markdown":
                 continue
             pre_process = elem.get("pre_process")
-            if not pre_process or FormGenerator._pre_process_existence(pre_process):
+            if not pre_process or _FormGenerator._pre_process_existence(pre_process):
                 optional = False
             else:
                 optional = True
