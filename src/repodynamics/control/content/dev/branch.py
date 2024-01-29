@@ -1,10 +1,10 @@
-from typing import NamedTuple
-from enum import Enum
+from typing import NamedTuple as _NamedTuple
+from enum import Enum as _Enum
 
-from repodynamics.datatype import BranchType
+from repodynamics.datatype import BranchType as _BranchType
 
 
-class RulesetEnforcementLevel(Enum):
+class RulesetEnforcementLevel(_Enum):
     """
     The enforcement level of the branch protection ruleset.
 
@@ -22,7 +22,7 @@ class RulesetEnforcementLevel(Enum):
     EVALUATE = "evaluate"
 
 
-class RulesetBypassActorType(Enum):
+class RulesetBypassActorType(_Enum):
     """
     The type of actor that can bypass the branch protection ruleset.
     """
@@ -32,7 +32,7 @@ class RulesetBypassActorType(Enum):
     INTEGRATION = "integration"
 
 
-class RulesetBypassMode(Enum):
+class RulesetBypassMode(_Enum):
     """
     The mode of bypass for the branch protection ruleset.
     """
@@ -40,18 +40,18 @@ class RulesetBypassMode(Enum):
     PULL = "pull_request"
 
 
-class RulesetBypassActor(NamedTuple):
+class RulesetBypassActor(_NamedTuple):
     id: int
     type: RulesetBypassActorType
     mode: RulesetBypassMode
 
 
-class RulesetStatusCheckContext(NamedTuple):
+class RulesetStatusCheckContext(_NamedTuple):
     name: str
     integration_id: int | None
 
 
-class Rules(NamedTuple):
+class Rules(_NamedTuple):
     protect_creation: bool
     protect_deletion: bool
     protect_modification: bool
@@ -71,18 +71,18 @@ class Rules(NamedTuple):
     required_deployment_environments: tuple[str, ...]
 
 
-class BranchProtectionRuleset(NamedTuple):
+class BranchProtectionRuleset(_NamedTuple):
     enforcement: RulesetEnforcementLevel
     bypass_actors: tuple[RulesetBypassActor, ...]
     rule: Rules
 
 
-class MainBranch(NamedTuple):
+class MainBranch(_NamedTuple):
     name: str
     ruleset: BranchProtectionRuleset
 
 
-class GroupedBranch(NamedTuple):
+class GroupedBranch(_NamedTuple):
     prefix: str
     ruleset: BranchProtectionRuleset
 
@@ -198,11 +198,11 @@ class Branch:
         return self._branch_auto_update
 
     @property
-    def groups(self) -> dict[BranchType, GroupedBranch]:
+    def groups(self) -> dict[_BranchType, GroupedBranch]:
         return {
-            BranchType.RELEASE: self.release,
-            BranchType.PRERELEASE: self.pre_release,
-            BranchType.IMPLEMENT: self.implementation,
-            BranchType.DEV: self.development,
-            BranchType.AUTOUPDATE: self.auto_update
+            _BranchType.RELEASE: self.release,
+            _BranchType.PRERELEASE: self.pre_release,
+            _BranchType.IMPLEMENT: self.implementation,
+            _BranchType.DEV: self.development,
+            _BranchType.AUTOUPDATE: self.auto_update
         }
