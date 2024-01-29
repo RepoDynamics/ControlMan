@@ -7,8 +7,7 @@ from repodynamics.control import files
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.control.data import loader, generator, validator
 from repodynamics.path import PathManager
-from repodynamics.datatype import DynamicFile, Diff
-from repodynamics.datatype import DynamicFileType
+from repodynamics.datatype import DynamicFile, Diff, DynamicFileType
 from repodynamics.version import PEP440SemVer
 
 
@@ -74,7 +73,7 @@ class ControlCenterManager:
         if self._generated_files:
             return self._generated_files
         metadata = self.generate_data()
-        self._logger.h2("Generate Files")
+
         self._generated_files = files.generate(
             content_manager=metadata,
             path_manager=self.path_manager,
@@ -89,12 +88,12 @@ class ControlCenterManager:
             return self._results, self._changes, self._summary
         updates = self.generate_files()
         self._results, self._changes, self._summary = files.compare(
-            generated_files=updates, path_root=self._path_root, logger=self._logger
+            generated_files=updates, path_repo=self._path_root, logger=self._logger
         )
         return self._results, self._changes, self._summary
 
     def apply_changes(self) -> None:
         if not self._results:
             self.compare_files()
-        files.apply(self._results)
+        files.apply(results=self._results, logger=self._logger)
         return
