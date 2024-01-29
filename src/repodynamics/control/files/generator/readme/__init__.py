@@ -13,15 +13,15 @@ _THEME_GENERATOR = {
 
 
 def generate(
-    ccm: ControlCenterContentManager,
-    path: PathManager,
-    logger: Logger = None,
+    content_manager: ControlCenterContentManager,
+    path_manager: PathManager,
+    logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    out = ReadmeFileGenerator(ccm=ccm, path=path, logger=logger).generate()
-    if ccm["readme"]["repo"]:
-        theme = ccm["readme"]["repo"]["theme"]
-        out.extend(_THEME_GENERATOR[theme](ccm=ccm, path=path, target="repo", logger=logger).generate())
-    if ccm["readme"]["package"]:
-        theme = ccm["readme"]["package"]["theme"]
-        out.extend(_THEME_GENERATOR[theme](ccm=ccm, path=path, target="package", logger=logger).generate())
+    out = ReadmeFileGenerator(ccm=content_manager, path=path_manager, logger=logger).generate()
+    if content_manager["readme"]["repo"]:
+        theme = content_manager["readme"]["repo"]["theme"]
+        out.extend(_THEME_GENERATOR[theme](ccm=content_manager, path=path_manager, target="repo", logger=logger).generate())
+    if content_manager["readme"]["package"]:
+        theme = content_manager["readme"]["package"]["theme"]
+        out.extend(_THEME_GENERATOR[theme](ccm=content_manager, path=path_manager, target="package", logger=logger).generate())
     return out
