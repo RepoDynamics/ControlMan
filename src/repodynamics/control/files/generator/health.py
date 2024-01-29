@@ -5,7 +5,19 @@ from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
 
 
-class HealthFileGenerator:
+def generate(
+    content_manager: ControlCenterContentManager,
+    path_manager: PathManager,
+    logger: Logger,
+) -> list[tuple[DynamicFile, str]]:
+    return _HealthFileGenerator(
+        content_manager=content_manager,
+        path_manager=path_manager,
+        logger=logger,
+    ).generate()
+
+
+class _HealthFileGenerator:
     def __init__(
         self,
         content_manager: ControlCenterContentManager,
