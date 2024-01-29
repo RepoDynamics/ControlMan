@@ -22,7 +22,7 @@ class Git:
     ):
         self._logger = logger or Logger()
         self._logger.h2("Initialize Git API")
-        git_available = _util.shell.run_command(["git", "--version"], raise_command=False, logger=self._logger)
+        git_available = _util.shell.run_command(["git", "version", "--build-options"], raise_command=False, logger=self._logger)
         if not git_available:
             self._logger.error(f"'git' is not installed. Please install 'git' and try again.")
         path_root, err, code = _util.shell.run_command(
