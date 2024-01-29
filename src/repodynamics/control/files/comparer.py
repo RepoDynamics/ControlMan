@@ -7,7 +7,7 @@ import json
 import difflib
 
 from markitup import html, md
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType, Diff
 
