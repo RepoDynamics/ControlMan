@@ -4,7 +4,7 @@ import datetime
 from github_contexts import GitHubContext
 from github_contexts.github.payloads.issues import IssuesPayload
 from github_contexts.github.enums import ActionType
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.datatype import IssueStatus, TemplateType, LabelType, Label
 from repodynamics.action.events._base import EventHandler
