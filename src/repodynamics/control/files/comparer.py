@@ -12,19 +12,27 @@ from actionman.logger import Logger
 from repodynamics.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType, Diff
 
 
-class FileComparer:
-    def __init__(self, path_root: str | Path = ".", logger: Logger | None = None):
+def compare(
+    generated_files: list[tuple[DynamicFile, str]],
+    path_root: Path,
+    logger: Logger,
+) -> tuple[list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str]:
+    return _FileComparer(path_root=path_root, logger=logger).compare(generated_files=generated_files)
+
+
+class _FileComparer:
+    def __init__(self, path_root: str | Path, logger: Logger):
         self.path_root = Path(path_root).resolve()
-        self._logger = logger or Logger()
+        self._logger = logger
         return
 
     def compare(
         self,
-        updates: list[tuple[DynamicFile, str]],
+        generated_files: list[tuple[DynamicFile, str]],
     ) -> tuple[list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str]:
         results = []
         file_updates = []
-        for info, content in updates:
+        for info, content in generated_files:
             if info.is_dir:
                 result = self._compare_dir(
                     path_old=info.alt_paths[0] if info.alt_paths else None, path_new=info.path
