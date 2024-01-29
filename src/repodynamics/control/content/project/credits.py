@@ -1,23 +1,23 @@
-from typing import NamedTuple
+from typing import NamedTuple as _NamedTuple
 
 
-class AuthorRole(NamedTuple):
+class AuthorRole(_NamedTuple):
     title: str
     description: str
     abbreviation: str
 
 
-class AuthorEntry(NamedTuple):
+class AuthorEntry(_NamedTuple):
     username: str
     roles: tuple[str, ...]
 
 
-class Authors(NamedTuple):
+class Authors(_NamedTuple):
     role: dict[str, AuthorRole]
     entries: tuple[AuthorEntry, ...]
 
 
-class Funding(NamedTuple):
+class Funding(_NamedTuple):
     community_bridge: str
     issuehunt: str
     ko_fi: str
