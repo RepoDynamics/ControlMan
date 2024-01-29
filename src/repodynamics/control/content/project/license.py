@@ -1,8 +1,8 @@
-from typing import NamedTuple
-from enum import Enum
+from typing import NamedTuple as _NamedTuple
+from enum import Enum as _Enum
 
 
-class LicenseID(Enum):
+class LicenseID(_Enum):
     GNU_AGPL_V3_PLUS = "gnu_agpl_v3+"
     GNU_AGPL_V3 = "gnu_agpl_v3"
     GNU_GPL_V3_PLUS = "gnu_gpl_v3+"
@@ -16,7 +16,7 @@ class LicenseID(Enum):
     UNLICENSE = "unlicense"
 
 
-class LicenseData(NamedTuple):
+class LicenseData(_NamedTuple):
     id: LicenseID | None = None
     shortname: str = ""
     fullname: str = ""
@@ -25,7 +25,7 @@ class LicenseData(NamedTuple):
     notice: str = ""
 
 
-class Copyright(NamedTuple):
+class Copyright(_NamedTuple):
     year_start: int | None = None
     owner: str = ""
 
