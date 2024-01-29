@@ -1,4 +1,4 @@
-from actionman.log import Logger
+from actionman.logger import Logger
 
 from repodynamics.datatype import DynamicFile
 from repodynamics.control.files.generator.package.python import PythonPackageFileGenerator
