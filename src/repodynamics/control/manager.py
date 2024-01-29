@@ -1,4 +1,3 @@
-from pathlib import Path as _Path
 import copy as _copy
 
 from actionman.logger import Logger as _Logger
@@ -13,21 +12,23 @@ from repodynamics.datatype import (
     DynamicFileType as _DynamicFileType,
 )
 from repodynamics.version import PEP440SemVer as _PEP440SemVer
+from repodynamics.git import Git as _Git
 
 
 class ControlCenterManager:
     def __init__(
         self,
-        path_repo: str | _Path,
+        git_manager: _Git,
         logger: _Logger,
         github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | _PEP440SemVer] | None = None,
         log_section_title: str = "Initialize Control Center Manager"
     ):
+        self._git = git_manager
         self._logger = logger
         self._logger.section(log_section_title, group=True)
-        self._path_root = _Path(path_repo).resolve()
+        self._path_root = self._git.path_root
         self._github_token = github_token
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
@@ -62,12 +63,13 @@ class ControlCenterManager:
         self.load()
         metadata_dict = _generator.generate(
             initial_data=_copy.deepcopy(self._metadata_raw),
-            output_path=self.path_manager,
-            api_cache_manager=self._local_config["cache_retention_days"]["api"],
+            path_manager=self.path_manager,
+            api_cache_retention_days=self._local_config["cache_retention_days"]["api"],
+            git_manager=self._git,
+            logger=self._logger,
             github_token=self._github_token,
             ccm_before=self._ccm_before,
             future_versions=self._future_versions,
-            logger=self._logger,
         )
         self._metadata = ControlCenterContentManager(data=metadata_dict)
         _validator.validate(content_manager=self._metadata, logger=self._logger)
