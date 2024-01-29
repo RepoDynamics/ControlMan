@@ -52,6 +52,7 @@ class PathManager:
         paths = file_io.read_datafile(
             path_data=self._path_root / rel_path_meta / "path.yaml",
             relpath_schema="path",
+            logger=self._logger,
             log_section_title="Read Path Declaration File"
         )
 
