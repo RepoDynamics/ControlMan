@@ -14,18 +14,19 @@ from repodynamics import time
 
 
 def load(path_manager: PathManager, logger: Logger, github_token: str | None = None) -> tuple[dict, dict]:
+    logger.section("Load Control Center Contents", group=True)
     data, local_config = _ControlCenterContentLoader(
         path_manager=path_manager,
         logger=logger,
         github_token=github_token,
     ).load()
+    logger.section_end()
     return data, local_config
 
 
 class _ControlCenterContentLoader:
     def __init__(self, path_manager: PathManager, logger: Logger, github_token: str | None = None):
-        self._logger = logger or Logger()
-        self._logger.section("Process Meta Source Files")
+        self._logger = logger
         self._github_token = github_token
         self._pathfinder = path_manager
         self._github_api = api.github(self._github_token)
@@ -34,11 +35,11 @@ class _ControlCenterContentLoader:
         return
 
     def load(self):
-        local_config = self._get_local_config()
-        self._extensions, self._path_extensions = self._read_extensions(
+        local_config = self._load_config()
+        self._extensions, self._path_extensions = self._load_extensions(
             cache_retention_days=local_config["cache_retention_days"]["extensions"]
         )
-        data: dict = self._read_raw_metadata()
+        data: dict = self._load_data()
         data["extensions"] = self._extensions
         data["path"] = self._pathfinder.paths_dict
         data["path"]["file"] = {
@@ -47,53 +48,75 @@ class _ControlCenterContentLoader:
         }
         return data, local_config
 
-    def _read_extensions(self, cache_retention_days: float) -> tuple[list[dict], Path | None]:
-        extensions = file_io.read_datafile(
+    def _load_config(self):
+        self._logger.section("Load Control Center Configurations")
+        source_path = (
+            self._pathfinder.file_local_config
+            if self._pathfinder.file_local_config.is_file()
+            else self._pathfinder.dir_meta / "config.yaml"
+        )
+        local_config = file_io.read_datafile(
+            path_data=source_path,
+            relpath_schema="config",
+            logger=self._logger,
+        )
+        self._logger.section_end()
+        return local_config
+
+    def _load_extensions(self, cache_retention_days: float) -> tuple[list[dict], Path | None]:
+        self._logger.section("Load Control Center Extensions")
+        extensions: list[dict] = file_io.read_datafile(
             path_data=self._pathfinder.file_meta_core_extensions,
             relpath_schema="extensions",
             root_type=list,
-        )  # TODO: add logging and error handling
+            logger=self._logger,
+        )
         if not extensions:
+            self._logger.info("No extensions defined.")
+            self._logger.section_end()
             return extensions, None
         local_path, exists = self._get_local_extensions(extensions, cache_retention_days=cache_retention_days)
         if not exists:
             self._download_extensions(extensions, download_path=local_path)
+        self._logger.section_end()
         return extensions, local_path
 
     def _get_local_extensions(self, extensions: list[dict], cache_retention_days: float) -> tuple[Path, bool]:
-        self._logger.h3("Get Local Extensions")
-        extention_defs = json.dumps(extensions).encode("utf-8")
-        hash = hashlib.md5(extention_defs).hexdigest()
-        self._logger.info(f"Looking for non-expired local extensions with hash '{hash}'.")
-        dir_pattern = re.compile(
-            r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
-            r"([a-fA-F0-9]{32})$"
-        )
-        new_path = self._pathfinder.dir_local_meta_extensions / f"{time.now()}__{hash}"
+        self._logger.section("Load Local Extensions")
+        file_hash = hashlib.md5(json.dumps(extensions).encode("utf-8")).hexdigest()
+        new_path = self._pathfinder.dir_local_meta_extensions / f"{time.now()}__{file_hash}"
         if not self._pathfinder.dir_local_meta_extensions.is_dir():
             self._logger.info(
                 f"Local extensions directory not found at '{self._pathfinder.dir_local_meta_extensions}'."
             )
+            self._logger.section_end()
             return new_path, False
+        self._logger.info(f"Looking for non-expired local extensions with hash '{file_hash}'.")
+        dir_pattern = re.compile(
+            r"^(20\d{2}_(?:0[1-9]|1[0-2])_(?:0[1-9]|[12]\d|3[01])_(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d)__"
+            r"([a-fA-F0-9]{32})$"
+        )
         for path in self._pathfinder.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
-                if match and match.group(2) == hash and not time.is_expired(
+                if match and match.group(2) == file_hash and not time.is_expired(
                     timestamp=match.group(1),
                     expiry_days=cache_retention_days
                 ):
-                    self._logger.success(f"Found non-expired local extensions at '{path}'.")
+                    self._logger.info(f"Found non-expired local extensions at '{path}'.")
+                    self._logger.section_end()
                     return path, True
         self._logger.info(f"No non-expired local extensions found.")
+        self._logger.section_end()
         return new_path, False
 
     def _download_extensions(self, extensions: list[dict], download_path: Path) -> None:
-        self._logger.h3("Download Meta Extensions")
+        self._logger.section("Download Extensions")
         self._pathfinder.dir_local_meta_extensions.mkdir(parents=True, exist_ok=True)
         file_io.delete_dir_content(self._pathfinder.dir_local_meta_extensions, exclude=["README.md"])
         for idx, extension in enumerate(extensions):
-            self._logger.h4(f"Download Extension {idx + 1}")
-            self._logger.info(f"Input: {extension}")
+            self._logger.section(f"Download Extension {idx + 1}")
+            self._logger.debug(f"Extension data:", code=str(extension))
             repo_owner, repo_name = extension["repo"].split("/")
             dir_path = download_path / f"{idx + 1 :03}"
             rel_dl_path = Path(extension["type"])
@@ -117,31 +140,23 @@ class _ControlCenterContentLoader:
                     )
                 )
             except WebAPIPersistentStatusCodeError as e:
-                self._logger.error(f"Error downloading extension data:", str(e))
+                self._logger.critical(title=f"Failed to download extension", message=str(e))
+                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
             if not extension_filepath:
-                self._logger.error(f"No files found in extension.")
+                self._logger.critical(
+                    title=f"Failed to download extension",
+                    message=f"No files found in extension:",
+                    code=str(extension)
+                )
             else:
-                self._logger.success(
+                self._logger.info(
                     f"Downloaded extension file '{extension_filepath}' from '{extension['repo']}'",
                 )
+        self._logger.section_end()
         return
 
-    def _get_local_config(self):
-        self._logger.h3("Read Local Config")
-        source_path = (
-            self._pathfinder.file_local_config
-            if self._pathfinder.file_local_config.is_file()
-            else self._pathfinder.dir_meta / "config.yaml"
-        )
-        local_config = file_io.read_datafile(
-            path_data=source_path,
-            relpath_schema="config",
-        )
-        self._logger.success("Local config set.", json.dumps(local_config, indent=3))
-        return local_config
-
-    def _read_raw_metadata(self):
-        self._logger.h3("Read Raw Metadata")
+    def _load_data(self):
+        self._logger.section("Load Control Center Data")
         metadata = {}
         for entry in ("credits", "intro", "license"):
             section = self._read_single_file(rel_path=f"project/{entry}")
@@ -154,8 +169,11 @@ class _ControlCenterContentLoader:
                     raise_duplicates=True,
                 )
             except pyserials.exception.DictUpdateError as e:
-                # TODO
-                pass
+                self._logger.critical(
+                    title=f"Failed to merge data file '{entry}' into control center data",
+                    message=e.message,
+                )
+                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
         for entry in (
             "custom/custom",
             "dev/branch",
@@ -184,8 +202,11 @@ class _ControlCenterContentLoader:
                     raise_duplicates=True,
                 )
             except pyserials.exception.DictUpdateError as e:
-                # TODO
-                pass
+                self._logger.critical(
+                    title=f"Failed to merge data file '{entry}' into control center data",
+                    message=e.message,
+                )
+                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
         package = {}
         if (self._pathfinder.dir_meta / "package_python").is_dir():
             package["type"] = "python"
@@ -207,25 +228,46 @@ class _ControlCenterContentLoader:
                         raise_duplicates=True,
                     )
                 except pyserials.exception.DictUpdateError as e:
-                    # TODO
-                    pass
+                    self._logger.critical(
+                        title=f"Failed to merge data file '{entry}' into control center data",
+                        message=e.message,
+                    )
+                    raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
+            package["pyproject_tests"] = self._read_single_file(
+                rel_path="package_python/build_tests", ext="toml"
+            )
             package["pyproject"] = self._read_package_python_pyproject()
-            package["pyproject_tests"] = self._read_single_file(rel_path="package_python/build_tests", ext="toml")
         else:
             package["type"] = None
         metadata["package"] = package
-        self._logger.success("Full metadata file assembled.", json.dumps(metadata, indent=3))
+        self._logger.info("Successfully loaded control center data,")
+        self._logger.section_end()
         return metadata
 
     def _read_single_file(self, rel_path: str, ext: str = "yaml"):
-        section = file_io.read_datafile(path_data=self._pathfinder.dir_meta / f"{rel_path}.{ext}")
+        filename = f"{rel_path}.{ext}"
+        self._logger.section(f"Load Control Center File '{filename}'")
+        section = file_io.read_datafile(
+            path_data=self._pathfinder.dir_meta / filename,
+            logger=self._logger,
+            log_section_title="Read Main File"
+        )
         for idx, extension in enumerate(self._extensions):
             if extension["type"] == rel_path:
-                self._logger.h4(f"Read Extension Metadata {idx + 1}")
+                self._logger.section(f"Merge Extension {idx + 1}")
                 extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
-                section_extension = file_io.read_datafile(path_data=extionsion_path)
+                section_extension = file_io.read_datafile(
+                    path_data=extionsion_path,
+                    logger=self._logger,
+                    log_section_title="Read Extension File",
+                )
                 if not section_extension:
-                    raise  # TODO
+                    self._logger.critical(
+                        title=f"Failed to read extension file at {extionsion_path}",
+                        message=f"Extension file does not exist or is empty.",
+                    )
+                    # This will never be reached, but is required to satisfy the type checker and IDE.
+                    raise Exception()
                 try:
                     log = pyserials.update.dict_from_addon(
                         data=section,
@@ -235,20 +277,27 @@ class _ControlCenterContentLoader:
                         raise_duplicates=extension["raise_duplicate"],
                     )
                 except pyserials.exception.DictUpdateError as e:
-                    # TODO
-                    pass
-        file_io.validate_data(data=section, schema_relpath=rel_path)
+                    self._logger.critical(
+                        title=f"Failed to merge extension file at {extionsion_path} to '{filename}'",
+                        message=e.message,
+                    )
+                    raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
+                self._logger.info(
+                    title=f"Successfully merged extension file at '{extionsion_path}' to '{filename}'.",
+                    message=str(log),
+                )
+        file_io.validate_data(data=section, schema_relpath=rel_path, logger=self._logger)
+        self._logger.section_end()
         return section
 
     def _read_package_python_pyproject(self):
-        self._logger.h3("Read Package Config")
 
         def read_package_toml(path: Path):
             dirpath_config = Path(path) / "package_python" / "tools"
             paths_config_files = list(dirpath_config.glob("*.toml"))
             config = dict()
             for path_file in paths_config_files:
-                config_section = file_io.read_datafile(path_data=path_file)
+                config_section = file_io.read_datafile(path_data=path_file, logger=self._logger)
                 try:
                     log = pyserials.update.dict_from_addon(
                         data=config,
@@ -263,9 +312,11 @@ class _ControlCenterContentLoader:
             return config
 
         build = self._read_single_file(rel_path="package_python/build", ext="toml")
+        self._logger.section("Load Package Tools Configurations")
         tools = read_package_toml(self._pathfinder.dir_meta)
         for idx, extension in enumerate(self._extensions):
             if extension["type"] == "package_python/tools":
+                self._logger.section(f"Merge Extension {idx + 1}")
                 extension_config = read_package_toml(self._path_extensions / f"{idx + 1 :03}")
                 try:
                     log = pyserials.update.dict_from_addon(
@@ -276,9 +327,14 @@ class _ControlCenterContentLoader:
                         raise_duplicates=extension["raise_duplicate"],
                     )
                 except pyserials.exception.DictUpdateError as e:
-                    # TODO
-                    pass
-        file_io.validate_data(data=tools, schema_relpath="package_python/tools")
+                    self._logger.critical(
+                        title=f"Failed to merge extension",
+                        message=e.message,
+                    )
+                    raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
+                self._logger.section_end()
+        self._logger.section_end()
+        file_io.validate_data(data=tools, schema_relpath="package_python/tools", logger=self._logger)
         try:
             log = pyserials.update.dict_from_addon(
                 data=build,
@@ -288,6 +344,9 @@ class _ControlCenterContentLoader:
                 raise_duplicates=True,
             )
         except pyserials.exception.DictUpdateError as e:
-            # TODO
-            pass
+            self._logger.critical(
+                title=f"Failed to merge tools configurations to package pyproject",
+                message=e.message,
+            )
+            raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
         return build
