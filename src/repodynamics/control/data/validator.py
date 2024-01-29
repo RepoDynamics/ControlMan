@@ -1,13 +1,13 @@
-import re
+import re as _re
 
-from actionman.logger import Logger
+from actionman.logger import Logger as _Logger
 
-from repodynamics.control.content import ControlCenterContentManager
+from repodynamics.control.content import ControlCenterContentManager as _ControlCenterContentManager
 
 
 def validate(
-    content_manager: ControlCenterContentManager,
-    logger: Logger,
+    content_manager: _ControlCenterContentManager,
+    logger: _Logger,
     log_section_title: str = "Validate Control Center Contents",
 ) -> None:
     logger.section(log_section_title, group=True)
@@ -18,9 +18,9 @@ def validate(
 
 
 class _ControlCenterContentValidator:
-    def __init__(self, content_manager: ControlCenterContentManager, logger: Logger = None):
+    def __init__(self, content_manager: _ControlCenterContentManager, logger: _Logger):
         self._ccm = content_manager
-        self._logger = logger or Logger()
+        self._logger = logger
         return
 
     def validate(self):
@@ -180,7 +180,7 @@ class _ControlCenterContentValidator:
             if form_post_process:
                 if form_post_process.get("body"):
                     pattern = r"{([a-zA-Z_][a-zA-Z0-9_]*)}"
-                    var_names = re.findall(pattern, form_post_process["body"])
+                    var_names = _re.findall(pattern, form_post_process["body"])
                     for var_name in var_names:
                         if var_name not in element_ids:
                             self._logger.critical(
