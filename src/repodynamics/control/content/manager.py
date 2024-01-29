@@ -1,24 +1,39 @@
-from repodynamics.control.content import project, dev
-from repodynamics.datatype import BranchType, TemplateType, Branch, LabelType, Label, PrimaryActionCommitType, \
-    IssueStatus, Issue, CommitGroup, PrimaryActionCommit, PrimaryCustomCommit, SecondaryActionCommit, \
-    SecondaryCustomCommit, SecondaryActionCommitType
-from repodynamics.version import PEP440SemVer
+from repodynamics.control.content.project import Project as _Project
+from repodynamics.control.content.dev import Dev as _Dev
+
+from repodynamics.datatype import (
+    BranchType as _BranchType,
+    TemplateType as _TemplateType,
+    Branch as _Branch,
+    LabelType as _LabelType,
+    Label as _Label,
+    PrimaryActionCommitType as _PrimaryActionCommitType,
+    IssueStatus as _IssueStatus,
+    Issue as _Issue,
+    CommitGroup as _CommitGroup,
+    PrimaryActionCommit as _PrimaryActionCommit,
+    PrimaryCustomCommit as _PrimaryCustomCommit,
+    SecondaryActionCommit as _SecondaryActionCommit,
+    SecondaryCustomCommit as _SecondaryCustomCommit,
+    SecondaryActionCommitType as _SecondaryActionCommitType,
+)
+from repodynamics.version import PEP440SemVer as _PEP440SemVer
 
 
 class ControlCenterContent:
 
     def __init__(self, data: dict):
         self._data = data
-        self._project = project.Project(data)
-        self._dev = dev.Dev(data)
+        self._project = _Project(data)
+        self._dev = _Dev(data)
         return
 
     @property
-    def project(self) -> project.Project:
+    def project(self) -> _Project:
         return self._project
 
     @property
-    def dev(self) -> dev.Dev:
+    def dev(self) -> _Dev:
         return self._dev
 
 
@@ -75,8 +90,8 @@ class ControlCenterContentManager:
         return self.branch["development"]
 
     @property
-    def branch__groups__prefixes(self) -> dict[BranchType, str]:
-        return {BranchType(key): val["prefix"] for key, val in self.branch.items() if key != "main"}
+    def branch__groups__prefixes(self) -> dict[_BranchType, str]:
+        return {_BranchType(key): val["prefix"] for key, val in self.branch.items() if key != "main"}
 
     @property
     def changelog(self) -> dict:
@@ -127,30 +142,30 @@ class ControlCenterContentManager:
         return self._data.get("package", {})
 
     @property
-    def config__template(self) -> TemplateType:
-        return TemplateType(self._data["config"]["template"])
+    def config__template(self) -> _TemplateType:
+        return _TemplateType(self._data["config"]["template"])
 
-    def get_branch_info_from_name(self, branch_name: str) -> Branch:
+    def get_branch_info_from_name(self, branch_name: str) -> _Branch:
         if branch_name == self.branch__main__name:
-            return Branch(type=BranchType.MAIN, name=branch_name)
+            return _Branch(type=_BranchType.MAIN, name=branch_name)
         for branch_type, branch_prefix in self.branch__groups__prefixes.items():
             if branch_name.startswith(branch_prefix):
                 suffix_raw = branch_name.removeprefix(branch_prefix)
-                if branch_type is BranchType.RELEASE:
+                if branch_type is _BranchType.RELEASE:
                     suffix = int(suffix_raw)
-                elif branch_type is BranchType.PRERELEASE:
-                    suffix = PEP440SemVer(suffix_raw)
-                elif branch_type is BranchType.IMPLEMENT:
+                elif branch_type is _BranchType.PRERELEASE:
+                    suffix = _PEP440SemVer(suffix_raw)
+                elif branch_type is _BranchType.IMPLEMENT:
                     issue_num, target_branch = suffix_raw.split("/", 1)
                     suffix = (int(issue_num), target_branch)
-                elif branch_type is BranchType.DEV:
+                elif branch_type is _BranchType.DEV:
                     issue_num, target_branch_and_task = suffix_raw.split("/", 1)
                     target_branch, task_nr = target_branch_and_task.rsplit("/", 1)
                     suffix = (int(issue_num), target_branch, int(task_nr))
                 else:
                     suffix = suffix_raw
-                return Branch(type=branch_type, name=branch_name, prefix=branch_prefix, suffix=suffix)
-        return Branch(type=BranchType.OTHER, name=branch_name)
+                return _Branch(type=branch_type, name=branch_name, prefix=branch_prefix, suffix=suffix)
+        return _Branch(type=_BranchType.OTHER, name=branch_name)
 
     def get_label_grouped(self, group_id: str, label_id: str) -> dict[str, str]:
         """
@@ -176,7 +191,7 @@ class ControlCenterContentManager:
         }
         return out
 
-    def resolve_labels(self, names: list[str]) -> dict[LabelType, list[Label]]:
+    def resolve_labels(self, names: list[str]) -> dict[_LabelType, list[_Label]]:
         """
         Resolve a list of label names to label objects.
 
@@ -191,7 +206,7 @@ class ControlCenterContentManager:
             labels.setdefault(label.category, []).append(label)
         return labels
 
-    def resolve_label(self, name: str) -> Label:
+    def resolve_label(self, name: str) -> _Label:
         """
         Resolve a label name to a label object.
 
@@ -211,8 +226,8 @@ class ControlCenterContentManager:
         for autogroup_id, autogroup in self._data["label"]["auto_group"].items():
             prefix = autogroup["prefix"]
             if name.startswith(prefix):
-                return Label(
-                    category=LabelType(autogroup_id),
+                return _Label(
+                    category=_LabelType(autogroup_id),
                     name=name,
                     prefix=prefix,
                 )
@@ -221,22 +236,22 @@ class ControlCenterContentManager:
             if name.startswith(prefix):
                 label_suffix = name.removeprefix(prefix)
                 if group_id == "primary_type":
-                    category = LabelType.TYPE
+                    category = _LabelType.TYPE
                     label_id = get_label_id()
                     try:
-                        suffix_type = PrimaryActionCommitType(label_id)
+                        suffix_type = _PrimaryActionCommitType(label_id)
                     except ValueError:
                         suffix_type = label_id
                 elif group_id == "subtype":
-                    category = LabelType.SUBTYPE
+                    category = _LabelType.SUBTYPE
                     suffix_type = get_label_id()
                 elif group_id == "status":
-                    category = LabelType.STATUS
-                    suffix_type = IssueStatus(get_label_id())
+                    category = _LabelType.STATUS
+                    suffix_type = _IssueStatus(get_label_id())
                 else:
-                    category = LabelType.CUSTOM_GROUP
+                    category = _LabelType.CUSTOM_GROUP
                     suffix_type = get_label_id()
-                return Label(
+                return _Label(
                     category=category,
                     name=name,
                     prefix=prefix,
@@ -244,14 +259,14 @@ class ControlCenterContentManager:
                 )
         for label_id, label in self._data["label"]["single"].items():
             if name == label["name"]:
-                return Label(
-                    category=LabelType.SINGLE,
+                return _Label(
+                    category=_LabelType.SINGLE,
                     name=name,
                     type=label_id,
                 )
-        return Label(category=LabelType.UNKNOWN, name=name)
+        return _Label(category=_LabelType.UNKNOWN, name=name)
 
-    def get_primary_action_label_name(self, action_type: PrimaryActionCommitType) -> str:
+    def get_primary_action_label_name(self, action_type: _PrimaryActionCommitType) -> str:
         """
         Get the label name for a primary action commit type.
 
@@ -348,7 +363,7 @@ class ControlCenterContentManager:
             f"and sub type '{label_ids['subtype']}'."
         )
 
-    def get_issue_data_from_labels(self, label_names: list[str]) -> Issue:
+    def get_issue_data_from_labels(self, label_names: list[str]) -> _Issue:
         type_prefix = {
             "primary_type": self._data["label"]["group"]["primary_type"]["prefix"],
             "subtype": self._data["label"]["group"].get("subtype", {}).get("prefix"),
@@ -385,12 +400,12 @@ class ControlCenterContentManager:
             return list(self._commit_data.keys())
         return [
             conv_type for conv_type, commit_data in self._commit_data.items()
-            if commit_data.group is CommitGroup.SECONDARY_CUSTOM
+            if commit_data.group is _CommitGroup.SECONDARY_CUSTOM
         ]
 
     def get_commit_type_from_conventional_type(
         self, conv_type: str
-    ) -> PrimaryActionCommit | PrimaryCustomCommit | SecondaryActionCommit | SecondaryCustomCommit:
+    ) -> _PrimaryActionCommit | _PrimaryCustomCommit | _SecondaryActionCommit | _SecondaryCustomCommit:
         if self._commit_data:
             return self._commit_data[conv_type]
         self._commit_data = self._initialize_commit_data()
@@ -414,21 +429,21 @@ class ControlCenterContentManager:
         status = label_name.removeprefix(status_prefix)
         for status_label_id, status_label_info in self._data["label"]["group"]["status"]["labels"].items():
             if status_label_info["suffix"] == status:
-                return IssueStatus(status_label_id)
+                return _IssueStatus(status_label_id)
         raise ValueError(f"Unknown status label suffix '{status}'.")
 
-    def create_label_branch(self, source: Label | str) -> Label:
+    def create_label_branch(self, source: _Label | str) -> _Label:
         prefix = self._data["label"]["auto_group"]["branch"]["prefix"]
         if isinstance(source, str):
             branch_name = source
-        elif isinstance(source, Label):
-            if source.category is not LabelType.VERSION:
+        elif isinstance(source, _Label):
+            if source.category is not _LabelType.VERSION:
                 raise ValueError(f"Label '{source.name}' is not a version label.")
             branch_name = self.get_branch_from_version(version=source.suffix)
         else:
             raise TypeError(f"Invalid type for source: {type(source)}")
-        return Label(
-            category=LabelType.BRANCH,
+        return _Label(
+            category=_LabelType.BRANCH,
             name=f'{prefix}{branch_name}',
             prefix=prefix,
         )
@@ -436,22 +451,22 @@ class ControlCenterContentManager:
     def _initialize_commit_data(self):
         commit_type = {}
         for group_id, group_data in self._data["commit"]["primary_action"].items():
-            commit_type[group_data["type"]] = PrimaryActionCommit(
-                action=PrimaryActionCommitType(group_id),
+            commit_type[group_data["type"]] = _PrimaryActionCommit(
+                action=_PrimaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
         for group_id, group_data in self._data["commit"]["primary_custom"].items():
-            commit_type[group_data["type"]] = PrimaryCustomCommit(
+            commit_type[group_data["type"]] = _PrimaryCustomCommit(
                 group_id=group_id,
                 conv_type=group_data["type"],
             )
         for group_id, group_data in self._data["commit"]["secondary_action"].items():
-            commit_type[group_data["type"]] = SecondaryActionCommit(
-                action=SecondaryActionCommitType(group_id),
+            commit_type[group_data["type"]] = _SecondaryActionCommit(
+                action=_SecondaryActionCommitType(group_id),
                 conv_type=group_data["type"],
             )
         for conv_type, group_data in self._data["commit"]["secondary_custom"].items():
-            commit_type[conv_type] = SecondaryCustomCommit(
+            commit_type[conv_type] = _SecondaryCustomCommit(
                 conv_type=conv_type,
                 changelog_id=group_data["changelog_id"],
                 changelog_section_id=group_data["changelog_section_id"],
@@ -482,15 +497,15 @@ class ControlCenterContentManager:
 
             prim_commit = self._data["commit"]["primary_action"].get(prim_id)
             if prim_commit:
-                commit = PrimaryActionCommit(
-                    action=PrimaryActionCommitType(prim_id),
+                commit = _PrimaryActionCommit(
+                    action=_PrimaryActionCommitType(prim_id),
                     conv_type=prim_commit["type"],
                 )
             else:
-                commit = PrimaryCustomCommit(
+                commit = _PrimaryCustomCommit(
                     group_id=prim_id,
                     conv_type=self._data["commit"]["primary_custom"][prim_id]["type"],
                 )
 
-            issue_data[key] = Issue(group_data=commit, type_labels=type_labels, form=issue)
+            issue_data[key] = _Issue(group_data=commit, type_labels=type_labels, form=issue)
         return issue_data
