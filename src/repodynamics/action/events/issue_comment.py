@@ -47,7 +47,7 @@ class IssueCommentEventHandler(EventHandler):
         }
         return
 
-    def run_event(self):
+    def _run_event(self):
         action = self._payload.action
         logger.info(title="Action", message=action.value)
         is_pull = self._payload.is_on_pull
