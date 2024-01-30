@@ -4,11 +4,11 @@ from repodynamics.datatype import DynamicFile
 from repodynamics.control.content import ControlCenterContentManager
 from repodynamics.path import PathManager
 from repodynamics.control.files.generator.readme.main import ReadmeFileGenerator
-from repodynamics.control.files.generator.readme.pypackit_default import PypackitDefaultReadmeFileGenerator
+from repodynamics.control.files.generator.readme.pypackit_default import PyPackITDefaultReadmeFileGenerator
 
 
 _THEME_GENERATOR = {
-    "pypackit-default": PypackitDefaultReadmeFileGenerator,
+    "pypackit-default": PyPackITDefaultReadmeFileGenerator,
 }
 
 
@@ -17,11 +17,17 @@ def generate(
     path_manager: PathManager,
     logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    out = ReadmeFileGenerator(ccm=content_manager, path=path_manager, logger=logger).generate()
+    out = ReadmeFileGenerator(
+        content_manager=content_manager, path_manager=path_manager, target="repo", logger=logger
+    ).generate()
     if content_manager["readme"]["repo"]:
         theme = content_manager["readme"]["repo"]["theme"]
-        out.extend(_THEME_GENERATOR[theme](ccm=content_manager, path=path_manager, target="repo", logger=logger).generate())
+        out.extend(_THEME_GENERATOR[theme](
+            content_manager=content_manager, path_manager=path_manager, target="repo", logger=logger
+        ).generate())
     if content_manager["readme"]["package"]:
         theme = content_manager["readme"]["package"]["theme"]
-        out.extend(_THEME_GENERATOR[theme](ccm=content_manager, path=path_manager, target="package", logger=logger).generate())
+        out.extend(_THEME_GENERATOR[theme](
+            content_manager=content_manager, path_manager=path_manager, target="package", logger=logger
+        ).generate())
     return out
