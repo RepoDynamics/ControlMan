@@ -57,7 +57,7 @@ class WorkflowDispatchEventHandler(EventHandler):
         # self._input_website_announcement_msg = website_announcement_msg
         return
 
-    def run_event(self):
+    def _run_event(self):
         # if self.context.ref_is_main:
         #     self.state
         # self.action_website_announcement_update()
