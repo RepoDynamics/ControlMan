@@ -31,11 +31,17 @@ class _HealthFileGenerator:
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
+        self._logger.section("Health Files", group=True)
         updates = []
         for health_file_id, data in self._ccm["health_file"].items():
-            info = self._pathman.health_file(health_file_id, target_path=data["path"])
-            text = self._codeowners() if health_file_id == "codeowners" else data["text"]
-            updates.append((info, text))
+            self._logger.section(health_file_id.replace("_", " ").title())
+            file_info = self._pathman.health_file(health_file_id, target_path=data["path"])
+            file_content = self._codeowners() if health_file_id == "codeowners" else data["text"]
+            updates.append((file_info, file_content))
+            self._logger.info(message="File info:", code=str(file_info))
+            self._logger.debug(message="File content:", code=file_content)
+            self._logger.section_end()
+        self._logger.section_end()
         return updates
 
     def _codeowners(self) -> str:
