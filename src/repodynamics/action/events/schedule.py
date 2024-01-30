@@ -33,7 +33,7 @@ class ScheduleEventHandler(EventHandler):
         self._payload: SchedulePayload = self._context.event
         return
 
-    def run_event(self):
+    def _run_event(self):
         cron = self._payload.schedule
         if cron == self._ccm_main.workflow__init__schedule__sync:
             self._run_sync()
