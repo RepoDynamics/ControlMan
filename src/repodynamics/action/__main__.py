@@ -83,6 +83,7 @@ def get_template_type(input_template_type: str, logger: actionman.logger.Logger)
 
 def get_event_handler(event: EventType, logger: actionman.logger.Logger):
     logger.section("Verify Triggering Event", group=True)
+    logger.info(title="Triggering event", message=event.value)
     event_to_handler = {
         EventType.ISSUES: IssuesEventHandler,
         EventType.ISSUE_COMMENT: IssueCommentEventHandler,
