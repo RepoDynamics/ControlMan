@@ -74,7 +74,7 @@ class EventHandler:
         self._ccm_main: ControlCenterContentManager | None = repodynamics.control.content.from_json_file(
             path_repo=self._path_root_base,
             logger=logger,
-            log_section_title="Read Main Control Center Settings"
+            log_section_title="Read Main Control Center Contents"
         )
 
         repo_user = self._context.repository_owner
@@ -108,30 +108,11 @@ class EventHandler:
         self._output_finalize: dict = {}
         self._summary_oneliners: list[str] = []
         self._summary_sections: list[str | html.ElementCollection | html.Element] = []
-        # self._job_run_flag: dict[str, bool] = {
-        #     job_id: False
-        #     for job_id in [
-        #         "package_build",
-        #         "package_test_local",
-        #         "package_lint",
-        #         "website_build",
-        #         "website_deploy",
-        #         "website_rtd_preview",
-        #         "package_publish_testpypi",
-        #         "package_publish_pypi",
-        #         "package_test_testpypi",
-        #         "package_test_pypi",
-        #         "github_release",
-        #     ]
-        # }
-        # self._tag: str = ""
-        # self._version: str = ""
-        # self._hash_latest: str = ""
         return
 
     def run(self):
         self.run_event()
-        self._logger.h1("Finalization")
+        self._logger.section("Generate Outputs and Summary", group=True)
         if self._failed:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
             if self._output_website:
@@ -166,6 +147,7 @@ class EventHandler:
             "finalize": self._output_finalize,
         }
         summary = self.assemble_summary()
+        self._logger.section_end()
         return output, None, summary
 
     def run_event(self) -> None:
