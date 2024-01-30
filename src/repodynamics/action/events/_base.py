@@ -9,9 +9,9 @@ import pylinks
 from pylinks.exceptions import WebAPIError
 from github_contexts import GitHubContext
 import conventional_commits
-from actionman.logger import Logger
 
 import repodynamics
+from repodynamics.action import logger
 import repodynamics.control.content
 import repodynamics.control.content.manager
 from repodynamics import control
@@ -63,7 +63,6 @@ class EventHandler:
         admin_token: str,
         path_repo_base: str,
         path_repo_head: str,
-        logger: Logger,
     ):
         self._template_type = template_type
         self._context = context_manager
