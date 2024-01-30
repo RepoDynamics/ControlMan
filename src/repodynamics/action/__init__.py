@@ -38,13 +38,11 @@ def run():
     )
     logger.section_end()
     logger.section_end()
-    logger.section("Execute Event Handler")
     try:
         outputs, env_vars, summary = event_handler.run()
     except Exception as e:
         logger.critical(title=f"An unexpected error occurred", message=str(e))
         raise e  # This will never be reached, but is required to satisfy the type checker and IDE
-    logger.section_end()
     logger.section("Write Outputs and Summary")
     if outputs:
         actionman.io.write_github_outputs(outputs, logger=logger)
