@@ -4,6 +4,7 @@ from typing import Literal
 import re
 import datetime
 
+from actionman.logger import logger
 from markitup import html, md
 import pylinks
 from pylinks.exceptions import WebAPIError
@@ -11,10 +12,8 @@ from github_contexts import GitHubContext
 import conventional_commits
 
 import repodynamics
-from repodynamics.action import logger
 import repodynamics.control.content
 import repodynamics.control.content.manager
-from repodynamics import control
 from repodynamics.git import Git
 from repodynamics.control.content import ControlCenterContentManager, ControlCenterContent
 from repodynamics import hook
@@ -68,7 +67,6 @@ class EventHandler:
         self._context = context_manager
         self._path_root_base = Path(path_repo_base)
         self._path_root_head = Path(path_repo_head)
-        self._logger = logger
 
         self._ccm_main: ControlCenterContentManager | None = repodynamics.control.content.from_json_file(
             path_repo=self._path_root_base,
@@ -84,12 +82,12 @@ class EventHandler:
         self._git_base: Git = Git(
             path_repo=self._path_root_base,
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
-            logger=self._logger,
+            logger=logger,
         )
         self._git_head: Git = Git(
             path_repo=self._path_root_head,
             user=(self._context.event.sender.login, self._context.event.sender.github_email),
-            logger=self._logger,
+            logger=logger,
         )
         self._template_name_ver = f"{self._template_type.value} v{repodynamics.__version__}"
         self._is_pypackit = self._template_type is TemplateType.PYPACKIT
@@ -109,9 +107,17 @@ class EventHandler:
         self._summary_sections: list[str | html.ElementCollection | html.Element] = []
         return
 
+    @logger.sectioner("Execute Event Handler", group=False)
     def run(self):
-        self.run_event()
-        self._logger.section("Generate Outputs and Summary", group=True)
+        self._run_event()
+        output, summary = self._generate_output()
+        return output, None, summary
+
+    def _run_event(self) -> None:
+        ...
+
+    @logger.sectioner("Generate Outputs and Summary")
+    def _generate_output(self):
         if self._failed:
             # Just to be safe, disable publish/deploy/release jobs if fail is True
             if self._output_website:
@@ -146,35 +152,31 @@ class EventHandler:
             "finalize": self._output_finalize,
         }
         summary = self.assemble_summary()
-        self._logger.section_end()
-        return output, None, summary
-
-    def run_event(self) -> None:
-        ...
+        return output, summary
 
     def _action_meta(self, action: InitCheckAction, meta: ControlCenterManager, base: bool, branch: Branch) -> str | None:
         name = "Meta Sync"
-        self._logger.h1(name)
+        logger.h1(name)
         # if not action:
         #     action = InitCheckAction(
         #         self._ccm_main["workflow"]["init"]["meta_check_action"][self._event_type.value]
         #     )
-        self._logger.input(f"Action: {action.value}")
+        logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
             self.add_summary(
                 name=name,
                 status="skip",
                 oneliner="Meta synchronization is disabled for this event type❗",
             )
-            self._logger.skip("Meta synchronization is disabled for this event type; skip❗")
+            logger.skip("Meta synchronization is disabled for this event type; skip❗")
             return
         git = self._git_base if base else self._git_head
         if action == InitCheckAction.PULL:
             pr_branch_name = self.switch_to_autoupdate_branch(typ="meta", git=git)
         meta_results, meta_changes, meta_summary = meta.compare_files()
-        # self._logger.success("Meta synchronization completed.", {"result": meta_results})
-        # self._logger.success("Meta synchronization summary:", meta_summary)
-        # self._logger.success("Meta synchronization changes:", meta_changes)
+        # logger.success("Meta synchronization completed.", {"result": meta_results})
+        # logger.success("Meta synchronization summary:", meta_summary)
+        # logger.success("Meta synchronization changes:", meta_changes)
         meta_changes_any = any(any(change.values()) for change in meta_changes.values())
         # Push/amend/pull if changes are made and action is not 'fail' or 'report'
         commit_hash = None
@@ -205,7 +207,7 @@ class EventHandler:
                 commit_hash = None
         if not meta_changes_any:
             oneliner = "All dynamic files are in sync with meta content."
-            self._logger.success(oneliner)
+            logger.success(oneliner)
         else:
             oneliner = "Some dynamic files were out of sync with meta content."
             if action in [InitCheckAction.PULL, InitCheckAction.COMMIT, InitCheckAction.AMEND]:
@@ -242,25 +244,25 @@ class EventHandler:
         internal: bool = False,
     ) -> str | None:
         name = "Workflow Hooks"
-        self._logger.h1(name)
+        logger.h1(name)
         # if not action:
         #     action = InitCheckAction(
         #         self._ccm_main["workflow"]["init"]["hooks_check_action"][self._event_type.value]
         #     )
-        self._logger.input(f"Action: {action.value}")
+        logger.input(f"Action: {action.value}")
         if action == InitCheckAction.NONE:
             self.add_summary(
                 name=name,
                 status="skip",
                 oneliner="Hooks are disabled for this event type❗",
             )
-            self._logger.skip("Hooks are disabled for this event type; skip❗")
+            logger.skip("Hooks are disabled for this event type; skip❗")
             return
         config = self._ccm_main["workflow"]["pre_commit"].get(branch.type.value)
         if not config:
             if not internal:
                 oneliner = "Hooks are enabled but no pre-commit config set in 'meta.workflow.pre_commit'❗"
-                self._logger.error(oneliner, raise_error=False)
+                logger.error(oneliner, raise_error=False)
                 self.add_summary(
                     name=name,
                     status="fail",
@@ -290,7 +292,7 @@ class EventHandler:
             path_root=self._path_root_base if base else self._path_root_head,
             config=config,
             git=git,
-            logger=self._logger,
+            logger=logger,
         )
         passed = hooks_output["passed"]
         modified = hooks_output["modified"]
@@ -366,7 +368,7 @@ class EventHandler:
             git.checkout(branch=curr_branch)
             git.stash_pop()
         if not latest_version and not dev_only:
-            self._logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
+            logger.error(f"No matching version tags found with prefix '{ver_tag_prefix}'.")
         return latest_version, distance
 
     def _tag_version(self, ver: str | PEP440SemVer, base: bool, msg: str = "") -> str:
@@ -384,7 +386,7 @@ class EventHandler:
         new_branch_name = f"{new_branch_prefix}{current_branch}/{typ}"
         git.stash()
         git.checkout(branch=new_branch_name, reset=True)
-        self._logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
+        logger.success(f"Switch to CI branch '{new_branch_name}' and reset it to '{current_branch}'.")
         self._branch_name_memory_autoupdate = current_branch
         return new_branch_name
 
@@ -698,7 +700,7 @@ class EventHandler:
         logs = html.ElementCollection(
             [
                 html.h(2, "🪵 Logs"),
-                html.details(self._logger.file_log, "Log"),
+                html.details(logger.file_log, "Log"),
             ]
         )
         summaries = html.ElementCollection(self._summary_sections)
@@ -725,7 +727,7 @@ class EventHandler:
         action_err_details = (
             f"The workflow was triggered by an event of type '{event_name}', {action_err_details_sub}"
         )
-        self._logger.error(action_err_msg, action_err_details, raise_error=False)
+        logger.error(action_err_msg, action_err_details, raise_error=False)
         self.add_summary(
             name="Event Handler",
             status="fail",
@@ -736,7 +738,7 @@ class EventHandler:
 
     def _action_file_change_detector(self, meta: ControlCenterManager) -> dict[RepoFileType, list[str]]:
         name = "File Change Detector"
-        self._logger.h1(name)
+        logger.h1(name)
         change_type_map = {
             "added": FileChangeType.CREATED,
             "deleted": FileChangeType.REMOVED,
@@ -756,7 +758,7 @@ class EventHandler:
         changes = self._git_head.changed_files(
             ref_start=self._context.hash_before, ref_end=self._context.hash_after
         )
-        self._logger.success("Detected changed files", json.dumps(changes, indent=3))
+        logger.success("Detected changed files", json.dumps(changes, indent=3))
         fixed_paths = [outfile.rel_path for outfile in meta.path_manager.fixed_files]
         for change_type, changed_paths in changes.items():
             # if change_type in ["unknown", "broken"]:
@@ -852,12 +854,12 @@ class EventHandler:
                 build_type="workflow",
             )
         except WebAPIError as e:
-            self._logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
+            logger.warning(f"Failed to update custom domain for GitHub Pages", str(e))
         if cname:
             try:
                 self._gh_api_admin.pages_update(https_enforced=cname.startswith("https://"))
             except WebAPIError as e:
-                self._logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
+                logger.warning(f"Failed to update HTTPS enforcement for GitHub Pages", str(e))
         return
 
     def _config_repo_labels_reset(self, ccs: ControlCenterContent | None = None):
@@ -895,7 +897,7 @@ class EventHandler:
             return full, version, branch, rest
 
         name = "Repository Labels Synchronizer"
-        self._logger.h1(name)
+        logger.h1(name)
 
         labels_old, labels_old_ver, labels_old_branch, labels_old_rest = format_labels(
             ccs_old.dev.label.full_labels
@@ -1102,7 +1104,7 @@ class EventHandler:
     def _get_commits(self, base: bool = False) -> list[Commit]:
         git = self._git_base if base else self._git_head
         commits = git.get_commits(f"{self._context.hash_before}..{self._context.hash_after}")
-        self._logger.success("Read commits from git history", json.dumps(commits, indent=4))
+        logger.success("Read commits from git history", json.dumps(commits, indent=4))
         parser = conventional_commits.parser.create(
             types=self._ccm_main.get_all_conventional_commit_types(secondary_custom_only=False),
         )
@@ -1196,7 +1198,7 @@ class EventHandler:
         elif comment_id:
             self._gh_api.issue_comment_update(comment_id=comment_id, body=new_body)
         else:
-            self._logger.error(
+            logger.error(
                 "Failed to add to timeline", "Neither issue nor comment ID was provided."
             )
         return new_body
