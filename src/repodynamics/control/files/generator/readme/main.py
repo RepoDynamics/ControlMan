@@ -1,8 +1,4 @@
 # Standard libraries
-import copy
-import datetime
-import itertools
-import re
 from pathlib import Path
 from typing import Literal, Sequence
 
@@ -22,14 +18,14 @@ from repodynamics.control.content import ControlCenterContentManager
 class ReadmeFileGenerator:
     def __init__(
         self,
-        ccm: ControlCenterContentManager,
-        path: PathManager,
-        target: Literal["repo", "package"] = "repo",
-        logger: Logger | None = None
+        content_manager: ControlCenterContentManager,
+        path_manager: PathManager,
+        target: Literal["repo", "package"],
+        logger: Logger,
     ):
-        self._ccm = ccm
-        self._path = path
-        self._logger = logger or Logger()
+        self._ccm = content_manager
+        self._pathman = path_manager
+        self._logger = logger
 
         self._is_for_gh = target == "repo"
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
@@ -46,11 +42,17 @@ class ReadmeFileGenerator:
         return self.generate_dir_readmes()
 
     def generate_dir_readmes(self) -> list[tuple[DynamicFile, str]]:
+        self._logger.section("Directory Readme Files", group=True)
         out = []
         for dir_path, readme_text in self._ccm["readme"]["dir"].items():
-            info = self._path.readme_dir(dir_path)
-            readme = f"{readme_text}\n{self.footer()}"
-            out.append((info, readme))
+            self._logger.section(f"Directory '{dir_path}'", group=True)
+            file_info = self._pathman.readme_dir(dir_path)
+            file_content = f"{readme_text}\n{self.footer()}"
+            out.append((file_info, file_content))
+            self._logger.info(message="File info:", code=str(file_info))
+            self._logger.debug(message="File content:", code=file_content)
+            self._logger.section_end()
+        self._logger.section_end()
         return out
 
     def footer(self):
@@ -83,7 +85,7 @@ class ReadmeFileGenerator:
             color_right_light=self._ccm["theme"]["color"]["primary"][0],
             color_right_dark=self._ccm["theme"]["color"]["primary"][1] if self._is_for_gh else None,
             text_left=self._ccm["name"],
-            logo=self._path.dir_meta / "ui/branding/favicon.svg",
+            logo=self._pathman.dir_meta / "ui/branding/favicon.svg",
             link=self._ccm["url"]["website"]["home"],
             title=f"{self._ccm['name']} is licensed under the {self._ccm['license']['fullname']}",
         )
