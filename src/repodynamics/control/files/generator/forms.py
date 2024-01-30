@@ -35,7 +35,7 @@ class _FormGenerator:
             self._logger.section(f"Issue Form {idx + 1}")
             file_info = self._pathman.issue_form(issue["id"], idx + 1)
             pre_process = issue.get("pre_process")
-            if pre_process and not self._pre_process_existence(pre_process):
+            if pre_process and not pre_process_existence(pre_process):
                 continue
             form = {
                 key: val
@@ -60,7 +60,7 @@ class _FormGenerator:
             form["body"] = []
             for elem in issue["body"]:
                 pre_process = elem.get("pre_process")
-                if pre_process and not self._pre_process_existence(pre_process):
+                if pre_process and not pre_process_existence(pre_process):
                     continue
                 form["body"].append(
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
@@ -141,14 +141,14 @@ class _FormGenerator:
         self._logger.section_end()
         return out
 
-    @staticmethod
-    def _pre_process_existence(commands: dict) -> bool:
-        if "if_any" in commands:
-            return any(commands["if_any"])
-        if "if_all" in commands:
-            return all(commands["if_all"])
-        if "if_none" in commands:
-            return not any(commands["if_none"])
-        if "if_equal" in commands:
-            return all([commands["if_equal"][0] == elem for elem in commands["if_equal"][1:]])
-        return True
+
+def pre_process_existence(commands: dict) -> bool:
+    if "if_any" in commands:
+        return any(commands["if_any"])
+    if "if_all" in commands:
+        return all(commands["if_all"])
+    if "if_none" in commands:
+        return not any(commands["if_none"])
+    if "if_equal" in commands:
+        return all([commands["if_equal"][0] == elem for elem in commands["if_equal"][1:]])
+    return True
