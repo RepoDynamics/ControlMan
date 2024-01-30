@@ -7,7 +7,7 @@ from github_contexts.github.enums import ActionType
 from actionman.logger import Logger
 
 from repodynamics.action.events._base import EventHandler
-from repodynamics.datatype import Branch, TemplateType, RepoDynamicsBotCommand, BranchType
+from repodynamics.datatype import TemplateType, RepoDynamicsBotCommand, BranchType
 from repodynamics.action import _helpers
 
 
@@ -39,15 +39,19 @@ class IssueCommentEventHandler(EventHandler):
         self._comment = self._payload.comment
         self._issue = self._payload.issue
 
-        self._command_runner_pull = {
-            RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
+        self._command_runner = {
+            "pull": {
+                RepoDynamicsBotCommand.CREATE_DEV_BRANCH: self._create_dev_branch,
+            },
+            "issue": {}
         }
-        self._command_runner_issue = {}
         return
 
     def run_event(self):
         action = self._payload.action
+        self._logger.info(title="Action", message=action.value)
         is_pull = self._payload.is_on_pull
+        self._logger.info(title="On pull request", message=str(is_pull))
         if action is ActionType.CREATED:
             self._run_created_pull() if is_pull else self._run_created_issue()
         elif action is ActionType.EDITED:
@@ -59,48 +63,44 @@ class IssueCommentEventHandler(EventHandler):
         return
 
     def _run_created_pull(self):
-        command = self._process_comment()
-        if not command:
-            return
-        command_type, kwargs = command
-        if command_type not in self._command_runner_pull:
-            return
-        self._command_runner_pull[command_type](kwargs)
+        self._process_comment()
         return
 
     def _run_edited_pull(self):
-        self._run_created_pull()
+        self._process_comment()
         return
 
     def _run_deleted_pull(self):
+        self._logger.notice("No action for deleted pull request comments.")
         return
 
     def _run_created_issue(self):
-        command = self._process_comment()
-        if not command:
-            return
-        command_type, kwargs = command
-        if command_type not in self._command_runner_issue:
-            return
-        self._command_runner_issue[command_type](kwargs)
+        self._process_comment()
         return
 
     def _run_edited_issue(self):
-        self._run_created_issue()
+        self._process_comment()
         return
 
     def _run_deleted_issue(self):
+        self._logger.notice("No action for deleted issue comments.")
         return
 
     def _create_dev_branch(self, kwargs: dict):
-        if "task" not in kwargs or not isinstance(kwargs["task"], int):
-            self._logger.error("Invalid task number.")
+        self._logger.section("Create Development Branch", group=True)
+        if "task" not in kwargs:
+            self._logger.error("Argument 'task' is missing.")
+            self._logger.section_end()
+            return
+        if not isinstance(kwargs["task"], int):
+            self._logger.error("Argument 'task' is not an integer.")
+            self._logger.section_end()
             return
         task_nr = kwargs["task"]
         pull_data = self._gh_api.pull(self._issue.number)
         head_branch = self.resolve_branch(branch_name=pull_data["head"]["ref"])
         if head_branch.type is not BranchType.IMPLEMENT:
-            self._logger.error("Invalid branch type.")
+            self._logger.error(title="Invalid branch type", message=head_branch.type.value)
             return
         dev_branch_name = self.create_branch_name_development(
             issue_nr=head_branch.suffix[0],
@@ -109,11 +109,14 @@ class IssueCommentEventHandler(EventHandler):
         )
         _, branch_names = self._git_base.get_all_branch_names()
         if dev_branch_name in branch_names:
-            self._logger.error("Branch already exists.")
+            self._logger.error(title="Development branch already exists", message=dev_branch_name)
             return
         tasklist = self._extract_tasklist(body=self._issue.body)
         if len(tasklist) < task_nr:
-            self._logger.error("Invalid task number.")
+            self._logger.error(
+                title="Invalid task number",
+                message=f"No task {task_nr} in tasklist; it has only {len(tasklist)} entries."
+            )
             return
         self._git_base.fetch_remote_branches_by_name(branch_names=head_branch.name)
         self._git_base.checkout(branch=head_branch.name)
@@ -126,6 +129,7 @@ class IssueCommentEventHandler(EventHandler):
             allow_empty=True,
         )
         self._git_base.push(target="origin", set_upstream=True)
+        self._logger.info(title="Created and pushed development branch", message=dev_branch_name)
         task = tasklist[task_nr - 1]
         sub_tasklist_str = self._write_tasklist(entries=[task])
         pull_body = (
@@ -142,15 +146,38 @@ class IssueCommentEventHandler(EventHandler):
             draft=True,
         )
         self._gh_api.issue_labels_set(number=pull_data["number"], labels=self._issue.label_names)
+        self._logger.info(title="Created draft pull request", message=pull_data["html_url"])
+        self._logger.section_end()
         return
 
     def _process_comment(self):
+        self._logger.section("Process Comment", group=True)
         body = self._comment.body
         if not body.startswith("@RepoDynamicsBot"):
+            self._logger.info("Comment is not a command as it does not start with '@RepoDynamicsBot'.")
             return
         command_str = body.removeprefix("@RepoDynamicsBot").strip()
-        command_name, kwargs = _helpers.parse_function_call(command_str)
-        command_type = RepoDynamicsBotCommand(command_name)
-        return command_type, kwargs
-
-
+        try:
+            command_name, kwargs = _helpers.parse_function_call(command_str)
+        except Exception as e:
+            self._logger.error("Failed to parse command.", str(e))
+            return
+        try:
+            command_type = RepoDynamicsBotCommand(command_name)
+        except ValueError:
+            self._logger.error(title="Invalid command name", message=command_name)
+            return
+        is_pull = self._payload.is_on_pull
+        command_runner_map = self._command_runner["pull" if is_pull else "issue"]
+        if command_type not in command_runner_map:
+            event_name = "pull request" if is_pull else "issue"
+            self._logger.error(
+                title=f"Unsupported command for {event_name} comments",
+                message=f"Command {command_type.value} is not supported for {event_name} comments."
+            )
+            return
+        self._logger.info(title="Command", message=command_type.value)
+        self._logger.debug(message="Arguments:", code=str(kwargs))
+        self._logger.section_end()
+        command_runner_map[command_type](kwargs)
+        return
