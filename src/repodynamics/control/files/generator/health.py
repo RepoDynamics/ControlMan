@@ -26,8 +26,7 @@ class _HealthFileGenerator:
     ):
         self._ccm = content_manager
         self._pathman = path_manager
-        self._logger = logger or Logger()
-        self._logger.h2("Generate Files")
+        self._logger = logger
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
