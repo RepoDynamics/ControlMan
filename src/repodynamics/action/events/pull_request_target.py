@@ -29,7 +29,7 @@ class PullRequestTargetEventHandler(EventHandler):
         self._payload: PullRequestPayload = self._context.event
         return
 
-    def run_event(self):
+    def _run_event(self):
         action = self._payload.action
         if action == ActionType.OPENED:
             self.event_pull_target_opened()
