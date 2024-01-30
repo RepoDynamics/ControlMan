@@ -43,10 +43,10 @@ def _generate_metadata(
     path_manager: _PathManager,
     logger: _Logger,
 ) -> list[tuple[_DynamicFile, str]]:
-    logger.section("Generate Metadata File", group=True)
+    logger.section("Metadata File", group=True)
     file_info = path_manager.metadata
     file_content = _pyserials.write.to_json_string(data=content_manager.as_dict, sort_keys=True, indent=None)
-    logger.info(message="File Info:", code=str(file_info))
+    logger.info(message="File info:", code=str(file_info))
     logger.debug(message="File content:", code=file_content)
     logger.section_end()
     return [(file_info, file_content)]
@@ -57,10 +57,10 @@ def _generate_license(
     path_manager: _PathManager,
     logger: _Logger,
 ) -> list[tuple[_DynamicFile, str]]:
-    logger.section("Generate License File", group=True)
+    logger.section("License File", group=True)
     file_info = path_manager.license
     file_content = content_manager["license"].get("text", "")
-    logger.info(message="File Info:", code=str(file_info))
+    logger.info(message="File info:", code=str(file_info))
     logger.debug(message="File content:", code=file_content)
     logger.section_end()
     return [(file_info, file_content)]
