@@ -12,6 +12,8 @@ def generate(
     logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
     if content_manager["package"]["type"] == "python":
-        return PythonPackageFileGenerator(metadata=content_manager, paths=path_manager, logger=logger).generate()
+        return PythonPackageFileGenerator(
+            content_manager=content_manager, path_manager=path_manager, logger=logger
+        ).generate()
     else:
         return []
