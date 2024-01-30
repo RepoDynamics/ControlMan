@@ -1,6 +1,7 @@
 import github_contexts
 from github_contexts.github.enums import EventType
 import actionman
+from actionman.logger import logger
 
 from repodynamics.action.events.issue_comment import IssueCommentEventHandler
 from repodynamics.action.events.issues import IssuesEventHandler
@@ -10,17 +11,6 @@ from repodynamics.action.events.push import PushEventHandler
 from repodynamics.action.events.schedule import ScheduleEventHandler
 from repodynamics.action.events.workflow_dispatch import WorkflowDispatchEventHandler
 from repodynamics.datatype import TemplateType
-
-
-logger: actionman.logger.Logger = actionman.logger.create(
-    realtime_output=True,
-    github_console=True,
-    initial_section_number=2,
-    exit_code_critical=1,
-    output_html_filepath="log.html",
-    root_heading="Execute Action",
-    html_title="ProMan Action Log",
-)
 
 
 def run():
