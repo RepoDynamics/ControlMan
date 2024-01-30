@@ -36,7 +36,7 @@ class IssuesEventHandler(EventHandler):
         self._label_groups: dict[LabelType, list[Label]] = {}
         return
 
-    def run_event(self):
+    def _run_event(self):
         action = self._payload.action
         if action == ActionType.OPENED:
             self._run_opened()
