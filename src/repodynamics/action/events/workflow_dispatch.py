@@ -28,16 +28,16 @@ class WorkflowDispatchEventHandler(EventHandler):
         # website_announcement: str,
         # website_announcement_msg: str,
         # first_major_release: bool,
-        path_root_base: str,
-        path_root_head: str | None = None,
+        path_repo_base: str,
+        path_repo_head: str | None = None,
         logger: Logger | None = None,
     ):
         super().__init__(
             template_type=template_type,
             context_manager=context_manager,
             admin_token=admin_token,
-            path_root_base=path_root_base,
-            path_root_head=path_root_head,
+            path_repo_base=path_repo_base,
+            path_repo_head=path_repo_head,
             logger=logger
         )
         # for arg_name, arg in (("meta_sync", meta_sync), ("hooks", hooks)):

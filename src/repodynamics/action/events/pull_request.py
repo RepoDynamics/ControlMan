@@ -42,16 +42,16 @@ class PullRequestEventHandler(EventHandler):
         template_type: TemplateType,
         context_manager: GitHubContext,
         admin_token: str,
-        path_root_base: str,
-        path_root_head: str,
+        path_repo_base: str,
+        path_repo_head: str,
         logger: Logger,
     ):
         super().__init__(
             template_type=template_type,
             context_manager=context_manager,
             admin_token=admin_token,
-            path_root_base=path_root_base,
-            path_root_head=path_root_head,
+            path_repo_base=path_repo_base,
+            path_repo_head=path_repo_head,
             logger=logger
         )
         self._payload: PullRequestPayload = self._context.event

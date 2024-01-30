@@ -61,14 +61,14 @@ class EventHandler:
         template_type: TemplateType,
         context_manager: GitHubContext,
         admin_token: str,
-        path_root_base: str,
-        path_root_head: str,
+        path_repo_base: str,
+        path_repo_head: str,
         logger: Logger,
     ):
         self._template_type = template_type
         self._context = context_manager
-        self._path_root_base = Path(path_root_base)
-        self._path_root_head = Path(path_root_head)
+        self._path_root_base = Path(path_repo_base)
+        self._path_root_head = Path(path_repo_head)
         self._logger = logger
 
         self._ccm_main: ControlCenterContentManager | None = repodynamics.control.content.from_json_file(

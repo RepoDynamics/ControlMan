@@ -41,8 +41,8 @@ def action():
         template_type=template_type,
         context_manager=context_manager,
         admin_token=inputs["ADMIN_TOKEN"] or "",
-        path_root_base=inputs["PATH_REPO_BASE"],
-        path_root_head=inputs["PATH_REPO_HEAD"],
+        path_repo_base=inputs["PATH_REPO_BASE"],
+        path_repo_head=inputs["PATH_REPO_HEAD"],
         logger=logger
     )
     logger.section_end()
