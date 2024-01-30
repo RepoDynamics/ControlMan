@@ -75,7 +75,7 @@ class PullRequestEventHandler(EventHandler):
         self._primary_commit_type: PrimaryActionCommit | PrimaryCustomCommit | None = None
         return
 
-    def run_event(self):
+    def _run_event(self):
         if not self._head_to_base_allowed():
             return
         action = self._payload.action
