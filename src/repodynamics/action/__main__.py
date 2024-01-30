@@ -13,8 +13,15 @@ from repodynamics.datatype import TemplateType
 
 
 def action():
-    logger = actionman.logger.create(output_html_filepath="log.html")
-    logger.section("Action")
+    logger = actionman.logger.create(
+        realtime_output=True,
+        github_console=True,
+        initial_section_number=2,
+        exit_code_critical=1,
+        output_html_filepath="log.html",
+        root_heading="Execute Action",
+        html_title="ProMan Action Log",
+    )
     logger.section("Initialize")
     inputs = actionman.io.read_environment_variables(
         ("TEMPLATE_TYPE", str, True, False),
@@ -29,6 +36,7 @@ def action():
     template_type = get_template_type(input_template_type=inputs.pop("TEMPLATE_TYPE"), logger=logger)
     context_manager = github_contexts.context_github(context=inputs.pop("GITHUB_CONTEXT"))
     event_handler_class = get_event_handler(event=context_manager.event_name, logger=logger)
+    logger.section("Initialize Event Handler", group=True)
     event_handler = event_handler_class(
         template_type=template_type,
         context_manager=context_manager,
@@ -37,12 +45,16 @@ def action():
         path_root_head=inputs["PATH_REPO_HEAD"],
         logger=logger
     )
+    logger.section_end()
+    logger.section_end()
+    logger.section("Execute Event Handler")
     try:
         outputs, env_vars, summary = event_handler.run()
     except Exception as e:
         logger.critical(title=f"An unexpected error occurred", message=str(e))
         raise e  # This will never be reached, but is required to satisfy the type checker and IDE
-    logger.section("Outputs & Summary")
+    logger.section_end()
+    logger.section("Write Outputs & Summary")
     if outputs:
         actionman.io.write_github_outputs(outputs, logger=logger)
     if env_vars:
