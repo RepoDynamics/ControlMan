@@ -43,7 +43,7 @@ class PushEventHandler(EventHandler):
         self._ccm_main_before: ControlCenterContentManager | None = None
         return
 
-    def run_event(self):
+    def _run_event(self):
         ref_type = self._context.ref_type
         action = self._payload.action
         if ref_type is RefType.BRANCH:
