@@ -1,7 +1,6 @@
 # Standard libraries
 import datetime as _datetime
 from pathlib import Path as _Path
-import json
 import re as _re
 import copy as _copy
 
