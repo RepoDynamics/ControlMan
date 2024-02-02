@@ -373,7 +373,7 @@ class ControlCenterContentManager:
             for label_type, prefix in type_prefix.items():
                 if prefix and label_name.startswith(prefix):
                     if label.get(label_type) is not None:
-                        raise ValueError(f"Label '{label_name}' with type {label_type} is a duplicate.")
+                        raise ValueError(f"Label '{label_name}' with type '{label_type}' is a duplicate.")
                     label[label_type] = label_name
                     break
         if "primary_type" not in label:
