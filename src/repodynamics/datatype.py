@@ -1,5 +1,4 @@
-import json
-from typing import NamedTuple, Any
+from typing import NamedTuple
 from pathlib import Path
 from enum import Enum
 
