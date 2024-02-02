@@ -36,7 +36,6 @@ class PreCommitHooks:
         self._action: Literal["report", "amend", "commit"] = "report"
         self._commit_message: str = ""
         self._commit_hash: str = ""
-
         self._from_ref: str = ""
         self._to_ref: str = ""
         return
