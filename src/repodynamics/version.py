@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal
-from packaging.version import Version, InvalidVersion
+from typing import Literal as _Literal
+from packaging.version import Version as _Version, InvalidVersion as _InvalidVersion
 
 
 class PEP440SemVer:
     def __init__(self, version: str):
         self._version_input = version
         try:
-            self._version = Version(version)
-        except InvalidVersion:
+            self._version = _Version(version)
+        except _InvalidVersion:
             raise ValueError(f"Invalid version: {version}")
         if len(self._version.release) != 3:
             raise ValueError(f"Invalid version: {version}")
@@ -33,7 +33,7 @@ class PEP440SemVer:
         return self._version.release
 
     @property
-    def pre(self) -> tuple[Literal["a", "b", "rc"], int] | None:
+    def pre(self) -> tuple[_Literal["a", "b", "rc"], int] | None:
         """The pre-release segment of the version."""
         return self._version.pre
 
@@ -68,7 +68,7 @@ class PEP440SemVer:
         return self._version_input
 
     @property
-    def release_type(self) -> Literal["final", "pre", "post", "dev"]:
+    def release_type(self) -> _Literal["final", "pre", "post", "dev"]:
         if self.dev is not None:
             return "dev"
         if self.post is not None:
@@ -118,55 +118,55 @@ class PEP440SemVer:
     def __hash__(self):
         return hash(self._version)
 
-    def __lt__(self, other: str | Version | "PEP440SemVer"):
+    def __lt__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__lt__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__lt__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__lt__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__lt__(other._version)
         raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-    def __le__(self, other: str | Version | "PEP440SemVer"):
+    def __le__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__le__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__le__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__le__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__le__(other._version)
         raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-    def __eq__(self, other: str | Version | "PEP440SemVer"):
+    def __eq__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__eq__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__eq__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__eq__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__eq__(other._version)
         raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-    def __ne__(self, other: str | Version | "PEP440SemVer"):
+    def __ne__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__ne__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__ne__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__ne__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__ne__(other._version)
         raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-    def __gt__(self, other: str | Version | "PEP440SemVer"):
+    def __gt__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__gt__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__gt__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__gt__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__gt__(other._version)
         raise TypeError(f"Cannot compare PEP440SemVer with {type(other)}")
 
-    def __ge__(self, other: str | Version | "PEP440SemVer"):
+    def __ge__(self, other: str | _Version | "PEP440SemVer"):
         if isinstance(other, str):
-            return self._version.__ge__(Version(other))
-        if isinstance(other, Version):
+            return self._version.__ge__(_Version(other))
+        if isinstance(other, _Version):
             return self._version.__ge__(other)
         if isinstance(other, PEP440SemVer):
             return self._version.__ge__(other._version)
