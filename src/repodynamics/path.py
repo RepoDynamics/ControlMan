@@ -1,7 +1,7 @@
 from typing import Literal
 from pathlib import Path
 
-from actionman.logger import Logger
+from loggerman import logger as _logger
 
 from repodynamics.datatype import DynamicFile, DynamicFileType
 from repodynamics import file_io
@@ -37,26 +37,22 @@ class RelativePath:
 
 
 class PathManager:
-    def __init__(
-        self,
-        path_repo: str | Path,
-        logger: Logger,
-        log_section_title: str = "Initialize Path Manager"
-    ):
-        self._logger = logger
-        self._logger.section(log_section_title, group=True)
-        self._path_root = Path(path_repo).resolve()
+
+    @_logger.sectioner("Initialize Path Manager")
+    def __init__(self, repo_path: str | Path):
+        self._path_root = Path(repo_path).resolve()
         pathfile = self._path_root / RelativePath.file_path_meta
         rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
-
         paths = file_io.read_datafile(
             path_data=self._path_root / rel_path_meta / "path.yaml",
             relpath_schema="path",
-            logger=self._logger,
             log_section_title="Read Path Declaration File"
         )
+        self._paths = self._check_paths(paths=paths, rel_path_meta=rel_path_meta)
+        return
 
-        self._logger.section("Check Paths", group=True)
+    @_logger.sectioner("Check Paths")
+    def _check_paths(self, paths, rel_path_meta):
         paths["dir"]["control"] = rel_path_meta
         dir_local_root = paths["dir"]["local"]["root"]
         for local_dir in ("cache", "report"):
@@ -68,16 +64,14 @@ class PathManager:
                     dict_local_dir[key] = full_rel_path
                     fullpath = self._path_root / full_rel_path
                     if fullpath.is_file():
-                        self._logger.critical(f"Input local directory '{fullpath}' is a file")
+                        _logger.critical(f"Input local directory '{fullpath}' is a file")
                     if not fullpath.exists():
-                        self._logger.info(f"Created input local directory '{fullpath}'.")
+                        _logger.info(f"Create input local directory '{fullpath}'.")
                         fullpath.mkdir(parents=True, exist_ok=True)
-        self._paths = paths
         for path, name in ((self.dir_meta, "control center"), (self.dir_github, "github")):
             if not path.is_dir():
-                self._logger.critical(f"Input {name} directory '{path}' not found")
-        self._logger.section_end()
-        return
+                _logger.critical(f"Input {name} directory '{path}' not found")
+        return paths
 
     @property
     def paths_dict(self) -> dict:
@@ -201,7 +195,9 @@ class PathManager:
         ]:
             for target_path in [".", "docs", ".github"]:
                 files.append(self.health_file(health_file_name, target_path))
-        for pre_commit_config_type in ["main", "release", "pre-release", "implementation", "development", "auto-update", "other"]:
+        for pre_commit_config_type in [
+            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
+        ]:
             files.append(self.pre_commit_config(pre_commit_config_type))
         return files
 
@@ -276,7 +272,12 @@ class PathManager:
         path = self._path_root / rel_path
         return DynamicFile("funding", DynamicFileType.CONFIG, rel_path, path)
 
-    def pre_commit_config(self, branch_type: Literal["main", "release", "pre-release", "implementation", "development", "auto-update", "other"]) -> DynamicFile:
+    def pre_commit_config(
+        self,
+        branch_type: Literal[
+            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
+        ]
+    ) -> DynamicFile:
         rel_path = getattr(RelativePath, f"file_pre_commit_config_{branch_type.replace('-', '_')}")
         path = self._path_root / rel_path
         return DynamicFile(f"pre-commit-config-{branch_type}", DynamicFileType.CONFIG, rel_path, path)
@@ -357,9 +358,9 @@ class PathManager:
         # Health files are only allowed in the root, docs, and .github directories
         allowed_paths = [".", "docs", ".github"]
         if target_path not in allowed_paths:
-            self._logger.critical(f"Path '{target_path}' not allowed for health files.")
+            _logger.critical(f"Path '{target_path}' not allowed for health files.")
         if name not in ["code_of_conduct", "codeowners", "contributing", "governance", "security", "support"]:
-            self._logger.critical(f"Health file '{name}' not recognized.")
+            _logger.critical(f"Health file '{name}' not recognized.")
         filename = name.upper() + (".md" if name != "codeowners" else "")
         rel_path = ("" if target_path == "." else f"{target_path}/") + filename
         path = self._path_root / rel_path
@@ -413,7 +414,6 @@ class PathManager:
         )
 
     def python_file(self, path: Path):
-        filename = path.name
         rel_path = str(path.relative_to(self._path_root))
         return DynamicFile(rel_path, DynamicFileType.PACKAGE, rel_path, path)
 
