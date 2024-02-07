@@ -33,7 +33,7 @@ class ControlCenterManager:
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
 
-        self._path_manager = _PathManager(path_repo=self._path_root, logger=self._logger)
+        self._path_manager = _PathManager(repo_path=self._path_root, logger=self._logger)
 
         self._metadata_raw: dict = {}
         self._local_config: dict = {}
