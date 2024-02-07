@@ -8,10 +8,10 @@ import copy as _copy
 import pylinks
 import trove_classifiers as _trove_classifiers
 import pyserials
-from actionman.logger import Logger
+from loggerman import logger
+import pyshellman
 
 from repodynamics.git import Git as _Git
-from repodynamics import _util
 from repodynamics.version import PEP440SemVer
 from repodynamics.path import PathManager
 from repodynamics.control.content import ControlCenterContentManager
@@ -819,16 +819,20 @@ class _ControlCenterContentGenerator:
         return out
 
     def _generate_custom_metadata(self) -> dict:
+
+        @logger.sectioner("Install Requirements")
+        def install_requirements():
+            result = pyshellman.pip.install_requirements(path=dir_path / "requirements.txt")
+            for title, detail in result.details:
+                logger.info(code_title=title, code=detail)
+            return
+
         dir_path = self._pathman.dir_meta / "custom"
         if not (dir_path / "generator.py").is_file():
             return {}
         self._logger.section("User-Defined Data")
         if (dir_path / "requirements.txt").is_file():
-            self._logger.info("Install custom metadata generator requirements")
-            _util.shell.run_command(
-                command=["pip", "install", "-r", str(dir_path / "requirements.txt")],
-                raise_stderr=False,
-            )
+            install_requirements()
         custom_generator = file_io.import_module(name="generator", path=dir_path / "generator.py")
         custom_metadata = custom_generator.run(self._data)
         self._logger.section_end()
