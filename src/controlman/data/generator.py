@@ -11,11 +11,11 @@ import pyserials
 from loggerman import logger
 import pyshellman
 
-from controlman.git import Git as _Git
+from controlman._git import Git as _Git
 from controlman.version import PEP440SemVer
-from controlman.path import PathManager
+from controlman._path import PathManager
 from controlman.control.content import ControlCenterContentManager
-from controlman import file_io
+from controlman import _file_io
 from controlman.control.data.cache import APICacheManager
 
 

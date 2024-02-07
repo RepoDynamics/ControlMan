@@ -4,15 +4,16 @@ from actionman.logger import Logger as _Logger
 
 from controlman.control import files as _files
 from controlman.control.content import ControlCenterContentManager
-from controlman.control.data import loader as _loader, generator as _generator, validator as _validator
-from controlman.path import PathManager as _PathManager
+from controlman.control.data import loader as _loader, validator as _validator
+from controlman.data import generator as _generator
+from controlman._path import PathManager as _PathManager
 from controlman.datatype import (
     DynamicFile as _DynamicFile,
     Diff as _Diff,
     DynamicFileType as _DynamicFileType,
 )
 from controlman.version import PEP440SemVer as _PEP440SemVer
-from controlman.git import Git as _Git
+from controlman._git import Git as _Git
 
 
 class ControlCenterManager:

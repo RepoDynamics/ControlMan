@@ -3,7 +3,7 @@ from pathlib import Path as _Path
 import pyserials as _pyserials
 from actionman.logger import Logger as _Logger
 
-from controlman import time as _time, file_io as _file_io
+from controlman import _time as _time, _file_io as _file_io
 
 
 class APICacheManager:

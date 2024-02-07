@@ -3,13 +3,12 @@ from pathlib import Path as _Path
 
 from actionman.logger import Logger as _Logger
 
-from controlman.control.content.manager import ControlCenterContent, ControlCenterContentManager
-from controlman.control.content import project, dev
+from controlman.content.manager import ControlCenterContent, ControlCenterContentManager
 
-from controlman import file_io as _file_io
+from controlman import _file_io as _file_io
 from controlman.control.data import validator as _validator
-from controlman.git import Git as _Git
-from controlman.path import RelativePath as _RelativePath
+from controlman._git import Git as _Git
+from controlman._path import RelativePath as _RelativePath
 
 
 def from_json_file(

@@ -1,9 +1,9 @@
 from actionman.logger import Logger
 
 from controlman.datatype import DynamicFile
-from controlman.control.files.generator.package.python import PythonPackageFileGenerator
+from controlman.files.generator import PythonPackageFileGenerator
 from controlman.control.content import ControlCenterContentManager
-from controlman.path import PathManager
+from controlman._path import PathManager
 
 
 def generate(

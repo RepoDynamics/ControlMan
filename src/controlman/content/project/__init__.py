@@ -1,4 +1,5 @@
-from controlman.control.content.project import intro, credits, license
+from controlman.control.content.project import intro, license
+from controlman.content.project import credits
 
 
 class Project:

@@ -9,8 +9,9 @@ from controlman.datatype import (
     DynamicFileChangeType as _DynamicFileChangeType,
 )
 from controlman.control.content import ControlCenterContentManager as _ControlCenterContentManager
-from controlman.path import PathManager as _PathManager
-from controlman.control.files import generator as _generator, comparer as _comparer
+from controlman._path import PathManager as _PathManager
+from controlman.control.files import comparer as _comparer
+from controlman.files import generator as _generator
 
 
 def generate(

@@ -4,7 +4,7 @@ from pathlib import Path
 from loggerman import logger as _logger
 
 from controlman.datatype import DynamicFile, DynamicFileType
-from controlman import file_io
+from controlman import _file_io
 
 
 class RelativePath:

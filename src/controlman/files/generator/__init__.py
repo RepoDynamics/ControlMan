@@ -1,16 +1,16 @@
 import pyserials as _pyserials
 from actionman.logger import Logger as _Logger
 
-from controlman.path import PathManager as _PathManager
+from controlman._path import PathManager as _PathManager
 from controlman.datatype import DynamicFile as _DynamicFile
 from controlman.control.content import ControlCenterContentManager as _ControlCenterContentManager
-from controlman.control.files.generator import (
+from controlman.files.generator import (
     config as _config,
     forms as _forms,
-    health as _health,
     package as _package,
     readme as _readme,
 )
+from controlman.files.generator import health as _health
 
 
 def generate(

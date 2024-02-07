@@ -10,10 +10,10 @@ import textwrap
 import pyserials
 from actionman.logger import Logger
 
-from controlman.path import PathManager
+from controlman._path import PathManager
 from controlman.datatype import DynamicFile
 from controlman.control.content import ControlCenterContentManager
-from controlman import file_io
+from controlman import _file_io
 
 
 class PythonPackageFileGenerator:

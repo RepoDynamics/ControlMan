@@ -9,10 +9,10 @@ from markitup import html
 from actionman.logger import Logger
 
 import controlman
-from controlman.path import PathManager
+from controlman._path import PathManager
 from controlman.datatype import DynamicFile
 from controlman.control.content import ControlCenterContentManager
-from controlman.control.files.generator.readme.main import ReadmeFileGenerator
+from controlman.files.generator.readme.main import ReadmeFileGenerator
 
 
 class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):

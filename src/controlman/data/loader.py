@@ -6,9 +6,9 @@ import pyserials as _pyserials
 from actionman.logger import Logger as _Logger
 import pylinks as _pylinks
 
-from controlman.path import PathManager as _PathManager
-from controlman import file_io as _file_io
-from controlman import time as _time
+from controlman._path import PathManager as _PathManager
+from controlman import _file_io as _file_io
+from controlman import _time as _time
 
 
 def load(path_manager: _PathManager, logger: _Logger, github_token: str | None = None) -> tuple[dict, dict]:
