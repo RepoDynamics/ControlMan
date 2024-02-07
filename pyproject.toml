@@ -18,10 +18,9 @@ namespaces = true
 #
 [project]
 version = "0.0.0.dev246"
-name = "RepoDynamics"
+name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
-    "pre-commit == 3.3.3",
     "jsonschema >= 4.19, < 5",
     "trove-classifiers",
     "readme-renderer[md]",
@@ -32,13 +31,8 @@ dependencies = [
     "github-contexts",
     "conventional_commits",
     "actionman",
-    "pyserials"
+    "loggerman",
+    "pyserials",
+    "gittidy",
 ]
 requires-python = ">=3.10"
-
-
-#[project.scripts]
-#rd-print = "repodynamics.actions._print:main"
-#repodynamics-get-metadata = "pypackit.metadata:__main__"
-#repodynamics-sync-files = "pypackit.templates:__main__"
-#repodynamics-deploy = "pypackit.cd:__main__"
