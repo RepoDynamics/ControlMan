@@ -1,5 +1,5 @@
 from controlman.content.dev import branch
-from controlman.control.content.dev import label
+from controlman.content.dev import label
 
 
 class Dev:
