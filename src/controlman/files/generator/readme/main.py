@@ -10,7 +10,7 @@ from actionman.logger import Logger
 from readme_renderer.markdown import render
 
 import controlman
-from controlman._path import PathManager
+from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
 from controlman.control.content import ControlCenterContentManager
 
