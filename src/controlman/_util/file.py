@@ -12,50 +12,51 @@ from controlman import exception as _exception
 
 
 def read_datafile(
-    path_data: str | Path,
+    path_repo: str | Path,
+    path_data: str,
     relpath_schema: str = "",
     root_type: Type[dict | list] = dict,
     extension: Literal["json", "yaml", "toml"] | None = None,
     log_section_title: str = "Read Datafile",
 ) -> dict | list:
     _logger.section(log_section_title)
-    path_data = Path(path_data).resolve()
-    _logger.info("Path", path_data)
+    fullpath_data = Path(path_repo).resolve() / path_data
+    _logger.info("Path", fullpath_data)
     _logger.info("Root Type", root_type.__name__)
-    file_exists = path_data.is_file()
+    file_exists = fullpath_data.is_file()
     _logger.info("File Exists", file_exists)
     if not file_exists:
         content = root_type()
     else:
-        raw_content = path_data.read_text().strip()
+        raw_content = fullpath_data.read_text().strip()
         if raw_content == "":
             content = root_type()
         else:
-            extension = extension or path_data.suffix.removeprefix(".")
+            extension = extension or fullpath_data.suffix.removeprefix(".")
             if extension == "yml":
                 extension = "yaml"
-            content = pyserials.read.from_string(
-                data=raw_content,
-                data_type=extension,
-                json_strict=True,
-                yaml_safe=True,
-                toml_as_dict=False,
-            )
+            try:
+                content = pyserials.read.from_string(
+                    data=raw_content,
+                    data_type=extension,
+                    json_strict=True,
+                    yaml_safe=True,
+                    toml_as_dict=False,
+                )
+            except pyserials.exception.read.PySerialsReadFromStringException as e:
+                raise _exception.content.ControlManFileReadError(
+                    relpath_data=path_data, data=raw_content
+                ) from e
             if content is None:
                 _logger.info("File is empty.")
                 content = root_type()
             if not isinstance(content, root_type):
-                _logger.critical(
-                    f"Invalid datafile at {path_data}",
-                    f"Expected a {root_type.__name__}, but got {type(content).__name__}.",
-                    code_title="Content",
-                    code=content,
+                raise _exception.content.ControlManFileDataTypeError(
+                    relpath_data=path_data, data=content, expected_type=root_type
                 )
-                # This will never be reached, but is required to satisfy the type checker and IDE.
-                raise TypeError()
     if relpath_schema:
         validate_data(data=content, schema_relpath=relpath_schema)
-    _logger.info(f"Successfully read data file at '{path_data}'.")
+    _logger.info(f"Successfully read data file at '{fullpath_data}'.")
     _logger.debug("Content:", code=str(content))
     _logger.section_end()
     return content
@@ -78,8 +79,8 @@ def validate_data(
             fill_defaults=True,
             raise_invalid_data=True,
         )
-    except pyserials.exception.PySerialsSchemaValidationError as e:
-        raise _exception.ControlManSchemaValidationError(
+    except pyserials.exception.validate.PySerialsSchemaValidationError as e:
+        raise _exception.content.ControlManSchemaValidationError(
             rel_path=schema_relpath,
             file_ext=datafile_ext,
             is_dir=is_dir,
