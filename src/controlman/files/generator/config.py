@@ -3,7 +3,7 @@ from actionman.logger import Logger
 import pylinks
 from pylinks.exceptions import WebAPIError
 
-from controlman._path import PathManager
+from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
 from controlman.control.content import ControlCenterContentManager
 
