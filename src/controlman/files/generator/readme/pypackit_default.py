@@ -9,7 +9,7 @@ from markitup import html
 from actionman.logger import Logger
 
 import controlman
-from controlman._path import PathManager
+from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
 from controlman.control.content import ControlCenterContentManager
 from controlman.files.generator.readme.main import ReadmeFileGenerator
