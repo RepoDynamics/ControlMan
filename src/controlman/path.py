@@ -1,4 +1,4 @@
-"""Constant paths to files and directories in the repository."""
+"""Constant paths to files and directories in the user repository."""
 
 
 FILE_METADATA = ".github/.metadata.json"
