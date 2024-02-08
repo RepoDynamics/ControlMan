@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: API Cache
+description: Cached data from web APIs and other sources.
+type: object
+default: {}
+additionalProperties:
+  type: object
+  additionalProperties: false
+  properties:
+    timestamp:
+      description: Timestamp of the last update.
+      type: string
+    data:
+      description: Cached data.
+    required: [ timestamp, data ]
