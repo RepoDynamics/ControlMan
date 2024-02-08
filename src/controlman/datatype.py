@@ -1,13 +1,13 @@
-from typing import NamedTuple
-from pathlib import Path
-from enum import Enum
+from typing import NamedTuple as _NamedTuple
+from pathlib import Path as _Path
+from enum import Enum as _Enum
 
-import conventional_commits
+import conventional_commits as _conventional_commits
 
-from controlman.version import PEP440SemVer
+from versionman import PEP440SemVer as _PEP440SemVer
 
 
-class EventType(Enum):
+class EventType(_Enum):
     PUSH_MAIN = "push_main"
     PUSH_RELEASE = "push_release"
     PUSH_DEV = "push_dev"
@@ -21,7 +21,7 @@ class EventType(Enum):
     DISPATCH = "dispatch"
 
 
-class BranchType(Enum):
+class BranchType(_Enum):
     MAIN = "main"
     RELEASE = "release"
     PRERELEASE = "pre-release"
@@ -31,14 +31,14 @@ class BranchType(Enum):
     OTHER = "other"
 
 
-class Branch(NamedTuple):
+class Branch(_NamedTuple):
     type: BranchType
     name: str
     prefix: str | None = None
-    suffix: str | int | PEP440SemVer | tuple[int, str] | tuple[int, str, int] | None = None
+    suffix: str | int | _PEP440SemVer | tuple[int, str] | tuple[int, str, int] | None = None
 
 
-class RepoFileType(Enum):
+class RepoFileType(_Enum):
     SUPERMETA = "SuperMeta Content"
     WORKFLOW = "Workflows"
     META = "Meta Content"
@@ -50,7 +50,7 @@ class RepoFileType(Enum):
     OTHER = "Other Files"
 
 
-class DynamicFileType(Enum):
+class DynamicFileType(_Enum):
     METADATA = "Metadata Files"
     LICENSE = "License Files"
     PACKAGE = "Package Files"
@@ -61,12 +61,12 @@ class DynamicFileType(Enum):
     FORM = "Forms"
 
 
-class DynamicFile(NamedTuple):
+class DynamicFile(_NamedTuple):
     id: str
     category: DynamicFileType
     rel_path: str
-    path: Path
-    alt_paths: list[Path] | None = None
+    path: _Path
+    alt_paths: list[_Path] | None = None
     is_dir: bool = False
 
     @property
@@ -74,12 +74,12 @@ class DynamicFile(NamedTuple):
         return self.path.name
 
 
-class _FileStatus(NamedTuple):
+class _FileStatus(_NamedTuple):
     title: str
     emoji: str
 
 
-class FileChangeType(Enum):
+class FileChangeType(_Enum):
     REMOVED = _FileStatus("Removed", "🔴")
     MODIFIED = _FileStatus("Modified", "🟣")
     BROKEN = _FileStatus("Broken", "🟠")
@@ -88,12 +88,12 @@ class FileChangeType(Enum):
     UNKNOWN = _FileStatus("Unknown", "⚫")
 
 
-class DynamicFileChangeTypeContent(NamedTuple):
+class DynamicFileChangeTypeContent(_NamedTuple):
     title: str
     emoji: str
 
 
-class DynamicFileChangeType(Enum):
+class DynamicFileChangeType(_Enum):
     REMOVED = DynamicFileChangeTypeContent("Removed", "🔴")
     MODIFIED = DynamicFileChangeTypeContent("Modified", "🟣")
     MOVED_MODIFIED = DynamicFileChangeTypeContent("Moved & Modified", "🟠")
@@ -104,14 +104,14 @@ class DynamicFileChangeType(Enum):
     DISABLED = DynamicFileChangeTypeContent("Disabled", "⚫")
 
 
-class Diff(NamedTuple):
+class Diff(_NamedTuple):
     status: DynamicFileChangeType
     after: str
     before: str = ""
-    path_before: Path | None = None
+    path_before: _Path | None = None
 
 
-class CommitGroup(Enum):
+class CommitGroup(_Enum):
     PRIMARY_ACTION = "primary_action"
     PRIMARY_CUSTOM = "primary_custom"
     SECONDARY_ACTION = "secondary_action"
@@ -119,7 +119,7 @@ class CommitGroup(Enum):
     NON_CONV = "non_conventional"
 
 
-class PrimaryActionCommitType(Enum):
+class PrimaryActionCommitType(_Enum):
     RELEASE_MAJOR = "release_major"
     RELEASE_MINOR = "release_minor"
     RELEASE_PATCH = "release_patch"
@@ -128,7 +128,7 @@ class PrimaryActionCommitType(Enum):
     META = "meta"
 
 
-class SecondaryActionCommitType(Enum):
+class SecondaryActionCommitType(_Enum):
     AUTO_UPDATE = "auto-update"
     META_SYNC = "meta_sync"
     REVERT = "revert"
@@ -243,12 +243,12 @@ class NonConventionalCommit(GroupedCommit):
         return "NonConventionalCommit()"
 
 
-class Commit(NamedTuple):
+class Commit(_NamedTuple):
     hash: str
     author: str
     date: str
     files: list[str]
-    msg: str | conventional_commits.message.ConventionalCommitMessage
+    msg: str | _conventional_commits.message.ConventionalCommitMessage
     group_data: (
         PrimaryActionCommit
         | PrimaryCustomCommit
@@ -258,13 +258,13 @@ class Commit(NamedTuple):
     )
 
 
-class Issue(NamedTuple):
+class Issue(_NamedTuple):
     group_data: PrimaryActionCommit | PrimaryCustomCommit
     type_labels: list[str]
     form: dict
 
 
-class InitCheckAction(Enum):
+class InitCheckAction(_Enum):
     NONE = "none"
     FAIL = "fail"
     REPORT = "report"
@@ -273,18 +273,10 @@ class InitCheckAction(Enum):
     AMEND = "amend"
 
 
-class WorkflowDispatchInput(NamedTuple):
-    meta: InitCheckAction
-    hooks: InitCheckAction
-    package_build: bool
-    package_lint: bool
-    package_test: bool
-    website_build: bool
-    website_announcement: str
-    website_announcement_msg: str
 
 
-class IssueStatus(Enum):
+
+class IssueStatus(_Enum):
     TRIAGE = "triage"
     REJECTED = "rejected"
     DUPLICATE = "duplicate"
@@ -300,16 +292,7 @@ class IssueStatus(Enum):
     DEPLOY_FINAL = "deploy_final"
 
 
-class TemplateType(Enum):
-    PYPACKIT = "PyPackIT"
-    SPHINXIT = "SphinxIT"
-
-
-class RepoDynamicsBotCommand(Enum):
-    CREATE_DEV_BRANCH = "create_dev_branch"
-
-
-class LabelType(Enum):
+class LabelType(_Enum):
     VERSION = "version"
     BRANCH = "branch"
     TYPE = "primary_type"
@@ -320,7 +303,7 @@ class LabelType(Enum):
     UNKNOWN = "unknown"
 
 
-class Label(NamedTuple):
+class Label(_NamedTuple):
     category: LabelType
     name: str
     prefix: str = ""
