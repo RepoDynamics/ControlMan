@@ -4,10 +4,10 @@ from pathlib import Path
 import subprocess
 import re
 from contextlib import contextmanager
-from actionman.logger import Logger
+from loggerman import Logger
 
-from controlman import _util
-from controlman.version import PEP440SemVer
+
+from versionman import PEP440SemVer
 
 
 class Git:

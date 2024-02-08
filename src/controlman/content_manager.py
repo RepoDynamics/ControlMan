@@ -1,9 +1,8 @@
-from controlman.control.content.project import Project as _Project
-from controlman.control.content.dev import Dev as _Dev
+from versionman import PEP440SemVer as _PEP440SemVer
 
+from controlman.content import ControlCenterContent as _ControlCenterContent
 from controlman.datatype import (
     BranchType as _BranchType,
-    TemplateType as _TemplateType,
     Branch as _Branch,
     LabelType as _LabelType,
     Label as _Label,
@@ -17,31 +16,12 @@ from controlman.datatype import (
     SecondaryCustomCommit as _SecondaryCustomCommit,
     SecondaryActionCommitType as _SecondaryActionCommitType,
 )
-from controlman.version import PEP440SemVer as _PEP440SemVer
-
-
-class ControlCenterContent:
-
-    def __init__(self, data: dict):
-        self._data = data
-        self._project = _Project(data)
-        self._dev = _Dev(data)
-        return
-
-    @property
-    def project(self) -> _Project:
-        return self._project
-
-    @property
-    def dev(self) -> _Dev:
-        return self._dev
 
 
 class ControlCenterContentManager:
     def __init__(self, data: dict):
         self._data = data
-        self._content = ControlCenterContent(data)
-
+        self._content = _ControlCenterContent(data)
         self._commit_data: dict = {}
         self._issue_data: dict = {}
         self._version_to_branch_map: dict[str, str] = {}
@@ -54,12 +34,8 @@ class ControlCenterContentManager:
         return item in self._data
 
     @property
-    def settings(self) -> ControlCenterContent:
+    def content(self) -> _ControlCenterContent:
         return self._content
-
-    @property
-    def as_dict(self) -> dict:
-        return self._data
 
     @property
     def branch(self) -> dict:
@@ -140,10 +116,6 @@ class ControlCenterContentManager:
     @property
     def package(self) -> dict:
         return self._data.get("package", {})
-
-    @property
-    def config__template(self) -> _TemplateType:
-        return _TemplateType(self._data["config"]["template"])
 
     def get_branch_info_from_name(self, branch_name: str) -> _Branch:
         if branch_name == self.branch__main__name:
