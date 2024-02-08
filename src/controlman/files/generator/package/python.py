@@ -8,12 +8,13 @@ import textwrap
 
 # Non-standard libraries
 import pyserials
-from actionman.logger import Logger
+import pysyntax as _pysyntax
+from loggerman import logger
 
-from controlman._path import PathManager
+from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman.control.content import ControlCenterContentManager
-from controlman import _file_io
+from controlman import ControlCenterContentManager
+from controlman import _util
 
 
 class PythonPackageFileGenerator:
@@ -21,10 +22,9 @@ class PythonPackageFileGenerator:
         self,
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
-        logger: Logger,
     ):
         self._ccm = content_manager
-        self._ccs = content_manager.settings
+        self._ccs = content_manager.content
         self._pathman = path_manager
         self._logger = logger
 
@@ -153,7 +153,9 @@ class PythonPackageFileGenerator:
                 else:
                     new_path = filepath
                 file_info = self._pathman.python_file(new_path)
-                file_content = self.rename_imports(module_content=filepath.read_text(), mapping=mapping)
+                file_content = _pysyntax.modify.rename_imports(
+                    module_content=filepath.read_text(), mapping=mapping
+                )
                 out.append((file_info, file_content))
                 self._logger.info(message="File info:", code=str(file_info))
                 self._logger.debug(message="File content:", code=file_content)
@@ -162,14 +164,12 @@ class PythonPackageFileGenerator:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
                 self._logger.section(f"Test-Suite File '{testsuite_filename}'")
-                filepath = file_io.get_package_datafile(
-                    f"template/testsuite/{testsuite_filename}", return_content=False
-                )
                 file_info = self._pathman.python_file(
                     (test_package_dir.path / testsuite_filename).with_suffix(".py")
                 )
                 file_content = pyserials.update.templated_data_from_source(
-                    templated_data=filepath.read_text(), source_data=self._ccm.as_dict
+                    templated_data=_util.file.get_package_datafile(f"template/testsuite/{testsuite_filename}"),
+                    source_data=self._ccm.content.as_dict
                 )
                 out.append((file_info, file_content))
                 self._logger.info(message="File info:", code=str(file_info))
@@ -414,36 +414,3 @@ __version__ = __version_details__["version"]"""
             if self._ccm["package"].get(cat)
             else None
         )
-
-    @staticmethod
-    def rename_imports(module_content: str, mapping: dict[str, str]) -> str:
-        """
-        Rename the old import name to the new import name in the provided module content.
-
-        Parameters
-        ----------
-        module_content : str
-            The content of the Python module as a string.
-        mapping : dict[str, str]
-            A dictionary mapping the old import names to the new import names.
-
-        Returns
-        -------
-        new_module_content : str
-            The updated module content as a string with the old names replaced by the new names.
-        """
-        updated_module_content = module_content
-        for old_name, new_name in mapping.items():
-            # Regular expression patterns to match the old name in import statements
-            patterns = [
-                rf"^\s*from\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*\s+import",
-                rf"^\s*import\s+{re.escape(old_name)}(?:.[a-zA-Z0-9_]+)*",
-            ]
-            for pattern in patterns:
-                # Compile the pattern into a regular expression object
-                regex = re.compile(pattern, flags=re.MULTILINE)
-                # Replace the old name with the new name wherever it matches
-                updated_module_content = regex.sub(
-                    lambda match: match.group(0).replace(old_name, new_name, 1), updated_module_content
-                )
-        return updated_module_content
