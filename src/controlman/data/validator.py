@@ -1,13 +1,12 @@
 import re as _re
 
-from actionman.logger import Logger as _Logger
+from loggerman import logger as _logger
 
-from controlman.control.content import ControlCenterContentManager as _ControlCenterContentManager
+from controlman import ControlCenterContentManager as _ControlCenterContentManager
 
 
 def validate(
     content_manager: _ControlCenterContentManager,
-    logger: _Logger,
     log_section_title: str = "Validate Control Center Contents",
 ) -> None:
     logger.section(log_section_title, group=True)
@@ -18,7 +17,7 @@ def validate(
 
 
 class _ControlCenterContentValidator:
-    def __init__(self, content_manager: _ControlCenterContentManager, logger: _Logger):
+    def __init__(self, content_manager: _ControlCenterContentManager):
         self._ccm = content_manager
         self._logger = logger
         return
