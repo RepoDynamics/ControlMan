@@ -11,12 +11,12 @@ import pyserials
 from loggerman import logger
 import pyshellman
 
-from controlman._git import Git as _Git
-from controlman.version import PEP440SemVer
-from controlman._path import PathManager
-from controlman.control.content import ControlCenterContentManager
-from controlman import _file_io
-from controlman.control.data.cache import APICacheManager
+from controlman import _util, exception as _exception
+from versionman import PEP440SemVer
+from controlman._path_manager import PathManager
+from controlman import ControlCenterContentManager
+from controlman.data.cache import APICacheManager
+from controlman.protocol import Git as _Git
 
 
 def generate(
@@ -24,7 +24,6 @@ def generate(
     path_manager: PathManager,
     api_cache_retention_days: float,
     git_manager: _Git,
-    logger: Logger,
     github_token: str | None = None,
     ccm_before: ControlCenterContentManager | dict | None = None,
     future_versions: dict[str, str | PEP440SemVer] | None = None,
@@ -43,7 +42,6 @@ class _ControlCenterContentGenerator:
         path_manager: PathManager,
         api_cache_retention_days: float,
         git_manager: _Git,
-        logger: Logger,
         github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
@@ -55,7 +53,8 @@ class _ControlCenterContentGenerator:
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
         self._cache = APICacheManager(
-            path_cachefile=self._pathman.file_local_api_cache,
+            path_repo=self._pathman.root,
+            path_cachefile=str(self._pathman.file_local_api_cache.relative_to(self._pathman.root)),
             retention_days=api_cache_retention_days,
             logger=self._logger,
         )
@@ -233,12 +232,10 @@ class _ControlCenterContentGenerator:
             self._logger.info("License data already set manually.")
             self._logger.section_end()
             return self._data["license"]
-        license_db = file_io.read_datafile(
-            path_data=file_io.get_package_datafile("db/license/info.yaml", return_content=False)
-        )
+        license_db = _util.file.get_package_datafile("db/license/info.yaml")
         license_info = license_db.get(license_id.lower())
         if not license_info:
-            self._logger.critical(title=f"License ID not found in database", message=license_id)
+            self._logger.critical(title=f"License ID not found in database", msg=license_id)
         license_info = _copy.deepcopy(license_info)
         license_info["shortname"] = data.get("shortname") or license_info["shortname"]
         license_info["fullname"] = data.get("fullname") or license_info["fullname"]
@@ -248,10 +245,10 @@ class _ControlCenterContentGenerator:
         )
         filename = license_id.lower().removesuffix("+")
         license_info["text"] = (
-            data.get("text") or file_io.get_package_datafile(f"db/license/text/{filename}.txt")
+            data.get("text") or _util.file.get_package_datafile(f"db/license/text/{filename}.txt")
         )
         license_info["notice"] = (
-            data.get("notice") or file_io.get_package_datafile(f"db/license/notice/{filename}.txt")
+            data.get("notice") or _util.file.get_package_datafile(f"db/license/notice/{filename}.txt")
         )
         self._logger.info(f"License data set from license ID '{license_id}'.")
         self._logger.debug("License data:", code=str(license_info))
@@ -739,11 +736,19 @@ class _ControlCenterContentGenerator:
             if not ver:
                 self._logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
-            branch_metadata = (
-                file_io.read_datafile(  # TODO: add logging and error handling
-                    path_data=self._pathman.metadata.path
-                ) if branch != curr_branch else self._data
-            )
+            if branch == curr_branch:
+                branch_metadata = self._data
+            else:
+                try:
+                    branch_metadata = _util.file.read_datafile(
+                        path_repo=self._pathman.root,
+                        path_data=self._pathman.metadata.rel_path,
+                        relpath_schema="metadata",
+                    )
+                except _exception.content.ControlManContentException as e:
+                    self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
+                    _logger.debug("Error Details", e)
+                    continue
             if not branch_metadata:
                 self._logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
                 continue
@@ -833,7 +838,7 @@ class _ControlCenterContentGenerator:
         self._logger.section("User-Defined Data")
         if (dir_path / "requirements.txt").is_file():
             install_requirements()
-        custom_generator = file_io.import_module(name="generator", path=dir_path / "generator.py")
+        custom_generator = _util.file.import_module_from_path(path=dir_path / "generator.py")
         custom_metadata = custom_generator.run(self._data)
         self._logger.section_end()
         return custom_metadata
