@@ -3,7 +3,7 @@ from actionman.logger import Logger
 from controlman.datatype import DynamicFile
 from controlman.files.generator import PythonPackageFileGenerator
 from controlman.control.content import ControlCenterContentManager
-from controlman._path import PathManager
+from controlman._path_manager import PathManager
 
 
 def generate(
