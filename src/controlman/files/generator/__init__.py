@@ -1,7 +1,7 @@
 import pyserials as _pyserials
 from actionman.logger import Logger as _Logger
 
-from controlman._path import PathManager as _PathManager
+from controlman._path_manager import PathManager as _PathManager
 from controlman.datatype import DynamicFile as _DynamicFile
 from controlman.control.content import ControlCenterContentManager as _ControlCenterContentManager
 from controlman.files.generator import (
@@ -45,7 +45,7 @@ def _generate_metadata(
 ) -> list[tuple[_DynamicFile, str]]:
     logger.section("Metadata File", group=True)
     file_info = path_manager.metadata
-    file_content = _pyserials.write.to_json_string(data=content_manager.as_dict, sort_keys=True, indent=None)
+    file_content = _pyserials.write.to_json_string(data=content_manager.content.as_dict, sort_keys=True, indent=None)
     logger.info(message="File info:", code=str(file_info))
     logger.debug(message="File content:", code=file_content)
     logger.section_end()
