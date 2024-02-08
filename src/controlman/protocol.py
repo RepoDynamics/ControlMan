@@ -4,6 +4,7 @@ from pathlib import Path as _Path
 
 @_runtime_checkable
 class Git(_Protocol):
+    """Protocol for the Git API interface required by ControlMan."""
 
     @property
     def repo_path(self) -> _Path:
