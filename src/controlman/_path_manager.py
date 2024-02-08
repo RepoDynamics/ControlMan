@@ -15,7 +15,8 @@ class PathManager:
         pathfile = self._path_root / _path.FILE_PATH_META
         rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
         paths = _util.file.read_datafile(
-            path_data=self._path_root / rel_path_meta / "path.yaml",
+            path_repo=self._path_root,
+            path_data=f"{rel_path_meta}/path.yaml",
             relpath_schema="path",
             log_section_title="Read Path Declaration File"
         )
