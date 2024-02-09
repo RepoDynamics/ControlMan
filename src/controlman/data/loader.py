@@ -13,8 +13,7 @@ from controlman import _util
 @_logger.sectioner("Load Control Center Contents")
 def load(path_manager: _PathManager, github_token: str | None = None) -> tuple[dict, dict]:
     data, local_config = _ControlCenterContentLoader(
-        path_manager=path_manager,
-        github_token=github_token,
+        path_manager=path_manager, github_token=github_token,
     ).load()
     return data, local_config
 
@@ -80,7 +79,7 @@ class _ControlCenterContentLoader:
         file_hash = hashlib.md5(
             _pyserials.write.to_json_string(data=extensions, sort_keys=True, indent=None).encode("utf-8")
         ).hexdigest()
-        new_path = self._pathman.dir_local_meta_extensions / f"{_time.now()}__{file_hash}"
+        new_path = self._pathman.dir_local_meta_extensions / f"{_util.time.now()}__{file_hash}"
         if not self._pathman.dir_local_meta_extensions.is_dir():
             _logger.info(
                 f"Local extensions directory not found at '{self._pathman.dir_local_meta_extensions}'."
@@ -94,7 +93,7 @@ class _ControlCenterContentLoader:
         for path in self._pathman.dir_local_meta_extensions.iterdir():
             if path.is_dir():
                 match = dir_pattern.match(path.name)
-                if match and match.group(2) == file_hash and not _time.is_expired(
+                if match and match.group(2) == file_hash and not _util.time.is_expired(
                     timestamp=match.group(1),
                     expiry_days=cache_retention_days
                 ):
@@ -330,13 +329,13 @@ class _ControlCenterContentLoader:
                         raise_duplicates=extension["raise_duplicate"],
                     )
                 except _pyserials.exception.DictUpdateError as e:
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Failed to merge extension",
                         message=e.message,
                     )
                     raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-                self._logger.section_end()
-        self._logger.section_end()
+                _logger.section_end()
+        _logger.section_end()
         _util.file.validate_data(
             data=tools, schema_relpath="package_python/tools", is_dir=True, has_extension=has_extension,
         )
@@ -349,7 +348,7 @@ class _ControlCenterContentLoader:
                 raise_duplicates=True,
             )
         except _pyserials.exception.DictUpdateError as e:
-            self._logger.critical(
+            _logger.critical(
                 title=f"Failed to merge tools configurations to package pyproject",
                 message=e.message,
             )
