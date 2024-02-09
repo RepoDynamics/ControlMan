@@ -67,7 +67,7 @@ class PythonPackageFileGenerator:
         logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
-    @logger.section("Generate Package and Test-Suite Directories")
+    @logger.sectioner("Generate Package and Test-Suite Directories")
     def _directories(self) -> list[tuple[DynamicFile, str]]:
         out = []
         for title, name, sub_path, func in (
@@ -126,7 +126,7 @@ class PythonPackageFileGenerator:
             logger.section_end()
         return out
 
-    @logger.section("Generate Package and Test-Suite Source Files")
+    @logger.sectioner("Generate Package and Test-Suite Source Files")
     def python_files(self) -> list[tuple[DynamicFile, str]]:
         out = []
         mapping = {}
