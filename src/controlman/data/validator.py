@@ -5,21 +5,16 @@ from loggerman import logger as _logger
 from controlman import ControlCenterContentManager as _ControlCenterContentManager
 
 
-def validate(
-    content_manager: _ControlCenterContentManager,
-    log_section_title: str = "Validate Control Center Contents",
-) -> None:
-    logger.section(log_section_title, group=True)
-    validator = _ControlCenterContentValidator(content_manager=content_manager, logger=logger)
+@_logger.sectioner("Validate Control Center Contents")
+def validate(content_manager: _ControlCenterContentManager,) -> None:
+    validator = _ControlCenterContentValidator(content_manager=content_manager)
     validator.validate()
-    logger.section_end()
     return
 
 
 class _ControlCenterContentValidator:
     def __init__(self, content_manager: _ControlCenterContentManager):
         self._ccm = content_manager
-        self._logger = logger
         return
 
     def validate(self):
@@ -34,9 +29,9 @@ class _ControlCenterContentValidator:
         for branch_type, branch_prefix in self._ccm.branch__groups__prefixes.items():
             for branch_name in branch_names:
                 if branch_name.startswith(branch_prefix):
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Duplicate branch name: {branch_name}",
-                        message=f"The branch name '{branch_name}' starts with "
+                        msg=f"The branch name '{branch_name}' starts with "
                         f"the prefix of branch group '{branch_type.value}'.",
                     )
             branch_names.append(branch_prefix)
@@ -48,16 +43,16 @@ class _ControlCenterContentValidator:
         changelog_names = []
         for changelog_id, changelog_data in self._ccm["changelog"].items():
             if changelog_data["path"] in changelog_paths:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate changelog path: {changelog_data['path']}",
-                    message=f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
+                    msg=f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
                 )
             changelog_paths.append(changelog_data["path"])
             if changelog_data["name"] in changelog_names:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate changelog name: {changelog_data['name']}",
-                    message=f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
+                    msg=f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
                 )
             changelog_names.append(changelog_data["name"])
@@ -66,9 +61,9 @@ class _ControlCenterContentValidator:
             section_ids = []
             for section in changelog_data["sections"]:
                 if section["id"] in section_ids:
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Duplicate changelog section ID: {section['id']}",
-                        message=f"The section ID '{section['id']}' set for changelog '{changelog_id}' "
+                        msg=f"The section ID '{section['id']}' set for changelog '{changelog_id}' "
                         f"is already used by another earlier section.",
                     )
                 section_ids.append(section["id"])
@@ -80,43 +75,43 @@ class _ControlCenterContentValidator:
         for main_type in ("primary_action", "primary_custom"):
             for commit_id, commit_data in self._ccm["commit"][main_type].items():
                 if commit_data["type"] in commit_types:
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Duplicate commit type: {commit_data['type']}",
-                        message=f"The type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
+                        msg=f"The type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
                         f"is already used by another earlier commit.",
                     )
                 commit_types.append(commit_data["type"])
                 for subtype_type, subtypes in commit_data["subtypes"]:
                     for subtype in subtypes:
                         if subtype not in self._ccm["commit"]["secondary_custom"]:
-                            self._logger.critical(
+                            _logger.critical(
                                 title=f"Invalid commit subtype: {subtype}",
-                                message=f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
+                                msg=f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
                                 f"in 'subtypes.{subtype_type}' is not defined in 'commit.secondary_custom'.",
                             )
         for commit_id, commit_data in self._ccm["commit"]["secondary_action"].items():
             if commit_data["type"] in commit_types:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate commit type: {commit_data['type']}",
-                    message=f"The type '{commit_data['type']}' set for commit 'secondary_action.{commit_id}' "
+                    msg=f"The type '{commit_data['type']}' set for commit 'secondary_action.{commit_id}' "
                     f"is already used by another earlier commit.",
                 )
             commit_types.append(commit_data["type"])
         changelog_sections = {}
         for commit_type, commit_data in self._ccm["commit"]["secondary_custom"].items():
             if commit_type in commit_types:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate commit type: {commit_type}",
-                    message=f"The type '{commit_type}' set in 'secondary_custom' "
+                    msg=f"The type '{commit_type}' set in 'secondary_custom' "
                     f"is already used by another earlier commit.",
                 )
             commit_types.append(commit_type)
             # Verify that linked changelogs are defined
             changelog_id = commit_data["changelog_id"]
             if changelog_id not in self._ccm["changelog"]:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Invalid commit changelog ID: {changelog_id}",
-                    message=f"The changelog ID '{changelog_id}' set for commit "
+                    msg=f"The changelog ID '{changelog_id}' set for commit "
                     f"'secondary_custom.{commit_type}' is not defined in 'changelog'.",
                 )
             if changelog_id not in changelog_sections:
@@ -124,9 +119,9 @@ class _ControlCenterContentValidator:
                     section["id"] for section in self._ccm["changelog"][changelog_id]["sections"]
                 ]
             if commit_data["changelog_section_id"] not in changelog_sections[changelog_id]:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Invalid commit changelog section ID: {commit_data['changelog_section_id']}",
-                    message=f"The changelog section ID '{commit_data['changelog_section_id']}' set for commit "
+                    msg=f"The changelog section ID '{commit_data['changelog_section_id']}' set for commit "
                     f"'secondary_custom.{commit_type}' is not defined in 'changelog.{changelog_id}.sections'.",
                 )
         return
@@ -136,16 +131,16 @@ class _ControlCenterContentValidator:
         form_identifying_labels = []
         for form_idx, form in enumerate(self._ccm["issue"]["forms"]):
             if form["id"] in form_ids:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate issue-form ID: {form['id']}",
-                    message=f"The issue-form number {form_idx} has an ID that is already used by another earlier form.",
+                    msg=f"The issue-form number {form_idx} has an ID that is already used by another earlier form.",
                 )
             form_ids.append(form["id"])
             identifying_labels = (form["primary_type"], form.get("subtype"))
             if identifying_labels in form_identifying_labels:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Duplicate issue-form identifying labels: {identifying_labels}",
-                    message=f"The issue-form number {form_idx} has the same identifying labels as another earlier form.",
+                    msg=f"The issue-form number {form_idx} has the same identifying labels as another earlier form.",
                 )
             form_identifying_labels.append(identifying_labels)
             element_ids = []
@@ -156,23 +151,23 @@ class _ControlCenterContentValidator:
                 elem_id = elem.get("id")
                 if elem_id:
                     if elem_id in element_ids:
-                        self._logger.critical(
+                        _logger.critical(
                             title=f"Duplicate issue-form body-element ID: {elem_id}",
-                            message=f"The element number {elem_idx} has an ID that is "
+                            msg=f"The element number {elem_idx} has an ID that is "
                             f"already used by another earlier element.",
                         )
                     else:
                         element_ids.append(elem["id"])
                 if elem["attributes"]["label"] in element_labels:
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Duplicate issue-form body-element label: {elem['attributes']['label']}",
-                        message=f"The element number {elem_idx} has a label that is already used by another earlier element.",
+                        msg=f"The element number {elem_idx} has a label that is already used by another earlier element.",
                     )
                 element_labels.append(elem["attributes"]["label"])
             if not any(element_id in ("version", "branch") for element_id in element_ids):
-                self._logger.critical(
+                _logger.critical(
                     title=f"Missing issue-form body-element: version or branch",
-                    message=f"The issue-form number {form_idx} is missing a body-element "
+                    msg=f"The issue-form number {form_idx} is missing a body-element "
                     f"with ID 'version' or 'branch'.",
                 )
             form_post_process = form.get("post_process")
@@ -182,45 +177,45 @@ class _ControlCenterContentValidator:
                     var_names = _re.findall(pattern, form_post_process["body"])
                     for var_name in var_names:
                         if var_name not in element_ids:
-                            self._logger.critical(
+                            _logger.critical(
                                 title=f"Unknown issue-form post-process body variable: {var_name}",
-                                message=f"The variable '{var_name}' is not a valid element ID within the issue body.",
+                                msg=f"The variable '{var_name}' is not a valid element ID within the issue body.",
                             )
                 assign_creator = form_post_process.get("assign_creator")
                 if assign_creator:
                     if_checkbox = assign_creator.get("if_checkbox")
                     if if_checkbox:
                         if if_checkbox["id"] not in element_ids:
-                            self._logger.critical(
+                            _logger.critical(
                                 title=f"Unknown issue-form post-process assign_creator if_checkbox ID: {if_checkbox}",
-                                message=f"The ID '{if_checkbox}' is not a valid element ID within the issue body.",
+                                msg=f"The ID '{if_checkbox}' is not a valid element ID within the issue body.",
                             )
                         for elem in form["body"]:
                             elem_id = elem.get("id")
                             if elem_id and elem_id == if_checkbox["id"]:
                                 if elem["type"] != "checkboxes":
-                                    self._logger.critical(
+                                    _logger.critical(
                                         title=f"Invalid issue-form post-process assign_creator if_checkbox ID: {if_checkbox}",
-                                        message=f"The ID '{if_checkbox}' is not a checkbox element.",
+                                        msg=f"The ID '{if_checkbox}' is not a checkbox element.",
                                     )
                                 if len(elem["attributes"]["options"]) < if_checkbox["number"]:
-                                    self._logger.critical(
+                                    _logger.critical(
                                         title=f"Invalid issue-form post-process assign_creator if_checkbox number: {if_checkbox}",
-                                        message=f"The number '{if_checkbox['number']}' is greater than the number of "
+                                        msg=f"The number '{if_checkbox['number']}' is greater than the number of "
                                         f"checkbox options.",
                                     )
                                 break
         # Verify that identifying labels are defined in 'label.group' metadata
         for primary_type_id, subtype_id in form_identifying_labels:
             if primary_type_id not in self._ccm["label"]["group"]["primary_type"]["labels"]:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Unknown issue-form `primary_type`: {primary_type_id}",
-                    message=f"The ID '{primary_type_id}' does not exist in 'label.group.primary_type.labels'.",
+                    msg=f"The ID '{primary_type_id}' does not exist in 'label.group.primary_type.labels'.",
                 )
             if subtype_id and subtype_id not in self._ccm["label"]["group"]["subtype"]["labels"]:
-                self._logger.critical(
+                _logger.critical(
                     title=f"Unknown issue-form subtype: {subtype_id}",
-                    message=f"The ID '{subtype_id}' does not exist in 'label.group.subtype.labels'.",
+                    msg=f"The ID '{subtype_id}' does not exist in 'label.group.subtype.labels'.",
                 )
         return
 
@@ -233,25 +228,25 @@ class _ControlCenterContentValidator:
                 label_type = "name" if main_type == "single" else "prefix"
                 for set_label in labels:
                     if set_label.startswith(label) or label.startswith(set_label):
-                        self._logger.critical(
+                        _logger.critical(
                             title=f"Ambiguous label {label_type}: {label}",
-                            message=f"The {label_type} '{label}' set for label '{main_type}.{label_id}' "
+                            msg=f"The {label_type} '{label}' set for label '{main_type}.{label_id}' "
                             f"is ambiguous as it overlaps with the already set name/prefix '{set_label}'.",
                         )
                 labels.append(label)
         if len(labels) > 1000:
-            self._logger.critical(
+            _logger.critical(
                 title=f"Too many labels: {len(labels)}",
-                message=f"The maximum number of labels allowed by GitHub is 1000.",
+                msg=f"The maximum number of labels allowed by GitHub is 1000.",
             )
         for label_id, label_data in self._ccm["label"]["group"].items():
             suffixes = []
             for label_type, suffix_data in label_data["labels"].items():
                 suffix = suffix_data["suffix"]
                 if suffix in suffixes:
-                    self._logger.critical(
+                    _logger.critical(
                         title=f"Duplicate label suffix: {suffix}",
-                        message=f"The suffix '{suffix}' set for label 'group.{label_id}.labels.{label_type}' "
+                        msg=f"The suffix '{suffix}' set for label 'group.{label_id}.labels.{label_type}' "
                         f"is already used by another earlier label.",
                     )
                 suffixes.append(suffix)
@@ -261,7 +256,7 @@ class _ControlCenterContentValidator:
         issue_ids = [issue["id"] for issue in self._ccm.issue__forms]
         for issue_id in self._ccm.maintainer__issue.keys():
             if issue_id not in issue_ids:
-                self._logger.critical(
+                _logger.critical(
                     f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
                 )
         return
