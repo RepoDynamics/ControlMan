@@ -6,13 +6,13 @@ from typing import Literal, Sequence
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
-from actionman.logger import Logger
+from loggerman import logger
 from readme_renderer.markdown import render
 
 import controlman
 from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman.control.content import ControlCenterContentManager
+from controlman import ControlCenterContentManager
 
 
 class ReadmeFileGenerator:
@@ -21,11 +21,9 @@ class ReadmeFileGenerator:
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
         target: Literal["repo", "package"],
-        logger: Logger,
     ):
         self._ccm = content_manager
         self._pathman = path_manager
-        self._logger = logger
 
         self._is_for_gh = target == "repo"
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
@@ -41,18 +39,17 @@ class ReadmeFileGenerator:
     def generate(self) -> list[tuple[DynamicFile, str]]:
         return self.generate_dir_readmes()
 
+    @logger.sectioner("Generate Directory Readme Files")
     def generate_dir_readmes(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Directory Readme Files", group=True)
         out = []
         for dir_path, readme_text in self._ccm["readme"]["dir"].items():
-            self._logger.section(f"Directory '{dir_path}'", group=True)
+            logger.section(f"Directory '{dir_path}'", group=True)
             file_info = self._pathman.readme_dir(dir_path)
             file_content = f"{readme_text}\n{self.footer()}"
             out.append((file_info, file_content))
-            self._logger.info(message="File info:", code=str(file_info))
-            self._logger.debug(message="File content:", code=file_content)
-            self._logger.section_end()
-        self._logger.section_end()
+            logger.info(code_title="File info", code=file_info)
+            logger.debug(code_title="File content", code=file_content)
+            logger.section_end()
         return out
 
     def footer(self):
