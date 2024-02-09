@@ -18,15 +18,10 @@ from controlman import _util
 
 
 class PythonPackageFileGenerator:
-    def __init__(
-        self,
-        content_manager: ControlCenterContentManager,
-        path_manager: PathManager,
-    ):
+    def __init__(self, content_manager: ControlCenterContentManager, path_manager: PathManager):
         self._ccm = content_manager
         self._ccs = content_manager.content
         self._pathman = path_manager
-        self._logger = logger
 
         self._package_dir_output: tuple[DynamicFile, str] | None = None
         self._test_package_dir_output: tuple[DynamicFile, str] | None = None
@@ -45,21 +40,20 @@ class PythonPackageFileGenerator:
             + self.manifest()
         )
 
+    @logger.sectioner("Generate Package PEP 561 Typing Marker")
     def typing_marker(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package PEP 561 Typing Marker")
         file_info = self._pathman.package_typing_marker(package_name=self._ccm["package"]["import_name"])
         file_content = (
             "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
             if self._ccm["package"].get("typed")
             else ""
         )
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Package Requirements File")
     def requirements(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package Requirements File")
         file_info = self._pathman.package_requirements
         file_content = ""
         if self._ccm["package"].get("core_dependencies"):
@@ -69,13 +63,12 @@ class PythonPackageFileGenerator:
             for dep_group in self._ccm["package"]["optional_dependencies"]:
                 for dep in dep_group["packages"]:
                     file_content += f"{dep['pip_spec']}\n"
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.section("Generate Package and Test-Suite Directories")
     def _directories(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package and Test-Suite Directories")
         out = []
         for title, name, sub_path, func in (
             (
@@ -91,16 +84,16 @@ class PythonPackageFileGenerator:
                 self._pathman.package_tests_dir
             ),
         ):
-            self._logger.section(title)
+            logger.section(title)
             rel_path = f"{sub_path}/{name}"
             path = self._pathman.root / rel_path
             if path.exists():
-                self._logger.info(title=f"Path exists", message=path)
+                logger.info(title=f"Path exists", msg=path)
                 file_info = func(path, path)
                 out.append((file_info, ""))
-                self._logger.info(message="File info:", code=str(file_info))
+                logger.info(code_title="File info", code=str(file_info))
                 continue
-            self._logger.info(f"Path '{rel_path}' does not exist; looking for package directory.")
+            logger.info(f"Path '{rel_path}' does not exist; looking for package directory.")
             package_dirs = (
                 [
                     subdir
@@ -113,29 +106,28 @@ class PythonPackageFileGenerator:
             )
             count_dirs = len(package_dirs)
             if count_dirs > 1:
-                self._logger.critical(
+                logger.critical(
                     title=f"More than one package directory found in '{path}'",
-                    message="\n".join([str(package_dir) for package_dir in package_dirs]),
+                    msg="\n".join([str(package_dir) for package_dir in package_dirs]),
                 )
             if count_dirs == 1:
-                self._logger.info(
+                logger.info(
                     title=f"Rename package directory to '{name}'",
-                    message=f"Old Path: '{package_dirs[0]}', New Path: '{path}'",
+                    msg=f"Old Path: '{package_dirs[0]}', New Path: '{path}'",
                 )
                 file_info = func(name, old_path=package_dirs[0], new_path=path)
                 out.append((file_info, ""))
-                self._logger.info(message="File info:", code=str(file_info))
+                logger.info(code_title="File info", code=str(file_info))
                 continue
-            self._logger.info(title="No package directory found", message=f"create directory '{path}'.")
+            logger.info(title="No package directory found", msg=f"create directory '{path}'.")
             file_info = func(old_path=None, new_path=path)
             out.append((file_info, ""))
-            self._logger.info(message="File info:", code=str(file_info))
-            self._logger.section_end()
-        self._logger.section_end()
+            logger.info(code_title="File info", code=str(file_info))
+            logger.section_end()
         return out
 
+    @logger.section("Generate Package and Test-Suite Source Files")
     def python_files(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package and Test-Suite Source Files")
         out = []
         mapping = {}
         package_dir = self._package_dir_output[0]
@@ -145,7 +137,7 @@ class PythonPackageFileGenerator:
                 mapping[dir_.alt_paths[0].name] = dir_.path.name
         if mapping:
             for filepath in self._pathman.root.glob("**/*.py"):
-                self._logger.section(f"File '{filepath.relative_to(self._pathman.root)}'")
+                logger.section(f"File '{filepath.relative_to(self._pathman.root)}'")
                 if package_dir.alt_paths and filepath.is_relative_to(package_dir.alt_paths[0]):
                     new_path = package_dir.path / filepath.relative_to(package_dir.alt_paths[0])
                 elif test_package_dir.alt_paths and filepath.is_relative_to(test_package_dir.alt_paths[0]):
@@ -157,13 +149,13 @@ class PythonPackageFileGenerator:
                     module_content=filepath.read_text(), mapping=mapping
                 )
                 out.append((file_info, file_content))
-                self._logger.info(message="File info:", code=str(file_info))
-                self._logger.debug(message="File content:", code=file_content)
-                self._logger.section_end()
+                logger.info(code_title="File info", code=str(file_info))
+                logger.debug(code_title="File content", code=file_content)
+                logger.section_end()
         if not test_package_dir.alt_paths:
             # test-suite package must be created
             for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
-                self._logger.section(f"Test-Suite File '{testsuite_filename}'")
+                logger.section(f"Test-Suite File '{testsuite_filename}'")
                 file_info = self._pathman.python_file(
                     (test_package_dir.path / testsuite_filename).with_suffix(".py")
                 )
@@ -172,14 +164,13 @@ class PythonPackageFileGenerator:
                     source_data=self._ccm.content.as_dict
                 )
                 out.append((file_info, file_content))
-                self._logger.info(message="File info:", code=str(file_info))
-                self._logger.debug(message="File content:", code=file_content)
-                self._logger.section_end()
-        self._logger.section_end()
+                logger.info(code_title="File info", code=str(file_info))
+                logger.debug(code_title="File content", code=file_content)
+                logger.section_end()
         return out
 
     # def _package_dir(self, tests: bool = False) -> list[tuple[DynamicFile, str]]:
-    #     self._logger.h4("Update path: package")
+    #     logger.h4("Update path: package")
     #     package_name = self._meta["package"]["name"]
     #     name = package_name if not tests else f"{package_name}_tests"
     #     sub_path = (
@@ -188,10 +179,10 @@ class PythonPackageFileGenerator:
     #     path = self._out_db.root / sub_path / name
     #     func = self._out_db.package_tests_dir if tests else self._out_db.package_dir
     #     if path.exists():
-    #         self._logger.skip(f"Package path exists", f"{path}")
+    #         logger.skip(f"Package path exists", f"{path}")
     #         out = [(func(name, path, path), "")]
     #         return out
-    #     self._logger.info(f"Package path '{path}' does not exist; looking for package directory.")
+    #     logger.info(f"Package path '{path}' does not exist; looking for package directory.")
     #     package_dirs = (
     #         [
     #             subdir
@@ -204,12 +195,12 @@ class PythonPackageFileGenerator:
     #     )
     #     count_dirs = len(package_dirs)
     #     if count_dirs > 1:
-    #         self._logger.error(
+    #         logger.error(
     #             f"More than one package directory found in '{path}'",
     #             "\n".join([str(package_dir) for package_dir in package_dirs]),
     #         )
     #     if count_dirs == 1:
-    #         self._logger.success(
+    #         logger.success(
     #             f"Rename package directory to '{name}'",
     #             f"Old Path: '{package_dirs[0]}'\nNew Path: '{path}'",
     #         )
@@ -221,7 +212,7 @@ class PythonPackageFileGenerator:
     #             )
     #             out.append((self._out_db.python_file(filepath), new_content))
     #         return out
-    #     self._logger.success(f"No package directory found in '{path}'; creating one.")
+    #     logger.success(f"No package directory found in '{path}'; creating one.")
     #     out = [(func(name, old_path=None, new_path=path), "")]
     #     if tests:
     #         for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
@@ -230,12 +221,11 @@ class PythonPackageFileGenerator:
     #             out.append((self._out_db.python_file((path / testsuite_filename).with_suffix(".py")), text))
     #     return out
 
+    @logger.sectioner("Generate Package __init__.py File")
     def init_docstring(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package __init__.py File")
         docs_config = self._ccm["package"].get("docs", {})
         if "main_init" not in docs_config:
-            self._logger.info("No docstring set in package.docs.main_init; skipping.")
-            self._logger.section_end()
+            logger.info("No docstring set in package.docs.main_init; skipping.")
             return []
         file_info = self._pathman.package_init(self._ccm["package"]["import_name"])
         docstring_text = textwrap.fill(
@@ -266,22 +256,20 @@ __version__ = __version_details__["version"]"""
         else:
             # Replace the existing docstring with the new one
             file_content = re.sub(pattern, rf"\1{docstring}", file_content)
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Package Manifest File")
     def manifest(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package Manifest File")
         file_info = self._pathman.package_manifest
         file_content = "\n".join(self._ccm["package"].get("manifest", []))
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Package pyproject.toml File")
     def pyproject(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Package pyproject.toml File")
         file_info = self._pathman.package_pyproject
         pyproject = self._ccm["package"]["pyproject"]
         project = pyproject.setdefault("project", {})
@@ -289,20 +277,18 @@ __version__ = __version_details__["version"]"""
             if key not in project:
                 project[key] = val
         file_content = pyserials.write.to_toml_string(data=pyproject, sort_keys=True)
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Test Suite pyproject.toml File")
     def pyproject_tests(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Test Suite pyproject.toml File")
         file_info = self._pathman.test_package_pyproject
         file_content = pyserials.write.to_toml_string(
             data=self._ccm["package"]["pyproject_tests"], sort_keys=True
         )
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
     def pyproject_project(self) -> dict:
@@ -395,7 +381,7 @@ __version__ = __version_details__["version"]"""
         )
         for person in target_people:
             if not person["name"]:
-                self._logger.warning(
+                logger.warning(
                     f'One of {role} with username \'{person["username"]}\' '
                     f"has no name set in their GitHub account. They will be dropped from the list of {role}."
                 )
