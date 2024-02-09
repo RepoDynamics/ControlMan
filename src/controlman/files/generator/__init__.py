@@ -1,9 +1,9 @@
 import pyserials as _pyserials
-from actionman.logger import Logger as _Logger
+from loggerman import logger as _logger
 
 from controlman._path_manager import PathManager as _PathManager
 from controlman.datatype import DynamicFile as _DynamicFile
-from controlman.control.content import ControlCenterContentManager as _ControlCenterContentManager
+from controlman import ControlCenterContentManager as _ControlCenterContentManager
 from controlman.files.generator import (
     config as _config,
     forms as _forms,
@@ -13,12 +13,10 @@ from controlman.files.generator import (
 from controlman.files.generator import health as _health
 
 
+@_logger.sectioner("Generate Dynamic Repository Files")
 def generate(
-    content_manager: _ControlCenterContentManager,
-    path_manager: _PathManager,
-    logger: _Logger,
+    content_manager: _ControlCenterContentManager, path_manager: _PathManager,
 ) -> list[tuple[_DynamicFile, str]]:
-    logger.section("Generate Dynamic Repository Files", group=True)
     generated_files = []
     for generator in (
         _generate_metadata,
@@ -29,38 +27,31 @@ def generate(
         _package.generate,
         _readme.generate,
     ):
-        generated_files += generator(
-            content_manager=content_manager,
-            path_manager=path_manager,
-            logger=logger,
-        )
-    logger.section_end()
+        generated_files += generator(content_manager=content_manager, path_manager=path_manager)
     return generated_files
 
 
+@_logger.sectioner("Generate Metadata File")
 def _generate_metadata(
     content_manager: _ControlCenterContentManager,
     path_manager: _PathManager,
-    logger: _Logger,
 ) -> list[tuple[_DynamicFile, str]]:
-    logger.section("Metadata File", group=True)
     file_info = path_manager.metadata
-    file_content = _pyserials.write.to_json_string(data=content_manager.content.as_dict, sort_keys=True, indent=None)
-    logger.info(message="File info:", code=str(file_info))
-    logger.debug(message="File content:", code=file_content)
-    logger.section_end()
+    file_content = _pyserials.write.to_json_string(
+        data=content_manager.content.as_dict, sort_keys=True, indent=None
+    )
+    _logger.info(code_title="File info", code=str(file_info))
+    _logger.debug(code_title="File content", code=file_content)
     return [(file_info, file_content)]
 
 
+@_logger.sectioner("Generate License File")
 def _generate_license(
     content_manager: _ControlCenterContentManager,
     path_manager: _PathManager,
-    logger: _Logger,
 ) -> list[tuple[_DynamicFile, str]]:
-    logger.section("License File", group=True)
     file_info = path_manager.license
     file_content = content_manager["license"].get("text", "")
-    logger.info(message="File info:", code=str(file_info))
-    logger.debug(message="File content:", code=file_content)
-    logger.section_end()
+    _logger.info(code_title="File info", code=str(file_info))
+    _logger.debug(code_title="File content", code=file_content)
     return [(file_info, file_content)]
