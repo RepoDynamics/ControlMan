@@ -1,4 +1,8 @@
-"""ControlMan"""
+"""ControlMan
+
+The control center manager for RepoDynamics template repositories.
+"""
+
 
 from pathlib import Path as _Path
 
