@@ -6,12 +6,12 @@ from typing import Literal
 import pybadger as bdg
 import pycolorit as pcit
 from markitup import html
-from actionman.logger import Logger
+from loggerman import logger
 
 import controlman
 from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman.control.content import ControlCenterContentManager
+from controlman import ControlCenterContentManager
 from controlman.files.generator.readme.main import ReadmeFileGenerator
 
 
@@ -21,11 +21,8 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
         target: Literal["repo", "package"],
-        logger: Logger,
     ):
-        super().__init__(
-            content_manager=content_manager, path_manager=path_manager, target=target, logger=logger
-        )
+        super().__init__(content_manager=content_manager, path_manager=path_manager, target=target)
         self._data = self._ccm["readme"][target]["config"]
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
@@ -38,7 +35,7 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section(f"{'Repository' if self._is_for_gh else 'PyPI'} ReadMe File", group=True)
+        logger.section(f"{'Repository' if self._is_for_gh else 'PyPI'} ReadMe File", group=True)
         html_content = html.ElementCollection(
             elements=[
                 html.Comment(f"{self._ccm['name']} ReadMe File"),
@@ -65,9 +62,9 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         )
         file_info = self._pathman.readme_main if self._is_for_gh else self._pathman.readme_pypi
         file_content = str(html_content)
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
+        logger.section_end()
         return [(file_info, file_content)]
 
     def header(self):
