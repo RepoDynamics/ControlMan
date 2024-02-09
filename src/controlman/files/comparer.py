@@ -6,24 +6,21 @@ from pathlib import Path
 import json
 import difflib
 
+from loggerman import logger
 from markitup import html, md
-from actionman.logger import Logger
 
 from controlman.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType, Diff
 
 
 def compare(
-    generated_files: list[tuple[DynamicFile, str]],
-    path_root: Path,
-    logger: Logger,
+    generated_files: list[tuple[DynamicFile, str]], path_root: Path
 ) -> tuple[list[tuple[DynamicFile, Diff]], dict[DynamicFileType, dict[str, bool]], str]:
-    return _FileComparer(path_root=path_root, logger=logger).compare(generated_files=generated_files)
+    return _FileComparer(path_root=path_root).compare(generated_files=generated_files)
 
 
 class _FileComparer:
-    def __init__(self, path_root: str | Path, logger: Logger):
+    def __init__(self, path_root: str | Path):
         self.path_root = Path(path_root).resolve()
-        self._logger = logger
         return
 
     def compare(
@@ -59,7 +56,7 @@ class _FileComparer:
             before = ""
             status = DynamicFileChangeType.CREATED if content else DynamicFileChangeType.DISABLED
         elif not path.is_file():
-            self._logger.error(f"Cannot write file to '{path}'; path exists as a directory.")
+            logger.error(f"Cannot write file to '{path}'; path exists as a directory.")
         else:
             with open(path) as f:
                 before = f.read().strip()
@@ -80,7 +77,7 @@ class _FileComparer:
                 [str(path.relative_to(self.path_root))]
                 + [str(alt["path"].relative_to(self.path_root)) for alt in alts]
             )
-            self._logger.error(f"File '{path.name}' found in multiple paths", paths_str)
+            logger.error(f"File '{path.name}' found in multiple paths", paths_str)
         alt = alts[0]
         diff = Diff(
             status=DynamicFileChangeType.MOVED_REMOVED
@@ -101,7 +98,7 @@ class _FileComparer:
         for alt_path in alt_paths:
             if alt_path.exists():
                 if not alt_path.is_file():
-                    self._logger.error(f"Alternate path '{alt_path}' is not a file.")
+                    logger.error(f"Alternate path '{alt_path}' is not a file.")
                 with open(alt_path) as f:
                     alts.append({"path": alt_path, "before": f.read()})
         return alts
@@ -131,7 +128,6 @@ class _FileComparer:
                 html.hr(),
                 self._color_legend(),
             ]
-        rest.append(html.details(self._logger.file_log, "Log"))
         summary.extend(rest)
         return changes, str(summary)
 
