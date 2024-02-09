@@ -1,23 +1,18 @@
+from loggerman import logger
 import pyserials
-from actionman.logger import Logger
 import pylinks
 from pylinks.exceptions import WebAPIError
 
 from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman.control.content import ControlCenterContentManager
+from controlman import ControlCenterContentManager
 
 
 def generate(
     content_manager: ControlCenterContentManager,
     path_manager: PathManager,
-    logger: Logger,
 ) -> list[tuple[DynamicFile, str]]:
-    return ConfigFileGenerator(
-        content_manager=content_manager,
-        path_manager=path_manager,
-        logger=logger,
-    ).generate()
+    return ConfigFileGenerator(content_manager=content_manager, path_manager=path_manager).generate()
 
 
 class ConfigFileGenerator:
@@ -25,11 +20,9 @@ class ConfigFileGenerator:
         self,
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
-        logger: Logger
     ):
         self._ccm = content_manager
         self._path_manager = path_manager
-        self._logger = logger
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
@@ -44,13 +37,13 @@ class ConfigFileGenerator:
             + self.gitattributes()
         )
 
+    @logger.sectioner("Generate GitHub Funding Configuration File")
     def funding(self) -> list[tuple[DynamicFile, str]]:
         """
         References
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
-        self._logger.section("GitHub Funding Configuration File")
         file_info = self._path_manager.funding
         funding = self._ccm["funding"]
         if not funding:
@@ -67,31 +60,31 @@ class ConfigFileGenerator:
                 else:
                     output[funding_platform] = users
             file_content = pyserials.write.to_yaml_string(data=output, end_of_file_newline=True)
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=file_info)
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Workflow Requirements Files")
     def workflow_requirements(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Workflow Requirements Files")
         tools = self._ccm["workflow"]["tool"]
         out = []
         for tool_name, tool_spec in tools.items():
-            self._logger.section(f"Tool: {tool_name}")
+            logger.section(f"Tool: {tool_name}")
             file_info = self._path_manager.workflow_requirements(tool_name)
             file_content = "\n".join(tool_spec["pip_spec"])
             out.append((file_info, file_content))
-            self._logger.info(message="File info:", code=str(file_info))
-            self._logger.debug(message="File content:", code=file_content)
-            self._logger.section_end()
-        self._logger.section_end()
+            logger.info(code_title="File info", code=str(file_info))
+            logger.debug(code_title="File content", code=file_content)
+            logger.section_end()
         return out
 
+    @logger.sectioner("Generate Pre-Commit Configuration Files")
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Pre-Commit Configuration Files")
         out = []
-        for config_type in ("main", "release", "pre-release", "implementation", "development", "auto-update", "other"):
-            self._logger.section(f"Branch Type '{config_type}'")
+        for config_type in (
+            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
+        ):
+            logger.section(f"Branch Type '{config_type}'")
             file_info = self._path_manager.pre_commit_config(config_type)
             config = self._ccm["workflow"]["pre_commit"].get(config_type)
             if not config:
@@ -99,14 +92,13 @@ class ConfigFileGenerator:
             else:
                 file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
             out.append((file_info, file_content))
-            self._logger.info(message="File info:", code=str(file_info))
-            self._logger.debug(message="File content:", code=file_content)
-            self._logger.section_end()
-        self._logger.section_end()
+            logger.info(code_title="File info", code=str(file_info))
+            logger.debug(code_title="File content", code=file_content)
+            logger.section_end()
         return out
 
+    @logger.sectioner("Generate ReadTheDocs Configuration File")
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("ReadTheDocs Configuration File")
         file_info = self._path_manager.read_the_docs_config
         config = self._ccm["web"].get("readthedocs")
         if not config:
@@ -119,13 +111,12 @@ class ConfigFileGenerator:
                 },
                 end_of_file_newline=True
             )
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Codecov Configuration File")
     def codecov_config(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Codecov Configuration File")
         file_info = self._path_manager.codecov_config
         config = self._ccm["workflow"].get("codecov")
         if not config:
@@ -141,26 +132,24 @@ class ConfigFileGenerator:
                     data=file_content.encode(),
                 )
             except WebAPIError as e:
-                self._logger.error("Validation of Codecov configuration file failed.", str(e))
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+                logger.error("Validation of Codecov configuration file failed.", str(e))
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Issue Template Chooser Configuration File")
     def issue_template_chooser(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Issue Template Chooser Configuration File")
         file_info = self._path_manager.issue_template_chooser_config
         file = {"blank_issues_enabled": self._ccm["issue"]["blank_enabled"]}
         if self._ccm["issue"].get("contact_links"):
             file["contact_links"] = self._ccm["issue"]["contact_links"]
         file_content = pyserials.write.to_yaml_string(data=file, end_of_file_newline=True)
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Gitignore File")
     def gitignore(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Gitignore File")
         file_info = self._path_manager.gitignore
         local_dir = self._ccm["path"]["dir"]["local"]["root"]
         file_content = "\n".join(
@@ -171,13 +160,12 @@ class ConfigFileGenerator:
                 f"!{local_dir}/**/README.md",
             ]
         )
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
 
+    @logger.sectioner("Generate Gitattributes File")
     def gitattributes(self) -> list[tuple[DynamicFile, str]]:
-        self._logger.section("Gitattributes File")
         file_info = self._path_manager.gitattributes
         file_content = ""
         attributes = self._ccm["repo"].get("gitattributes", [])
@@ -190,7 +178,6 @@ class ConfigFileGenerator:
             attrs = list(attribute.values())[0]
             attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs).strip()
             file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
-        self._logger.info(message="File info:", code=str(file_info))
-        self._logger.debug(message="File content:", code=file_content)
-        self._logger.section_end()
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
