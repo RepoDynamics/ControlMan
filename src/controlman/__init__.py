@@ -13,7 +13,7 @@ from versionman import PEP440SemVer as _PEP440SemVer
 from controlman import exception, datatype, content, path, protocol, _util
 from controlman.content_manager import ControlCenterContentManager
 from controlman.center_manager import ControlCenterManager
-
+from controlman.files.generator.forms import pre_process_existence
 
 from controlman.data import validator as _validator
 
@@ -48,7 +48,8 @@ def read_from_json_file(
         path_repo=path_repo, path_data=path.FILE_METADATA, relpath_schema="metadata"
     )
     if not data_dict:
-        _logger.section_end()
+        if log_section_title:
+            _logger.section_end()
         return
     meta_manager = ControlCenterContentManager(data=data_dict)
     _validator.validate(content_manager=meta_manager)
