@@ -98,10 +98,8 @@ def get_package_datafile(path: str) -> str | dict | list:
     ----------
     path : str
         The path of the data file relative to the package's '_data' directory.
-    return_content : bool, default: True
-        Return the text content of the data file instead of the path.
     """
-    full_path = _pkgdata.path.get_from_name(root=True) / "_data" / path
+    full_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_data" / path
     data = full_path.read_text()
     if full_path.suffix == ".yaml":
         return pyserials.read.yaml_from_string(data=data, safe=True)
@@ -141,4 +139,4 @@ def import_module_from_path(path: str | Path) -> _ModuleType:
     module : types.ModuleType
         The imported module.
     """
-    return _pkgdata.module.import_from_path(path=path)
+    return _pkgdata.import_module_from_path(path=path)
