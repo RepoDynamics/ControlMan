@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev247"
+version = "0.0.0.dev248"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -34,5 +34,6 @@ dependencies = [
     "loggerman",
     "pyserials",
     "gittidy",
+    "FileEx",
 ]
 requires-python = ">=3.10"
