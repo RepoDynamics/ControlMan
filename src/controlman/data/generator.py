@@ -154,12 +154,12 @@ class _ControlCenterContentGenerator:
 
     @_logger.sectioner("Repository Data")
     def _repo(self) -> dict:
-        repo_address = self._git.repo_name(fallback_name=False, fallback_purpose=False)
+        repo_address = self._git.get_remote_repo_name(fallback_name=False, fallback_purpose=False)
         if not repo_address:
             _logger.critical(
                 "Failed to determine repository GitHub address from 'origin' remote for push events. "
                 "Following remotes were found:",
-                str(self._git.remotes),
+                str(self._git.get_remotes),
             )
         owner_username, repo_name = repo_address
         _logger.info(title="Owner Username", msg=owner_username)

@@ -14,3 +14,12 @@ class Git(_Protocol):
     def file_at_hash(self, path: str | _Path, commit_hash: str) -> str | None:
         """Read the contents of a file at a given commit hash."""
         ...
+
+    def get_remote_repo_name(
+        self,
+        remote_name: str = "origin",
+        remote_purpose: str = "push",
+        fallback_name: bool = True,
+        fallback_purpose: bool = True,
+    ) -> tuple[str, str] | None:
+        ...
