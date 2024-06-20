@@ -57,7 +57,7 @@ def read_datafile(
     if relpath_schema:
         validate_data(data=content, schema_relpath=relpath_schema)
     _logger.info(f"Successfully read data file at '{fullpath_data}'.")
-    _logger.debug("Content:", code=str(content))
+    _logger.debug(f"File Content: {content}")
     _logger.section_end()
     return content
 
