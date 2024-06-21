@@ -1,5 +1,6 @@
 from typing import Protocol as _Protocol, runtime_checkable as _runtime_checkable
 from pathlib import Path as _Path
+import re as _re
 
 
 @_runtime_checkable
@@ -22,4 +23,17 @@ class Git(_Protocol):
         fallback_name: bool = True,
         fallback_purpose: bool = True,
     ) -> tuple[str, str] | None:
+        ...
+
+    def fetch_remote_branches_by_pattern(
+        self,
+        branch_pattern: _re.Pattern | None = None,
+        remote_name: str = "origin",
+        exists_ok: bool = False,
+        not_fast_forward_ok: bool = False,
+    ) -> None:
+        ...
+
+    def get_all_branch_names(self) -> tuple[str, list[str]]:
+        """Get the name of all branches."""
         ...

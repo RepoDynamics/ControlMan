@@ -18,6 +18,10 @@ from controlman.files.generator.forms import pre_process_existence
 from controlman.data import validator as _validator
 
 
+#TODO: Remove after adding versioningit
+__release__ = "1.0"
+
+
 def initialize_manager(
     git_manager: protocol.Git,
     github_token: str | None = None,
