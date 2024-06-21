@@ -34,6 +34,7 @@ class _FormGenerator:
             file_info = self._pathman.issue_form(issue["id"], idx + 1)
             pre_process = issue.get("pre_process")
             if pre_process and not pre_process_existence(pre_process):
+                logger.section_end()
                 continue
             form = {
                 key: val
