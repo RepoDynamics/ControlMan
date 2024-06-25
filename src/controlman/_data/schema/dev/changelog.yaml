@@ -106,7 +106,7 @@ properties:
     properties:
       name:
         type: string
-        default: Public API
+        default: Public API (Pre-release)
       path:
         type: string
         default: CHANGELOG_PRERELEASE.md
