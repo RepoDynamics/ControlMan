@@ -109,7 +109,7 @@ properties:
         default: Public API
       path:
         type: string
-        default: CHANGELOG.md
+        default: CHANGELOG_PRERELEASE.md
       title:
         type: string
         default: "${{name}} Changelog (Public API)"
