@@ -803,7 +803,7 @@ class _ControlCenterContentGenerator:
         @_logger.sectioner("Install Requirements")
         def install_requirements():
             result = pyshellman.pip.install_requirements(path=dir_path / "requirements.txt")
-            for title, detail in result.details:
+            for title, detail in result.details.items():
                 _logger.info(code_title=title, code=detail)
             return
 
