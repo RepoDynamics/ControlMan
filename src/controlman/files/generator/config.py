@@ -126,7 +126,7 @@ class ConfigFileGenerator:
             try:
                 # Validate the config file
                 # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
-                pylinks.request(
+                pylinks.http.request(
                     verb="POST",
                     url="https://codecov.io/validate",
                     data=file_content.encode(),

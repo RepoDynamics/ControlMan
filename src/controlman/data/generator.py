@@ -159,7 +159,7 @@ class _ControlCenterContentGenerator:
             _logger.critical(
                 "Failed to determine repository GitHub address from 'origin' remote for push events. "
                 "Following remotes were found:",
-                str(self._git.get_remotes),
+                str(self._git.get_remotes()),
             )
         owner_username, repo_name = repo_address
         _logger.info(title="Owner Username", msg=owner_username)

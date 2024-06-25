@@ -335,3 +335,90 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
             **args,
         )
         return spacer
+
+    def pr_issue_badge(
+        self,
+        pr: bool = True,
+        status: Literal["open", "closed", "both"] = "both",
+        label: str | None = None,
+        raw: bool = False,
+        **kwargs,
+    ) -> bdg.Badge:
+        """Number of pull requests or issues on GitHub.
+
+        Parameters
+        ----------
+        pr : bool, default: True
+            Whether to query pull requests (True, default) or issues (False).
+        closed : bool, default: False
+            Whether to query closed (True) or open (False, default) issues/pull requests.
+        label : str, optional
+            A specific GitHub label to query.
+        raw : bool, default: False
+            Display 'open'/'close' after the number (False) or only display the number (True).
+        """
+
+        def get_path_link(closed):
+            path = self._url / (
+                f"issues{'-pr' if pr else ''}{'-closed' if closed else ''}"
+                f"{'-raw' if raw else ''}/{self._address}{f'/{label}' if label else ''}"
+            )
+            link = self._repo_link.pr_issues(pr=pr, closed=closed, label=label)
+            return path, link
+
+        def half_badge(closed: bool):
+            path, link = get_path_link(closed=closed)
+            if "link" not in args:
+                args["link"] = link
+            badge = ShieldsBadge(path=path, **args)
+            badge.html_syntax = ""
+            if closed:
+                badge.color = {"right": "00802b"}
+                badge.text = ""
+                badge.logo = None
+            else:
+                badge.color = {"right": "AF1F10"}
+            return badge
+
+        desc = {
+            None: {True: "pull requests in total", False: "issues in total"},
+            "bug": {True: "pull requests related to a bug-fix", False: "bug-related issues"},
+            "enhancement": {
+                True: "pull requests related to new features and enhancements",
+                False: "feature and enhancement requests",
+            },
+            "documentation": {
+                True: "pull requests related to the documentation",
+                False: "issues related to the documentation",
+            },
+        }
+        text = {
+            None: {True: "Total", False: "Total"},
+            "bug": {True: "Bug Fix", False: "Bug Report"},
+            "enhancement": {True: "Enhancement", False: "Feature Request"},
+            "documentation": {True: "Docs", False: "Docs"},
+        }
+
+        args = self.args | kwargs
+        if "text" not in args:
+            args["text"] = text[label][pr]
+        if "title" not in args:
+            args["title"] = (
+                f"Number of {status if status != 'both' else 'open (red) and closed (green)'} "
+                f"{desc[label][pr]}. "
+                f"Click {'on the red and green tags' if status=='both' else ''} to see the details of "
+                f"the respective {'pull requests' if pr else 'issues'} in the "
+                f"'{'Pull requests' if pr else 'Issues'}' section of the repository."
+            )
+        if "style" not in args and status == "both":
+            args["style"] = "flat-square"
+        if status not in ("open", "closed", "both"):
+            raise ValueError()
+        if status != "both":
+            path, link = get_path_link(closed=status == "closed")
+            if "link" not in args:
+                args["link"] = link
+            return ShieldsBadge(path=path, **args)
+        return html.element.ElementCollection(
+            [half_badge(closed) for closed in (False, True)], seperator=""
+        )

@@ -4,7 +4,6 @@ from typing import Literal, Sequence
 
 # Non-standard libraries
 import pybadger as bdg
-import pycolorit as pcit
 from markitup import html
 from loggerman import logger
 from readme_renderer.markdown import render
@@ -54,14 +53,14 @@ class ReadmeFileGenerator:
 
     def footer(self):
         project_badge = self.project_badge()
-        project_badge.set(align="left")
+        project_badge.set(settings=bdg.BadgeSettings(align="left"))
         left_badges = [project_badge]
         if self._ccm["license"]:
             license_badge = self.license_badge()
-            license_badge.set(align="left")
+            license_badge.set(settings=bdg.BadgeSettings(align="left"))
             left_badges.append(license_badge)
         pypackit_badge = self.pypackit_badge()
-        pypackit_badge.set(align="right")
+        pypackit_badge.set(settings=bdg.BadgeSettings(align="right"))
         elements = html.DIV(
             content=[
                 "\n",
@@ -134,39 +133,72 @@ class ReadmeFileGenerator:
         color_left_dark: str | None = None,
         style: Literal["plastic", "flat", "flat-square", "for-the-badge", "social"] = "for-the-badge",
         logo: str | Path | None = None,
+        logo_dark: str | Path | None = None,
         logo_color_light: str | None = None,
         logo_color_dark: str | None = None,
         logo_width: int | None = None,
+        logo_size: Literal["auto"] | None = None,
         link: str | None = None,
         title: str | None = None,
         height: str | None = None,
+        alt: str | None = None,
+        align: Literal["left", "right", "center"] = "center",
+        tag_seperator: str = "",
+        content_indent: str = "",
     ):
-        badge_light, badge_dark = (
-            bdg.shields.custom.static(
-                message=text_right,
+        badge = bdg.shields.core.static(
+            message=text_right,
+            shields_settings=bdg.shields.ShieldsSettings(
                 style=style,
-                color=color_right,
-                label=text_left,
-                label_color=color_left,
                 logo=logo,
-                logo_color=color_logo,
+                logo_color=logo_color_light,
+                logo_size=logo_size,
                 logo_width=logo_width,
+                label=text_left,
+                label_color=color_left_light,
+                color=color_right_light,
+                logo_dark=logo_dark if self._is_for_gh else None,
+                logo_color_dark=logo_color_dark if self._is_for_gh else None,
+                label_color_dark=color_left_dark if self._is_for_gh else None,
+                color_dark=color_right_dark if self._is_for_gh else None,
+            ),
+            badge_settings=bdg.BadgeSettings(
                 link=link,
-            ) for color_right, color_left, color_logo in zip(
-                [color_right_light, color_right_dark],
-                [color_left_light, color_left_dark],
-                [logo_color_light, logo_color_dark],
-            )
+                title=title,
+                alt=f"{f'{text_left}: ' if text_left else ''}{text_right}",
+                height=height,
+                align=align,
+                tag_seperator=tag_seperator,
+                content_indent=content_indent,
+            ),
         )
-        alt = f"{f'{text_left}: ' if text_left else ''}{text_right}"
-        badge_light.set(
-            link=link,
-            title=title or alt,
-            alt=alt,
-            height=height,
-        )
-        return badge_light + badge_dark if self._is_for_gh else badge_light
 
+        # badge_light, badge_dark = (
+        #     bdg.shields.custom.static(
+        #         message=text_right,
+        #         style=style,
+        #         color=color_right,
+        #         label=text_left,
+        #         label_color=color_left,
+        #         logo=logo,
+        #         logo_color=color_logo,
+        #         logo_width=logo_width,
+        #         link=link,
+        #     ) for color_right, color_left, color_logo in zip(
+        #         [color_right_light, color_right_dark],
+        #         [color_left_light, color_left_dark],
+        #         [logo_color_light, logo_color_dark],
+        #     )
+        # )
+        # alt =
+        # badge_light.set(
+        #     link=link,
+        #     title=title or alt,
+        #     alt=alt,
+        #     height=height,
+        # )
+        # return badge_light + badge_dark if self._is_for_gh else badge_light
+        return badge
 
 
 

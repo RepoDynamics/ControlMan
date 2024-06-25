@@ -16,6 +16,10 @@ class Git(_Protocol):
         """Read the contents of a file at a given commit hash."""
         ...
 
+    def get_remotes(self) -> dict[str, dict[str, str]]:
+        """Get all remote URLs of the git repository."""
+        ...
+
     def get_remote_repo_name(
         self,
         remote_name: str = "origin",
