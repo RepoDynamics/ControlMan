@@ -54,7 +54,7 @@ properties:
   pre_commit:
     type: object
     default: {}
-    additionalProperties: false
+    additionalProperties: true
     properties:
       repos:
         type: array

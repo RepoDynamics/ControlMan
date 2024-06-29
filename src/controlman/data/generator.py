@@ -522,7 +522,7 @@ class _ControlCenterContentGenerator:
 
     @_logger.sectioner("Publications")
     def _publications(self) -> list[dict]:
-        if not self._data["workflow"]["init"].get("get_owner_publications"):
+        if not self._data["workflow"].get("get_owner_publications"):
             return []
         orcid_id = self._data["owner"]["url"].get("orcid")
         if not orcid_id:
