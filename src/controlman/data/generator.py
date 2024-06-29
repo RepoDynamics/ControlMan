@@ -179,7 +179,7 @@ class _ControlCenterContentGenerator:
             )
         repo = {
             attr: repo_info[attr]
-            for attr in ["id", "node_id", "name", "full_name", "html_url", "default_branch", "created_at"]
+            for attr in ["id", "node_id", "name", "full_name", "html_url", "default_branch", "created_at", "fork"]
         }
         repo["owner"] = repo_info["owner"]["login"]
         self._cache.set(f"repo__{owner_username.lower()}_{repo_name.lower()}_{target_repo}", repo)

@@ -5,32 +5,16 @@ type: object
 default: {}
 additionalProperties: false
 properties:
-  init:
+  schedule:
     type: object
-    default: {}
+    default: { }
     additionalProperties: false
     properties:
-      meta_check_action:
-        $ref: '#/definitions/check_action'
-      hooks_check_action:
-        $ref: '#/definitions/check_action'
-      schedule:
-        type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          test:
-            type: string
-            default: '0 0 * * 1'  # Every Monday at midnight UTC.
-          sync:
-            type: string
-            default: '0 0 * * *'  # Every day at midnight UTC.
-        required: [ test, sync ]
-      get_owner_publications:
-        description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
-        type: boolean
-        default: false
-    required: [ meta_check_action, hooks_check_action, schedule, get_owner_publications ]
+      sync:
+        $ref: '#/definitions/scheduled_task'
+      test:
+        $ref: '#/definitions/scheduled_task'
+    required: [ sync, test ]
   tool:
     type: object
     default: {}
@@ -72,80 +56,6 @@ properties:
     default: {}
     additionalProperties: false
     properties:
-      main:
-        $ref: '#/definitions/pre_commit_config'
-      release:
-        $ref: '#/definitions/pre_commit_config'
-      pre-release:
-        $ref: '#/definitions/pre_commit_config'
-      implementation:
-        $ref: '#/definitions/pre_commit_config'
-      development:
-        $ref: '#/definitions/pre_commit_config'
-      auto-update:
-        $ref: '#/definitions/pre_commit_config'
-      other:
-        $ref: '#/definitions/pre_commit_config'
-  codecov:
-    type: object
-    minProperties: 1
-required: [ init, tool, codecov ]
-
-definitions:
-  check_action:
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      push_main:
-        type: string
-        enum: [ fail, amend, commit, pull ]
-        default: fail
-      push_release:
-        type: string
-        enum: [ fail, amend, commit, pull ]
-        default: fail
-      push_dev:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: commit
-      push_other:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: none
-      pull_main:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: fail
-      pull_release:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: fail
-      pull_dev:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: fail
-      pull_other:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: fail
-      schedule:
-        type: string
-        enum: [ fail, amend, commit, pull, none ]
-        default: pull
-    required:
-      - push_main
-      - push_release
-      - push_dev
-      - push_other
-      - pull_main
-      - pull_release
-      - pull_dev
-      - pull_other
-      - schedule
-  pre_commit_config:
-    type: object
-    properties:
       repos:
         type: array
         minItems: 1
@@ -178,3 +88,39 @@ definitions:
                 required: [ id, stages ]
           required: [ repo, rev, hooks ]
     required: [ repos ]
+  codecov:
+    type: object
+    minProperties: 1
+  get_owner_publications:
+    description: Whether to retrieve owner publications from their ORCID-ID set in their GitHub profile
+    type: boolean
+    default: false
+required: [ schedule, tool, pre_commit, codecov, get_owner_publications ]
+
+definitions:
+  scheduled_task:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      cron:
+        type: string
+      branch:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          main:
+            type: string
+            enum: [ disable, report, pull, commit ]
+            default: pull
+          release:
+            type: string
+            enum: [ disable, report, pull, commit ]
+            default: pull
+          pre-release:
+            type: string
+            enum: [ disable, report, pull, commit ]
+            default: pull
+        required: [ main, release, pre-release ]
+    required: [ cron, branch ]
