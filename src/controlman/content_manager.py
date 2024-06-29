@@ -58,10 +58,6 @@ class ControlCenterContentManager:
         return self.branch["pre-release"]
 
     @property
-    def branch__implement(self) -> dict:
-        return self.branch["implementation"]
-
-    @property
     def branch__dev(self) -> dict:
         return self.branch["development"]
 

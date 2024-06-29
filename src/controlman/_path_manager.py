@@ -151,6 +151,7 @@ class PathManager:
             self.test_package_pyproject,
             self.package_requirements,
             self.package_manifest,
+            self.pre_commit_config,
             self.codecov_config,
             self.gitignore,
             self.gitattributes,
@@ -167,10 +168,6 @@ class PathManager:
         ]:
             for target_path in [".", "docs", ".github"]:
                 files.append(self.health_file(health_file_name, target_path))
-        for pre_commit_config_type in [
-            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
-        ]:
-            files.append(self.pre_commit_config(pre_commit_config_type))
         return files
 
     @property
@@ -244,15 +241,11 @@ class PathManager:
         path = self._path_root / rel_path
         return _DynamicFile("funding", _DynamicFileType.CONFIG, rel_path, path)
 
-    def pre_commit_config(
-        self,
-        branch_type: _Literal[
-            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
-        ]
-    ) -> _DynamicFile:
-        rel_path = getattr(_path, f"file_pre_commit_config_{branch_type.replace('-', '_')}".upper())
+    @property
+    def pre_commit_config(self) -> _DynamicFile:
+        rel_path = _path.FILE_PRE_COMMIT_CONFIG
         path = self._path_root / rel_path
-        return _DynamicFile(f"pre-commit-config-{branch_type}", _DynamicFileType.CONFIG, rel_path, path)
+        return _DynamicFile(f"pre-commit-config", _DynamicFileType.CONFIG, rel_path, path)
 
     @property
     def read_the_docs_config(self) -> _DynamicFile:

@@ -80,22 +80,15 @@ class ConfigFileGenerator:
 
     @logger.sectioner("Generate Pre-Commit Configuration Files")
     def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
-        out = []
-        for config_type in (
-            "main", "release", "pre-release", "implementation", "development", "auto-update", "other"
-        ):
-            logger.section(f"Branch Type '{config_type}'")
-            file_info = self._path_manager.pre_commit_config(config_type)
-            config = self._ccm["workflow"]["pre_commit"].get(config_type)
-            if not config:
-                file_content = ""
-            else:
-                file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
-            out.append((file_info, file_content))
-            logger.info(code_title="File info", code=str(file_info))
-            logger.debug(code_title="File content", code=file_content)
-            logger.section_end()
-        return out
+        file_info = self._path_manager.pre_commit_config
+        config = self._ccm["workflow"].get("pre_commit")
+        if not config:
+            file_content = ""
+        else:
+            file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
+        logger.info(code_title="File info", code=str(file_info))
+        logger.debug(code_title="File content", code=file_content)
+        return [(file_info, file_content)]
 
     @logger.sectioner("Generate ReadTheDocs Configuration File")
     def read_the_docs(self) -> list[tuple[DynamicFile, str]]:

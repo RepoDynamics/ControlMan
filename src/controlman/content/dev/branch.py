@@ -162,7 +162,7 @@ class Branch:
             name=data["branch"]["main"]["name"],
             ruleset=instantiate_ruleset(data["branch"]["main"]["ruleset"])
         )
-        for branch_group in ("release", "pre-release", "implementation", "development", "auto-update"):
+        for branch_group in ("release", "pre-release", "development", "auto-update"):
             setattr(
                 self,
                 f"_branch_{branch_group.replace('-', '_')}",
@@ -186,10 +186,6 @@ class Branch:
         return self._branch_pre_release
 
     @property
-    def implementation(self) -> GroupedBranch:
-        return self._branch_implementation
-
-    @property
     def development(self) -> GroupedBranch:
         return self._branch_development
 
@@ -202,7 +198,6 @@ class Branch:
         return {
             _BranchType.RELEASE: self.release,
             _BranchType.PRERELEASE: self.pre_release,
-            _BranchType.IMPLEMENT: self.implementation,
             _BranchType.DEV: self.development,
             _BranchType.AUTOUPDATE: self.auto_update
         }
