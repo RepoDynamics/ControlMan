@@ -88,27 +88,6 @@ properties:
 #              require_review_thread_resolution: true
 #              required_approving_review_count: 1
     required: [ prefix, ruleset ]
-  implementation:
-    title: Implementation Branch
-    description: Configurations for implementation branches
-    type: object
-    default: { }
-    properties:
-      prefix:
-        description: Name prefix of the branch group
-        type: string
-        default: impl/
-      ruleset:
-        $ref: "#/definitions/ruleset"
-        default:
-          enforcement: enabled
-          rule:
-            protect_creation: true
-            protect_deletion: true
-            protect_force_push: true
-            require_linear_history: true
-#            require_signatures: true
-    required: [ prefix, ruleset ]
   development:
     title: Development Branch
     description: Configurations for development branches
@@ -151,7 +130,7 @@ properties:
             require_linear_history: true
 #            require_signatures: true
     required: [ prefix, ruleset ]
-required: [ main, release, pre-release, implementation, development, auto-update ]
+required: [ main, release, pre-release, development, auto-update ]
 
 definitions:
   ruleset:

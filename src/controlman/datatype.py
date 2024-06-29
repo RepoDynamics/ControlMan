@@ -25,7 +25,6 @@ class BranchType(_Enum):
     MAIN = "main"
     RELEASE = "release"
     PRERELEASE = "pre-release"
-    IMPLEMENT = "implementation"
     DEV = "development"
     AUTOUPDATE = "auto-update"
     OTHER = "other"
