@@ -74,6 +74,8 @@ def read_from_json_file_at_commit(
         path=path.FILE_METADATA,
     )
     output = read_from_json_string(data=data_str, log_section_title="") if data_str else None
+    if log_section_title:
+        _logger.section_end()
     return output
 
 
