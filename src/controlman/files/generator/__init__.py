@@ -10,12 +10,14 @@ from controlman.files.generator import (
     package as _package,
     readme as _readme,
 )
-from controlman.files.generator import health as _health
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator as _ControlCenterCustomContentGenerator
 
 
 @_logger.sectioner("Generate Dynamic Repository Files")
 def generate(
-    content_manager: _ControlCenterContentManager, path_manager: _PathManager,
+    content_manager: _ControlCenterContentManager,
+    path_manager: _PathManager,
+    custom_generator: _ControlCenterCustomContentGenerator
 ) -> list[tuple[_DynamicFile, str]]:
     generated_files = []
     for generator in (
@@ -23,11 +25,14 @@ def generate(
         _generate_license,
         _config.generate,
         _forms.generate,
-        _health.generate,
         _package.generate,
         _readme.generate,
     ):
         generated_files += generator(content_manager=content_manager, path_manager=path_manager)
+    for generator in (
+        _readme.generate,
+    ):
+        generated_files += generator(content_manager=content_manager, path_manager=path_manager, custom_generator=custom_generator)
     return generated_files
 
 
