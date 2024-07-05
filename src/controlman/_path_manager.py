@@ -144,6 +144,7 @@ class PathManager:
             self.license,
             self.readme_main,
             self.readme_pypi,
+            self.readme_conda,
             self.funding,
             self.read_the_docs_config,
             self.issue_template_chooser_config,
@@ -191,6 +192,7 @@ class PathManager:
     @property
     def file_path_meta(self) -> _Path:
         return self.root / _path.FILE_PATH_META
+        return self.root / _path.FILE_CC_PATH_DEF
 
     @property
     def file_local_config(self) -> _Path:
@@ -228,6 +230,13 @@ class PathManager:
         rel_path = f'{self._paths["dir"]["source"]}/{filename}'
         path = self._path_root / rel_path
         return _DynamicFile("readme-pypi", _DynamicFileType.README, rel_path, path)
+
+    @property
+    def readme_conda(self) -> _DynamicFile:
+        filename = "README_conda.md"
+        rel_path = f'{self._paths["dir"]["source"]}/{filename}'
+        path = self._path_root / rel_path
+        return _DynamicFile("readme-conda", _DynamicFileType.README, rel_path, path)
 
     def readme_dir(self, dir_path: str):
         filename = "README.md" if dir_path not in ["docs", ".github"] else "_README.md"
