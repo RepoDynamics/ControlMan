@@ -5,73 +5,357 @@ type: object
 default: { }
 additionalProperties: false
 properties:
+  github:
+    title: GitHub README
+    description: Main README file of the GitHub repository.
+    $ref: '#/definitions/index_repo'
+  pypi:
+    title: PyPI README
+    description: README file of the PyPI/TestPyPI package.
+    $ref: '#/definitions/index_repo'
+  conda:
+    title: Conda README
+    description: README file of the Conda package.
+    $ref: '#/definitions/index_repo'
   repo:
-    title: Repository README
-    description: Main README file of the repository.
-    default: { }
-    oneOf:
-      - type: "null"
-      - type: object
-        additionalProperties: false
-        properties:
-          theme:
-            type: string
-            enum: [ pypackit-default ]
-            default: pypackit-default
-          config:
-            title: Theme Configurations
-            description: Configurations for the theme.
-            type: object
-            default: { }
-        required: [ theme, config ]
-        allOf:
-          - if:
-              properties:
-                theme:
-                  const: pypackit-default
-            then:
-              properties:
-                config:
-                  $ref: '#/definitions/theme-pypackit-default'
-  package:
-    title: Package README
-    description: README file of the package used for PyPI/TestPyPI/conda.
-    default: { }
-    oneOf:
-      - type: "null"
-      - type: object
-        additionalProperties: false
-        properties:
-          theme:
-            type: string
-            enum: [ pypackit-default ]
-            default: pypackit-default
-          config:
-            title: Theme Configurations
-            description: Configurations for the theme.
-            type: object
-            default: { }
-        required: [ theme, config ]
-        allOf:
-          - if:
-              properties:
-                theme:
-                  const: pypackit-default
-            then:
-              properties:
-                config:
-                  $ref: '#/definitions/theme-pypackit-default'
-  dir:
-    title: Directory READMEs
+    title: Repository Directory READMEs
     description: Directory README files.
     type: object
     default: { }
-    additionalProperties:
-      type: string
-required: [ repo, package, dir ]
+    additionalProperties: false
+    properties:
+      footer:
+        default: { }
+        oneOf:
+          - type: "null"
+          - type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                description: Type of the footer.
+                type: string
+                enum: [ pypackit-default, custom, manual ]
+                default: pypackit-default
+              config:
+                title: Configurations
+            required: [ type, config ]
+        allOf:
+          - if:
+              properties:
+                type:
+                  const: pypackit-default
+            then:
+              properties:
+                config:
+                  $ref: '#/definitions/theme-pypackit-default-footer'
+          - if:
+              properties:
+                type:
+                  const: custom
+            then:
+              properties:
+                config:
+                  description: Configurations for the custom theme.
+                  type: object
+                  default: { }
+          - if:
+              properties:
+                type:
+                  const: manual
+            then:
+              properties:
+                config:
+                  description: Content of the footer.
+                  type: string
+                  default: ""
+      health:
+        title: meta_ui_health_files
+        description: Paths and content of repository health files
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          code_of_conduct:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: [ contributor_covenant, custom, manual ]
+                default: contributor_covenant
+              config:
+                title: Configurations
+              path:
+                type: string
+                enum: [ ., .github, docs ]
+                default: .
+              include_footer:
+                type: boolean
+                default: true
+            required: [ type, config, path, include_footer ]
+            allOf:
+              - if:
+                  properties:
+                    type:
+                      const: contributor_covenant
+                then:
+                  properties:
+                    config:
+                      description: Configurations for the custom theme.
+                      type: object
+                      default: { }
+                      additionalProperties: false
+                      properties:
+                        contact:
+                          type: object
+                          default: { }
+                          additionalProperties: false
+                          properties:
+                            type:
+                              type: string
+                              enum: [ email, url ]
+                              default: email
+                            address:
+                              type: string
+                              default: "${{ maintainer.email.code_of_conduct }}"
+                            display_name:
+                              type: string
+                              default: "${{ maintainer.email.code_of_conduct }}"
+              - if:
+                  properties:
+                    type:
+                      const: custom
+                then:
+                  properties:
+                    config:
+                      description: Configurations for the custom theme.
+                      type: object
+                      default: { }
+              - if:
+                  properties:
+                    type:
+                      const: manual
+                then:
+                  properties:
+                    config:
+                      description: Content of the directory README file.
+                      type: string
+                      default: ""
+          contributing:
+            $ref: '#/definitions/health_file'
+          governance:
+            $ref: '#/definitions/health_file'
+          security:
+            $ref: '#/definitions/health_file'
+          support:
+            $ref: '#/definitions/health_file'
+          codeowners:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              path:
+                type: string
+                enum: [ ., .github, docs ]
+                default: .github
+            required: [ path ]
+      dir:
+        type: object
+        default: { }
+        additionalProperties:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [ custom, manual ]
+              default: manual
+            config:
+              title: Configurations
+            include_footer:
+              type: boolean
+              default: true
+          required: [ type, config, include_footer ]
+          allOf:
+            - if:
+                properties:
+                  type:
+                    const: custom
+              then:
+                properties:
+                  config:
+                    description: Configurations for the custom theme.
+                    type: object
+                    default: { }
+            - if:
+                properties:
+                  type:
+                    const: manual
+              then:
+                properties:
+                  config:
+                    description: Content of the directory README file.
+                    type: string
+                    default: ""
+    required: [ footer, dir ]
+
+required: [ github, pypi, conda, repo ]
 
 definitions:
+  static_badge:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      style:
+        type: string
+        enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
+      label:
+        type: string
+      message:
+        type: string
+      label_color:
+        type: string
+      color:
+        type: string
+      logo:
+        type: object
+        additionalProperties: false
+        properties:
+          type:
+            type: string
+            enum: [ path, url, data, name ]
+          value:
+            type: string
+          extension:
+            type: string
+            enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
+        required: [ type, value ]
+      logo_color:
+        type: string
+      logo_size:
+        type: string
+        enum: [ "auto" ]
+      logo_width:
+        type: string
+      label_color_dark:
+        type: string
+      color_dark:
+        type: string
+      logo_color_dark:
+        type: string
+      link:
+        type: string
+      alt:
+        type: string
+      title:
+        type: string
+      width:
+        type: string
+      height:
+        type: string
+      align:
+        type: string
+        enum: [ left, center, right ]
+    required: [ message ]
+
+  index_repo:
+    default: { }
+    oneOf:
+      - type: "null"
+      - type: object
+        additionalProperties: false
+        properties:
+          type:
+            type: string
+            enum: [ pypackit-default, custom, manual ]
+            default: pypackit-default
+          config:
+            title: Theme Configurations
+        required: [ theme, config ]
+        allOf:
+          - if:
+              properties:
+                type:
+                  const: pypackit-default
+            then:
+              properties:
+                config:
+                  $ref: '#/definitions/theme-pypackit-default'
+          - if:
+              properties:
+                type:
+                  const: custom
+            then:
+              properties:
+                config:
+                  description: Configurations for the custom theme.
+                  type: object
+                  default: { }
+          - if:
+              properties:
+                type:
+                  const: manual
+            then:
+              properties:
+                config:
+                  description: Content of the README file.
+                  type: string
+                  default: ""
+  theme-pypackit-default-footer:
+    description: Footer configurations for PyPackIT's default theme.
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      common:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          style:
+            type: string
+            enum: ["flat", "flat-square", "plastic", "for-the-badge", "social"]
+            default: for-the-badge
+          height:
+            type: string
+            default: ""
+          label_color:
+            type: string
+            default: ""
+          label_color_dark:
+            type: string
+            default: ""
+      project:
+        default:
+          style: for-the-badge
+          label: "${{ name }}"
+          message: "©${{ copyright.notice }}"
+          color: "${{ theme.color.primary.light }}"
+          color_dark: "${{ theme.color.primary.dark }}"
+          logo: "${{ path.dir.control }}/ui/branding/favicon.svg"
+          link: "${{ url.website.home }}"
+          title: "${{ badge.project.text_left }} ${{ badge.project.text_right }}"
+          alt: "${{ badge.project.title }}"
+        $ref: '#/definitions/static_badge'
+      license:
+        default:
+          style: for-the-badge
+          label: License
+          message: "${{ license.shortname }}"
+          color: "${{ theme.color.secondary.light }}"
+          color_dark: "${{ theme.color.secondary.dark }}"
+          link: "${{ url.website.home }}/${{ web.path.license }}"
+          alt: "${{ license.fullname }}"
+          title: "${{ name }} is licensed under the ${{ license.fullname }}"
+        $ref: '#/definitions/static_badge'
+      show_pypackit_badge:
+        type: boolean
+        default: true
+    required: [ badge_style, badge_height, project_badge, license_badge, show_pypackit_badge ]
   theme-pypackit-default:
+    description: Configurations for the theme.
     additionalProperties: false
     properties:
       header:
@@ -165,10 +449,51 @@ definitions:
                       config:
                         $ref: '#/definitions/theme-pypackit-default_body-section-keynotes_config'
               required: [ type, config ]
+      footer:
+        $ref: '#/definitions/theme-pypackit-default-footer'
   theme-pypackit-default_body-section-keynotes_config:
     additionalProperties: false
     properties:
       title:
         type: string
         default: Key Features
-
+  health_file:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        enum: [ custom, manual ]
+        default: manual
+      config:
+        title: Configurations
+      path:
+        type: string
+        enum: [ ., .github, docs ]
+        default: .
+      include_footer:
+        type: boolean
+        default: true
+    required: [ type, config, path, include_footer ]
+    allOf:
+      - if:
+          properties:
+            type:
+              const: custom
+        then:
+          properties:
+            config:
+              description: Configurations for the custom theme.
+              type: object
+              default: { }
+      - if:
+          properties:
+            type:
+              const: manual
+        then:
+          properties:
+            config:
+              description: Content of the directory README file.
+              type: string
+              default: ""
