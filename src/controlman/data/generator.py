@@ -17,6 +17,7 @@ from controlman._path_manager import PathManager
 from controlman import ControlCenterContentManager
 from controlman.data.cache import APICacheManager
 from controlman.protocol import Git as _Git
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator
 
 
 @_logger.sectioner("Generate Control Center Contents")
@@ -25,6 +26,7 @@ def generate(
     path_manager: PathManager,
     api_cache_retention_days: float,
     git_manager: _Git,
+    custom_generator: ControlCenterCustomContentGenerator,
     github_token: str | None = None,
     ccm_before: ControlCenterContentManager | dict | None = None,
     future_versions: dict[str, str | PEP440SemVer] | None = None,
@@ -40,12 +42,14 @@ class _ControlCenterContentGenerator:
         path_manager: PathManager,
         api_cache_retention_days: float,
         git_manager: _Git,
+        custom_generator: ControlCenterCustomContentGenerator,
         github_token: str | None = None,
         ccm_before: ControlCenterContentManager | dict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
     ):
         self._data = initial_data
         self._pathman = path_manager
+        self._custom_gen = custom_generator
         self._git = git_manager
         self._ccm_before = ccm_before
         self._future_versions = future_versions or {}
@@ -336,7 +340,7 @@ class _ControlCenterContentGenerator:
         url["security"]["advisories"] = f"{url['security']['home']}/advisories"
         url["security"]["new_advisory"] = f"{url['security']['advisories']}/new"
         url["health_file"] = {}
-        for health_file_id, health_file_data in self._data["health_file"].items():
+        for health_file_id, health_file_data in self._data["readme"]["repo"]["health"].items():
             health_file_rel_path = self._pathman.health_file(
                 name=health_file_id, target_path=health_file_data["path"]
             ).rel_path
@@ -799,23 +803,7 @@ class _ControlCenterContentGenerator:
 
     @_logger.sectioner("Custom Metadata")
     def _generate_custom_metadata(self) -> dict:
-
-        @_logger.sectioner("Install Requirements")
-        def install_requirements():
-            result = pyshellman.pip.install_requirements(path=dir_path / "requirements.txt")
-            for title, detail in result.details.items():
-                _logger.info(code_title=title, code=detail)
-            return
-
-        dir_path = self._pathman.dir_meta / "custom"
-        if not (dir_path / "generator.py").is_file():
-            return {}
-        _logger.section("User-Defined Data")
-        if (dir_path / "requirements.txt").is_file():
-            install_requirements()
-        custom_generator = _util.file.import_module_from_path(path=dir_path / "generator.py")
-        custom_metadata = custom_generator.run(self._data)
-        return custom_metadata
+        return self._custom_gen.generate("generate_config", self._data)
 
     # def _get_issue_labels(self, issue_number: int) -> tuple[dict[str, str | list[str]], list[str]]:
     #     label_prefix = {
@@ -906,3 +894,4 @@ class _ControlCenterContentGenerator:
         release_versions = sorted(set([v for v in vers if v[0] >= 3]))
         self._cache.set("python_versions", release_versions)
         return release_versions
+
