@@ -5,6 +5,7 @@ from versionman import PEP440SemVer as _PEP440SemVer
 from controlman import files as _files
 from controlman.content_manager import ControlCenterContentManager as _ControlCenterContentManager
 from controlman.data import loader as _loader, generator as _generator, validator as _validator
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator as _ControlCenterCustomContentGenerator
 from controlman._path_manager import PathManager as _PathManager
 from controlman.datatype import (
     DynamicFile as _DynamicFile,
