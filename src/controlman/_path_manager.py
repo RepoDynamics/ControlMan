@@ -191,7 +191,6 @@ class PathManager:
 
     @property
     def file_path_meta(self) -> _Path:
-        return self.root / _path.FILE_PATH_META
         return self.root / _path.FILE_CC_PATH_DEF
 
     @property
