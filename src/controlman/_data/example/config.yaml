@@ -1,8 +1,0 @@
-# Number of days to keep the cache data:
-cache_retention_days:
-
-  # For extension files retrieved from other repositories:
-  extensions: 3
-
-  # For data retrieved from web APIs:
-  api: 5
