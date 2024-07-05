@@ -12,12 +12,15 @@ from controlman.datatype import (
 from controlman import ControlCenterContentManager as _ControlCenterContentManager
 from controlman._path_manager import PathManager as _PathManager
 from controlman.files import comparer as _comparer, generator as _generator
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator as _ControlCenterCustomContentGenerator
 
 
 def generate(
-    content_manager: _ControlCenterContentManager, path_manager: _PathManager,
+    content_manager: _ControlCenterContentManager,
+    path_manager: _PathManager,
+    custom_generator: _ControlCenterCustomContentGenerator,
 ) -> list[tuple[_DynamicFile, str]]:
-    return _generator.generate(content_manager=content_manager, path_manager=path_manager)
+    return _generator.generate(content_manager=content_manager, path_manager=path_manager, custom_generator=custom_generator)
 
 
 def compare(
