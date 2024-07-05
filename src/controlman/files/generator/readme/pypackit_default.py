@@ -13,6 +13,7 @@ from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
 from controlman import ControlCenterContentManager
 from controlman.files.generator.readme.main import ReadmeFileGenerator
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator as _ControlCenterCustomContentGenerator
 
 
 class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
@@ -20,9 +21,10 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         self,
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
-        target: Literal["repo", "package"],
+        custom_generator: _ControlCenterCustomContentGenerator,
+        target: Literal["github", "pypi", "conda"],
     ):
-        super().__init__(content_manager=content_manager, path_manager=path_manager, target=target)
+        super().__init__(content_manager=content_manager, path_manager=path_manager, custom_generator=custom_generator, target=target)
         self._data = self._ccm["readme"][target]["config"]
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
@@ -35,7 +37,7 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        logger.section(f"{'Repository' if self._is_for_gh else 'PyPI'} ReadMe File", group=True)
+        logger.section(f"{self._target_name} ReadMe File", group=True)
         html_content = html.ElementCollection(
             elements=[
                 html.Comment(f"{self._ccm['name']} ReadMe File"),
@@ -60,7 +62,7 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 "\n",
             ]
         )
-        file_info = self._pathman.readme_main if self._is_for_gh else self._pathman.readme_pypi
+        file_info = self._pathman.readme_main if self._supports_dark else self._pathman.readme_pypi
         file_content = str(html_content)
         logger.info(code_title="File info", code=str(file_info))
         logger.debug(code_title="File content", code=file_content)
@@ -105,7 +107,7 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
         data = self._data["header"]["logo"]
 
         url = (
-            f"{self._ccm['path']['dir']['control']}/ui/branding/logo_full_{{}}.svg" if self._is_for_gh
+            f"{self._ccm['path']['dir']['control']}/ui/branding/logo_full_{{}}.svg" if self._supports_dark
             else f"{self._ccm['url']['website']['home']}/_static/logo_full_{{}}.svg"
         )
         img = html.img(
@@ -122,7 +124,7 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 html.SOURCE(media=f"(prefers-color-scheme: {theme})", srcset=url.format(theme))
                 for theme in ("light", "dark")
             ],
-        ) if self._is_for_gh else img
+        ) if self._supports_dark else img
         logo = html.A(href=self._ccm["url"]["website"]["home"], content=[tag])
         if style == "horizontal":
             logo.content.elements.append(self.spacer(width="10px", height=data["height"], align="left"))
@@ -165,13 +167,13 @@ class PyPackITDefaultReadmeFileGenerator(ReadmeFileGenerator):
                 color_start=pcit.color.hexa(self._ccm["theme"]["color"]["primary"][theme]),
                 color_end=pcit.color.hexa(self._ccm["theme"]["color"]["secondary"][theme]),
                 count=len(top_data) + len(bottom_data),
-            ).hex() for theme in (0, 1)
+            ).hex() for theme in ("light", "dark")
         ]
         buttons = [
             self.button(
                 text=data["title"],
                 color_light=color_light,
-                color_dark=color_dark if self._is_for_gh else None,
+                color_dark=color_dark if self._supports_dark else None,
                 link=f"{self._ccm['url']['website']['home']}/{data['path']}",
             )
             for data, color_light, color_dark in zip(top_data + bottom_data, colors_light, colors_dark)
