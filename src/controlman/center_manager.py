@@ -57,8 +57,9 @@ class ControlCenterManager:
         metadata_dict = _generator.generate(
             initial_data=_copy.deepcopy(self._contents_raw),
             path_manager=self.path_manager,
-            api_cache_retention_days=self._local_config["cache_retention_days"]["api"],
+            api_cache_retention_days=self._local_config["cache"]["retention_days"]["api"],
             git_manager=self._git,
+            custom_generator=self._custom_generator,
             github_token=self._github_token,
             ccm_before=self._ccm_before,
             future_versions=self._future_versions,
@@ -74,6 +75,7 @@ class ControlCenterManager:
         self._generated_files = _files.generate(
             content_manager=metadata,
             path_manager=self.path_manager,
+            custom_generator=self._custom_generator,
         )
         return self._generated_files
 
