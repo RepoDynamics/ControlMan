@@ -11,20 +11,46 @@ from readme_renderer.markdown import render
 import controlman
 from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman import ControlCenterContentManager
+from controlman import ControlCenterContentManager, _util
+from controlman.data.generator_custom import ControlCenterCustomContentGenerator as _ControlCenterCustomContentGenerator
 
 
 class ReadmeFileGenerator:
+
+    SUPPORTS_DARK_THEME = {
+        "github": True,
+        "pypi": False,
+        "conda": False,
+    }
+
+    _TARGET_NAME = {
+        "github": "GitHub",
+        "pypi": "PyPI",
+        "conda": "Conda",
+    }
+
     def __init__(
         self,
         content_manager: ControlCenterContentManager,
         path_manager: PathManager,
-        target: Literal["repo", "package"],
+        custom_generator: _ControlCenterCustomContentGenerator,
+        target: Literal["github", "pypi", "conda"],
     ):
         self._ccm = content_manager
         self._pathman = path_manager
+        self._custom_gen = custom_generator
+        self._target = target
+        self._target_name = self._TARGET_NAME[target]
 
-        self._is_for_gh = target == "repo"
+        self.repo_readme_path = {
+            "github": path_manager.readme_main,
+            "pypi": path_manager.readme_pypi,
+            "conda": path_manager.readme_conda,
+        }
+
+        self._badge_default = self._ccm["badge"]["default"]
+
+        self._supports_dark = self.SUPPORTS_DARK_THEME[target]
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
         #     self.github["repo"]
         # )
@@ -36,31 +62,121 @@ class ReadmeFileGenerator:
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        return self.generate_dir_readmes()
+        footer = self._generate_footer(config=self._ccm["readme"]["repo"]["footer"])
+        return self.generate_health_files(footer=footer) + self.generate_dir_readmes(footer=footer)
+
+    @logger.sectioner("Generate Health Files")
+    def generate_health_files(self, footer: str) -> list[tuple[DynamicFile, str]]:
+
+        def generate_codeowners() -> str:
+            """
+
+            Returns
+            -------
+
+            References
+            ----------
+            https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+            """
+            codeowners = self._ccm["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
+            if not codeowners:
+                return ""
+            # Get the maximum length of patterns to align the columns when writing the file
+            max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
+            text = ""
+            for entry in codeowners:
+                pattern = list(entry.keys())[0]
+                reviewers_list = entry[pattern]
+                reviewers = " ".join([f"@{reviewer.removeprefix('@')}" for reviewer in reviewers_list])
+                text += f"{pattern: <{max_len}}   {reviewers}\n"
+            return text
+
+        def generate_code_of_conduct() -> str:
+            if data["type"] == "contributor_covenant":
+                raw_text = _util.file.get_package_datafile("db/code_of_conduct/contributor_covenant.txt")
+                contact = data["config"]["contact"]
+                contact_address = (
+                    f'mailto:{contact["address"].removeprefix("mailto:")}' if contact["type"] == "email"
+                    else contact["address"]
+                )
+                return raw_text.format(contact=f"[{contact['display_name']}]({contact_address})")
+            logger.critical(f"Code of conduct type '{data['type']}' not recognized.")
+            return
+
+        out = []
+        for health_file_id, data in self._ccm["readme"]["repo"]["health"].items():
+            logger.section(health_file_id.replace("_", " ").title())
+            file_info = self._pathman.health_file(health_file_id, target_path=data["path"])
+            if health_file_id == "codeowners":
+                file_content = generate_codeowners()
+            elif data["type"] == "custom":
+                file_content = self._custom_gen.generate("generate_health_file", health_file_id, self._ccm, self._pathman)
+                if file_content is None:
+                    logger.critical("Custom health file generator not found.")
+            elif data["type"] == "manual":
+                file_content = data["config"]
+            elif health_file_id == "code_of_conduct":
+                file_content = generate_code_of_conduct()
+            else:
+                logger.critical(f"Health file type '{data['type']}' not recognized.")
+
+            if file_content and footer and data.get("include_footer"):
+                file_content = f"{file_content.strip()}\n{footer}\n"
+            out.append((file_info, file_content))
+            logger.info(code_title="File info", code=str(file_info))
+            logger.debug(code_title="File content", code=file_content)
+            logger.section_end()
+        return out
 
     @logger.sectioner("Generate Directory Readme Files")
-    def generate_dir_readmes(self) -> list[tuple[DynamicFile, str]]:
+    def generate_dir_readmes(self, footer: str) -> list[tuple[DynamicFile, str]]:
         out = []
-        for dir_path, readme_text in self._ccm["readme"]["dir"].items():
+        for dir_path, readme_config in self._ccm["readme"]["repo"]["dir"].items():
             logger.section(f"Directory '{dir_path}'", group=True)
             file_info = self._pathman.readme_dir(dir_path)
-            file_content = f"{readme_text}\n{self.footer()}"
+            if readme_config["type"] == "custom":
+                file_content = self._custom_gen.generate("generate_directory_readme", dir_path, self._ccm, self._pathman)
+                if file_content is None:
+                    logger.critical("Custom directory README generator not found.")
+                    continue
+            else:
+                # type is 'manual'
+                file_content = readme_config["config"]
+            if file_content and footer and readme_config["include_footer"]:
+                file_content = f"{file_content.strip()}\n{footer}\n"
             out.append((file_info, file_content))
             logger.info(code_title="File info", code=file_info)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
         return out
 
-    def footer(self):
-        project_badge = self.project_badge()
+    def _generate_footer(self, config: dict):
+        if not config:
+            return ""
+        if config["type"] == "pypackit-default":
+            return self.footer(settings=config["config"])
+        if config["type"] == "custom":
+            content = self._custom_gen.generate("generate_footer", self._ccm, self._pathman)
+            if content is None:
+                logger.critical("Custom footer generator not found.")
+            return f"{content.strip()}\n"
+        # type is 'manual'
+        return f'{config["config"].strip()}\n'
+
+    def footer(self, settings: dict):
+        project_badge = self.create_static_badge(settings["project"] | settings["common"])
         project_badge.set(settings=bdg.BadgeSettings(align="left"))
         left_badges = [project_badge]
+        right_badges = []
         if self._ccm["license"]:
-            license_badge = self.license_badge()
-            license_badge.set(settings=bdg.BadgeSettings(align="left"))
-            left_badges.append(license_badge)
-        pypackit_badge = self.pypackit_badge()
-        pypackit_badge.set(settings=bdg.BadgeSettings(align="right"))
+            license_badge = self.create_static_badge(settings["license"] | settings["common"])
+            license_badge.set(settings=bdg.BadgeSettings(align="left" if settings["show_pypackit_badge"] else "right"))
+            side = left_badges if settings["show_pypackit_badge"] else right_badges
+            side.append(license_badge)
+        if settings["show_pypackit_badge"]:
+            pypackit_badge = self.pypackit_badge(settings=settings["common"])
+            pypackit_badge.set(settings=bdg.BadgeSettings(align="right"))
+            right_badges.append(pypackit_badge)
         elements = html.DIV(
             content=[
                 "\n",
@@ -69,41 +185,11 @@ class ReadmeFileGenerator:
                 *left_badges,
                 self.marker(end="Left Side"),
                 self.marker(start="Right Side"),
-                pypackit_badge,
+                *right_badges,
                 self.marker(end="Right Side"),
             ]
         )
         return elements
-
-    def project_badge(self) -> bdg.Badge | bdg.ThemedBadge:
-        return self.create_static_badge(
-            text_right=f'©{self._ccm["copyright"]["notice"]}',
-            color_right_light=self._ccm["theme"]["color"]["primary"][0],
-            color_right_dark=self._ccm["theme"]["color"]["primary"][1] if self._is_for_gh else None,
-            text_left=self._ccm["name"],
-            logo=self._pathman.dir_meta / "ui/branding/favicon.svg",
-            link=self._ccm["url"]["website"]["home"],
-            title=f"{self._ccm['name']} is licensed under the {self._ccm['license']['fullname']}",
-        )
-
-    def copyright_badge(self):
-        badge = bdg.shields.custom.static(
-            message=self._ccm["copyright"]["notice"],
-            style="for-the-badge",
-            color="AF1F10",
-            label="Copyright",
-        )
-        return badge
-
-    def license_badge(self) -> bdg.Badge | bdg.ThemedBadge:
-        return self.create_static_badge(
-            text_right=self._ccm["license"]["shortname"],
-            color_right_light=self._ccm["theme"]["color"]["secondary"][0],
-            color_right_dark=self._ccm["theme"]["color"]["secondary"][1] if self._is_for_gh else None,
-            text_left="License",
-            link=f"{self._ccm['url']['website']['home']}/{self._ccm['web']['path']['license']}",
-            title=f"{self._ccm['name']} is licensed under the {self._ccm['license']['fullname']}",
-        )
 
     def button(
         self,
@@ -115,7 +201,7 @@ class ReadmeFileGenerator:
         title: str | None = None,
     ) -> bdg.Badge | bdg.ThemedBadge:
         return self.create_static_badge(
-            text_right=text,
+            message=text,
             color_right_light=color_light,
             color_right_dark=color_dark,
             height=height,
@@ -123,84 +209,29 @@ class ReadmeFileGenerator:
             title=title,
         )
 
-    def create_static_badge(
-        self,
-        text_right: str,
-        color_right_light: str,
-        color_right_dark: str | None = None,
-        text_left: str | None = None,
-        color_left_light: str | None = None,
-        color_left_dark: str | None = None,
-        style: Literal["plastic", "flat", "flat-square", "for-the-badge", "social"] = "for-the-badge",
-        logo: str | Path | None = None,
-        logo_dark: str | Path | None = None,
-        logo_color_light: str | None = None,
-        logo_color_dark: str | None = None,
-        logo_width: int | None = None,
-        logo_size: Literal["auto"] | None = None,
-        link: str | None = None,
-        title: str | None = None,
-        height: str | None = None,
-        alt: str | None = None,
-        align: Literal["left", "right", "center"] = "center",
-        tag_seperator: str = "",
-        content_indent: str = "",
-    ):
+    def create_static_badge(self, settings: dict) -> bdg.Badge | bdg.ThemedBadge:
+
+        def set_value(k: str, d: dict) -> None:
+            value = settings.get(k) or self._badge_default.get(k)
+            if value:
+                d[k] = value
+            return
+
+        shields_settings = {}
+        for key in ["style", "logo", "logo_color", "logo_size", "logo_width", "label", "label_color", "color"]:
+            set_value(key, shields_settings)
+        if self._supports_dark:
+            for key in ["logo_dark", "logo_color_dark", "label_color_dark", "color_dark"]:
+                set_value(key, shields_settings)
+        badge_settings = {}
+        for key in ["link", "title", "alt", "width", "height", "align", "tag_seperator", "content_indent"]:
+            set_value(key, badge_settings)
         badge = bdg.shields.core.static(
-            message=text_right,
-            shields_settings=bdg.shields.ShieldsSettings(
-                style=style,
-                logo=logo,
-                logo_color=logo_color_light,
-                logo_size=logo_size,
-                logo_width=logo_width,
-                label=text_left,
-                label_color=color_left_light,
-                color=color_right_light,
-                logo_dark=logo_dark if self._is_for_gh else None,
-                logo_color_dark=logo_color_dark if self._is_for_gh else None,
-                label_color_dark=color_left_dark if self._is_for_gh else None,
-                color_dark=color_right_dark if self._is_for_gh else None,
-            ),
-            badge_settings=bdg.BadgeSettings(
-                link=link,
-                title=title,
-                alt=f"{f'{text_left}: ' if text_left else ''}{text_right}",
-                height=height,
-                align=align,
-                tag_seperator=tag_seperator,
-                content_indent=content_indent,
-            ),
+            message=settings["message"],
+            shields_settings=bdg.shields.ShieldsSettings(**shields_settings),
+            badge_settings=bdg.BadgeSettings(**badge_settings),
         )
-
-        # badge_light, badge_dark = (
-        #     bdg.shields.custom.static(
-        #         message=text_right,
-        #         style=style,
-        #         color=color_right,
-        #         label=text_left,
-        #         label_color=color_left,
-        #         logo=logo,
-        #         logo_color=color_logo,
-        #         logo_width=logo_width,
-        #         link=link,
-        #     ) for color_right, color_left, color_logo in zip(
-        #         [color_right_light, color_right_dark],
-        #         [color_left_light, color_left_dark],
-        #         [logo_color_light, logo_color_dark],
-        #     )
-        # )
-        # alt =
-        # badge_light.set(
-        #     link=link,
-        #     title=title or alt,
-        #     alt=alt,
-        #     height=height,
-        # )
-        # return badge_light + badge_dark if self._is_for_gh else badge_light
         return badge
-
-
 
     @property
     def github(self):
@@ -234,13 +265,10 @@ class ReadmeFileGenerator:
         delim = "-" * (40 if main else 25)
         return html.Comment(f"{delim} {tag} : {section} {delim}")
 
-    def pypackit_badge(self):
-        return self.create_static_badge(
-            text_right=f"PyPackIT {controlman.__release__}",
-            color_right_light="rgb(0, 100, 0)",
-            color_right_dark="rgb(0, 100, 0)" if self._is_for_gh else None,
-            text_left="Powered By",
-            logo=(
+    def pypackit_badge(self, settings: dict):
+        settings_ = {
+            "style": "for-the-badge",
+            "logo": (
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsPAAALDwGS"
                 "+QOlAAADxklEQVRYhb1XbWxTZRR+3vvR3rt+OsJ2M5CWrKIxZJsm/gITk0XBjYQ4IJshAcJHjIq4HyyKgjJBPiLqwg"
                 "8Tk6L80qATgwkLGpUE94OYSBgSIZnTFoK93VxhpV1v73s/TGu6rOu69nZlz6/zvue85zw55z73vZeYpgkraDr85IX7"
@@ -258,9 +286,17 @@ class ReadmeFileGenerator:
                 "ZCWc8I+3f9ozQgT/cPfXTlwfwbUkb9tja9CHFuwjVsH2m+ZvvDn9m3gZeLnakqgS93nw07NFf+Q2YK8Jre/moSmHME"
                 "Ts351lL94a+SuupQqY46bdHFSwf+/ympCgD8BxQORGJUan2aAAAAAElFTkSuQmCC"
             ),
-            title=f"Project template created by PyPackIT version {controlman.__release__}.",
-            link="https://pypackit.repodynamics.com",
-        )
+            "label": "Powered by",
+            "color": "rgb(0, 100, 0)",
+            "color_dark": "rgb(0, 100, 0)",
+            "message": f"PyPackIT {controlman.__release__}",
+            "title": f"Project template created by PyPackIT version {controlman.__release__}.",
+            "alt": "Powered by PyPackIT",
+            "link": "https://pypackit.repodynamics.com",
+        }
+        if settings:
+            settings_ = settings_ | settings
+        return self.create_static_badge(settings_)
 
     @staticmethod
     def connect(
