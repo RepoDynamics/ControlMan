@@ -31,7 +31,7 @@ class ControlCenterManager:
         self._future_versions = future_versions or {}
         self._path_manager = _PathManager(repo_path=self._path_root)
         self._custom_generator = _ControlCenterCustomContentGenerator(
-            dir_path_custom=self._path_manager.dir_meta / "custom"
+            dir_path_custom=self._path_manager.dir_meta / "hook"
         )
         self._contents_raw: dict = {}
         self._local_config: dict = {}

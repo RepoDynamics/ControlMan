@@ -12,7 +12,6 @@ class APICacheManager:
     def __init__(
         self,
         path_repo: _Path,
-        path_cachefile: str,
         retention_days: float,
     ):
         path_repo = _Path(path_repo).resolve()
@@ -26,7 +25,7 @@ class APICacheManager:
                 self._cache = _util.file.read_datafile(
                     path_repo=path_repo,
                     path_data=path_cachefile,
-                    relpath_schema="api_cache",
+                    schema="api_cache",
                     log_section_title="Load API Cache File"
                 )
             except _exception.content.ControlManContentException as e:

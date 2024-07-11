@@ -10,7 +10,7 @@ from controlman._path_manager import PathManager as _PathManager
 from controlman import _util
 
 
-@_logger.sectioner("Load Control Center Contents")
+@_logger.sectioner("Load Control Center")
 def load(path_manager: _PathManager, github_token: str | None = None) -> tuple[dict, dict]:
     data, local_config = _ControlCenterContentLoader(
         path_manager=path_manager, github_token=github_token,
@@ -23,53 +23,91 @@ class _ControlCenterContentLoader:
         self._github_token = github_token
         self._pathman = path_manager
         self._github_api = _pylinks.api.github(self._github_token)
-        self._extensions: list[dict] | None = None
-        self._path_extensions: _Path | None = None
+
+        self._path_root = self._pathman.root
+        self._path_cc = self._pathman.dir_meta
         return
 
     def load(self):
-        local_config = self._load_config()
-        self._extensions, self._path_extensions = self._load_extensions(
-            cache_retention_days=local_config["cache_retention_days"]["extensions"]
-        )
-        data: dict = self._load_data()
-        data["extensions"] = self._extensions
-        data["path"] = self._pathman.paths_dict
-        data["path"]["file"] = {
-            "website_announcement": f"{data['path']['dir']['website']}/announcement.html",
-            "readme_pypi": f"{data['path']['dir']['source']}/README_pypi.md",
-        }
-        return data, local_config
+        full_data = {}
+        for file in self._path_cc.glob('*'):
+            if file.is_file() and file.suffix.lower() in ['.yaml', '.yml']:
+                filename = file.relative_to(self._path_cc)
+                _logger.section(f"Load Control Center File '{filename}'")
+                parser = self.create_yaml_parser()
+                with open(file, 'r') as f:
+                    data = parser.load(f)
+                duplicate_keys = set(data.keys()) & set(full_data.keys())
+                if duplicate_keys:
+                    raise RuntimeError(f"Duplicate keys '{', '.join(duplicate_keys)}' in project config")
+                full_data.update(data)
 
-    @_logger.sectioner("Load Control Center Configurations")
-    def _load_config(self):
-        if self._pathman.file_local_config.is_file():
-            source_path = self._pathman.file_local_config
-            source = "Local"
-        else:
-            source_path = self._pathman.dir_meta / "config.yaml"
-            source = "Main"
-        local_config = _util.file.read_datafile(
+        base_config = _util.file.read_datafile(
             path_repo=self._pathman.root,
-            path_data=str(source_path.relative_to(self._pathman.root)),
-            relpath_schema="config",
-            log_section_title=f"Read {source} Config File",
+            path_data=str((self._pathman.dir_meta / "config.yaml").relative_to(self._pathman.root)),
+            schema="config",
+            log_section_title=f"Read Config File",
         )
-        return local_config
+        metadata = {"config": base_config, "path": self._pathman.paths_dict}
+        if self._pathman.file_local_config.is_file():
+            base_config = _util.file.read_datafile(
+                path_repo=self._pathman.root,
+                path_data=str(self._pathman.file_local_config.relative_to(self._pathman.root)),
+                schema="config",
+                log_section_title="Read Local Config File",
+            )
+        extensions, path_extensions = self._load_extensions(config=base_config)
+        for config_name, config_filepath in _CONFIG_FILEPATH.items():
+            section = self._read_single_file(
+                rel_path=config_filepath, extensions=extensions, path_extensions=path_extensions
+            )
+            if config_name != "project":
+                if config_name in metadata:
+                    raise RuntimeError(f"Duplicate config name '{config_name}'")
+                metadata[config_name] = section
+            else:
+                for key in section:
+                    if key in metadata:
+                        raise RuntimeError(f"Duplicate key '{key}' in project config")
+                    metadata[key] = section[key]
+        return metadata, base_config
+
+    def create_yaml_parser(self):
+
+        def load_external_data(loader: SafeConstructor, node: ScalarNode):
+            # Define the constructor for the !include tag
+            tag_value = loader.construct_scalar(node)
+            _logger.info("Load external data", code_title="Path", code=tag_value)
+            if not tag_value:
+                raise ValueError("The !ext tag requires a value")
+            url, jsonpath_expr = tag_value.split(' ', 1)
+            response = requests.get(url)
+            response.raise_for_status()
+            data_raw = response.text
+            new_parser = self.create_yaml_parser()
+            json_data = new_parser.load(data_raw)
+            jsonpath_expr = jsonpath_ng.parse(jsonpath_expr)
+            match = jsonpath_expr.find(json_data)
+            if not match:
+                raise ValueError(
+                    f"No match found for JSONPath '{jsonpath_expr}' in the JSON data from '{url}'")
+            value = match[0].value
+
+            return new_parser.load(value)
+
+        yaml = YAML(typ="safe")
+        yaml.constructor.add_constructor(u'!ext', load_external_data)
+        return yaml
 
     @_logger.sectioner("Load Control Center Extensions")
-    def _load_extensions(self, cache_retention_days: float) -> tuple[list[dict], _Path | None]:
-        extensions: list[dict] = _util.file.read_datafile(
-            path_repo=self._pathman.root,
-            path_data=str(self._pathman.file_meta_core_extensions.relative_to(self._pathman.root)),
-            relpath_schema="extensions",
-            root_type=list,
-            log_section_title="Read Extensions Declaration File",
-        )
+    def _load_extensions(self, config: dict) -> tuple[list[dict], _Path | None]:
+        extensions: list[dict] = config.get("extensions", [])
         if not extensions:
             _logger.info("No extensions defined")
             return extensions, None
-        local_path, exists = self._get_local_extensions(extensions, cache_retention_days=cache_retention_days)
+        local_path, exists = self._get_local_extensions(
+            extensions, cache_retention_days=config["cache_retention_days"]["extensions"]
+        )
         if not exists:
             self._download_extensions(extensions, download_path=local_path)
         return extensions, local_path
@@ -111,15 +149,7 @@ class _ControlCenterContentLoader:
             _logger.debug(f"Extension data:", code=str(extension))
             repo_owner, repo_name = extension["repo"].split("/")
             dir_path = download_path / f"{idx + 1 :03}"
-            rel_dl_path = _Path(extension["type"])
-            if extension["type"] == "package/build":
-                rel_dl_path = rel_dl_path.with_suffix(".toml")
-            elif extension["type"] == "package/tools":
-                filename = _Path(extension["path"]).with_suffix(".toml").name
-                rel_dl_path = rel_dl_path / filename
-            else:
-                rel_dl_path = rel_dl_path.with_suffix(".yaml")
-            full_dl_path = dir_path / rel_dl_path
+            full_dl_path = (dir_path / _CONFIG_FILEPATH[extension["type"]]).with_suffix(".yaml")
             try:
                 extension_filepath = (
                     self._github_api.user(repo_owner)
@@ -147,107 +177,20 @@ class _ControlCenterContentLoader:
             _logger.section_end()
         return
 
-    @_logger.sectioner("Load Control Center Data")
-    def _load_data(self):
-        metadata = {}
-        for entry in ("credits", "intro", "license"):
-            section = self._read_single_file(rel_path=f"project/{entry}")
-            try:
-                log = _pyserials.update.dict_from_addon(
-                    data=metadata,
-                    addon=section,
-                    append_list=False,
-                    append_dict=True,
-                    raise_duplicates=True,
-                )
-            except _pyserials.exception.DictUpdateError as e:
-                _logger.critical(
-                    title=f"Failed to merge data file '{entry}' into control center data",
-                    msg=e.message,
-                )
-                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-        for entry in (
-            "custom/custom",
-            "dev/branch",
-            "dev/changelog",
-            "dev/commit",
-            "dev/discussion",
-            "dev/issue",
-            "dev/label",
-            "dev/maintainer",
-            "dev/pull",
-            "dev/repo",
-            "dev/tag",
-            "dev/workflow",
-            "ui/health_file",
-            "ui/readme",
-            "ui/theme",
-            "ui/web",
-        ):
-            section = {entry.split("/")[1]: self._read_single_file(rel_path=entry)}
-            try:
-                log = _pyserials.update.dict_from_addon(
-                    data=metadata,
-                    addon=section,
-                    append_list=False,
-                    append_dict=True,
-                    raise_duplicates=True,
-                )
-            except _pyserials.exception.DictUpdateError as e:
-                _logger.critical(
-                    title=f"Failed to merge data file '{entry}' into control center data",
-                    msg=e.message,
-                )
-                raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-        package = {}
-        if (self._pathman.dir_meta / "package_python").is_dir():
-            package["type"] = "python"
-            for entry in (
-                "package_python/conda",
-                "package_python/dev_config",
-                "package_python/docs",
-                "package_python/entry_points",
-                "package_python/metadata",
-                "package_python/requirements",
-            ):
-                section = self._read_single_file(rel_path=entry)
-                try:
-                    log = _pyserials.update.dict_from_addon(
-                        data=package,
-                        addon=section,
-                        append_list=False,
-                        append_dict=True,
-                        raise_duplicates=True,
-                    )
-                except _pyserials.exception.DictUpdateError as e:
-                    _logger.critical(
-                        title=f"Failed to merge data file '{entry}' into control center data",
-                        msg=e.message,
-                    )
-                    raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-            package["pyproject_tests"] = self._read_single_file(
-                rel_path="package_python/build_tests", ext="toml"
-            )
-            package["pyproject"] = self._read_package_python_pyproject()
-        else:
-            package["type"] = None
-        metadata["package"] = package
-        return metadata
+    def _read_single_file(self, rel_path: str, extensions: list[dict], path_extensions: _Path | None):
 
-    def _read_single_file(self, rel_path: str, ext: str = "yaml"):
-        filename = f"{rel_path}.{ext}"
-        _logger.section(f"Load Control Center File '{filename}'")
+
         section = _util.file.read_datafile(
             path_repo=self._pathman.root,
             path_data=str((self._pathman.dir_meta / filename).relative_to(self._pathman.root)),
             log_section_title="Read Main File"
         )
         has_extension = False
-        for idx, extension in enumerate(self._extensions):
-            if extension["type"] == rel_path:
+        for idx, extension in enumerate(extensions):
+            if extension["type"] == rel_path.split("/")[-1]:
                 has_extension = True
                 _logger.section(f"Merge Extension {idx + 1}")
-                extionsion_path = self._path_extensions / f"{idx + 1 :03}" / f"{rel_path}.{ext}"
+                extionsion_path = path_extensions / f"{idx + 1 :03}" / f"{rel_path}.yaml"
                 section_extension = _util.file.read_datafile(
                     path_repo=self._pathman.root,
                     path_data=str(extionsion_path.relative_to(self._pathman.root)),
@@ -264,9 +207,9 @@ class _ControlCenterContentLoader:
                     log = _pyserials.update.dict_from_addon(
                         data=section,
                         addon=section_extension,
-                        append_list=extension["append_list"],
-                        append_dict=extension["append_dict"],
-                        raise_duplicates=extension["raise_duplicate"],
+                        append_list=extension["extend_arrays"],
+                        append_dict=extension["extend_objects"],
+                        raise_duplicates=extension["raise_duplicates"],
                     )
                 except _pyserials.exception.DictUpdateError as e:
                     _logger.critical(
@@ -279,78 +222,8 @@ class _ControlCenterContentLoader:
                     msg=str(log),
                 )
                 _logger.section_end()
-        _util.file.validate_data(
-            data=section, schema_relpath=rel_path, datafile_ext=ext, is_dir=False, has_extension=has_extension
-        )
+        # _util.file.validate_data(
+        #     data=section, schema_relpath=rel_path, datafile_ext=ext, is_dir=False, has_extension=has_extension
+        # )
         _logger.section_end()
         return section
-
-    @_logger.sectioner("Load Package Pyproject")
-    def _read_package_python_pyproject(self):
-
-        def read_package_tools_config(path: _Path):
-            dirpath_config = _Path(path) / "package_python" / "tools"
-            paths_config_files = list(dirpath_config.glob("*.toml"))
-            config = dict()
-            for path_file in paths_config_files:
-                config_section = _util.file.read_datafile(
-                    path_repo=self._pathman.root, path_data=str(path_file.relative_to(self._pathman.root))
-                )
-                try:
-                    log = _pyserials.update.dict_from_addon(
-                        data=config,
-                        addon=config_section,
-                        append_list=True,
-                        append_dict=True,
-                        raise_duplicates=True,
-                    )
-                except _pyserials.exception.DictUpdateError as e:
-                    # TODO
-                    pass
-            return config
-
-        build = self._read_single_file(rel_path="package_python/build", ext="toml")
-        _logger.section("Load Package Tools Configurations")
-        _logger.section("Read Main Configurations")
-        tools = read_package_tools_config(self._pathman.dir_meta)
-        _logger.section_end()
-        has_extension = False
-        for idx, extension in enumerate(self._extensions):
-            if extension["type"] == "package_python/tools":
-                has_extension = True
-                _logger.section(f"Merge Extension {idx + 1}")
-                extension_config = read_package_tools_config(self._path_extensions / f"{idx + 1 :03}")
-                try:
-                    log = _pyserials.update.dict_from_addon(
-                        data=tools,
-                        addon=extension_config,
-                        append_list=extension["append_list"],
-                        append_dict=extension["append_dict"],
-                        raise_duplicates=extension["raise_duplicate"],
-                    )
-                except _pyserials.exception.DictUpdateError as e:
-                    _logger.critical(
-                        title=f"Failed to merge extension",
-                        message=e.message,
-                    )
-                    raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-                _logger.section_end()
-        _logger.section_end()
-        _util.file.validate_data(
-            data=tools, schema_relpath="package_python/tools", is_dir=True, has_extension=has_extension,
-        )
-        try:
-            log = _pyserials.update.dict_from_addon(
-                data=build,
-                addon=tools,
-                append_list=True,
-                append_dict=True,
-                raise_duplicates=True,
-            )
-        except _pyserials.exception.DictUpdateError as e:
-            _logger.critical(
-                title=f"Failed to merge tools configurations to package pyproject",
-                message=e.message,
-            )
-            raise e  # This will never be reached, but is required to satisfy the type checker and IDE.
-        return build

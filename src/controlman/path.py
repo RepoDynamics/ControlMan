@@ -1,17 +1,10 @@
 """Constant paths to files and directories in the user repository."""
 
 
-FILE_METADATA = ".github/.metadata.json"
-FILE_LICENSE = "LICENSE"
-FILE_README_MAIN = "README.md"
-FILE_FUNDING = ".github/FUNDING.yml"
-FILE_PRE_COMMIT_CONFIG = ".github/.pre-commit-config.yaml"
-FILE_READTHEDOCS_CONFIG = ".github/.readthedocs.yaml"
 FILE_ISSUE_TEMPLATE_CHOOSER_CONFIG = ".github/ISSUE_TEMPLATE/config.yml"
 FILE_PYTHON_PYPROJECT = "pyproject.toml"
 FILE_PYTHON_REQUIREMENTS = "requirements.txt"
 FILE_PYTHON_MANIFEST = "MANIFEST.in"
-FILE_CODECOV_CONFIG = ".github/.codecov.yml"
 FILE_GITIGNORE = ".gitignore"
 FILE_GITATTRIBUTES = ".gitattributes"
 FILE_CC_PATH_DEF = ".github/.cc_path.txt"

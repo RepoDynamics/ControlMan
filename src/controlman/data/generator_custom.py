@@ -28,7 +28,7 @@ class ControlCenterCustomContentGenerator:
         if self._generator:
             return self._generator
         if not self._dir.is_dir():
-            _logger.info("No custom configuration directory found.")
+            _logger.info("No hooks directory found.")
             return
         self._install_requirements()
         filepath = self._dir / "generator.py"

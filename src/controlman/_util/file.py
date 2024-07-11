@@ -3,6 +3,7 @@ from typing import Literal, Type
 from types import ModuleType as _ModuleType
 
 import jsonschema
+import referencing
 import fileex as _fileex
 import pkgdata as _pkgdata
 import pyserials
@@ -14,7 +15,7 @@ from controlman import exception as _exception
 def read_datafile(
     path_repo: str | Path,
     path_data: str,
-    relpath_schema: str = "",
+    schema: str = "",
     root_type: Type[dict | list] = dict,
     extension: Literal["json", "yaml", "toml"] | None = None,
     log_section_title: str = "Read Datafile",
@@ -54,8 +55,8 @@ def read_datafile(
                 raise _exception.content.ControlManFileDataTypeError(
                     relpath_data=path_data, data=content, expected_type=root_type
                 )
-    if relpath_schema:
-        validate_data(data=content, schema_relpath=relpath_schema)
+    if schema:
+        validate_data(data=content, schema=schema)
     _logger.info(f"Successfully read data file at '{fullpath_data}'.")
     _logger.debug(f"File Content: {content}")
     _logger.section_end()
@@ -65,28 +66,44 @@ def read_datafile(
 @_logger.sectioner("Validate Datafile Against Schema")
 def validate_data(
     data: dict | list,
-    schema_relpath: str,
+    schema: str,
     datafile_ext: str = "yaml",
     is_dir: bool = False,
     has_extension: bool = False,
 ) -> None:
-    schema = get_package_datafile(f"schema/{schema_relpath}.yaml")
+    """
+    Validate data against a schema.
+
+    Parameters
+    ----------
+    data
+    schema : str
+        Name of the schema defined in `_SCHEMA_NAMES`.
+    datafile_ext
+    is_dir
+    has_extension
+
+    Returns
+    -------
+
+    """
     try:
         pyserials.validate.jsonschema(
             data=data,
-            schema=schema,
+            schema=_SCHEMA[schema],
             validator=jsonschema.Draft202012Validator,
+            registry=_registry,
             fill_defaults=True,
             raise_invalid_data=True,
         )
     except pyserials.exception.validate.PySerialsSchemaValidationError as e:
         raise _exception.content.ControlManSchemaValidationError(
-            rel_path=schema_relpath,
+            rel_path=schema,
             file_ext=datafile_ext,
             is_dir=is_dir,
             has_extension=has_extension,
         ) from e
-    _logger.info(f"Successfully validated data against schema '{schema_relpath}'.")
+    _logger.info(f"Successfully validated data against schema '{schema}'.")
     return
 
 
@@ -140,3 +157,31 @@ def import_module_from_path(path: str | Path) -> _ModuleType:
         The imported module.
     """
     return _pkgdata.import_module_from_path(path=path)
+
+
+_SCHEMA = {
+    schema_name: get_package_datafile(f"schema/user/{schema_name}.yaml")
+    for schema_name in ("ci", "its", "main", "pkg", "vcs")
+}
+_registry = referencing.Registry().with_resources(
+    [(schema_name, referencing.Resource.from_contents(schema)) for schema_name, schema in _SCHEMA.items()]
+)
+_SCHEMA |= {
+    schema_name: get_package_datafile(f"schema/{schema_name}.yaml")
+    for schema_name in ("cache", "full", "local")
+}
+
+
+
+
+import requests
+from ruamel.yaml import YAML
+from ruamel.yaml.constructor import SafeConstructor
+from ruamel.yaml.nodes import ScalarNode
+import jsonpath_ng
+
+
+
+
+
+

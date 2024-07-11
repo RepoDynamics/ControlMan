@@ -12,15 +12,15 @@ class PathManager:
     @_logger.sectioner("Initialize Path Manager")
     def __init__(self, repo_path: str | _Path):
         self._path_root = _Path(repo_path).resolve()
-        pathfile = self._path_root / _path.FILE_PATH_META
-        rel_path_meta = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
+        pathfile = self._path_root / _path.FILE_CC_PATH_DEF
+        rel_dir_path_cc = pathfile.read_text().strip().removesuffix("./") if pathfile.is_file() else ".control"
         self._paths = _util.file.read_datafile(
             path_repo=self._path_root,
-            path_data=f"{rel_path_meta}/path.yaml",
-            relpath_schema="path",
+            path_data=f"{rel_dir_path_cc}/path.yaml",
+            schema="path",
             log_section_title="Read Path Declaration File"
         )
-        self._paths["dir"]["control"] = rel_path_meta
+        self._paths["dir"]["control"] = rel_dir_path_cc
         self._check_paths()
         return
 
@@ -158,6 +158,7 @@ class PathManager:
             self.gitattributes,
             self.pull_request_template("default"),
             self.website_announcement,
+            self.citation,
         ]
         for health_file_name in [
             "code_of_conduct",
@@ -216,6 +217,12 @@ class PathManager:
         rel_path = _path.FILE_LICENSE
         path = self._path_root / rel_path
         return _DynamicFile("license", _DynamicFileType.LICENSE, rel_path, path)
+
+    @property
+    def citation(self) -> _DynamicFile:
+        rel_path = _path.FILE_CITATION
+        path = self._path_root / rel_path
+        return _DynamicFile("citation", _DynamicFileType.CONFIG, rel_path, path)
 
     @property
     def readme_main(self) -> _DynamicFile:

@@ -1,3 +1,4 @@
+import datetime
 from loggerman import logger
 import pyserials
 import pylinks
@@ -174,3 +175,116 @@ class ConfigFileGenerator:
         logger.info(code_title="File info", code=str(file_info))
         logger.debug(code_title="File content", code=file_content)
         return [(file_info, file_content)]
+
+    def citation(self) -> dict | None:
+
+        def create_person(person_id):
+            person = self._ccm["people"][person_id]
+            pout = {}
+            if person["name"].get("legal"):
+                pout["name"] = person["name"]["legal"]
+                for in_key, out_key in (
+                    ("location", "location"),
+                    ("date_start", "date-start"),
+                    ("date_end", "date-end"),
+                ):
+                    if person.get(in_key):
+                        pout[out_key] = person[in_key]
+            else:
+                name = person["name"]
+                for in_key, out_key in (
+                    ("last", "family-names"),
+                    ("first", "given-names"),
+                    ("particle", "name-particle"),
+                    ("suffix", "name-suffix"),
+                    ("affiliation", "affiliation")
+                ):
+                    if name.get(in_key):
+                        pout[out_key] = name[in_key]
+            for contact_type, contact_key in (("orcid", "url"), ("email", "user")):
+                if person.get(contact_type):
+                    pout[contact_type] = person[contact_type][contact_key]
+            for key in (
+                "alias",
+                "website",
+                "tel",
+                "address",
+                "city",
+                "region",
+                "country",
+                "post-code",
+            ):
+                if person.get(key):
+                    pout[key] = person[key]
+            return pout
+
+        def create_reference(ref: dict):
+            out = {}
+            for key in (
+                "abbreviation",
+                "abstract",
+            ):
+                if ref.get(key):
+                    out[key] = ref[key]
+            out["authors"] = [
+                create_person(person_id=author_map["id"]) for author_map in ref["authors"]
+            ]
+            return out
+
+        def get_commit() -> str:
+            return
+
+        if not self._ccm.get("citation"):
+            return
+        cite = self._ccm["citation"]
+        cite_old = pyserials.read.yaml_from_file(
+            path=self._path_manager.citation.path
+        ) if self._path_manager.citation.path.is_file() else {}
+        out = {
+            "message": cite["message"],
+            "title": cite["title"],
+            "version": cite_old.get("version", ""),
+            "date-released": cite_old.get("date-released", ""),
+            "doi": cite_old.get("doi", ""),
+            "commit": get_commit(),
+        }
+        for key in ("license", "license_url", "url"):
+            if cite.get(key):
+                out[key.replace('_', "-")] = cite[key]
+        if cite.get("repository"):
+            for in_key, out_key in (
+                ("build", "repository-artifact"),
+                ("source", "repository-code"),
+                ("other", "repository"),
+            ):
+                if cite["repository"].get(in_key):
+                    out[out_key] = cite["repository"][in_key]
+        for key in ["identifiers", "type", "keywords", "abstract"]:
+            if cite.get(key):
+                out[key] = cite[key]
+        if cite.get("contacts"):
+            out["contact"] = [
+                create_person(person_id=contact_id) for contact_id in cite["contacts"]
+            ]
+        out["authors"] = [
+            create_person(person_id=author_map["id"]) for author_map in cite["authors"]
+        ]
+        if cite.get("preferred_citation"):
+            out["preferred-citation"] = create_reference(cite["preferred_citation"])
+        if cite.get("references"):
+            out["references"] = [create_reference(ref) for ref in cite["references"]]
+        out["cff-version"] = "1.2.0"
+        return out
+
+    def prepare_citation_for_release(
+        self,
+        doi: str,
+        version: str,
+    ):
+        cit_cur = pyserials.read.yaml_from_file(
+            path=self._path_manager.citation.path
+        ) if self._path_manager.citation.path.is_file() else self.citation()
+        cit_cur["version"] = version
+        cit_cur["doi"] = doi
+        cit_cur["date-released"] = datetime.datetime.now().strftime('%Y-%m-%d')
+        cit_cur.pop("commit", None)
