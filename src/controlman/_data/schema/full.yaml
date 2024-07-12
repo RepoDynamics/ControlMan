@@ -1,0 +1,11 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Full Schema
+description: |
+  This schema is used to validate the full configuration of the project.
+  It is a combination of all the other schemas.
+allOf:
+  - $ref: user/ci.yaml
+  - $ref: user/its.yaml
+  - $ref: user/main.yaml
+  - $ref: user/pkg.yaml
+  - $ref: user/vcs.yaml

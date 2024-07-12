@@ -1,0 +1,34 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Local Configurations
+description: |
+  Configurations for the project's control center.
+  
+  :::{admonition} Local Override
+  :class: tip dropdown
+  
+  When working with a local clone of the repository on your computer,
+  you can override these configurations 
+  by creating another `config.yaml` file with the same syntax
+  in the root of the repository's local directory.
+  Since the files under the local directory 
+  are automatically added to the `.gitignore` file,
+  this file will not be tracked by Git, 
+  and thus will not be pushed to the remote repository.
+  This allows you to easily maintain your own local configurations 
+  without affecting the remote repository.
+  :::
+
+examples:
+  - control:
+      cache:
+        retention_hours:
+          api: 1
+          extensions: 1
+
+type: object
+additionalProperties: false
+properties:
+  control:
+    title: Control Center
+    description: Configurations for the project's control center.
+    $ref: user/ci.yaml#/properties/control

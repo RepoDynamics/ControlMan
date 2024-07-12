@@ -1,0 +1,828 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Version Control System
+description:
+
+examples:
+  - config:
+      description: "${{ tagline }}"
+      homepage: "${{ url.website.base }}"
+      secret_scanning: true
+      secret_scanning_push_protection: true
+      vulnerability_alerts: true
+      automated_security_fixes: true
+      private_vulnerability_reporting: true
+      has_discussions: true
+      has_projects: false
+      has_wiki: false
+      allow_merge_commit: true
+      allow_rebase_merge: true
+      allow_auto_merge: false
+      delete_branch_on_merge: true
+      allow_update_branch: true
+      merge_commit_title: 'PR_TITLE'
+      merge_commit_message: 'PR_BODY'
+      archived: false
+    git:
+      gitattributes:
+        # ------------------------------------------ Auto Detect -------------------------------------------
+        # Auto-detect text files and perform LF normalization. This will handle all files NOT listed below.
+        - "*": [ text=auto ]
+        # ------------------------------------------ Explicit ----------------------------------------------
+        - ".gitattributes": [ text, export-ignore ]
+        - ".gitignore": [ text, export-ignore ]
+        - "AUTHORS": [ text ]
+        - "CHANGELOG": [ text ]
+        - "CHANGES": [ text ]
+        - "CODEOWNERS": [ text ]
+        - "CONTRIBUTING": [ text ]
+        - "COPYING": [ text ]
+        - "copyright": [ text ]
+        - "*COPYRIGHT*": [ text ]
+        - "INSTALL": [ text ]
+        - "license": [ text ]
+        - "LICENSE": [ text ]
+        - "Makefile": [ text ]
+        - "NEWS": [ text ]
+        - "readme": [ text ]
+        - "*README*": [ text ]
+        - "TODO": [ text ]
+        - "MANIFEST.in": [ text ]
+        - "*.typed": [ text ]
+        # ------------------------------------------ Documents ---------------------------------------------
+        - "*.bibtex": [ text, diff=bibtex ]
+        - "*.doc": [ diff=astextplain ]
+        - "*.DOC": [ diff=astextplain ]
+        - "*.docx": [ diff=astextplain ]
+        - "*.DOCX": [ diff=astextplain ]
+        - "*.dot": [ diff=astextplain ]
+        - "*.DOT": [ diff=astextplain ]
+        - "*.pdf": [ diff=astextplain ]
+        - "*.PDF": [ diff=astextplain ]
+        - "*.rtf": [ diff=astextplain ]
+        - "*.RTF": [ diff=astextplain ]
+        - "*.md": [ text, diff=markdown ]
+        - "*.mdx": [ text, diff=markdown ]
+        - "*.rst": [ text ]
+        - "*.tex": [ text, diff=tex ]
+        - "*.adoc": [ text ]
+        - "*.textile": [ text ]
+        - "*.mustache": [ text ]
+        - "*.csv": [ text, eol=crlf ]
+        - "*.tab": [ text ]
+        - "*.tsv": [ text ]
+        - "*.txt": [ text ]
+        - "*.sql": [ text ]
+        - "*.epub": [ diff=astextplain ]
+        - "*.css": [ text, diff=css ]
+        - "*.htm": [ text, diff=html ]
+        - "*.html": [ text, diff=html ]
+        # ------------------------------------------ Graphics ----------------------------------------------
+        - "*.svg": [ text ]
+        - "*.png": [ binary ]
+        - "*.jpg": [ binary ]
+        - "*.jpeg": [ binary ]
+        - "*.gif": [ binary ]
+        - "*.tif": [ binary ]
+        - "*.tiff": [ binary ]
+        - "*.ico": [ binary ]
+        - "*.eps": [ binary ]
+        # ------------------------------------------ Scripts -----------------------------------------------
+        - "*.bash": [ text, eol=lf ]
+        - "*.fish": [ text, eol=lf ]
+        - "*.sh": [ text, eol=lf ]
+        - "*.zsh": [ text, eol=lf ]
+        # Below are explicitly windows files and should use crlf
+        - "*.bat": [ text, eol=crlf ]
+        - "*.cmd": [ text, eol=crlf ]
+        - "*.ps1": [ text, eol=crlf ]
+        # ------------------------------------------ Serialisation -----------------------------------------
+        - "*.json": [ text ]
+        - "*.toml": [ text ]
+        - "*.xml": [ text ]
+        - "*.yaml": [ text ]
+        - "*.yml": [ text ]
+        # ------------------------------------------ Archives ----------------------------------------------
+        - "*.7z": [ binary ]
+        - "*.gz": [ binary ]
+        - "*.jar": [ binary ]
+        - "*.rar": [ binary ]
+        - "*.tar": [ binary ]
+        - "*.tgz": [ binary ]
+        - "*.zip": [ binary ]
+        # ------------------------------------------ Preserve EOL ------------------------------------------
+        # Text files where line endings should be preserved.
+        - "*.patch": [ -text ]
+        # ------------------------------------------ Python Source Files -----------------------------------
+        - "*.pxd": [ text, diff=python ]
+        - "*.py": [ text, diff=python ]
+        - "*.py3": [ text, diff=python ]
+        - "*.pyw": [ text, diff=python ]
+        - "*.pyx": [ text, diff=python ]
+        - "*.pyz": [ text, diff=python ]
+        - "*.pyi": [ text, diff=python ]
+        # ------------------------------------------ Python Binary Files -----------------------------------
+        # Note: .db, .p, and .pkl files are associated with the python modules
+        # ``pickle``, ``dbm.*``, ``shelve``, ``marshal``, ``anydbm``, and ``bsddb``, among others.
+        - "*.db": [ binary ]
+        - "*.p": [ binary ]
+        - "*.pkl": [ binary ]
+        - "*.pickle": [ binary ]
+        - "*.pyc": [ binary, export-ignore ]
+        - "*.pyo": [ binary, export-ignore ]
+        - "*.pyd": [ binary ]
+        # ------------------------------------------ Jupyter notebook --------------------------------------
+        - "*.ipynb": [ text, eol=lf ]
+      gitignore:
+        # Byte-compiled / optimized / DLL files
+        - __pycache__/
+        - "*.py[cod]"
+        - "*$py.class"
+        # C extensions
+        - "*.so"
+        # Distribution / packaging
+        - .Python
+        - ./build/
+        - develop-eggs/
+        - dist/
+        - downloads/
+        - eggs/
+        - .eggs/
+        - lib/
+        - lib64/
+        - parts/
+        - sdist/
+        - var/
+        - wheels/
+        - share/python-wheels/
+        - "*.egg-info/"
+        - .installed.cfg
+        - "*.egg"
+        # PyInstaller
+        #  Usually these files are written by a python script from a template
+        #  before PyInstaller builds the exe, so as to inject date/other infos into it.
+        - "*.manifest"
+        - "*.spec"
+        # Installer logs
+        - pip-log.txt
+        - pip-delete-this-directory.txt
+        # Unit test / coverage reports
+        - htmlcov/
+        - .tox/
+        - .nox/
+        - .coverage
+        - .coverage.*
+        - .cache
+        - nosetests.xml
+        - coverage.xml
+        - "*.cover"
+        - .hypothesis/
+        - .pytest_cache
+        - cover/
+        # Translations
+        - "*.mo"
+        - "*.pot"
+        # Django stuff:
+        - "*.log"
+        - local_settings.py
+        - db.sqlite3
+        - db.sqlite3-journal
+        # Flask stuff:
+        - instance/
+        - .webassets-cache
+        # Scrapy stuff:
+        - .scrapy
+        # Sphinx documentation
+        - docs/website/_build/
+        - docs/website/source/api/_autosummary
+        # PyBuilder
+        - .pybuilder/
+        - target/
+        # Jupyter Notebook
+        - .ipynb_checkpoints
+        # IPython
+        - profile_default/
+        - ipython_config.py
+        # pyenv
+        - .python-version
+        # Celery stuff
+        - celerybeat-schedule
+        - celerybeat.pid
+        # SageMath parsed files
+        - "*.sage.py"
+        # Environments
+        - .env
+        - .venv
+        - env/
+        - venv/
+        - ENV/
+        - env.bak/
+        - venv.bak/
+        # Spyder project settings
+        - .spyderproject
+        - .spyproject
+        # Rope project settings
+        - .ropeproject
+        # mkdocs documentation
+        - /site
+        # mypy
+        - .mypy_cache/
+        - .dmypy.json
+        - dmypy.json
+        # Pyre type checker
+        # There are reports this comes from LLVM profiling, but also Xcode 9.
+        - .pyre/
+        # pytype static type analyzer
+        - .pytype/
+        # Cython debug symbols
+        - cython_debug/
+        # profraw files from LLVM? Unclear exactly what triggers this
+        # There are reports this comes from LLVM profiling, but also Xcode 9.
+        - "*profraw"
+        # In-tree generated files
+        - "*/_version.py"
+        # VSCode
+        - .vscode/
+        # PyCharm
+        - .idea/
+        # MacOS system files
+        - .DS_Store
+        # RepoDynamics local configuration file
+        - .github/.control/local_config.yaml
+    branch:
+      main:
+        name: main
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+      release:
+        prefix: release/v
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+      pre-release:
+        prefix: prerelease/v
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+      #      require_pull_request:
+      #        dismiss_stale_reviews_on_push: true
+      #        require_code_owner_review: true
+      #        require_last_push_approval: true
+      #        require_review_thread_resolution: true
+      #        required_approving_review_count: 1
+      development:
+        prefix: dev/
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+      auto-update:
+        prefix: auto-update/
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+    tag:
+      version:
+        prefix: ver/
+    dir:
+      path:
+        control: .control
+        local: .local
+        source: src
+        tests: tests
+        website: docs/website
+
+
+type: object
+additionalProperties: false
+required: [ repo, branch ]
+properties:
+  repo:
+    title: Repository
+    description: GitHub/Git repository settings of the project.
+    type: object
+    properties:
+      config:
+        title: GitHub
+        description: General configuration for the GitHub repository.
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          description:
+            description: Description of the repository
+            type: string
+            default: "${{ tagline }}"
+          homepage:
+            description: URL for the project homepage
+            type: string
+            format: uri
+            default: "${{ url.website.base }}"
+          topics:
+            title: Topics
+            description: |
+              List of keywords for the repository.
+            type: array
+            uniqueItems: true
+            items:
+              title: Topic
+              description: |
+                A keyword for the repository.
+                
+                It must start with an alphanumeric character,
+                and can contain 50 or less ASCII alphanumeric characters and hyphens.
+                
+                If not provided, [`keywords`](#cc.keywords) will be used instead,
+                and any keyword that does not conform to the GitHub requirements
+                will be omitted from the GitHub repository topics.
+              type: string
+              maxLength: 50
+              pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+          secret_scanning:
+            description: Enable secret scanning for the repository
+            type: boolean
+            default: true
+          secret_scanning_push_protection:
+            description: Enable secret scanning push protection for the repository
+            type: boolean
+            default: true
+          vulnerability_alerts:
+            description: Enable vulnerability alerts for the repository
+            type: boolean
+            default: true
+          automated_security_fixes:
+            description: Enable automated security fixes for the repository
+            type: boolean
+            default: true
+          private_vulnerability_reporting:
+            description: Enable private vulnerability reporting for the repository
+            type: boolean
+            default: true
+          has_discussions:
+            description: Enable discussions for the repository
+            type: boolean
+            default: true
+          has_projects:
+            description: Enable projects for the repository
+            type: boolean
+            default: false
+          has_wiki:
+            description: Enable wiki for the repository
+            type: boolean
+            default: false
+          allow_merge_commit:
+            description: Allow merge commits for the repository
+            type: boolean
+            default: false
+          allow_rebase_merge:
+            description: Allow rebase merge for the repository
+            type: boolean
+            default: true
+          allow_auto_merge:
+            type: boolean
+            default: false
+          delete_branch_on_merge:
+            type: boolean
+            default: true
+          allow_update_branch:
+            type: boolean
+            default: true
+          merge_commit_title:
+            enum: [ PR_TITLE, MERGE_MESSAGE ]
+            default: PR_TITLE
+          merge_commit_message:
+            enum: [ PR_TITLE, PR_BODY, BLANK ]
+            default: PR_BODY
+          archived:
+            type: boolean
+            default: false
+      info:
+        title: Info
+        description: |
+          Information about the current state of the repository.
+          
+          This is an object identical to the response of GitHub's REST API for the  
+          '[Get a repository](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)'
+          endpoint, with the exception that keys whose values can frequently change 
+          are removed to avoid unnecessary updates to the repository metadata files.
+          These keys are: 'forks', 'forks_count', 'open_issues', 'open_issues_count',
+          'pushed_at', 'size', 'stargazers_count', 'updated_at', 'watchers', 'watchers_count'.
+
+        auto: |
+          This is automatically fetched from the 
+          [GitHub REST API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository).
+        type: object
+      git:
+        title: Git
+        description: Configuration for the repository's Git settings
+        type: object
+        additionalProperties: false
+        properties:
+          attributes:
+            title: Git Attributes
+            description: |
+              The content of the `.gitattributes` file, i.e.,
+              definition of attributes for files and directories in the repository,
+              such as data type (e.g., text or binary), line endings, diff settings, and merge strategies,
+              to manage how Git handles specific files.
+              The data must be an array of objects, as explained below.
+              
+              :::{admonition} Learn More: `.gitattributes`
+              :class: dropdown seealso
+              
+              - https://git-scm.com/docs/gitattributes
+              - https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
+              - https://github.com/alexkaratarakis/gitattributes/blob/master/Common.gitattributes
+              - https://github.com/alexkaratarakis/gitattributes/blob/master/Python.gitattributes
+              :::
+            type: array
+            uniqueItems: true
+            items:
+              title: Attribute Definition
+              description: |
+                Each element of the array is a key-value pair, where the key is a path or glob pattern,
+                and the value is the attributes to set for the matched files.
+                The attributes are specified as an array of strings.
+              type: object
+              minProperties: 1
+              maxProperties: 1
+              additionalProperties:
+                title: Attribute Values
+                description: |
+                  The list of attributes to set for the matched files.
+                type: array
+                minItems: 1
+                items:
+                  title: Attribute
+                  description: A single attribute to set for the matched files.
+                  type: string
+          ignore:
+            title: Git Ignore
+            description: |
+              The content of the `.gitignore` file, i.e.,
+              definition of files and directories in the repository to be excluded from version control by Git,
+              preventing them from being pushed to the remote repository.
+              
+              :::{admonition} Learn More: `.gitignore`
+              :class: dropdown seealso
+              
+              - https://git-scm.com/docs/gitignore
+              - https://github.com/github/gitignore
+              :::
+
+            type: array
+            default: []
+            uniqueItems: true
+            items:
+              type: string
+  branch:
+    title: Branches and Tags
+    description:
+      GitHub/Git branch and tag settings.
+
+      Names, prefixes, and protection rules for different branch types
+    type: object
+    additionalProperties: false
+    required: [ main, release, pre-release, development, auto-update, tag ]
+    properties:
+      main:
+        title: Main
+        description: |
+          Configurations for the default (aka main, trunk) branch of the repository.
+        $ref: "#/definitions/branch_config"
+      release:
+        title: Release
+        description: Configurations for release branches.
+        $ref: "#/definitions/branch_config"
+      prerelease:
+        title: Pre-release
+        description: Configurations for pre-release branches.
+        $ref: "#/definitions/branch_config"
+      development:
+        title: Development
+        description: Configurations for development branches.
+        $ref: "#/definitions/branch_config"
+      autoupdate:
+        title: Auto-update
+        description: Configurations for auto-update branches
+        $ref: "#/definitions/branch_config"
+  tag:
+    title: Tag Configurations
+    description: Configurations for the repository tags.
+    type: object
+    additionalProperties: false
+    required: [ version ]
+    properties:
+      version:
+        title: Version Tags
+        description: Configurations for version tags.
+        type: object
+        additionalProperties: false
+        required: [ prefix ]
+        properties:
+          prefix:
+            title: Prefix
+            description: Prefix of version tags.
+            type: string
+            examples:
+              - ver/
+  dir:
+    title: Directory Structure
+    description: |
+      Directory structure of the repository.
+    type: object
+    additionalProperties: false
+    properties:
+      path:
+        title: Filepaths
+        description: Paths to main directories in the repository.
+        type: object
+        additionalProperties: false
+        required: [ dir ]
+        properties:
+          local:
+            title: Local Directory
+            description: |
+              Path to the local directory.
+              Paths to the local directory and its subdirectories.
+              Paths to the cache subdirectory of the local directory, and its subdirectories.
+              Paths to the report subdirectory of the local directory, and its subdirectories.
+              These can be referenced in your custom configurations for other tools.
+            type: string
+            default: .local
+            examples:
+              - .local
+          source:
+            title: Source Code Directory
+            description: Path to the source code directory.
+            type: string
+            examples:
+              - src
+          tests:
+            title: Test Suite Directory
+            description: Path to the test suite directory.
+            type: string
+            examples:
+              - tests
+          website:
+            title: Website Directory
+            description: Path to the website directory.
+            type: string
+            examples:
+              - docs/website
+
+definitions:
+  branch_config:
+    title: Branch Configurations
+    description: Configurations for a branch (group).
+    type: object
+    additionalProperties: false
+    required: [ name ]
+    properties:
+      name:
+        title: Branch Name
+        description: Name (for main branch) or prefix (for branch groups) of the branch (group).
+        type: string
+        examples:
+          - main
+          - release/v
+          - prerelease/v
+          - dev/
+          - auto-update/
+      ruleset:
+        title: Ruleset
+        description: Branch protection rules for the branch (group).
+        type: object
+        additionalProperties: false
+        required: [ enforcement, bypass_actors, rule ]
+        properties:
+          enforcement:
+            title: Enforcement
+            description: |
+              The enforcement level of the ruleset; one of:
+              - 'enabled': Enforce rules.
+              - 'disabled': Do not enforce rules.
+              - 'evaluate': Allows admins to test rules before enforcing them.
+                Admins can view insights on the Rule Insights page.
+                This is only available with GitHub Enterprise.
+            type: string
+            enum: [ disabled, evaluate, enabled ]
+            default: enabled
+          bypass_actors:
+            title: Bypass Actors
+            description: List of roles, teams, or apps allowed to bypass the rules.
+            type: array
+            default:
+              - role: organization_admin
+                mode: always
+              - role: repository_admin
+                mode: always
+            uniqueItems: true
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                role:
+                  title: Role
+                  type: string
+                  enum: [ organization_admin, repository_admin, repository_maintainer, repository_writer ]
+                id:
+                  title: ID
+                  description: |
+                    The account ID of the actor.
+                    If `type` is organization_admin, this should be 1.
+                  type: integer
+                type:
+                  title: Type
+                  description: The type of actor.
+                  type: string
+                  enum: [ organization_admin, repository_role, team, integration ]
+                mode:
+                  title: Mode
+                  description: |
+                    When the specified actor can bypass the ruleset.
+                    'pull_request' means that an actor can only bypass rules on pull requests.
+                  type: string
+                  enum: [ always, pull_request ]
+                  default: always
+              oneOf:
+                - required: [ role, mode ]
+                - required: [ id, type, mode ]
+          rule:
+            title: Rules
+            description: Rules to enforce for the branch.
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              protect_creation:
+                description: |
+                  Prevent users from creating matching refs.
+                type: boolean
+                default: true
+              protect_modification:
+                description: |
+                  Prevent users from updating matching refs.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  allow_fetch_and_merge:
+                    description: Still allow the branch to pull changes from its upstream repository.
+                    type: boolean
+                    default: true
+                required: [ allow_fetch_and_merge ]
+              protect_deletion:
+                description: |
+                  Prevent users from deleting matching refs.
+                  Omitting this key is equivalent to setting it to `false`.
+                type: boolean
+                default: true
+              protect_force_push:
+                description: Prevent users from force-pushing to matching refs.
+                type: boolean
+                default: true
+              require_linear_history:
+                description: Prevent merge commits from being pushed to matching refs.
+                type: boolean
+                default: true
+              require_signatures:
+                description: Require commits on matching refs to have verified signatures.
+                type: boolean
+              require_pull_request:
+                description: |
+                  Require all commits be made to a non-target branch
+                  and submitted via a pull request before they can be merged.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  dismiss_stale_reviews_on_push:
+                    description: |
+                      Automatically dismiss previous approving pull-request reviews
+                      when new reviewable commits are pushed.
+                    type: boolean
+                    default: true
+                  require_code_owner_review:
+                    description: |
+                      Require an approving review in pull requests including files
+                      with a designated code owner.
+                    type: boolean
+                    default: true
+                  require_last_push_approval:
+                    description: |
+                      Require an approving review on the most recent reviewable push
+                      by someone other than the actor performing the push.
+                    type: boolean
+                    default: true
+                  require_review_thread_resolution:
+                    description: |
+                      Require all conversations on code to be resolved before a pull request
+                      can be merged into matching refs.
+                    type: boolean
+                    default: true
+                  required_approving_review_count:
+                    description: |
+                      The number of approving reviews that are required
+                      before a pull request can be merged into matching refs.
+                    type: integer
+                    default: 1
+                required:
+                  - dismiss_stale_reviews_on_push
+                  - require_code_owner_review
+                  - require_last_push_approval
+                  - require_review_thread_resolution
+                  - required_approving_review_count
+              require_status_checks:
+                description: |
+                  Require status checks to pass before a pull request can be merged into matching refs.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  contexts:
+                    description: The list of required status checks.
+                    type: array
+                    uniqueItems: true
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        name:
+                          description: The name of the status check context.
+                          type: string
+                        integration_id:
+                          description: The optional integration ID that this status check must originate from.
+                          type: integer
+                      required: [ context ]
+                  strict:
+                    description: Require status checks to pass on the latest commit.
+                    type: boolean
+                    default: true
+                required: [ contexts, strict ]
+              required_deployment_environments:
+                description: |
+                  A list of environments that must be successfully deployed into
+                  before merging into matching refs is allowed.
+                  Omitting this key will disable the protection rule.
+                type: array
+                uniqueItems: true
+                items:
+                  type: string
