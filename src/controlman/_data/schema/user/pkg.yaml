@@ -1,8 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Python Package
+title: Package
 description: |
-  Configurations of the project's Python package and its test suite.
-
+  Python package and test-suite configurations,
+  including build system, dependencies, requirements,
+  entry points, classifiers, and other metadata.
 examples:
   - python_version_min: "3.10"
     urls:

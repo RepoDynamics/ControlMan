@@ -1,7 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Version Control System
-description:
-
+title: Version Control
+description: |
+  Version control system (VCS) configurations, such as
+  GitHub/Git repository settings, branch/tag names,
+  protection rules, and directory structure.
 examples:
   - config:
       description: "${{ tagline }}"

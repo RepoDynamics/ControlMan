@@ -1,10 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Project
 description: |
-  Main project configurations and metadata.
-  
-  These include project-specific data such as name,
-  descriptors, copyright, license, funding, team, theme, and contact information.
+  Main project metadata and settings, including
+  name, descriptors, copyright, license, citation,
+  funding, team, theme, documentation, and contact information.
 examples:
   - tagline: Placeholder Project Tagline
     description: |
@@ -82,7 +81,6 @@ examples:
       message: >-
         If you use this software, please cite it using the metadata from this file.
       title: ${{ name }}
-    extensions: [ ]
     web:
       announcement:
         path: ${{ path.dir.website }}/announcement.html
@@ -91,68 +89,80 @@ examples:
         contact: help/contact
         blog: news
     readme:
+      github: &readme-config
+        type: pypackit-default
+        config:
+          header:
+            menu_bottom:
+              buttons:
+                - title: Overview
+                  description: ""
+                  path: 'intro/overview'
+                - title: Install
+                  description: ""
+                  path: 'manual/install'
+                - title: Releases
+                  description: ""
+                  path: 'news/category/releases'
+                - title: Contact
+                  description: ""
+                  path: 'help/contact'
+      pypi: *readme-config
+      conda: *readme-config
       pypi:
         path: ${{ path.dir.source }}/README_PYPI.md
+
 type: object
 additionalProperties: false
+required: [ url ]
 properties:
   name:
     title: Name
     description: |
       Name of the project.
       
-      This is used to dynamically reference the name in various documents,
-      such as documentation website, README files, community health files, etc.
+      This is dynamically referenced in various documents,
+      such as documentation website, README files, and community health files.
       It is also used to derive the package name when it is not specified explicitly.
       
-      If the project name is not provided, it is automatically derived from the GitHub repository name,
-      by replacing all hyphens with spaces.
-      
-      :::{code-block} python
-      :class: dropdown
-      :caption: Project Name Derivation Function
-      
-      import re
-      
-      def derive_project_name(repo_name: str) -> str:
-        """Derive a project name from a GitHub repository name."""
-        project_name = repo_name.replace("-", " ")
-        return project_name
-      :::
-      
       The project name on itself has no restrictions and can be any valid unicode string.
-      However, by default, it is also used to derive the
-      [distribution name](##cc.package.name) and [import name](##cc.package.import_name) of the package,
+      However, by default, it is also used to derive the 
+      distribution name (cf. [`pkg.name`](##cc.pkg.name))
+      and import name (cf. [`pkg.import_name`](##cc.pkg.import_name)) of the package,
       which have stricter naming specifications.
-      While you can manually set these separately,
-      for consistency, it is **strongly recommended** to choose a repository name
-      that can be used to automatically derive the project name, distribution name, and import name.
+      While you can separately set these,
+      for consistency, it is **recommended** to choose a project name
+      that can be used to automatically derive the distribution and import name of the package.
       This helps to avoid confusion and makes it easier for others to find, install, and use your package.
+    auto: |
+      If the project name is not provided, it is automatically derived from the GitHub repository name,
+      simply by replacing all hyphens with spaces.
     type: string
   title:
     title: Title
     description: |
-      A single-sentence description or slogan of the project.
+      A single-line description or slogan of the project.
       
-      This is automatically displayed on the GitHub repository's About section
+      This is automatically displayed on the About section of the project's GitHub repository 
       (cf. [`repo.config.description`](##cc.repo.config.description)),
       and the project's PyPI and TestPyPI pages
       (by being added to package metadata, i.e.,
       the [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
       key of the `pyproject.toml` file).
     type: string
+    pattern: ^[^\n\r]*$
   abstract:
     title: Abstract
     description: |
       A short description of the project.
       
       This is automatically displayed on the repository's main README file
-      (cf. [`readme.github`](##cc.readme.github)),
+      (cf. [`doc.github`](##cc.doc.github)),
       on the homepage of the project's website,
       on the project's PyPI and TestPyPI pages
-      (cf. [`readme.pypi`](##cc.readme.pypi)),
+      (cf. [`doc.pypi`](##cc.doc.pypi)),
       and on the package's main docstring
-      (cf. [`package.docs.init`](##cc.package.docs.init)).
+      (cf. [`pkg.docs.init`](##cc.pkg.docs.init)).
       
       By default, the first occurrence of the project's name
       is styled as bold/italic and linked to the project's website.
@@ -174,34 +184,40 @@ properties:
     properties:
       display:
         title: Display
-        description: Display keywords
+        description: |
+          Display-friendly keywords.
+          
+          These can contain capital letters, spaces, and other characters,
+          and are used on platforms that accept such keywords.
+          For examples, they are added to the
+          [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
+          metadata of the package's `pyproject.toml` file,
+          to be used on PyPI and TestPyPI platforms.
         type: array
         uniqueItems: true
         maxItems: 20
         items:
           title: Keyword
-          description: A keyword of the project.
+          description: A display-friendly keyword of the project.
           type: string
       slug:
         title: Slug
         description: |
-          A URL-friendly version of the keywords.
+          Machine-friendly keywords.
           
-          This is automatically generated from the display keywords
-          by converting them to lowercase, replacing spaces with hyphens,
-          and removing any special characters.
-          It is used to create the
-          [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics)
-          of the GitHub repository (cf. [`repo.config.topics`](#cc.repo.config.topics)),
-          and as the
-          [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
-          metadata of the package's `pyproject.toml` file.
+          These are used in places that only accept keyword slugs, for example for the
+          [Topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics)
+          section of the GitHub repository (cf. [`repo.config.topics`](#cc.repo.config.topics)).
+        auto: |
+          If not provided, these are automatically generated from the [display keywords](##cc.keywords.display)
+          by converting them to lowercase and replacing spaces with hyphens.
+          Any resulting slug that still does not meet the requirements is discarded.
         type: array
         uniqueItems: true
         maxItems: 20
         items:
           title: Slug
-          description: A URL-friendly version of a keyword.
+          description: A machine-friendly keyword of the project.
           type: string
           maxLength: 50
           pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
@@ -211,10 +227,10 @@ properties:
       Key features of the project.
       
       These are automatically displayed on the repository's main README file
-      (cf. [`readme.github`](##cc.readme.github)),
+      (cf. [`docs.github`](##cc.doc.github)),
       on the homepage of the project's website,
       and on the project's PyPI and TestPyPI pages
-      (cf. [`readme.pypi`](##cc.readme.pypi)).
+      (cf. [`doc.pypi`](##cc.doc.pypi)).
     type: array
     uniqueItems: true
     items:
@@ -232,30 +248,162 @@ properties:
           title: Description
           description: Description of the feature.
           type: string
-  contact:
-    title: Contact Information
-    description: Contact information of the project.
+  team:
+    title: Team
+    description: |
+      Natural and legal persons (e.g., institution, team, research group, company, conference)
+      involved in the project, e.g., copyright holders, authors, and maintainers.
+
+      For each person, define a key-value pair,
+      where the key is the ID of the person,
+      which can be used to reference the person in other configurations.
+    type: object
+    properties:
+      owner:
+        title: Owner
+        description: |
+          The repository owner on GitHub.
+
+          The `github` key is always automatically filled with information from the GitHub API.
+          Any other keys that are not provided are also 
+          automatically filled, as along as they have a corresponding information
+          in the GitHub API (cf. [`entity`](##cc.def.entity)).
+        $ref: '#/definitions/entity'
+    additionalProperties:
+      title: Entity
+      description: A natural person or entity involved in the project.
+      $ref: '#/definitions/entity'
+  license:
+    title: License
+    description: |
+      License of the project.
+
+      You can either select one of the supported SPDX licenses by providing its `id`,
+      or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
+      When a supported `id` is set, all other keys are filled automatically.
+      Nevertheless, you can still override any key by providing the corresponding custom value.
+
+      The license is automatically incorporated into the project:
+      - The license information is included in the license section of your documentation website.
+      - The license text is used to generate the `LICENSE` file in the root of your repository,
+        so that GitHub can automatically detect and display the license of your project.
+      - The license file is also included in your package distribution and recognized by PyPI.
+
+      :::{admonition} Learn More
+      :class: dropdown seealso
+
+      For more information about open-source licenses, see:
+      - [SPDX License List](https://spdx.org/licenses/)
+      - [Open Source Initiative](https://opensource.org/license)
+      - [Choose a License](https://choosealicense.com/)
+      :::
+    examples:
+      - id: unlicense
+      - id: mit
+        notice: |
+          This is a custom license notice that overwrites
+          the default MIT license's notice.
+      - shortname: MCL v1.0
+        fullname: My Custom License 1.0
+        text: |
+          My Custom License
+          Version 1.0, January 2024
+          https://mywebsite.com/my-custom-license
+        notice: |
+          Licensed under My Custom License, Version 1.0 (the "License");
+          you may not use this file except in compliance with the License.
+          You may obtain a copy of the License at https://mywebsite.com/my-custom-license
     type: object
     additionalProperties: false
+    required: [ id ]
     properties:
-      email:
-        title: Email
-        description: Email address of the project.
-        $ref: '#/definitions/email'
-      orcid:
-        title: ORCID
-        description: ORCID iD of the project.
-        $ref: '#/definitions/orcid'
+      id:
+        title: ID
+        description: |
+          [SPDX](https://spdx.org/licenses/) ID of the license.
+
+          For a full list of machine-readable SPDX license identifiers, see the
+          [SPDX GitHub repository](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
+          or the [CFF GitHub repository](https://github.com/citation-file-format/get-spdx-licenses).
+
+          If one of the supported IDs are selected,
+          the rest of the keys are automatically filled in.
+          Otherwise, `name`, `text`, and `notice` must be provided.
+          Supported IDs are:
+            - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
+            - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
+            - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
+            - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
+            - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
+            - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
+            - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
+            - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
+            - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
+            - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
+            - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
+        type: string
+      name:
+        title: Full Name
+        description: Full name of the license.
+        type: string
+        examples:
+          - GNU Affero General Public License v3.0 or later
+          - MIT License
+          - BSD 3-Clause License
+      trove_classifier:
+        title: Trove Classifier
+        description: |
+          [Trove classifier](https://pypi.org/classifiers/) of the license.
+
+          This is automatically added to package metadata
+          (cf. [`package.classifiers`](##cc.package.classifiers))
+          to help PyPI better categorize your package,
+          so that users can find your package when searching for packages with a specific license.
+        type: string
+        pattern: "^License :: "
+        examples:
+          - License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+          - License :: OSI Approved :: MIT License
+          - License :: OSI Approved :: BSD License
+      text:
+        title: Full Text
+        description: Full text of the license.
+        type: string
+      notice:
+        title: Notice
+        description: |
+          Short text of the license, i.e., the license notice.
+
+          By default, this is automatically added to the main docstring of the package
+          (cf. [`package.docs.init`](##cc.package.docs.init)).
+        type: string
+      path:
+        title: License
+        description: |
+          Path to the
+          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
+          file (cf. [`license`](#cc.license)).
+
+          This file must be named `LICENSE` (case-sensitive)
+          and placed in the root of the repository. 
+          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+        type: string
+        pattern: ^LICENSE(?i:.(txt|md|rst))?$
+        default: LICENSE
+        examples:
+          - LICENSE.md
+          - LICENSE.txt
+          - LICENSE.rst
   copyright:
     title: Copyright
     description: |
       Copyright information of the project.
-      
+
       The copyright [`notice`](##cc.copyright.notice)
       is automatically included in several places,
       such as the license texts (when a pre-defined license is used),
       the main docstring of the package (cf. [`package.docs.init`](##cc.package.docs.init)),
-      the footer of README and community files (cf. [`readme.footer`](##cc.readme.footer)),
+      the footer of README and community files (cf. [`doc.footer`](##cc.doc.footer)),
       as well as the website footer.
     examples:
       - owner: ${{ people.owner.name.full }}
@@ -270,7 +418,7 @@ properties:
         title: Notice
         description: |
           Copyright notice.
-          
+
           If provided, all
         type: string
         examples:
@@ -281,7 +429,7 @@ properties:
         title: Period
         description: |
           Year period to use in the copyright [notice](##cc.copyright.notice).
-          
+
           If not provided, it will be automatically set
           using the value of [`start_year`](##cc.copyright.start_year), as follows:
           - If `start_year` is the same as the current year, 
@@ -294,12 +442,108 @@ properties:
         title: Start Year
         description: |
           Start year of the project.
-          
+
           This can be used to dynamically set the [`period`](##cc.copyright.period).
           if not provided, it will be automatically set to the creation year of the repository.
         type: integer
         minimum: 1980
         maximum: 2040
+  contact:
+    title: Contact Information
+    description: Contact information of the project.
+    type: object
+    additionalProperties: false
+    properties:
+      email:
+        title: Email
+        description: Email address of the project.
+        $ref: '#/definitions/email'
+      orcid:
+        title: ORCID
+        description: ORCID iD of the project.
+        $ref: '#/definitions/orcid'
+  maintain:
+    title: Maintainers
+    description: Maintainers of the project
+    type: object
+    additionalProperties: false
+    properties:
+      pull:
+        description: Pull request reviewers of the project.
+        type: object
+        additionalProperties: false
+        properties:
+          code_owners:
+            title: Code Owners
+            description: |
+              Project code owners.
+
+              This is used to automatically maintain the
+              [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+              file (cf. [`doc.code_owners`](##cc.doc.code_owners)).
+            type: array
+            minItems: 1
+            uniqueItems: true
+            items:
+              title: Code Owners Definition
+              description: Code owners of a specific path.
+              type: object
+              minProperties: 1
+              maxProperties: 1
+              additionalProperties:
+                title: Code Owners
+                description: Code owners of the path.
+                type: array
+                minItems: 1
+                uniqueItems: true
+                items:
+                  title: Code Owner
+                  description: ID of the code owner, as defined in [`people`](##cc.people).
+                  type: string
+      issue:
+        title: Issues
+        description: |
+          Assignees of project issues.
+
+          For each issue form defined in [`issue.forms`](##cc.issue.forms),
+          you can add a key-value pair, where the key is the issue form's [`id`](##cc.issue.forms[i].id).
+        type: object
+        additionalProperties:
+          title: Assignees
+          description: Assignees for the project issues.
+          type: array
+          uniqueItems: true
+          items:
+            title: Assignee
+            description: |
+              ID of the assignee, as defined in [`people`](##cc.people).
+            type: string
+      discussion:
+        description: Assignees for the project discussions
+        type: object
+        additionalProperties:
+          title: Assignees
+          description: Assignees for the project discussions.
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            title: Assignee
+            description: |
+              ID of the assignee, as defined in [`people`](##cc.people).
+            type: string
+      security:
+        title: Security
+        description: ID of project's security maintainer, as defined in [`people`](##cc.people).
+        type: string
+      code_of_conduct:
+        title: Code of Conduct
+        description: ID of project's code of conduct enforcer, as defined in [`people`](##cc.people).
+        type: string
+      support:
+        title: Support
+        description: ID of project's support contact, as defined in [`people`](##cc.people).
+        type: string
   citation:
     title: Citation
     description: |
@@ -688,234 +932,6 @@ properties:
         type: string
         enum: [ .github/FUNDING.yml ]
         default: .github/FUNDING.yml
-  license:
-    title: License
-    description: |
-      License of the project.
-
-      You can either select one of the supported SPDX licenses by providing its `id`,
-      or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
-      When a supported `id` is set, all other keys are filled automatically.
-      Nevertheless, you can still override any key by providing the corresponding custom value.
-
-      The license is automatically incorporated into the project:
-      - The license information is included in the license section of your documentation website.
-      - The license text is used to generate the `LICENSE` file in the root of your repository,
-        so that GitHub can automatically detect and display the license of your project.
-      - The license file is also included in your package distribution and recognized by PyPI.
-
-      :::{admonition} Learn More
-      :class: dropdown seealso
-
-      For more information about open-source licenses, see:
-      - [SPDX License List](https://spdx.org/licenses/)
-      - [Open Source Initiative](https://opensource.org/license)
-      - [Choose a License](https://choosealicense.com/)
-      :::
-    examples:
-      - id: unlicense
-      - id: mit
-        notice: |
-          This is a custom license notice that overwrites
-          the default MIT license's notice.
-      - shortname: MCL v1.0
-        fullname: My Custom License 1.0
-        text: |
-          My Custom License
-          Version 1.0, January 2024
-          https://mywebsite.com/my-custom-license
-        notice: |
-          Licensed under My Custom License, Version 1.0 (the "License");
-          you may not use this file except in compliance with the License.
-          You may obtain a copy of the License at https://mywebsite.com/my-custom-license
-    type: object
-    additionalProperties: false
-    required: [ id ]
-    properties:
-      id:
-        title: ID
-        description: |
-          [SPDX](https://spdx.org/licenses/) ID of the license.
-
-          For a full list of machine-readable SPDX license identifiers, see the
-          [SPDX GitHub repository](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
-          or the [CFF GitHub repository](https://github.com/citation-file-format/get-spdx-licenses).
-
-          If one of the supported IDs are selected,
-          the rest of the keys are automatically filled in.
-          Otherwise, `name`, `text`, and `notice` must be provided.
-          Supported IDs are:
-            - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
-            - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
-            - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
-            - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
-            - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
-            - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
-            - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
-            - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
-            - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
-            - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
-            - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
-        type: string
-      name:
-        title: Full Name
-        description: Full name of the license.
-        type: string
-        examples:
-          - GNU Affero General Public License v3.0 or later
-          - MIT License
-          - BSD 3-Clause License
-      trove_classifier:
-        title: Trove Classifier
-        description: |
-          [Trove classifier](https://pypi.org/classifiers/) of the license.
-
-          This is automatically added to package metadata
-          (cf. [`package.classifiers`](##cc.package.classifiers))
-          to help PyPI better categorize your package,
-          so that users can find your package when searching for packages with a specific license.
-        type: string
-        pattern: "^License :: "
-        examples:
-          - License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
-          - License :: OSI Approved :: MIT License
-          - License :: OSI Approved :: BSD License
-      text:
-        title: Full Text
-        description: Full text of the license.
-        type: string
-      notice:
-        title: Notice
-        description: |
-          Short text of the license, i.e., the license notice.
-
-          By default, this is automatically added to the main docstring of the package
-          (cf. [`package.docs.init`](##cc.package.docs.init)).
-        type: string
-      path:
-        title: License
-        description: |
-          Path to the
-          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
-          file (cf. [`license`](#cc.license)).
-
-          This file must be named `LICENSE` (case-sensitive)
-          and placed in the root of the repository. 
-          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-        type: string
-        pattern: ^LICENSE(?i:.(txt|md|rst))?$
-        default: LICENSE
-        examples:
-          - LICENSE.md
-          - LICENSE.txt
-          - LICENSE.rst
-  maintain:
-    title: Maintainers
-    description: Maintainers of the project
-    type: object
-    additionalProperties: false
-    properties:
-      pull:
-        description: Pull request reviewers of the project.
-        type: object
-        additionalProperties: false
-        properties:
-          code_owners:
-            title: Code Owners
-            description: |
-              Project code owners.
-              
-              This is used to automatically maintain the
-              [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file (cf. [`readme.code_owners`](##cc.readme.code_owners)).
-            type: array
-            minItems: 1
-            uniqueItems: true
-            items:
-              title: Code Owners Definition
-              description: Code owners of a specific path.
-              type: object
-              minProperties: 1
-              maxProperties: 1
-              additionalProperties:
-                title: Code Owners
-                description: Code owners of the path.
-                type: array
-                minItems: 1
-                uniqueItems: true
-                items:
-                  title: Code Owner
-                  description: ID of the code owner, as defined in [`people`](##cc.people).
-                  type: string
-      issue:
-        title: Issues
-        description: |
-          Assignees of project issues.
-          
-          For each issue form defined in [`issue.forms`](##cc.issue.forms),
-          you can add a key-value pair, where the key is the issue form's [`id`](##cc.issue.forms[i].id).
-        type: object
-        additionalProperties:
-          title: Assignees
-          description: Assignees for the project issues.
-          type: array
-          uniqueItems: true
-          items:
-            title: Assignee
-            description: |
-              ID of the assignee, as defined in [`people`](##cc.people).
-            type: string
-      discussion:
-        description: Assignees for the project discussions
-        type: object
-        additionalProperties:
-          title: Assignees
-          description: Assignees for the project discussions.
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items:
-            title: Assignee
-            description: |
-              ID of the assignee, as defined in [`people`](##cc.people).
-            type: string
-      security:
-        title: Security
-        description: ID of project's security maintainer, as defined in [`people`](##cc.people).
-        type: string
-      code_of_conduct:
-        title: Code of Conduct
-        description: ID of project's code of conduct enforcer, as defined in [`people`](##cc.people).
-        type: string
-      support:
-        title: Support
-        description: ID of project's support contact, as defined in [`people`](##cc.people).
-        type: string
-  team:
-    title: Team
-    description: |
-      Natural and legal persons (e.g., institution, team, research group, company, conference)
-      involved in the project, e.g., copyright holders, authors, and maintainers.
-
-      For each person, define a key-value pair,
-      where the key is the ID of the person,
-      which can be used to reference the person in other configurations.
-    type: object
-    properties:
-      owner:
-        title: Owner
-        description: |
-          The repository owner on GitHub.
-
-          The `github` key is always automatically filled with information from the GitHub API.
-          Any other keys that are not provided are also 
-          automatically filled, as along as they have a corresponding information
-          in the GitHub API (cf. [`entity`](##cc.def.entity)).
-        $ref: '#/definitions/entity'
-    additionalProperties:
-      title: Entity
-      description: A natural person or entity involved in the project.
-      $ref: '#/definitions/entity'
   theme:
     title: Theme
     description: Configurations defining the visual theme of the project.
@@ -939,6 +955,51 @@ properties:
             title: Secondary
             description: Secondary colors of the project
             $ref: '#/definitions/color_config'
+      footer:
+        default: { }
+        oneOf:
+          - type: "null"
+          - type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              type:
+                description: Type of the footer.
+                type: string
+                enum: [ pypackit-default, custom, manual ]
+                default: pypackit-default
+              config:
+                title: Configurations
+            required: [ type, config ]
+        allOf:
+          - if:
+              properties:
+                type:
+                  const: pypackit-default
+            then:
+              properties:
+                config:
+                  $ref: '#/definitions/theme-pypackit-default-footer'
+          - if:
+              properties:
+                type:
+                  const: custom
+            then:
+              properties:
+                config:
+                  description: Configurations for the custom theme.
+                  type: object
+                  default: { }
+          - if:
+              properties:
+                type:
+                  const: manual
+            then:
+              properties:
+                config:
+                  description: Content of the footer.
+                  type: string
+                  default: ""
   web:
     title: Website
     description: Configurations for the project's website
@@ -1187,11 +1248,15 @@ properties:
                     description: A subsection of the main section.
                     $ref: "#/definitions/web_section"
   readme:
-    title: Community README Files
+    title: README Files
     description: |
-      Configurations for [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
-      and README files for GitHub and other indexing repositories.
-
+      README file configuration. 
+      
+      These include README files that are displayed to users on landing pages of
+      project's repositories, such as GitHub, PyPI, and Anaconda, as well as
+      README files in different directories of the repository providing
+      technical information to contributors and reviewers.
+      
       :::{admonition} Supported Syntax
       :class: dropdown info
 
@@ -1214,31 +1279,8 @@ properties:
       a separate [PyPI-friendly README](https://packaging.python.org/en/latest/guides/making-a-pypi-friendly-readme/)
       must be provided for PyPI, to ensure that the contents are correctly rendered on the package index.
       :::
-
-    examples:
-      - github: &readme-config
-          type: pypackit-default
-          config:
-            header:
-              menu_bottom:
-                buttons:
-                  - title: Overview
-                    description: ""
-                    path: 'intro/overview'
-                  - title: Install
-                    description: ""
-                    path: 'manual/install'
-                  - title: Releases
-                    description: ""
-                    path: 'news/category/releases'
-                  - title: Contact
-                    description: ""
-                    path: 'help/contact'
-        pypi: *readme-config
-        conda: *readme-config
     type: object
     additionalProperties: false
-    required: [ github, pypi, conda, repo ]
     properties:
       github:
         title: GitHub README
@@ -1293,6 +1335,57 @@ properties:
               - ${{ path.dir.source }}/README_CONDA.md
               - README_CONDA.md
         $ref: '#/definitions/index_repo'
+      dir:
+        title: Directory READMEs
+        description: |
+          Configurations for README files in different directories of the repository.
+          For each readme file, add a key-value pair where the key is the path to the directory.
+        type: object
+        additionalProperties:
+          title: Directory README
+          description: Configuration for a directory README file.
+          type: object
+          properties:
+            type:
+              title: Type
+              description: |
+                Type of the README file content.
+              type: string
+              enum: [ custom, manual ]
+              default: manual
+            config:
+              title: Configurations
+            include_footer:
+              type: boolean
+              default: true
+          required: [ type, config, include_footer ]
+          allOf:
+            - if:
+                properties:
+                  type:
+                    const: custom
+              then:
+                properties:
+                  config:
+                    description: Configurations for the custom theme.
+                    type: object
+                    default: { }
+            - if:
+                properties:
+                  type:
+                    const: manual
+              then:
+                properties:
+                  config:
+                    description: Content of the directory README file.
+                    type: string
+                    default: ""
+  health:
+    description: |
+      Configurations for 
+      [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
+
+    properties:
       contributing:
         title: Contributing Guidelines
         description: |
@@ -1315,7 +1408,7 @@ properties:
             description: |
               Path to the
               [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-              file (cf. [`readme.contributing`](#cc.readme.contributing)).
+              file (cf. [`doc.contributing`](#cc.doc.contributing)).
 
               This file must be named `CONTRIBUTING` (case-insensitive)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1350,7 +1443,7 @@ properties:
             title: Governance Model
             description: |
               Path to the `GOVERNANCE`
-              file (cf. [`readme.governance`](#cc.readme.governance)).
+              file (cf. [`doc.governance`](#cc.doc.governance)).
 
               This file must be named `GOVERNANCE` (case-sensitive)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1388,7 +1481,7 @@ properties:
             description: |
               Path to the
               [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-              file (cf. [`readme.security`](#cc.readme.security)).
+              file (cf. [`doc.security`](#cc.doc.security)).
 
               This file must be named `SECURITY` (case-sensitive)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1424,7 +1517,7 @@ properties:
             description: |
               Path to the
               [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-              file (cf. [`readme.support`](#cc.readme.support)).
+              file (cf. [`doc.support`](#cc.doc.support)).
 
               This file must be named `SUPPORT` (case-sensitive)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1475,7 +1568,7 @@ properties:
             description: |
               Path to the
               [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-              file (cf. [`readme.code_of_conduct`](#cc.readme.code_of_conduct)).
+              file (cf. [`doc.code_of_conduct`](#cc.doc.code_of_conduct)).
 
               This file must be named `CODE_OF_CONDUCT` (case-sensitive)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1551,7 +1644,7 @@ properties:
             description: |
               Path to the
               [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file (cf. [`readme.code_owners`](#cc.readme.code_owners)).
+              file (cf. [`doc.code_owners`](#cc.doc.code_owners)).
 
               This file must be named `CODEOWNERS` (case-sensitive, without extension)
               and placed either in the `.github` directory, the `docs` directory,
@@ -1564,96 +1657,6 @@ properties:
               - .github/CODEOWNERS
               - docs/CODEOWNERS
         required: [ path ]
-      dir:
-        title: Directory READMEs
-        description: |
-          Configurations for README files in different directories of the repository.
-          For each readme file, add a key-value pair where the key is the path to the directory.
-        type: object
-        additionalProperties:
-          title: Directory README
-          description: Configuration for a directory README file.
-          type: object
-          properties:
-            type:
-              title: Type
-              description: |
-                Type of the README file content.
-              type: string
-              enum: [ custom, manual ]
-              default: manual
-            config:
-              title: Configurations
-            include_footer:
-              type: boolean
-              default: true
-          required: [ type, config, include_footer ]
-          allOf:
-            - if:
-                properties:
-                  type:
-                    const: custom
-              then:
-                properties:
-                  config:
-                    description: Configurations for the custom theme.
-                    type: object
-                    default: { }
-            - if:
-                properties:
-                  type:
-                    const: manual
-              then:
-                properties:
-                  config:
-                    description: Content of the directory README file.
-                    type: string
-                    default: ""
-      footer:
-        default: { }
-        oneOf:
-          - type: "null"
-          - type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              type:
-                description: Type of the footer.
-                type: string
-                enum: [ pypackit-default, custom, manual ]
-                default: pypackit-default
-              config:
-                title: Configurations
-            required: [ type, config ]
-        allOf:
-          - if:
-              properties:
-                type:
-                  const: pypackit-default
-            then:
-              properties:
-                config:
-                  $ref: '#/definitions/theme-pypackit-default-footer'
-          - if:
-              properties:
-                type:
-                  const: custom
-            then:
-              properties:
-                config:
-                  description: Configurations for the custom theme.
-                  type: object
-                  default: { }
-          - if:
-              properties:
-                type:
-                  const: manual
-            then:
-              properties:
-                config:
-                  description: Content of the footer.
-                  type: string
-                  default: ""
   url:
     title: URLs
     description: |
@@ -1813,7 +1816,7 @@ properties:
                 title: GitHub README
                 description: |
                   URL of the GitHub repository's main `README` file
-                  (cf. [`readme.github`](##cc.readme.github)).
+                  (cf. [`doc.github`](##cc.doc.github)).
                 default: ${{ url.repo.blob }}/${{ path.file.readme.github }}
                 $ref: '#/definitions/url'
               code_of_conduct:
@@ -1963,124 +1966,6 @@ properties:
     title: Custom Metadata
     description: Custom metadata and configurations set by the user
     type: object
-  extensions:
-    title: Extension Definitions
-    description: |
-      An array of extension definitions for (YAML and TOML)
-      configuration files in the repository's control center.
-
-      :::{admonition} Sort by Priority
-      :class: attention
-
-      When defining multiple extensions for the same file,
-      they must be ordered by priority (highest first).
-      When two extensions share some common configurations,
-      the configurations from the extension with the highest priority will be used.
-
-      ordered by priority (highest first).
-    examples:
-      - - type: dev/repo
-          repo: RepoDynamics/CCTemplates
-          path: PyPackIT/dev/repo.yaml
-          extend_arrays: true
-          extend_objects: true
-        - type: dev/changelog
-          repo: RepoDynamics/CCTemplates
-          ref: v1.0.0
-          path: PyPackIT/dev/changelog.yaml
-          extend_arrays: true
-          extend_objects: false
-          raise_duplicates: true
-    type: array
-    uniqueItems: true
-    items:
-      title: Extension Definition
-      description: An extension for a specific file in the control center.
-      examples:
-        - type: dev/repo
-          repo: RepoDynamics/CCTemplates
-          path: PyPackIT/dev/repo.yaml
-          extend_arrays: true
-          extend_objects: true
-      type: object
-      additionalProperties: false
-      required: [ type, repo, path, extend_arrays, extend_objects ]
-      properties:
-        type:
-          title: File Type
-          description: |
-            The control center (YAML or TOML) configuration file to extend.
-
-            Each file is defined by its filename.
-            For example, to extend the `dev/repo.yaml` file, set this to `repo`.
-          type: string
-          enum:
-            - project
-            - package
-            - test
-            - web
-            - readme
-            - discussion
-            - changelog
-            - commit
-            - issue
-            - label
-            - ref
-            - repo
-            - tool
-            - workflow
-            - custom
-        repo:
-          title: Repository Address
-          description: |
-            The fullname of the target GitHub repository to retrieve the extension file from.
-            The fullname has the form `OWNER-USERNAME/REPOSITORY-NAME`.
-          type: string
-          pattern: ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$
-          examples:
-            - RepoDynamics/PyPackIT
-        ref:
-          title: Git Reference
-          description: |
-            A Git reference (e.g., branch, tag, or commit hash) in the target repository
-            to retrieve the extension file from.
-            If not specified, the latest commit on the default branch
-            of the target repository is used as the reference.
-          type: string
-        path:
-          title: Filepath
-          description: |
-            Path to the extension file in the target repository at the given reference.
-            The path is relative to the root of the repository.
-          type: string
-        extend_arrays:
-          title: Array Extension
-          description: |
-            Whether to add the elements of arrays
-            in the extension to the corresponding arrays
-            present in higher-priority configurations.
-            If set to false, any array that has a corresponding existing array
-            in higher-priority configurations will be treated as a duplicate
-            (see Raise Duplicates).
-          type: boolean
-        extend_objects:
-          title: Object Extension
-          description: |
-            Whether to add the key-value pairs of objects
-            in the extension to the corresponding objects
-            present in higher-priority configurations.
-            If set to false, any object that has a corresponding existing object
-            in higher-priority configurations will be treated as a duplicate
-            (see Raise Duplicates).
-          type: boolean
-        raise_duplicates:
-          title: Raise Duplicates
-          description: |
-            Whether to raise an error if any element (i.e., object, array, string, etc.)
-            in the extension is already set in higher-priority configurations.
-            If set to false (default), the duplicates will be ignored.
-          type: boolean
-          default: false
 
 definitions:
   entity:

@@ -1,7 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Workflow
 description: |
-  Configurations for the project's development workflow.
+  Development workflow configurations for 
+  Continuous integration, deployment, configuration automation,
+  maintenance, testing, and refactoring tasks.
 examples:
   - schedule:
       sync:

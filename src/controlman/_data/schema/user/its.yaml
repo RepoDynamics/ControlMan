@@ -1,6 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Issue Tracking System
-
+title: Issue Tracking
+description: |
+  Issue tracking and development configurations,
+  including templates and settings for issues, labels, 
+  design documents, commits, pull requests, and changelogs.
 examples:
   - changelog:
       package_public:
