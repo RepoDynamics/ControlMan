@@ -146,6 +146,7 @@ type: object
 additionalProperties: false
 required: [ control ]
 properties:
+
   schedule:
     title: Scheduled Jobs
     description: |
@@ -167,8 +168,9 @@ properties:
           Configurations for the Continuous Testing (CT) pipeline of the package.
         $ref: '#/definitions/scheduled_task'
   tool:
-    title: Tool Configurations
-    description: Configurations for different tools used in the development workflow.
+    title: Tools
+    description: |
+      Configurations for tools used in the development workflow.
     type: object
     additionalProperties:
       type: object
@@ -290,7 +292,6 @@ properties:
             default: ".github/.codecov.yml"
           config:
             type: object
-
       readthedocs:
         title: ReadTheDocs Website Configurations
         description: |
@@ -361,12 +362,12 @@ properties:
         required: [ name, platform, versioning_scheme, language, version ]
   control:
     title: Control Center
-    description: |
+    description: Configurations for the project's control center.
     type: object
     additionalProperties: false
     properties:
       cache:
-        title: Cache Configurations
+        title: Cache
         description: |
           Settings for cached data,
           such as extension files downloaded from other GitHub repositories
@@ -423,8 +424,6 @@ properties:
                   such as GitHub repo/users data, software versions, publications etc.
                 type: number
                 minimum: 0
-
-
 
 definitions:
   scheduled_task:

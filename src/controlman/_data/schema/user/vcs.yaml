@@ -350,53 +350,76 @@ examples:
         tests: tests
         website: docs/website
 
-
 type: object
 additionalProperties: false
 required: [ repo, branch ]
 properties:
   repo:
     title: Repository
-    description: GitHub/Git repository settings of the project.
+    description: |
+      GitHub/Git repository settings.
+      
+      These include general GitHub repository metadata
+      such as description, topics (keywords), and homepage URL,
+      as well as security configurations, merge strategies,
+      and section (e.g., Discussions, Projects, Wiki) toggles.
+      Git settings include `.gitignore` and `.gitattributes` files.
     type: object
+    additionalProperties: false
     properties:
       config:
-        title: GitHub
-        description: General configuration for the GitHub repository.
+        title: GitHub Settings
+        description: General configurations for the GitHub repository.
         type: object
-        default: {}
         additionalProperties: false
         properties:
           description:
-            description: Description of the repository
+            title: Description
+            description: |
+              A short project description (cf. [`title`](#cc.title)).
+              
+              This is displayed on the GitHub repository's homepage,
+              and is added to repository metadata to improve 
+              project findability and visibility.
             type: string
-            default: "${{ tagline }}"
+            default: ${{ title }}
           homepage:
-            description: URL for the project homepage
+            title: Homepage
+            description: |
+              URL of the project's homepage.
+              
+              This is displayed on the GitHub repository's homepage,
+              helping users to easily find your project's website.
             type: string
             format: uri
-            default: "${{ url.website.base }}"
+            default: "${{ url.website.home }}"
           topics:
             title: Topics
             description: |
-              List of keywords for the repository.
+              List of project [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics),
+              i.e., keywords.
+              
+              These help other people find and contribute to your project,
+              and can include project's intended purpose, subject area,
+              affinity groups, and other important qualities.
+              Note that GitHub only accepts up to 20 topics.
             type: array
             uniqueItems: true
+            maxItems: 20
             items:
               title: Topic
               description: |
-                A keyword for the repository.
+                A project keyword.
                 
                 It must start with an alphanumeric character,
                 and can contain 50 or less ASCII alphanumeric characters and hyphens.
-                
-                If not provided, [`keywords`](#cc.keywords) will be used instead,
-                and any keyword that does not conform to the GitHub requirements
-                will be omitted from the GitHub repository topics.
+                By default, [`keywords.slug`](#cc.keywords.slug) is used.
               type: string
               maxLength: 50
               pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+              default: ${{ keywords.slug }}
           secret_scanning:
+            title: Secret Scanning
             description: Enable secret scanning for the repository
             type: boolean
             default: true
@@ -472,23 +495,23 @@ properties:
         type: object
       git:
         title: Git
-        description: Configuration for the repository's Git settings
+        description: Configuration for the project's Git repository.
         type: object
         additionalProperties: false
         properties:
           attributes:
-            title: Git Attributes
+            title: Attributes
             description: |
-              The content of the `.gitattributes` file, i.e.,
-              definition of attributes for files and directories in the repository,
-              such as data type (e.g., text or binary), line endings, diff settings, and merge strategies,
-              to manage how Git handles specific files.
+              The contents of the [`.gitattributes`](https://git-scm.com/docs/gitattributes) file. 
+              
+              These are definition of attributes for files and directories in the repository,
+              such as data type (e.g., text or binary), line endings, diff settings, 
+              and merge strategies, to manage how Git handles specific files.
               The data must be an array of objects, as explained below.
               
               :::{admonition} Learn More: `.gitattributes`
               :class: dropdown seealso
               
-              - https://git-scm.com/docs/gitattributes
               - https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
               - https://github.com/alexkaratarakis/gitattributes/blob/master/Common.gitattributes
               - https://github.com/alexkaratarakis/gitattributes/blob/master/Python.gitattributes
@@ -496,18 +519,20 @@ properties:
             type: array
             uniqueItems: true
             items:
-              title: Attribute Definition
+              title: File Attributes
               description: |
-                Each element of the array is a key-value pair, where the key is a path or glob pattern,
-                and the value is the attributes to set for the matched files.
-                The attributes are specified as an array of strings.
+                Attributes for a specific filetype.
+                
+                This must be a key-value pair, where the key is a path or glob pattern,
+                and the value is the attributes to set for the matched files,
+                specified as an array of strings.
               type: object
               minProperties: 1
               maxProperties: 1
               additionalProperties:
-                title: Attribute Values
+                title: Attributes
                 description: |
-                  The list of attributes to set for the matched files.
+                  List of attributes to set for the matched files.
                 type: array
                 minItems: 1
                 items:
@@ -515,33 +540,35 @@ properties:
                   description: A single attribute to set for the matched files.
                   type: string
           ignore:
-            title: Git Ignore
+            title: Ignore
             description: |
-              The content of the `.gitignore` file, i.e.,
-              definition of files and directories in the repository to be excluded from version control by Git,
+              The contents of the [`.gitignore`](https://git-scm.com/docs/gitignore) file. 
+              
+              These are definition of files and directories in the repository 
+              to be excluded from version control by Git,
               preventing them from being pushed to the remote repository.
               
               :::{admonition} Learn More: `.gitignore`
               :class: dropdown seealso
               
-              - https://git-scm.com/docs/gitignore
-              - https://github.com/github/gitignore
+              - [Default `gitignore` templates](https://github.com/github/gitignore)
               :::
-
             type: array
             default: []
             uniqueItems: true
             items:
+              title: Path
+              description: A path or glob pattern to ignore.
               type: string
   branch:
-    title: Branches and Tags
+    title: Branches
     description:
-      GitHub/Git branch and tag settings.
+      GitHub/Git branch settings.
 
-      Names, prefixes, and protection rules for different branch types
+      These include names/prefixes and protection rules for different branch types.
     type: object
     additionalProperties: false
-    required: [ main, release, pre-release, development, auto-update, tag ]
+    required: [ main, release, prerelease, development, autoupdate ]
     properties:
       main:
         title: Main
@@ -552,27 +579,27 @@ properties:
         title: Release
         description: Configurations for release branches.
         $ref: "#/definitions/branch_config"
-      prerelease:
+      pre:
         title: Pre-release
         description: Configurations for pre-release branches.
         $ref: "#/definitions/branch_config"
-      development:
+      dev:
         title: Development
         description: Configurations for development branches.
         $ref: "#/definitions/branch_config"
-      autoupdate:
-        title: Auto-update
-        description: Configurations for auto-update branches
+      auto:
+        title: Auto Update
+        description: Configurations for auto-update branches.
         $ref: "#/definitions/branch_config"
   tag:
-    title: Tag Configurations
+    title: Tags
     description: Configurations for the repository tags.
     type: object
     additionalProperties: false
     required: [ version ]
     properties:
       version:
-        title: Version Tags
+        title: Version
         description: Configurations for version tags.
         type: object
         additionalProperties: false
@@ -585,7 +612,7 @@ properties:
             examples:
               - ver/
   dir:
-    title: Directory Structure
+    title: Directory
     description: |
       Directory structure of the repository.
     type: object
