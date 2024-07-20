@@ -1,0 +1,1322 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Version Control
+examples:
+  - repo:
+      description: ${{ title }}
+      topics: ${{ keywords }}
+
+      homepage: "${{ url.website.base }}"
+      secret_scanning: true
+      secret_scanning_push_protection: true
+      vulnerability_alerts: true
+      automated_security_fixes: true
+      private_vulnerability_reporting: true
+      has_discussions: true
+      has_projects: false
+      has_wiki: false
+      allow_merge_commit: true
+      allow_rebase_merge: true
+      allow_auto_merge: false
+      delete_branch_on_merge: true
+      allow_update_branch: true
+      merge_commit_title: 'PR_TITLE'
+      merge_commit_message: 'PR_BODY'
+      archived: false
+    git:
+      gitattributes:
+        # ------------------------------------------ Auto Detect -------------------------------------------
+        # Auto-detect text files and perform LF normalization. This will handle all files NOT listed below.
+        - "*": [ text=auto ]
+        # ------------------------------------------ Explicit ----------------------------------------------
+        - ".gitattributes": [ text, export-ignore ]
+        - ".gitignore": [ text, export-ignore ]
+        - "AUTHORS": [ text ]
+        - "CHANGELOG": [ text ]
+        - "CHANGES": [ text ]
+        - "CODEOWNERS": [ text ]
+        - "CONTRIBUTING": [ text ]
+        - "COPYING": [ text ]
+        - "copyright": [ text ]
+        - "*COPYRIGHT*": [ text ]
+        - "INSTALL": [ text ]
+        - "license": [ text ]
+        - "LICENSE": [ text ]
+        - "Makefile": [ text ]
+        - "NEWS": [ text ]
+        - "readme": [ text ]
+        - "*README*": [ text ]
+        - "TODO": [ text ]
+        - "MANIFEST.in": [ text ]
+        - "*.typed": [ text ]
+        # ------------------------------------------ Documents ---------------------------------------------
+        - "*.bibtex": [ text, diff=bibtex ]
+        - "*.doc": [ diff=astextplain ]
+        - "*.DOC": [ diff=astextplain ]
+        - "*.docx": [ diff=astextplain ]
+        - "*.DOCX": [ diff=astextplain ]
+        - "*.dot": [ diff=astextplain ]
+        - "*.DOT": [ diff=astextplain ]
+        - "*.pdf": [ diff=astextplain ]
+        - "*.PDF": [ diff=astextplain ]
+        - "*.rtf": [ diff=astextplain ]
+        - "*.RTF": [ diff=astextplain ]
+        - "*.md": [ text, diff=markdown ]
+        - "*.mdx": [ text, diff=markdown ]
+        - "*.rst": [ text ]
+        - "*.tex": [ text, diff=tex ]
+        - "*.adoc": [ text ]
+        - "*.textile": [ text ]
+        - "*.mustache": [ text ]
+        - "*.csv": [ text, eol=crlf ]
+        - "*.tab": [ text ]
+        - "*.tsv": [ text ]
+        - "*.txt": [ text ]
+        - "*.sql": [ text ]
+        - "*.epub": [ diff=astextplain ]
+        - "*.css": [ text, diff=css ]
+        - "*.htm": [ text, diff=html ]
+        - "*.html": [ text, diff=html ]
+        # ------------------------------------------ Graphics ----------------------------------------------
+        - "*.svg": [ text ]
+        - "*.png": [ binary ]
+        - "*.jpg": [ binary ]
+        - "*.jpeg": [ binary ]
+        - "*.gif": [ binary ]
+        - "*.tif": [ binary ]
+        - "*.tiff": [ binary ]
+        - "*.ico": [ binary ]
+        - "*.eps": [ binary ]
+        # ------------------------------------------ Scripts -----------------------------------------------
+        - "*.bash": [ text, eol=lf ]
+        - "*.fish": [ text, eol=lf ]
+        - "*.sh": [ text, eol=lf ]
+        - "*.zsh": [ text, eol=lf ]
+        # Below are explicitly windows files and should use crlf
+        - "*.bat": [ text, eol=crlf ]
+        - "*.cmd": [ text, eol=crlf ]
+        - "*.ps1": [ text, eol=crlf ]
+        # ------------------------------------------ Serialisation -----------------------------------------
+        - "*.json": [ text ]
+        - "*.toml": [ text ]
+        - "*.xml": [ text ]
+        - "*.yaml": [ text ]
+        - "*.yml": [ text ]
+        # ------------------------------------------ Archives ----------------------------------------------
+        - "*.7z": [ binary ]
+        - "*.gz": [ binary ]
+        - "*.jar": [ binary ]
+        - "*.rar": [ binary ]
+        - "*.tar": [ binary ]
+        - "*.tgz": [ binary ]
+        - "*.zip": [ binary ]
+        # ------------------------------------------ Preserve EOL ------------------------------------------
+        # Text files where line endings should be preserved.
+        - "*.patch": [ -text ]
+        # ------------------------------------------ Python Source Files -----------------------------------
+        - "*.pxd": [ text, diff=python ]
+        - "*.py": [ text, diff=python ]
+        - "*.py3": [ text, diff=python ]
+        - "*.pyw": [ text, diff=python ]
+        - "*.pyx": [ text, diff=python ]
+        - "*.pyz": [ text, diff=python ]
+        - "*.pyi": [ text, diff=python ]
+        # ------------------------------------------ Python Binary Files -----------------------------------
+        # Note: .db, .p, and .pkl files are associated with the python modules
+        # ``pickle``, ``dbm.*``, ``shelve``, ``marshal``, ``anydbm``, and ``bsddb``, among others.
+        - "*.db": [ binary ]
+        - "*.p": [ binary ]
+        - "*.pkl": [ binary ]
+        - "*.pickle": [ binary ]
+        - "*.pyc": [ binary, export-ignore ]
+        - "*.pyo": [ binary, export-ignore ]
+        - "*.pyd": [ binary ]
+        # ------------------------------------------ Jupyter notebook --------------------------------------
+        - "*.ipynb": [ text, eol=lf ]
+      gitignore:
+        # Byte-compiled / optimized / DLL files
+        - __pycache__/
+        - "*.py[cod]"
+        - "*$py.class"
+        # C extensions
+        - "*.so"
+        # Distribution / packaging
+        - .Python
+        - ./build/
+        - develop-eggs/
+        - dist/
+        - downloads/
+        - eggs/
+        - .eggs/
+        - lib/
+        - lib64/
+        - parts/
+        - sdist/
+        - var/
+        - wheels/
+        - share/python-wheels/
+        - "*.egg-info/"
+        - .installed.cfg
+        - "*.egg"
+        # PyInstaller
+        #  Usually these files are written by a python script from a template
+        #  before PyInstaller builds the exe, so as to inject date/other infos into it.
+        - "*.manifest"
+        - "*.spec"
+        # Installer logs
+        - pip-log.txt
+        - pip-delete-this-directory.txt
+        # Unit test / coverage reports
+        - htmlcov/
+        - .tox/
+        - .nox/
+        - .coverage
+        - .coverage.*
+        - .cache
+        - nosetests.xml
+        - coverage.xml
+        - "*.cover"
+        - .hypothesis/
+        - .pytest_cache
+        - cover/
+        # Translations
+        - "*.mo"
+        - "*.pot"
+        # Django stuff:
+        - "*.log"
+        - local_settings.py
+        - db.sqlite3
+        - db.sqlite3-journal
+        # Flask stuff:
+        - instance/
+        - .webassets-cache
+        # Scrapy stuff:
+        - .scrapy
+        # Sphinx documentation
+        - docs/website/_build/
+        - docs/website/source/api/_autosummary
+        # PyBuilder
+        - .pybuilder/
+        - target/
+        # Jupyter Notebook
+        - .ipynb_checkpoints
+        # IPython
+        - profile_default/
+        - ipython_config.py
+        # pyenv
+        - .python-version
+        # Celery stuff
+        - celerybeat-schedule
+        - celerybeat.pid
+        # SageMath parsed files
+        - "*.sage.py"
+        # Environments
+        - .env
+        - .venv
+        - env/
+        - venv/
+        - ENV/
+        - env.bak/
+        - venv.bak/
+        # Spyder project settings
+        - .spyderproject
+        - .spyproject
+        # Rope project settings
+        - .ropeproject
+        # mkdocs documentation
+        - /site
+        # mypy
+        - .mypy_cache/
+        - .dmypy.json
+        - dmypy.json
+        # Pyre type checker
+        # There are reports this comes from LLVM profiling, but also Xcode 9.
+        - .pyre/
+        # pytype static type analyzer
+        - .pytype/
+        # Cython debug symbols
+        - cython_debug/
+        # profraw files from LLVM? Unclear exactly what triggers this
+        # There are reports this comes from LLVM profiling, but also Xcode 9.
+        - "*profraw"
+        # In-tree generated files
+        - "*/_version.py"
+        # VSCode
+        - .vscode/
+        # PyCharm
+        - .idea/
+        # MacOS system files
+        - .DS_Store
+        # RepoDynamics local configuration file
+        - .github/.control/local_config.yaml
+    branch:
+      main:
+        name: main
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+      release:
+        prefix: release/v
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+            require_pull_request:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: true
+              require_last_push_approval: true
+              require_review_thread_resolution: true
+              required_approving_review_count: 1
+      pre-release:
+        prefix: prerelease/v
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+      #      require_pull_request:
+      #        dismiss_stale_reviews_on_push: true
+      #        require_code_owner_review: true
+      #        require_last_push_approval: true
+      #        require_review_thread_resolution: true
+      #        required_approving_review_count: 1
+      development:
+        prefix: dev/
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+      auto-update:
+        prefix: auto-update/
+        ruleset:
+          enforcement: enabled
+          bypass_actors:
+            - role: organization_admin
+              mode: always
+            - role: repository_admin
+              mode: always
+          rule:
+            protect_creation: true
+            protect_deletion: true
+            protect_force_push: true
+            require_linear_history: true
+    tag:
+      version:
+        prefix: ver/
+    dir:
+      path:
+        control: .control
+        local: .local
+        source: src
+        tests: tests
+        website: docs/website
+type: object
+additionalProperties: false
+required: [ repo, branch ]
+properties:
+  repo:
+    title: GitHub/Git repository settings.
+    description: |
+      These include general GitHub repository metadata
+      such as description, topics (keywords), and homepage URL,
+      as well as security configurations, merge strategies,
+      and section toggles (e.g., Discussions, Projects, Wiki).
+      Git settings include `.gitignore` and `.gitattributes` files.
+      
+      This is automatically retrieved from GitHub's REST API
+                during configuration synchronization, and is identical to the
+                [API response](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository), 
+                with few exceptions: 
+                - For forked repositories, this is set to the source repository's metadata,
+                  so `parent` and `source` keys are never present,
+                  since the data here always refers to `source`.
+                - Keys whose values can frequently change 
+                  are removed to avoid unnecessary updates to the repository metadata files.
+                  These are: 'forks', 'forks_count', 'network_count', 'open_issues',
+                  'open_issues_count', 'pushed_at', 'size', 'stargazers_count',
+                  'subscribers_count', 'updated_at', 'watchers', and 'watchers_count'.
+                - `template_repository` key is also removed, as it is not relevant to the repository's metadata.
+                Note that only some important properties are listed here.
+                For a full list of available properties, refer to the
+                [GitHub REST API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository).
+    examples:
+      - id: 1296269
+        node_id: MDEwOlJlcG9zaXRvcnkxMjk2MjY5
+        name: Hello-World
+        full_name: octocat/Hello-World
+        owner:
+          login: octocat
+          id: 1
+          node_id: MDQ6VXNlcjE=
+          avatar_url: https://github.com/images/error/octocat_happy.gif
+          gravatar_id: ''
+          url: https://api.github.com/users/octocat
+          html_url: https://github.com/octocat
+          followers_url: https://api.github.com/users/octocat/followers
+          following_url: https://api.github.com/users/octocat/following{/other_user}
+          gists_url: https://api.github.com/users/octocat/gists{/gist_id}
+          starred_url: https://api.github.com/users/octocat/starred{/owner}{/repo}
+          subscriptions_url: https://api.github.com/users/octocat/subscriptions
+          organizations_url: https://api.github.com/users/octocat/orgs
+          repos_url: https://api.github.com/users/octocat/repos
+          events_url: https://api.github.com/users/octocat/events{/privacy}
+          received_events_url: https://api.github.com/users/octocat/received_events
+          type: User
+          site_admin: false
+        private: false
+        html_url: https://github.com/octocat/Hello-World
+        description: This your first repo!
+        fork: false
+        url: https://api.github.com/repos/octocat/Hello-World
+        archive_url: https://api.github.com/repos/octocat/Hello-World/{archive_format}{/ref}
+        assignees_url: https://api.github.com/repos/octocat/Hello-World/assignees{/user}
+        blobs_url: https://api.github.com/repos/octocat/Hello-World/git/blobs{/sha}
+        branches_url: https://api.github.com/repos/octocat/Hello-World/branches{/branch}
+        collaborators_url: https://api.github.com/repos/octocat/Hello-World/collaborators{/collaborator}
+        comments_url: https://api.github.com/repos/octocat/Hello-World/comments{/number}
+        commits_url: https://api.github.com/repos/octocat/Hello-World/commits{/sha}
+        compare_url: https://api.github.com/repos/octocat/Hello-World/compare/{base}...{head}
+        contents_url: https://api.github.com/repos/octocat/Hello-World/contents/{+path}
+        contributors_url: https://api.github.com/repos/octocat/Hello-World/contributors
+        deployments_url: https://api.github.com/repos/octocat/Hello-World/deployments
+        downloads_url: https://api.github.com/repos/octocat/Hello-World/downloads
+        events_url: https://api.github.com/repos/octocat/Hello-World/events
+        forks_url: https://api.github.com/repos/octocat/Hello-World/forks
+        git_commits_url: https://api.github.com/repos/octocat/Hello-World/git/commits{/sha}
+        git_refs_url: https://api.github.com/repos/octocat/Hello-World/git/refs{/sha}
+        git_tags_url: https://api.github.com/repos/octocat/Hello-World/git/tags{/sha}
+        git_url: git:github.com/octocat/Hello-World.git
+        issue_comment_url: https://api.github.com/repos/octocat/Hello-World/issues/comments{/number}
+        issue_events_url: https://api.github.com/repos/octocat/Hello-World/issues/events{/number}
+        issues_url: https://api.github.com/repos/octocat/Hello-World/issues{/number}
+        keys_url: https://api.github.com/repos/octocat/Hello-World/keys{/key_id}
+        labels_url: https://api.github.com/repos/octocat/Hello-World/labels{/name}
+        languages_url: https://api.github.com/repos/octocat/Hello-World/languages
+        merges_url: https://api.github.com/repos/octocat/Hello-World/merges
+        milestones_url: https://api.github.com/repos/octocat/Hello-World/milestones{/number}
+        notifications_url:
+          https://api.github.com/repos/octocat/Hello-World/notifications{?since,all,participating}
+        pulls_url: https://api.github.com/repos/octocat/Hello-World/pulls{/number}
+        releases_url: https://api.github.com/repos/octocat/Hello-World/releases{/id}
+        ssh_url: git@github.com:octocat/Hello-World.git
+        stargazers_url: https://api.github.com/repos/octocat/Hello-World/stargazers
+        statuses_url: https://api.github.com/repos/octocat/Hello-World/statuses/{sha}
+        subscribers_url: https://api.github.com/repos/octocat/Hello-World/subscribers
+        subscription_url: https://api.github.com/repos/octocat/Hello-World/subscription
+        tags_url: https://api.github.com/repos/octocat/Hello-World/tags
+        teams_url: https://api.github.com/repos/octocat/Hello-World/teams
+        trees_url: https://api.github.com/repos/octocat/Hello-World/git/trees{/sha}
+        clone_url: https://github.com/octocat/Hello-World.git
+        mirror_url: git:git.example.com/octocat/Hello-World
+        hooks_url: https://api.github.com/repos/octocat/Hello-World/hooks
+        svn_url: https://svn.github.com/octocat/Hello-World
+        homepage: https://github.com
+        default_branch: master
+        is_template: false
+        topics:
+          - octocat
+          - atom
+          - electron
+          - api
+        has_issues: true
+        has_projects: true
+        has_wiki: true
+        has_pages: false
+        has_downloads: true
+        has_discussions: false
+        archived: false
+        disabled: false
+        visibility: public
+        created_at: '2011-01-26T19:01:12Z'
+        permissions:
+          pull: true
+          push: false
+          admin: false
+        allow_rebase_merge: true
+        temp_clone_token: ABTLWHOULUVAXGTRYU7OC2876QJ2O
+        allow_squash_merge: true
+        allow_auto_merge: false
+        delete_branch_on_merge: true
+        allow_merge_commit: true
+        allow_forking: true
+        license:
+          key: mit
+          name: MIT License
+          spdx_id: MIT
+          url: https://api.github.com/licenses/mit
+          node_id: MDc6TGljZW5zZW1pdA==
+        organization:
+          login: octocat
+          id: 1
+          node_id: MDQ6VXNlcjE=
+          avatar_url: https://github.com/images/error/octocat_happy.gif
+          gravatar_id: ''
+          url: https://api.github.com/users/octocat
+          html_url: https://github.com/octocat
+          followers_url: https://api.github.com/users/octocat/followers
+          following_url: https://api.github.com/users/octocat/following{/other_user}
+          gists_url: https://api.github.com/users/octocat/gists{/gist_id}
+          starred_url: https://api.github.com/users/octocat/starred{/owner}{/repo}
+          subscriptions_url: https://api.github.com/users/octocat/subscriptions
+          organizations_url: https://api.github.com/users/octocat/orgs
+          repos_url: https://api.github.com/users/octocat/repos
+          events_url: https://api.github.com/users/octocat/events{/privacy}
+          received_events_url: https://api.github.com/users/octocat/received_events
+          type: Organization
+          site_admin: false
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      description:
+        title: A short project description (cf. [`title`](#cc.title)).
+        description: |
+          This is displayed on the GitHub repository's homepage,
+          and is added to repository metadata to improve 
+          project findability and visibility.
+        type: string
+        examples:
+          - ${{ title }}
+          - Another description different from project title.
+      topics:
+        title: |
+          Project
+          [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics).
+        description: |
+          These keywords help others find your project on GitHub,
+          and can include project's intended purpose, subject area,
+          affinity groups, and other important qualities.
+          Note that GitHub only accepts up to 20 topics.
+        type: array
+        uniqueItems: true
+        maxItems: 20
+        items:
+          title: A project keyword.
+          description: |
+            It must start with an alphanumeric character,
+            and can contain 50 or less ASCII alphanumeric characters and hyphens.
+
+          type: string
+          maxLength: 50
+          pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+      homepage:
+        title: URL of the project's homepage.
+        description: |
+          This is displayed on the GitHub repository's homepage,
+          helping users to easily find your project's website.
+        $ref: 'defs#/definitions/url'
+        default: ${{ url.web.home }}
+      secret_scanning:
+        title: Enable secret scanning.
+        type: boolean
+        default: true
+      secret_scanning_push_protection:
+        title: Enable secret scanning push protection.
+        type: boolean
+        default: true
+      vulnerability_alerts:
+        title: Enable vulnerability alerts.
+        type: boolean
+        default: true
+      automated_security_fixes:
+        title: Enable automated security fixes.
+        type: boolean
+        default: true
+      private_vulnerability_reporting:
+        title: Enable private vulnerability reporting.
+        description: |
+          https://docs.github.com/en/code-security/security-advisories/repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository#enabling-or-disabling-private-vulnerability-reporting-for-a-repository
+        type: boolean
+        default: true
+      has_discussions:
+        title: Enable discussions.
+        type: boolean
+        default: true
+      has_projects:
+        title: Enable projects.
+        type: boolean
+        default: false
+      has_wiki:
+        title: Enable wiki pages.
+        type: boolean
+        default: false
+      allow_merge_commit:
+        title: Allow merge commits.
+        type: boolean
+        default: false
+      allow_rebase_merge:
+        description: Allow rebase merge.
+        type: boolean
+        default: true
+      allow_auto_merge:
+        description: Allow automatic merge.
+        type: boolean
+        default: false
+      delete_branch_on_merge:
+        title: Delete head branch on merge.
+        description: |
+          https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches
+        type: boolean
+        default: true
+      allow_update_branch:
+        title: Allow head branch updates from base branch.
+        type: boolean
+        default: true
+      merge_commit_title:
+        title: Default title of merge commit messages.
+        enum: [ PR_TITLE, MERGE_MESSAGE ]
+        default: PR_TITLE
+      merge_commit_message:
+        title: Default body of merge commit messages.
+        enum: [ PR_TITLE, PR_BODY, BLANK ]
+        default: PR_BODY
+      archived:
+        title: Archive the repository.
+        type: boolean
+        default: false
+      gitattributes:
+        title: The contents of the [`.gitattributes`](https://git-scm.com/docs/gitattributes) file.
+        description: |
+          These are definition of attributes for files and directories in the repository,
+          such as data type (e.g., text or binary), line endings, diff settings, 
+          and merge strategies, to manage how Git handles specific files.
+          The data must be an array of objects, as explained below.
+
+          :::{admonition} Learn More: `.gitattributes`
+          :class: dropdown seealso
+
+          - https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
+          - https://github.com/alexkaratarakis/gitattributes/blob/master/Common.gitattributes
+          - https://github.com/alexkaratarakis/gitattributes/blob/master/Python.gitattributes
+          :::
+        type: array
+        uniqueItems: true
+        items:
+          title: Attributes for a specific filetype.
+          description: |
+            This must be a key-value pair, where the key is a path or glob pattern,
+            and the value is the attributes to set for the matched files,
+            specified as an array of strings.
+          type: object
+          minProperties: 1
+          maxProperties: 1
+          additionalProperties:
+            title: List of attributes to set for the matched files.
+            $ref: "defs#/definitions/nonempty_array_of_unique_strings"
+      gitignore:
+        title: The contents of the [`.gitignore`](https://git-scm.com/docs/gitignore) file.
+        description: |
+          These are definition of files and directories in the repository 
+          to be excluded from version control by Git,
+          preventing them from being pushed to the remote repository.
+          The data must be an array of strings, where each string is a path or glob pattern to ignore.
+
+          :::{admonition} Learn More: `.gitignore`
+          :class: dropdown seealso
+
+          - [Default `gitignore` templates](https://github.com/github/gitignore)
+          :::
+        $ref: "defs#/definitions/nonempty_array_of_unique_strings"
+      id:
+        title: Repository ID.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: integer
+        format: int64
+        examples:
+          - 1296269
+      node_id:
+        title: Repository node ID.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: string
+        examples:
+          - MDEwOlJlcG9zaXRvcnkxMjk2MjY5
+      name:
+        title: Repository name.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: string
+        examples:
+          - PyPackIT
+      full_name:
+        title: Repository full name, i.e., `OWNER-USERNAME/REPOSITORY-NAME`.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: string
+        examples:
+          - RepoDynamics/PyPackIT
+      created_at:
+        title: Repository creation date.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        $ref: date
+      default_branch:
+        title: Default branch name.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: string
+        examples:
+          - main
+      url:
+        title: GitHub repository URLs.
+        description: |
+          These are all automatically generated URLs for various GitHub repository pages,
+          such as the homepage, issues, pull requests, discussions, actions, releases, and security.
+          You can use these to link to specific pages in your repository.
+        default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+        type: object
+        properties:
+          home:
+            title: Repository homepage.
+            auto_default: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
+            $ref: '#/definitions/url'
+          issues:
+            title: GitHub Issues URLs.
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              home:
+                title: URL of the repository's GitHub Issues homepage.
+                default: ${{ repo.url.home }}/issues
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/issues"
+                $ref: '#/definitions/url'
+              chooser:
+                title: URL of repository's GitHub Issue template chooser.
+                default: ${{ repo.url.issues.home }}/new/choose
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/issues/new/choose"
+                $ref: '#/definitions/url'
+              new:
+                title: URLs for opening a new issue.
+                description: |
+                  For each issue form defined in [`issue.forms`](#cc.issue.forms),
+                  a key-value pair is automatically added here,
+                  where the key is the [`id`](#cc.issue.forms[i].id) of the form,
+                  and the value is the URL for opening a new issue with that form.
+                type: object
+                default: { }
+                additionalProperties:
+                  title: New Issue URL
+                  description: URL for opening a new issue with a specific template.
+                  examples:
+                    - "https://github.com/RepoDynamics/PyPackIT/issues/new?template=bug_report.yaml"
+                  $ref: '#/definitions/url'
+          pulls:
+            title: GitHub Pull Requests URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's GitHub Pull Requests homepage.
+                default: ${{ repo.url.home }}/pulls
+                $ref: '#/definitions/url'
+          discussions:
+            title: GitHub Discussions URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's GitHub Discussions homepage.
+                default: ${{ repo.url.home }}/discussions
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/discussions"
+                $ref: '#/definitions/url'
+              new:
+                title: URLs for opening a new discussion.
+                description: |
+                  For each discussion category in [`discussion.category`](#cc.discussion.category),
+                  a key-value pair is automatically added here,
+                  where the key is the same as in `discussion.category` (i.e., the slug of the category name),
+                  and the value is the URL for opening a new discussion in that category.
+                type: object
+                default: { }
+                additionalProperties:
+                  title: URL for opening a new discussion in a specific category.
+                  examples:
+                    - "https://github.com/RepoDynamics/PyPackIT/discussions/new?category=announcements"
+                  $ref: '#/definitions/url'
+          actions:
+            title: GitHub Actions URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's GitHub Actions homepage.
+                default: ${{ repo.url.home }}/actions
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/actions"
+                $ref: '#/definitions/url'
+          releases:
+            title: GitHub Releases URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's GitHub Releases homepage.
+                default: ${{ repo.url.home }}/releases
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/releases"
+                $ref: '#/definitions/url'
+          security:
+            title: GitHub Security URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's GitHub Security homepage.
+                default: ${{ repo.url.home }}/security
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/security"
+                $ref: '#/definitions/url'
+              policy:
+                title: URL of the repository's security policy (cf. [`readme.security`](#cc.readme.security)).
+                default: ${{ repo.url.security.home }}/policy
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/security/policy"
+                $ref: '#/definitions/url'
+              advisories:
+                title: URL of the repository's security advisories.
+                default: ${{ repo.url.security.home }}/advisories
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/security/advisories"
+                $ref: '#/definitions/url'
+              new_advisory:
+                title: URL for creating a new security advisory.
+                default: ${{ repo.url.security.advisories }}/new
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/security/advisories/new"
+                $ref: '#/definitions/url'
+          tree:
+            title: URL of the default branch's tree view.
+            default: ${{ repo.url.home }}/tree/${{ branch.main.name }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/tree/main"
+            $ref: '#/definitions/url'
+          blob:
+            title: URL of the default branch's blob view.
+            default: ${{ repo.url.home }}/blob/${{ branch.main.name }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main"
+            $ref: '#/definitions/url'
+          raw:
+            title: URL of the default branch's raw file view.
+            default: 'https://raw.githubusercontent.com/${{ repo.full_name }}/${{ branch.main.name }}'
+            examples:
+              - "https://raw.githubusercontent.com/RepoDynamics/PyPackIT/main"
+            $ref: '#/definitions/url'
+          readme:
+            title: |
+              URL of the GitHub repository's main `README` file
+              (cf. [`doc.github`](#cc.doc.github)).
+            default: ${{ repo.url.blob }}/${{ readme.github.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"
+            $ref: '#/definitions/url'
+          code_of_conduct:
+            title: |
+              URL of the repository's code of conduct,
+              i.e., the `CODE_OF_CONDUCT` file
+              (cf. [`readme.code_of_conduct`](#cc.readme.code_of_conduct)).
+            default: ${{ repo.url.blob }}/${{ health.code_of_conduct.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODE_OF_CONDUCT.md"
+            $ref: '#/definitions/url'
+          code_owners:
+            title: |
+              URL of the repository's code owners,
+              i.e., the `CODEOWNERS` file
+              (cf. [`readme.code_owners`](#cc.readme.code_owners)).
+            default: ${{ repo.url.blob }}/${{ health.code_owners.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+            $ref: '#/definitions/url'
+          contributing:
+            title: |
+              URL of the repository's contributing guidelines,
+              i.e., the `CONTRIBUTING` file.
+              (cf. [`readme.contributing`](#cc.readme.contributing)).
+            default: ${{ repo.url.blob }}/${{ health.contributing.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CONTRIBUTING.md"
+            $ref: '#/definitions/url'
+          governance:
+            title: |
+              URL of the repository's governance model,
+              i.e., the `GOVERNANCE` file.
+              (cf. [`readme.governance`](#cc.readme.governance)).
+            default: ${{ repo.url.blob }}/${{ health.governance.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/GOVERNANCE.md"
+            $ref: '#/definitions/url'
+          support:
+            title: |
+              URL of the repository's support resources,
+              i.e., the `SUPPORT` file.
+              (cf. [`readme.support`](#cc.readme.support)).
+            default: ${{ repo.url.blob }}/${{ health.support.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/SUPPORT.md"
+            $ref: '#/definitions/url'
+          license:
+            title: |
+              URL of the repository's license file.
+              (cf. [`license`](#cc.license)).
+            default: ${{ repo.url.blob }}/${{ license.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
+            $ref: '#/definitions/url'
+  branch:
+    title: GitHub/Git branch settings.
+    description:
+      These include names/prefixes and protection rules for different branch types.
+    type: object
+    additionalProperties: false
+    required: [ main, release, pre, dev, auto ]
+    properties:
+      main:
+        title: Configurations for the default (aka main, trunk) branch of the repository.
+        $ref: "#/definitions/branch_config"
+      release:
+        title: Configurations for release branches.
+        $ref: "#/definitions/branch_config"
+      pre:
+        title: Configurations for pre-release branches.
+        $ref: "#/definitions/branch_config"
+      dev:
+        title: Configurations for development branches.
+        $ref: "#/definitions/branch_config"
+      auto:
+        title: Configurations for auto-update branches.
+        $ref: "#/definitions/branch_config"
+  tag:
+    title: Configurations for the repository tags.
+    type: object
+    additionalProperties: false
+    required: [ version ]
+    properties:
+      version:
+        title: Configurations for version tags.
+        type: object
+        additionalProperties: false
+        required: [ prefix ]
+        properties:
+          prefix:
+            title: Prefix of version tags.
+            description: |
+              You must choose a prefix that does not conflict with other tags.
+              For example, if you choose `v` (so version tags are `v1.0.0`, `v1.0.1`, etc.),
+              then no other tags should start with `v`.
+            type: string
+            examples:
+              - version/
+              - ver/
+              - v/
+              - v
+  dir:
+    title: Directory structure of the repository.
+    description: |
+      From the seven [main directories](/manual/fundamentals/structure/index.md) in your repository
+      that {{pp_meta.name}} manages and works with,
+      the [GitHub directory](/manual/fundamentals/structure/github.md)
+      and the [Docs directory](/manual/fundamentals/structure/docs.md)
+      have fixed paths according to GitHub requirements,
+      while the path to the other five directories can be customized.
+      As discussed before,
+      [Customizing the path to the control center directory](/manual/control/structure/index.md#location)
+      requires a configuration file outside the control center directory.
+      The path to the remaining four directories,
+      i.e., the [source](/manual/fundamentals/structure/source.md),
+      [tests](/manual/fundamentals/structure/tests.md),
+      [website](/manual/fundamentals/structure/website.md), and
+      [local](/manual/fundamentals/structure/local.md) directories,
+      along with the paths to subdirectories of the local directory,
+      can be customized using the `path.yaml` file
+      in your repository's control center, as described in this section.
+      
+      All paths are relative to the root of the repository.
+      
+      The `local` key accepts an object with
+      keys `root`, `cache`, and `report`. The `root` key must be set to a string defining
+      the path to the local directory itself. The `cache` and `report` keys
+      correspond to the cache and report subdirectories of the local directory;
+      they accept an object with a key `root` that must be set to a string defining
+      the path to the corresponding subdirectory, relative to the root of the local directory.
+      In addition, they each define paths to other subdirectories of the corresponding cache/report subdirectory,
+      each used for a specific tool. By default, the following keys are defined
+      for both the `cache` and `report` subdirectories: `repodynamics`, `coverage`, `mypy`, `pylint`,
+      `pytest`, and `ruff`. Each of these keys must be set to a string defining the path
+      to the cache/report subdirectory for that tool,
+      relative to the root of the corresponding cache/report subdirectory.
+      
+      You can also add other custom keys under `dir.local.cache` and `dir.local.report`
+      for other tools that you use, and reference them in the corresponding configuration files.
+      Note that you do not have to specify all keys in the `path.yaml` file;
+      for all keys that are not specified, {{pp_meta.name}} will use the default values.
+      Also, you can entirely omit the `path.yaml` file if you do not want to customize any paths.
+      
+      
+      For example, if you only want to
+      - change the path of the source directory to `my_source_directory`,
+      - change the path of the cache subdirectory to `my_cache_directory`, and
+      - add a new subdirectory `my_tool_subdirectory` under the report subdirectory
+        for the tool `my_tool`,
+      
+      :::{admonition} Important Considerations
+      :class: important
+
+      - You must also manually create/rename/move the corresponding directories to match the set path,
+        in the same commit where you create/modify/delete the `path.yaml` file.
+      - All four main directories must be orthogonal to all other
+        [main directories](/manual/fundamentals/structure/index.md) in your repository,
+        meaning that they cannot be a subdirectory of any other main directory.
+      :::
+      
+      {{pp_meta.name}} automatically manages a variety of files in your repository's main directories,
+      and performs a number of tasks that require access to these files.
+      For example, to run your tests and build your website, {{pp_meta.name}} needs to know
+      the path to tests and website directories. In addition, these paths are used as
+      substitutions in a number of other configuration files for your project,
+      so that you do not have to manually update these files when you change a path.
+      The following are just a few examples of configuration files where these paths are used:
+      
+      :::{code-block} toml
+      :caption: 🗂 `package_python/build.toml`
+      [tool.setuptools.packages.find]
+      where = [ "${‎{ path.dir.source }}" ]
+      
+      [tool.versioningit.onbuild]
+      source-file = "${‎{ path.dir.source }}/${‎{ package.name }}/__init__.py"
+      :::
+      
+      :::{code-block} toml
+      :caption: 🗂 `package_python/tools/mypy.toml`
+      [tool.mypy]
+      cache_dir = "${‎{ path.dir.local.cache.mypy }}"
+      any_exprs_report = "${‎{ path.dir.local.report.mypy }}"
+      html_report = "${‎{ path.dir.local.report.mypy }}"
+      linecount_report = "${‎{ path.dir.local.report.mypy }}"
+      linecoverage_report = "${‎{ path.dir.local.report.mypy }}"
+      lineprecision_report = "${‎{ path.dir.local.report.mypy }}"
+      txt_report = "${‎{ path.dir.local.report.mypy }}"
+      :::
+      
+      
+      :::{code-block} toml
+      :caption: 🗂 `package_python/tools/ruff.toml`
+      [tool.ruff]
+      cache-dir = "${‎{ path.dir.local.cache.ruff }}"
+      :::
+      
+      :::{code-block} yaml
+      :caption: 🗂 `ui/web.yaml`
+      readthedocs:
+        conda:
+          environment: ${‎{ path.dir.website }}/requirements.yaml
+        sphinx:
+          configuration: ${‎{ path.dir.website }}/source/conf.py
+      :::
+      
+      :::{code-block} text
+      📦 <REPOSITORY-ROOT>
+       ┃
+       ┗ 🗂 .local
+         ┃
+         ┣ 🗂 cache
+         ┃ ┃
+         ┃ ┣ 🗂 coverage
+         ┃ ┃
+         ┃ ┣ 🗂 mypy
+         ┃ ┃
+         ┃ ┣ 🗂 pylint
+         ┃ ┃
+         ┃ ┣ 🗂 pytest
+         ┃ ┃
+         ┃ ┣ 🗂 repodynamics
+         ┃ ┃
+         ┃ ┗ 🗂 ruff
+         ┃
+         ┗ 🗂 report
+           ┃
+           ┣ 🗂 coverage
+           ┃
+           ┣ 🗂 mypy
+           ┃
+           ┣ 🗂 pylint
+           ┃
+           ┣ 🗂 pytest
+           ┃
+           ┣ 🗂 repodynamics
+           ┃
+           ┗ 🗂 ruff
+      :::
+    type: object
+    additionalProperties: false
+    properties:
+      control:
+        title: Path to the control center directory.
+        type: string
+        default: .control
+      local:
+        title: Path to the local directory.
+        type: string
+        default: .local
+      src:
+        title: Path to the source code directory.
+        type: string
+        examples:
+          - src
+      test:
+        title: Path to the test suite directory.
+        type: string
+        examples:
+          - tests
+      web:
+        title: Path to the website directory.
+        type: string
+        examples:
+          - docs/website
+      media:
+        title: Path to the media directory.
+        description: |
+          Due to an issue with the PyData Sphinx Theme, the logo files used in the navbar must be explicitly
+          added to the root of static path, since PyData always looks there, regardless of the set path.
+          Ref:
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1325 
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1328
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1385
+        type: string
+        examples:
+          - docs/media
+definitions:
+  branch_config:
+    title: Branch Configurations
+    description: Configurations for a branch (group).
+    type: object
+    additionalProperties: false
+    required: [ name ]
+    properties:
+      name:
+        title: Branch Name
+        description: Name (for main branch) or prefix (for branch groups) of the branch (group).
+        type: string
+        examples:
+          - main
+          - release/v
+          - prerelease/v
+          - dev/
+          - auto-update/
+      ruleset:
+        title: Ruleset
+        description: Branch protection rules for the branch (group).
+        type: object
+        additionalProperties: false
+        required: [ enforcement, bypass_actors, rule ]
+        properties:
+          enforcement:
+            title: Enforcement
+            description: |
+              The enforcement level of the ruleset; one of:
+              - 'enabled': Enforce rules.
+              - 'disabled': Do not enforce rules.
+              - 'evaluate': Allows admins to test rules before enforcing them.
+                Admins can view insights on the Rule Insights page.
+                This is only available with GitHub Enterprise.
+            type: string
+            enum: [ disabled, evaluate, enabled ]
+            default: enabled
+          bypass_actors:
+            title: Bypass Actors
+            description: List of roles, teams, or apps allowed to bypass the rules.
+            type: array
+            default:
+              - role: organization_admin
+                mode: always
+              - role: repository_admin
+                mode: always
+            uniqueItems: true
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                role:
+                  title: Role
+                  type: string
+                  enum: [ organization_admin, repository_admin, repository_maintainer, repository_writer ]
+                id:
+                  title: ID
+                  description: |
+                    The account ID of the actor.
+                    If `type` is organization_admin, this should be 1.
+                  type: integer
+                type:
+                  title: Type
+                  description: The type of actor.
+                  type: string
+                  enum: [ organization_admin, repository_role, team, integration ]
+                mode:
+                  title: Mode
+                  description: |
+                    When the specified actor can bypass the ruleset.
+                    'pull_request' means that an actor can only bypass rules on pull requests.
+                  type: string
+                  enum: [ always, pull_request ]
+                  default: always
+              oneOf:
+                - required: [ role, mode ]
+                - required: [ id, type, mode ]
+          rule:
+            title: Rules
+            description: Rules to enforce for the branch.
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              protect_creation:
+                description: |
+                  Prevent users from creating matching refs.
+                type: boolean
+                default: true
+              protect_modification:
+                description: |
+                  Prevent users from updating matching refs.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  allow_fetch_and_merge:
+                    description: Still allow the branch to pull changes from its upstream repository.
+                    type: boolean
+                    default: true
+                required: [ allow_fetch_and_merge ]
+              protect_deletion:
+                description: |
+                  Prevent users from deleting matching refs.
+                  Omitting this key is equivalent to setting it to `false`.
+                type: boolean
+                default: true
+              protect_force_push:
+                description: Prevent users from force-pushing to matching refs.
+                type: boolean
+                default: true
+              require_linear_history:
+                description: Prevent merge commits from being pushed to matching refs.
+                type: boolean
+                default: true
+              require_signatures:
+                description: Require commits on matching refs to have verified signatures.
+                type: boolean
+              require_pull_request:
+                description: |
+                  Require all commits be made to a non-target branch
+                  and submitted via a pull request before they can be merged.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  dismiss_stale_reviews_on_push:
+                    description: |
+                      Automatically dismiss previous approving pull-request reviews
+                      when new reviewable commits are pushed.
+                    type: boolean
+                    default: true
+                  require_code_owner_review:
+                    description: |
+                      Require an approving review in pull requests including files
+                      with a designated code owner.
+                    type: boolean
+                    default: true
+                  require_last_push_approval:
+                    description: |
+                      Require an approving review on the most recent reviewable push
+                      by someone other than the actor performing the push.
+                    type: boolean
+                    default: true
+                  require_review_thread_resolution:
+                    description: |
+                      Require all conversations on code to be resolved before a pull request
+                      can be merged into matching refs.
+                    type: boolean
+                    default: true
+                  required_approving_review_count:
+                    description: |
+                      The number of approving reviews that are required
+                      before a pull request can be merged into matching refs.
+                    type: integer
+                    default: 1
+                required:
+                  - dismiss_stale_reviews_on_push
+                  - require_code_owner_review
+                  - require_last_push_approval
+                  - require_review_thread_resolution
+                  - required_approving_review_count
+              require_status_checks:
+                description: |
+                  Require status checks to pass before a pull request can be merged into matching refs.
+                  Omitting this key will disable the protection rule.
+                type: object
+                additionalProperties: false
+                properties:
+                  contexts:
+                    description: The list of required status checks.
+                    type: array
+                    uniqueItems: true
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        name:
+                          description: The name of the status check context.
+                          type: string
+                        integration_id:
+                          description: The optional integration ID that this status check must originate from.
+                          type: integer
+                      required: [ context ]
+                  strict:
+                    description: Require status checks to pass on the latest commit.
+                    type: boolean
+                    default: true
+                required: [ contexts, strict ]
+              required_deployment_environments:
+                description: |
+                  A list of environments that must be successfully deployed into
+                  before merging into matching refs is allowed.
+                  Omitting this key will disable the protection rule.
+                type: array
+                uniqueItems: true
+                items:
+                  type: string

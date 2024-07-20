@@ -63,8 +63,8 @@ class DynamicFileType(_Enum):
 class DynamicFile(_NamedTuple):
     id: str
     category: DynamicFileType
-    rel_path: str
-    path: _Path
+    rel_path: _Path | str
+    path: _Path | None = None
     alt_paths: list[_Path] | None = None
     is_dir: bool = False
 
@@ -270,9 +270,6 @@ class InitCheckAction(_Enum):
     PULL = "pull"
     COMMIT = "commit"
     AMEND = "amend"
-
-
-
 
 
 class IssueStatus(_Enum):

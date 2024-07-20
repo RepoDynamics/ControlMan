@@ -1,0 +1,2261 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [ url ]
+default:
+  title: A Placeholder Project Title
+  abstract: |
+    Replace this text with a short abstract of ${{ name }},
+    describing its purpose and main features.
+    By default, this text is displayed on the repository's main README file,
+    on the homepage of the project's website,
+    on the project's PyPI and TestPyPI pages,
+    and on the package's main docstring.
+    Like all other entries in the repository's control center,
+    this text can also contain dynamic references to other entries,
+    using the `${{ path.to.value }}` syntax.
+    By default, the first occurrence of the name of the project
+    in this text is styled as bold/italic and linked to the project's website.
+    The text can also contain (GitHub Flavored) HTML syntax,
+    such as `<b>` for <b>bold text</b>, `<i>` for <i>italic text</i>,
+    `<u>` for <u>underlined text</u>, and `<a>`
+    for <a href="https://pypackit.repodynamics.com">hyperlinks</a>.
+  keywords:
+    - Project Keyword
+    - Another Keyword
+    - Third Keyword
+  highlights:
+    - title: First Key Feature
+      description: |
+        Description of the first key feature of ${{ name }}.
+        By default, these keynotes are displayed on the repository's main README file,
+        on the homepage of the project's website, and on the project's PyPI and TestPyPI pages.
+    - title: Second Key Feature
+      description: |
+        Description of the second key feature of ${{ name }}.
+        For aesthetic reasons, it is recommended to keep the descriptions of all keynotes
+        approximately the same length.
+    - title: Third Key Feature
+      description: |
+        Description of the third key feature of ${{ name }}.
+        You can add as many keynotes as you want.
+        However, in order to keep the READMEs clean and tidy,
+        it is recommended to keep the number of keynotes between 3 and 7.
+  license:
+    id: AGPL-3.0-or-later
+  copyright:
+    notice: ${{ copyright.period }} ${{ team.owner.name.full }}
+  maintain:
+    pull:
+      code_owners:
+        - "*": [ owner ]
+    issue:
+      app_bug_gui: [ owner ]
+      app_bug_cli: [ owner ]
+      app_bug_api: [ owner ]
+      app_bug_setup: [ owner ]
+      app_request_enhancement: [ owner ]
+      app_request_feature: [ owner ]
+      app_request_breaking: [ owner ]
+    discussion:
+      announcements: [ owner ]
+    security: owner
+    code_of_conduct: owner
+    support: owner
+  citation:
+    title: '${{ name }}: ${{ title }}'
+    authors:
+      - id: owner
+    contacts:
+      - owner
+    message: If you use ${{ name }}, please cite it using the metadata from this file.
+properties:
+  name:
+    title: Name of the project.
+    description: |
+      This is used to dynamically reference the project name in various places,
+      such as documentation website, README files, and community health files,
+      and to derive the [package name](#cc.pkg.name) when not explicitly specified.
+      
+      :::{admonition} Naming Best Practices
+      :class: important dropdown
+      The project name on itself has no restrictions and can be any valid unicode string.
+      However, by default, it is also used to derive the 
+      distribution name (cf. [`pkg.name`](#cc.pkg.name))
+      and import name (cf. [`pkg.import_name`](#cc.pkg.import_name)) of the package,
+      which have stricter naming specifications.
+      While you can separately set these,
+      for consistency, it is recommended to **choose a project name
+      that can be used to automatically derive the distribution and import name of the package**.
+      This helps to avoid confusion and makes it easier for others to find, install, and use your package.
+      Note that if you do not provide a package name and the project name does not meet the naming requirements
+      after transformation, **an error will be raised**.
+      :::
+    default_auto: |
+      repository name (hyphens replaced with spaces)
+    templating: load
+    type: string
+  title:
+    title: A single-line description or slogan of the project.
+    description: |
+      This is automatically added to package metadata and is
+      displayed on the About section of the project's GitHub, 
+      (cf. [`repo.config.description`](#cc.repo.config.description)),
+      PyPI, and TestPyPI repositories
+      (cf. [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
+      key of the `pyproject.toml` file).
+    $ref: 'defs#/definitions/one_line_string'
+  abstract:
+    title: A short description of the project.
+    description: |
+      This is automatically displayed on the repository's main README file
+      (cf. [`readme.github`](#cc.readme.github)),
+      on the homepage of the project's website,
+      on the project's PyPI and TestPyPI pages
+      (cf. [`readme.pypi`](#cc.readme.pypi)),
+      and on the package's main docstring
+      (cf. [`pkg.docs.init`](#cc.pkg.docs.init)).
+      It is also added to the citation metadata of the project
+      (cf. [`citation.abstract`](#cc.citation.abstract)).
+      
+      By default, the first occurrence of the project's name
+      is styled as bold/italic and linked to the project's website.
+      The text can also contain (GitHub Flavored) HTML syntax,
+      for example, to make text bold, italic, or to add hyperlinks.
+    type: string
+  keywords:
+    title: Keywords categorizing the project.
+    description: |
+      These are automatically added as
+      [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics)
+      to the GitHub repository (cf. [`repo.config.topics`](#cc.repo.config.topics)), and as
+      [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
+      metadata to the package's `pyproject.toml` file, helping to make it easier to discover.
+    type: object
+    additionalProperties: false
+    properties:
+      display:
+        title: Display-friendly keywords.
+        description: |
+          These can contain capital letters, spaces, and other characters,
+          and are used on platforms that accept such keywords,
+          including PyPI and TestPyPI.
+        type: array
+        uniqueItems: true
+        maxItems: 20
+        items:
+          type: string
+      slug:
+        title: Machine-friendly keywords.
+        description: |
+          These are used in places that only accept keyword slugs, such as GitHub
+          (cf. [`repo.config.topics`](#cc.repo.config.topics)).
+          By default, these are automatically generated from the `display` keywords
+          by converting them to slug format and discarding any resulting slug
+          that does not meet the requirements (i.e. max. length > 50).
+        default_auto: slugs of [`keywords.display`](#cc.keywords.display)
+        type: array
+        uniqueItems: true
+        maxItems: 20
+        items:
+          type: string
+          maxLength: 50
+          pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+  highlights:
+    title: Key features of the project.
+    description: |
+      These are automatically displayed on the repository's main README file
+      (cf. [`readme.github`](#cc.readme.github)),
+      on the homepage of the project's website,
+      and on the project's PyPI and TestPyPI pages
+      (cf. [`readme.pypi`](#cc.doc.pypi)).
+    type: array
+    uniqueItems: true
+    items:
+      type: object
+      additionalProperties: false
+      required: [ title, description ]
+      properties:
+        title:
+          title: Title of the feature.
+          type: string
+        description:
+          title: Description of the feature.
+          type: string
+  team:
+    title: Natural and legal persons involved in the project.
+    description: |
+      For each person (copyright holder, author, maintainer, research group, institution, etc.),
+      define a key-value pair, where the key is the ID of the person
+      ([`owner`](#cc.team.owner)) is pre-defined).
+      The ID can then be used to reference the person in other configurations
+      (e.g. see [`maintain`](#cc.maintain) and [`citation`](#cc.citation)).
+      Also, the information of each person can be used directly
+      (e.g. see [`copyright.notice`](#cc.copyright.notice)).
+    type: object
+    properties:
+      owner:
+        title: The repository owner on GitHub.
+        description: |
+          The `github` key is always automatically filled with information from the GitHub API.
+          Any other keys that are not provided are also 
+          automatically filled, as along as they have a corresponding information
+          in the GitHub API (cf. [`entity`](#cc.def.entity)).
+        $ref: '#/definitions/entity'
+    additionalProperties:
+      title: A natural person or entity involved in the project.
+      $ref: '#/definitions/entity'
+  license:
+    title: License of the project.
+    description: |
+      You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
+      by providing its `id`, or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
+      When a supported `id` is set, all other keys are filled automatically.
+      Nevertheless, you can still override any key by providing the corresponding custom value.
+      The license is then automatically incorporated into the project.
+      
+      :::{admonition} External Resources
+      :class: dropdown seealso
+
+      For more information about open-source licenses, see:
+      - [SPDX License List](https://spdx.org/licenses/)
+      - [Open Source Initiative](https://opensource.org/license)
+      - [Choose a License](https://choosealicense.com/)
+      - [SPDX License List Data (JSON)](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
+      :::
+    examples:
+      - id: unlicense
+      - id: mit
+        notice: |
+          This is a custom license notice that overwrites
+          the default MIT license's notice.
+      - shortname: MCL v1.0
+        fullname: My Custom License 1.0
+        text: |
+          My Custom License
+          Version 1.0, January 2024
+          https://mywebsite.com/my-custom-license
+        notice: |
+          Licensed under My Custom License, Version 1.0 (the "License");
+          you may not use this file except in compliance with the License.
+          You may obtain a copy of the License at https://mywebsite.com/my-custom-license
+    type: object
+    additionalProperties: false
+    required: [ id ]
+    properties:
+      id:
+        title: |
+          [SPDX](https://spdx.org/licenses/) ID of the license.
+        description: |
+          If one of the supported IDs are selected,
+          the rest of the keys are automatically filled in.
+          Otherwise, `name`, `text`, and `notice` must be provided.
+          Supported IDs are:
+          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
+          - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
+          - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
+          - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
+          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
+          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
+          - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
+          - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
+          - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
+          - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
+          - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
+        $ref: '#/definitions/spdx_license_id'
+      name:
+        title: Full name of the license.
+        type: string
+        examples:
+          - GNU Affero General Public License v3.0 or later
+          - MIT License
+          - BSD 3-Clause License
+      trove:
+        title: |
+          [Trove classifier](https://pypi.org/classifiers/) of the license.
+        description: |
+          This is automatically added to package metadata
+          (cf. [`pkg.classifiers`](#cc.pkg.classifiers))
+          to help PyPI better categorize your package,
+          so that users can find your package when searching for packages with a specific license.
+        type: string
+        pattern: "^License :: "
+        examples:
+          - 'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
+          - 'License :: OSI Approved :: MIT License'
+          - 'License :: OSI Approved :: BSD License'
+      text:
+        title: Full text of the license.
+        type: string
+      notice:
+        title: Short text of the license.
+        description: |
+          This is automatically added to the main docstring of the package
+          (cf. [`pkg.docs.init`](#cc.pkg.docs.init)).
+        type: string
+      path:
+        title: |
+          Path to the
+          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
+          file.
+        description: |
+          This file must be named `LICENSE` (case-sensitive)
+          and placed in the root of the repository. 
+          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+        type: string
+        pattern: ^LICENSE(?i:.(txt|md|rst))?$
+        default: LICENSE
+        examples:
+          - LICENSE.md
+          - LICENSE.txt
+          - LICENSE.rst
+  copyright:
+    title: Copyright information of the project.
+    description: |
+      The copyright [`notice`](#cc.copyright.notice)
+      is automatically included in several places,
+      such as the license texts (when a pre-defined license is used),
+      the main docstring of the package (cf. [`pkg.docs.init`](#cc.pkg.docs.init)),
+      and the footer of documentation files (cf. [`theme.footer`](#cc.theme.footer)),
+    examples:
+      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
+      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
+        year_start: 2020
+      - notice: ${{ copyright.period }} John Doe
+      - notice: John Doe
+        year_start: 2020
+    type: object
+    additionalProperties: false
+    required: [ notice ]
+    properties:
+      notice:
+        title: Copyright notice.
+        description: |
+          This is the final form of the notice that will be displayed.
+        type: string
+        examples:
+          - ${{ copyright.period }} ${{ team.owner.name.full }}
+          - ${{ copyright.period }} John Doe
+          - A Custom Copyright Notice
+      period:
+        title: Year period to use in the copyright notice.
+        description: |
+          If not provided, it will be automatically set
+          using the value of [`start_year`](#cc.copyright.start_year), as follows:
+          - If `start_year` is the same as the current year, 
+            the period is set to the current year, e.g., `2024`.
+          - If `start_year` is before the current year,
+            the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
+          - If `start_year` is after the current year, an error is raised.
+        type: string
+      start_year:
+        title: Start year of the project.
+        description: |
+          This can be used to dynamically set the [`period`](#cc.copyright.period).
+        default_auto: repository creation year
+        type: integer
+        minimum: 1980
+        maximum: 2040
+  contact:
+    title: Contact information of the project.
+    type: object
+    additionalProperties: false
+    properties:
+      email:
+        title: Email address of the project.
+        $ref: email
+      orcid:
+        title: ORCID iD of the project.
+        $ref: orcid
+  maintain:
+    title: Maintainers of the project.
+    description: |
+      Here you can define maintainers for different parts of the project,
+      such as pull request reviewers, issue assignees, and discussion moderators.
+      These will then be automatically assigned to corresponding tasks,
+      and their information will be added tp the project's documentation,
+      including website, citation, README, and community files,
+      as well as package metadata.
+    type: object
+    additionalProperties: false
+    properties:
+      pull:
+        title: Pull request reviewers of the project.
+        type: object
+        additionalProperties: false
+        properties:
+          code_owners:
+            title: Project code owners.
+            description: |
+              This is used to automatically maintain the
+              [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+              file (cf. [`doc.code_owners`](#cc.doc.code_owners)),
+              which will then be used to automatically assign reviewers to pull requests
+              based on the modified files.
+              For each path or glob pattern, add a key-value pair,
+              where the key is the path or glob pattern,
+              and the value is an array of code owners' IDs, as defined in [`team`](#cc.team).
+              Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
+              the last matching pattern takes the most precedence.
+            type: array
+            minItems: 1
+            uniqueItems: true
+            examples:
+              - - "*": [ owner ]  # Default owners for all unassigned files.
+                - "/*": [ a_maintainer ]  # All files directly under root directory.
+                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
+            items:
+              title: Code owners of a specific path or glob pattern.
+              type: object
+              minProperties: 1
+              maxProperties: 1
+              additionalProperties:
+                title: IDs of the code owners, as defined in [`team`](#cc.team).
+                $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+      issue:
+        title: Assignees of project issues.
+        description: |
+          For each issue form defined in [`issue.forms`](#cc.issue.forms),
+          add a key-value pair where the key is the issue form's [`id`](#cc.issue.forms[i].id),
+          and the value is an array of assignees' IDs, as defined in [`team`](#cc.team).
+        examples:
+          - app_bug_api: [ owner ]
+            app_bug_cli: [ owner, some_maintainer ]
+        type: object
+        additionalProperties:
+          title: ID of assignees, as defined in [`team`](#cc.team).
+          $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+      discussion:
+        title: Assignees of project discussions
+        description: |
+          For each discussion category form defined in
+          [`discussion.category.*.form`](#cc.discussion.category.*.form),
+          add a key-value pair where the key is the category's [slug](#cc.discussion.category),
+          and the value is an array of assignees' IDs, as defined in [`team`](#cc.team).
+        examples:
+          - announcements: [ some_maintainer_id, some-other-maintainer-id ]
+        type: object
+        additionalProperties:
+          title: ID of assignees, as defined in [`team`](#cc.team).
+          $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+      security:
+        title: ID of project's security maintainer, as defined in [`team`](#cc.team).
+        type: string
+      code_of_conduct:
+        title: ID of project's code of conduct enforcer, as defined in [`team`](#cc.team).
+        type: string
+      support:
+        title: ID of project's support contact, as defined in [`team`](#cc.team).
+        type: string
+  citation:
+    title: Project citation information.
+    description: |
+      Among others, this is used to automatically maintain a
+      [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
+      ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
+      This object closely follows the
+      [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
+      (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)),
+      with some modifications, e.g.:
+      - `doi` (given you have [activated your Zenodo account](#man.activate_zenodo)),
+        `version` and `date-released`are automatically filled for each new release.
+      - `cff-version` is automatically added to the file.
+    type: object
+    additionalProperties: false
+    required: [ title, authors, message ]
+    properties:
+      title:
+        title: The name of the project.
+        examples:
+          - '${{ name }}: ${{ title }}'
+          - ${{ name }}
+          - ${{ pkg.name }}
+          - A Custom Title
+        $ref: nonempty_string
+      authors:
+        title: Core author(s) of the project, ordered by contribution (highest first).
+        description: |
+          These are automatically displayed on the Credits section of the project's website,
+          the front page of the project's PDF documentation,
+          and the project's PyPI and TestPyPI pages
+          (by being added to package metadata, i.e.,
+          the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+          key of the `pyproject.toml` file).
+        examples:
+          - - id: owner
+              roles: [ concept, dev, manage ]
+            - id: some_author_id
+              roles: [ dev, maint ]
+        default: [ owner ]
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: An author of the project/package.
+          type: object
+          additionalProperties: false
+          required: [ id ]
+          properties:
+            id:
+              title: ID of the author, as defined in [`team`](#cc.team).
+              type: string
+            roles:
+              title: ID of the author's roles, defined as a key in [`citation.role`](#cc.citation.role).
+              $ref: array_of_unique_strings
+      contacts:
+        title: IDs of project's contact persons, as defined in [`team`](#cc.team).
+        $ref: nonempty_array_of_unique_strings
+      message:
+        title: A message to the human reader of the file.
+        examples:
+          - If you use this software, please cite both the article from preferred-citation and the software itself.
+          - If you use this software, please cite it using the metadata from this file.
+          - Please cite this software using these metadata.
+          - Please cite this software using the metadata from 'preferred-citation'.
+        default: If you use ${{ name }}, please cite it using the metadata from this file.
+        $ref: nonempty_string
+      preferred_citation:
+        title: |
+          A reference to another work that should be cited
+          instead of the software itself.
+        $ref: '#/definitions/reference'
+      grant_ids:
+        title: List of OpenAIRE-supported grants funding the research for this project.
+        description: |
+          These can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
+        examples:
+          - [ 10.13039/501100000780::283595, 283595 ]
+        $ref: array_of_unique_strings
+      zenodo_communities:
+        title: ID list of Zenodo communities you wish the project to appear in.
+        description: |
+          The owner of the communities will be notified,
+          and can either accept or reject your request.
+        examples:
+          - [ ecfunded ]
+        $ref: array_of_unique_strings
+      role:
+        title: Author role definitions.
+        description: |
+          For each role, add a key-value pair
+          where the key is the ID of the role, used to attribute roles to authors
+          (cf. [`citation.authors[i].roles`](#cc.citation.authors[i].roles)).
+        type: object
+        examples:
+          - concept:
+              title: Conceptualization
+              description: Formulation and evolution of overarching project goals and aims.
+              abbreviation: CNP
+            dev:
+              title: Software Development
+              description: Implementation of the software.
+              abbreviation: DEV
+            manage:
+              title: Management
+              description: Project administration and coordination.
+              abbreviation: MAN
+            maint:
+              title: Maintenance
+              description: Maintenance of the software and development workflows.
+              abbreviation: MNT
+        additionalProperties:
+          title: An author role definition.
+          examples:
+            - title: Conceptualization
+              description: Formulation and evolution of overarching project goals and aims.
+              abbreviation: CNP
+          type: object
+          additionalProperties: false
+          required: [ title, description, abbreviation ]
+          properties:
+            title:
+              title: Name of the role.
+              type: string
+              examples:
+                - Conceptualization
+                - Software Development
+                - Management
+            description:
+              title: A short description of the role.
+              type: string
+              examples:
+                - Formulation and evolution of overarching project goals and aims.
+                - Implementation of the software.
+                - Project administration and coordination.
+            abbreviation:
+              title: Abbreviation of the role title.
+              type: string
+              examples:
+                - CNP
+                - DEV
+                - MAN
+      references:
+        title: Reference(s) to other creative works.
+        type: array
+        uniqueItems: true
+        items:
+          $ref: '#/definitions/reference'
+      identifiers:
+        title: The identifiers of the project.
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          $ref: '#/definitions/identifier'
+      language:
+        title: |
+          [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
+          or 639-3 code of the primary natural language of the work.
+        type: string
+        default: eng
+        examples:
+          - eng
+      abstract:
+        title: A description of the project.
+        type: string
+        default: ${{ abstract }}
+        examples:
+          - A custom description of the project that can span multiple lines.
+      license:
+        title: SPDX license ID of the project (cf. [`license.id`](#cc.license.id)).
+        type: string
+        default: ${{ license.id }}
+      license_url:
+        title: The URL of the project's license (only for non-SPDX licenses).
+        $ref: url
+      keywords:
+        title: Keywords that describe the work.
+        type: array
+        uniqueItems: true
+        default: ${{ keywords.display }}
+        examples:
+          - [ A Custom Keyword, Another Custom Keyword ]
+        items:
+          $ref: nonempty_array_of_unique_strings
+      repository:
+        title: Repository information.
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          build:
+            title: URL of the project in a build artifact/binary repository.
+            default: ${{ url.pkg.pypi.home }}
+            $ref: url
+          source:
+            title: URL of the project in a source code repository.
+            default: ${{ url.repo.home }}
+            $ref: url
+          other:
+            title: URL of the project in another type of repository.
+            $ref: url
+      url:
+        title: URL of a landing page for the project.
+        default: ${{ url.web.home }}
+        $ref: url
+      type:
+        title: Type of the project.
+        type: string
+        enum: [ dataset, software ]
+        default: software
+      path:
+        title: Path to the CITATION file.
+        description: |
+          Currently, GitHub only recognizes this file at `CITATION.cff`.
+        type: string
+        enum: [ CITATION.cff ]
+        default: CITATION.cff
+  funding:
+    title: Available funding options of the project.
+    description: |
+      These settings are used to automatically maintain the GitHub `FUNDING` configuration file,
+      which is used to [display a sponsor button in your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
+      Clicking on the *Sponsor* button opens the *Sponsor this project* section,
+      where a list of links to your specified funding platforms is displayed to the user.
+      
+      You can specify up to four
+      [sponsored GitHub accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors),
+      up to four custom URLs,
+      and one account per supported external funding platform.
+    examples:
+      - github: [ '${{ owner.username }}', EXAMPLE-GITHUB-USERNAME ]
+        custom: [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME' ]
+        tideleft: pypi/${{ package.name }}
+    type: object
+    additionalProperties: false
+    properties:
+      community_bridge:
+        title: |
+          [LFX Mentorship (CommunityBridge)](https://lfx.linuxfoundation.org/tools/mentorship) project name.
+        type: string
+      issuehunt:
+        title: |
+          [IssueHunt](https://issuehunt.io/) username.
+        type: string
+      ko_fi:
+        title: |
+          [Ko-fi](https://ko-fi.com/) username.
+        type: string
+      liberapay:
+        title: |
+          [Liberapay](https://liberapay.com/) username.
+        type: string
+      open_collective:
+        title: |
+          [Open Collective](https://opencollective.com/) username.
+        type: string
+      patreon:
+        title: |
+          [Patreon](https://www.patreon.com/) username.
+        type: string
+      tidelift:
+        title: |
+          [Tidelift](https://tidelift.com/) package address.
+        description: |
+          This is a string with the format `<PLATFORM-NAME>/<PACKAGE-NAME>`,
+          where `<PACKAGE-NAME>` is the name of your package,
+          and platform name is the name of the package manager
+          hosting the package, i.e., one of
+          `npm`, `pypi`, `maven`, `rubygems`, `nuget`, or `packagist`.
+        examples:
+          - pypi/controlman
+        type: string
+        pattern: ^(npm|pypi|rubygems|maven|packagist|nuget)/\S+$
+      polar:
+        title: |
+          [Polar](https://www.polar.sh/) username.
+        type: string
+      buy_me_a_coffee:
+        title: |
+          [Buy Me a Coffee](https://www.buymeacoffee.com/) username.
+        type: string
+      github:
+        title: Usernames of up to four [GitHub Sponsors](https://docs.github.com/en/sponsors/) accounts.
+        description: |
+          One of these can be a
+          [sponsored organization account](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors/setting-up-github-sponsors-for-your-organization),
+          while the others must be
+          [sponsored personal accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors/setting-up-github-sponsors-for-your-personal-account).
+        type: array
+        maxItems: 4
+        uniqueItems: true
+        items:
+          $ref: github_username
+      custom:
+        title: URLs of up to four custom funding platforms.
+        type: array
+        maxItems: 4
+        uniqueItems: true
+        items:
+          $ref: url
+      path:
+        title: Path to the funding configuration file.
+        description: |
+          Currently, GitHub only recognizes this file at `.github/FUNDING.yml`.
+        type: string
+        enum: [ .github/FUNDING.yml ]
+        default: .github/FUNDING.yml
+  custom:
+    title: User-defined custom metadata and configurations.
+    description: |
+      Here you can store custom data that can be dynamically referenced 
+      anywhere else in the project.
+    type: object
+definitions:
+  entity:
+    title: Entity
+    description: |
+      A natural or legal person.
+      
+      If `github.user` is provided, any of the following keys that is not provided will be automatically filled
+      with information from the GitHub API, if available
+      (cf. [Personalizing your profile on GitHub](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile)):
+      - [`name`](#cc.def.entity.name)
+      - [`bio`](#cc.def.entity.bio)
+      - [`affiliation`](#cc.def.entity.affiliation)
+      - [`avatar`](#cc.def.entity.avatar)
+      - [`email`](#cc.def.entity.email)
+      - [`website`](#cc.def.entity.website)
+      - [`orcid`](#cc.def.entity.orcid)
+      - [`researchgate`](#cc.def.entity.researchgate)
+      - [`linkedin`](#cc.def.entity.linkedin)
+      - [`twitter`](#cc.def.entity.twitter)
+      - [`city`](#cc.def.entity.city)
+    type: object
+    additionalProperties: false
+    anyOf:
+      - required: [ github ]
+      - required: [ name ]
+    properties:
+      github:
+        title: GitHub User
+        description: |
+          GitHub user information of the entity.
+
+          Only provide `username`; other keys are automatically fetched from the
+          [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        type: object
+        additionalProperties: false
+        required: [ username ]
+        properties:
+          user:
+            title: GitHub Username
+            description: |
+              GitHub username of the entity.
+
+              If provided, `name`, `email`, and `avatar`
+              will be fetched automatically from GitHub API,
+              unless they are provided explicitly.
+            $ref: github_username
+          id:
+            title: GitHub ID
+            description: |
+              GitHub ID of the entity.
+
+              When `username` is provided, this is fetched automatically from GitHub API.
+            type: integer
+            minimum: 1
+            examples:
+              - 139513484
+          node_id:
+            title: GitHub Node ID
+            description: |
+              GitHub Node ID of the entity.
+
+              When `username` is provided, this is fetched automatically from GitHub API.
+            type: string
+            examples:
+              - O_kgDOCFDOjA
+          url:
+            title: GitHub URL
+            description: |
+              GitHub account URL of the entity.
+
+              When `username` is provided, this is fetched automatically from GitHub API.
+            $ref: url
+      name:
+        title: Name
+        description: |
+          The entity's name.
+
+          If the entity is a legal person, only provide `legal`.
+          Otherwise, `first` and `last` must be provided at least.
+
+          If not provided, `github` must be provided.
+          In that case, user information is automatically fetched from
+          [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user)
+          to determine the name.
+          
+          :::{admonition} Name Determination
+          :class: dropdown info
+          
+          1. If the user has no `name` set in their GitHub profile,
+             a legal entity is created with `name.legal` set to the GitHub username.
+             This emits a warning log in the workflow.
+          2. The value of `type` in API response is checked;
+             if it is `Organization`, a legal entity is created with
+             `name.legal` set to the value of `name` in the API response.
+          3. `name` is split by the first space character.
+             If this results in other than two parts,
+             a legal entity is created with `name.legal` set to the value of `name`.
+             This emits a warning log in the workflow.
+          4. If `name` has only two parts, a natural person is created with `name.first` and `name.last`
+             set to the first and last parts of `name`, respectively.
+          :::
+        type: object
+        additionalProperties: false
+        oneOf:
+          - required: [ first, last ]
+          - required: [ legal ]
+        properties:
+          legal:
+            title: Legal Name
+            description: The entity's name, when it is not a natural person.
+            type: string
+            minLength: 1
+          first:
+            title: First Name
+            description: The person's first name.
+            type: string
+            minLength: 1
+          last:
+            title: Last Name
+            description: The person's last name.
+            type: string
+            minLength: 1
+          particle:
+            title: Name Particle
+            description: |
+              The person's name particle, e.g., a nobiliary particle or a preposition
+              meaning 'of' or 'from' (for example 'von' in 'Alexander von Humboldt').
+            type: string
+            examples:
+              - von
+          suffix:
+            title: Name Suffix
+            description: |
+              The person's name-suffix, e.g. 'Jr.' for Sammy Davis Jr. or 'III'
+              for Frank Edwin Wright III.
+            type: string
+            examples:
+              - Jr.
+              - III
+          full:
+            title: Full Name
+            description: |
+              The person's full name.
+              
+              If not provided, it is automatically set to
+              `first particle last, suffix`
+              (`particle ` and `, suffix` are only added when provided)
+              for natural persons, and to `legal` for legal persons.
+            type: string
+      affiliation:
+        title: Affiliation
+        description: |
+          The entity's affiliation.
+          
+          If not provided while `github` is provided,
+          it is automatically set to the value of `company` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        type: string
+      bio:
+        title: Bio
+        description: |
+          A short biography of the entity.
+
+          If not provided while `github` is provided,
+          it is automatically set to the value of `bio` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        type: string
+      alias:
+        title: Alias
+        description: The entity's alias.
+        $ref: nonempty_string
+      avatar:
+        title: Avatar
+        description: |
+          The entity's avatar URL.
+          
+          If not provided while `github` is provided,
+          it is automatically set to the value of `avatar_html` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        $ref: url
+      email:
+        title: Email
+        description: |
+          The entity's contact email.
+          
+          If not provided while `github` is provided,
+          `email.user` is automatically set to the value of `email` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        $ref: email
+      website:
+        title: Website
+        description: |
+          The entity's website address.
+          
+          If not provided while `github` is provided,
+          it is automatically set to the value of `blog` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        $ref: url
+      orcid:
+        title: ORCID
+        description: |
+          The entity's [ORCID](https://orcid.org) account information.
+          
+          If not provided while `github` is provided,
+          the GitHub user's [social accounts](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile#adding-links-to-your-social-accounts)
+          are fetched from the
+          [GitHub API](https://docs.github.com/en/rest/users/social-accounts?apiVersion=2022-11-28#list-social-accounts-for-a-user).
+          If an ORCID URL is found, `orcid` is automatically set.
+        $ref: orcid
+      researchgate:
+        title: ResearchGate
+        description: |
+          The entity's ResearchGate account information.
+          
+          If not provided while `github` is provided,
+          the GitHub user's [social accounts](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile#adding-links-to-your-social-accounts)
+          are fetched from the
+          [GitHub API](https://docs.github.com/en/rest/users/social-accounts?apiVersion=2022-11-28#list-social-accounts-for-a-user).
+          If a ResearchGate URL is found, `researchgate` is automatically set.
+        $ref: researchgate
+      linkedin:
+        title: LinkedIn
+        description: |
+          The entity's LinkedIn account information.
+          
+          If not provided while `github` is provided,
+          the GitHub user's [social accounts](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile#adding-links-to-your-social-accounts)
+          are fetched from the
+          [GitHub API](https://docs.github.com/en/rest/users/social-accounts?apiVersion=2022-11-28#list-social-accounts-for-a-user).
+          If a LinkedIn URL is found, `linkedin` is automatically set.
+        $ref: linkedin
+      twitter:
+        title: Twitter
+        description: |
+          The entity's Twitter account information.
+          
+          If not provided while `github` is provided,
+          the GitHub user's [social accounts](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile#adding-links-to-your-social-accounts)
+          are fetched from the
+          [GitHub API](https://docs.github.com/en/rest/users/social-accounts?apiVersion=2022-11-28#list-social-accounts-for-a-user).
+          If a Twitter URL is found, `twitter` is automatically set.
+        $ref: twitter
+      address:
+        title: Address
+        description: The entity's address.
+        $ref: nonempty_string
+      city:
+        title: City
+        description: |
+          The entity's city.
+          
+          If not provided while `github` is provided,
+          it is automatically set to the value of `location` in the
+          [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
+        $ref: nonempty_string
+      region:
+        title: Region
+        description: The entity's region.
+        $ref: nonempty_string
+      country:
+        title: Country
+        description: |
+          The entity's country, defined as an
+          [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1) country code.
+        type: string
+        enum:
+          - AD
+          - AE
+          - AF
+          - AG
+          - AI
+          - AL
+          - AM
+          - AO
+          - AQ
+          - AR
+          - AS
+          - AT
+          - AU
+          - AW
+          - AX
+          - AZ
+          - BA
+          - BB
+          - BD
+          - BE
+          - BF
+          - BG
+          - BH
+          - BI
+          - BJ
+          - BL
+          - BM
+          - BN
+          - BO
+          - BQ
+          - BR
+          - BS
+          - BT
+          - BV
+          - BW
+          - BY
+          - BZ
+          - CA
+          - CC
+          - CD
+          - CF
+          - CG
+          - CH
+          - CI
+          - CK
+          - CL
+          - CM
+          - CN
+          - CO
+          - CR
+          - CU
+          - CV
+          - CW
+          - CX
+          - CY
+          - CZ
+          - DE
+          - DJ
+          - DK
+          - DM
+          - DO
+          - DZ
+          - EC
+          - EE
+          - EG
+          - EH
+          - ER
+          - ES
+          - ET
+          - FI
+          - FJ
+          - FK
+          - FM
+          - FO
+          - FR
+          - GA
+          - GB
+          - GD
+          - GE
+          - GF
+          - GG
+          - GH
+          - GI
+          - GL
+          - GM
+          - GN
+          - GP
+          - GQ
+          - GR
+          - GS
+          - GT
+          - GU
+          - GW
+          - GY
+          - HK
+          - HM
+          - HN
+          - HR
+          - HT
+          - HU
+          - ID
+          - IE
+          - IL
+          - IM
+          - IN
+          - IO
+          - IQ
+          - IR
+          - IS
+          - IT
+          - JE
+          - JM
+          - JO
+          - JP
+          - KE
+          - KG
+          - KH
+          - KI
+          - KM
+          - KN
+          - KP
+          - KR
+          - KW
+          - KY
+          - KZ
+          - LA
+          - LB
+          - LC
+          - LI
+          - LK
+          - LR
+          - LS
+          - LT
+          - LU
+          - LV
+          - LY
+          - MA
+          - MC
+          - MD
+          - ME
+          - MF
+          - MG
+          - MH
+          - MK
+          - ML
+          - MM
+          - MN
+          - MO
+          - MP
+          - MQ
+          - MR
+          - MS
+          - MT
+          - MU
+          - MV
+          - MW
+          - MX
+          - MY
+          - MZ
+          - NA
+          - NC
+          - NE
+          - NF
+          - NG
+          - NI
+          - NL
+          - NO
+          - NP
+          - NR
+          - NU
+          - NZ
+          - OM
+          - PA
+          - PE
+          - PF
+          - PG
+          - PH
+          - PK
+          - PL
+          - PM
+          - PN
+          - PR
+          - PS
+          - PT
+          - PW
+          - PY
+          - QA
+          - RE
+          - RO
+          - RS
+          - RU
+          - RW
+          - SA
+          - SB
+          - SC
+          - SD
+          - SE
+          - SG
+          - SH
+          - SI
+          - SJ
+          - SK
+          - SL
+          - SM
+          - SN
+          - SO
+          - SR
+          - SS
+          - ST
+          - SV
+          - SX
+          - SY
+          - SZ
+          - TC
+          - TD
+          - TF
+          - TG
+          - TH
+          - TJ
+          - TK
+          - TL
+          - TM
+          - TN
+          - TO
+          - TR
+          - TT
+          - TV
+          - TW
+          - TZ
+          - UA
+          - UG
+          - UM
+          - US
+          - UY
+          - UZ
+          - VA
+          - VC
+          - VE
+          - VG
+          - VI
+          - VN
+          - VU
+          - WF
+          - WS
+          - YE
+          - YT
+          - ZA
+          - ZM
+          - ZW
+      post-code:
+        title: Post Code
+        description: The entity's post code.
+        $ref: nonempty_string
+      tel:
+        title: Telephone
+        description: The entity's telephone number.
+        $ref: nonempty_string
+      fax:
+        Title: The entity's fax number.
+        $ref: nonempty_string
+      location:
+        title: Location
+        description: |
+          The entity's location, e.g., when the entity is a conference.
+
+          This is only used when the entity is a legal person,
+          i.e., when `name.legal` is set.
+        type: string
+      date_start:
+        title: Start Date
+        description: |
+          The entity's starting date, e.g., when the entity is a conference.
+
+          This is only used when the entity is a legal person,
+          i.e., when `name.legal` is set.
+        $ref: date
+      date_end:
+        title: End Date
+        $ref: date
+        description: |
+          The entity's ending date, e.g., when the entity is a conference.
+
+          This is only used when the entity is a legal person,
+          i.e., when `name.legal` is set.
+  reference:
+    title: Reference
+    description: A bibliographic reference.
+    type: object
+    additionalProperties: false
+    required: [ authors, title, type ]
+    properties:
+      abbreviation:
+        title: Abbreviation
+        description: The abbreviation of a work.
+        type: string
+        minLength: 1
+      abstract:
+        title: Abstract
+        description: The abstract of a work.
+        type: string
+        minLength: 1
+      authors:
+        title: Authors
+        description: The author(s) of the work.
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: Author
+          description: |
+            An author of the work.
+            
+            This can either be set to the ID of a person defined in [`team`](#cc.team),
+            or to an [`entity`](#cc.) object.
+          oneOf:
+            - type: string
+            - $ref: '#/definitions/entity'
+      collection-doi:
+        $ref: doi
+        description: The DOI of a collection containing the work.
+      collection-title:
+        description: The title of a collection or proceedings.
+        minLength: 1
+        type: string
+      collection-type:
+        description: The type of a collection.
+        minLength: 1
+        type: string
+      commit:
+        title: Commit hash (e.g., Git) or revision number (e.g., Subversion) of the work.
+        $ref: nonempty_string
+      conference:
+        $ref: '#/definitions/entity'
+        description: The conference where the work was presented.
+      contact:
+        description: The contact person, group, company, etc. for a work.
+        items:
+          $ref: '#/definitions/entity'
+        minItems: 1
+        type: array
+        uniqueItems: true
+      copyright:
+        description: The copyright information pertaining to the work.
+        minLength: 1
+        type: string
+      data-type:
+        description: The data type of a data set.
+        minLength: 1
+        type: string
+      database:
+        description: The name of the database where a work was accessed/is stored.
+        minLength: 1
+        type: string
+      database-provider:
+        $ref: '#/definitions/entity'
+        description: The provider of the database where a work was accessed/is stored.
+      date-accessed:
+        $ref: date
+        description: The date the work was accessed.
+      date-downloaded:
+        $ref: date
+        description: The date the work has been downloaded.
+      date-published:
+        $ref: date
+        description: The date the work has been published.
+      date-released:
+        $ref: date
+        description: The date the work has been released.
+      department:
+        description: The department where a work has been produced.
+        minLength: 1
+        type: string
+      doi:
+        $ref: doi
+        description: The DOI of the work.
+      edition:
+        description: The edition of the work.
+        minLength: 1
+        type: string
+      editors:
+        description: The editor(s) of a work.
+        items:
+          $ref: '#/definitions/entity'
+        minItems: 1
+        type: array
+        uniqueItems: true
+      editors-series:
+        description: The editor(s) of a series in which a work has been published.
+        items:
+          $ref: '#/definitions/entity'
+        minItems: 1
+        type: array
+        uniqueItems: true
+      end:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The end page of the work.
+      entry:
+        description: An entry in the collection that constitutes the work.
+        minLength: 1
+        type: string
+      filename:
+        description: The name of the electronic file containing the work.
+        minLength: 1
+        type: string
+      format:
+        description: The format in which a work is represented.
+        minLength: 1
+        type: string
+      identifiers:
+        description: The identifier(s) of the work.
+        items:
+          $ref: '#/definitions/identifier'
+        minItems: 1
+        type: array
+        uniqueItems: true
+      institution:
+        $ref: '#/definitions/entity'
+        description: The institution where a work has been produced or published.
+      isbn:
+        description: The ISBN of the work.
+        pattern: ^[0-9\- ]{10,17}X?$
+        type: string
+      issn:
+        description: The ISSN of the work.
+        pattern: ^\d{4}-\d{3}[\dxX]$
+        type: string
+      issue:
+        anyOf:
+          - minLength: 1
+            type: string
+          - type: number
+        description: The issue of a periodical in which a work appeared.
+      issue-date:
+        description: The publication date of the issue of a periodical in which a
+          work appeared.
+        minLength: 1
+        type: string
+      issue-title:
+        description: The name of the issue of a periodical in which the work appeared.
+        minLength: 1
+        type: string
+      journal:
+        description: The name of the journal/magazine/newspaper/periodical where the
+          work was published.
+        minLength: 1
+        type: string
+      keywords:
+        description: Keywords pertaining to the work.
+        items:
+          minLength: 1
+          type: string
+        minItems: 1
+        type: array
+        uniqueItems: true
+      languages:
+        description: The language identifier(s) of the work according to ISO 639 language
+          strings.
+        items:
+          maxLength: 3
+          minLength: 2
+          pattern: ^[a-z]{2,3}$
+          type: string
+        minItems: 1
+        type: array
+        uniqueItems: true
+      license:
+        $ref: '#/definitions/spdx_license_id'
+      license-url:
+        $ref: url
+        description: The URL of the license text under which the work is licensed
+          (only for non-standard licenses not included in the SPDX License List).
+      loc-end:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The line of code in the file where the work ends.
+      loc-start:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The line of code in the file where the work starts.
+      location:
+        $ref: '#/definitions/entity'
+        description: The location of the work.
+      medium:
+        description: The medium of the work.
+        minLength: 1
+        type: string
+      month:
+        maximum: 12
+        minimum: 1
+        type: integer
+        description: The month in which a work has been published.
+      nihmsid:
+        description: The NIHMSID of a work.
+        minLength: 1
+        type: string
+      notes:
+        description: Notes pertaining to the work.
+        minLength: 1
+        type: string
+      number:
+        anyOf:
+          - minLength: 1
+            type: string
+          - type: number
+        description: The accession number for a work.
+      number-volumes:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The number of volumes making up the collection in which the work
+          has been published.
+      pages:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The number of pages of the work.
+      patent-states:
+        description: The states for which a patent is granted.
+        items:
+          minLength: 1
+          type: string
+        minItems: 1
+        type: array
+        uniqueItems: true
+      pmcid:
+        description: The PMCID of a work.
+        pattern: ^PMC[0-9]{7}$
+        type: string
+      publisher:
+        $ref: '#/definitions/entity'
+        description: The publisher who has published the work.
+      recipients:
+        description: The recipient(s) of a personal communication.
+        minItems: 1
+        type: array
+        uniqueItems: true
+        items:
+          $ref: '#/definitions/entity'
+      repository:
+        $ref: url
+        description: The URL of the work in a repository (when the repository is neither
+          a source code repository nor a build artifact repository).
+      repository-artifact:
+        $ref: url
+        description: The URL of the work in a build artifact/binary repository.
+      repository-code:
+        $ref: url
+        description: The URL of the work in a source code repository.
+      scope:
+        description: The scope of the reference, e.g., the section of the work it
+          adheres to.
+        minLength: 1
+        type: string
+      section:
+        anyOf:
+          - minLength: 1
+            type: string
+          - type: number
+        description: The section of a work that is referenced.
+      senders:
+        description: The sender(s) of a personal communication.
+        minItems: 1
+        type: array
+        uniqueItems: true
+        items:
+          $ref: '#/definitions/entity'
+      start:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The start page of the work.
+      status:
+        description: The publication status of the work.
+        enum:
+          - abstract
+          - advance-online
+          - in-preparation
+          - in-press
+          - preprint
+          - submitted
+        type: string
+      term:
+        description: The term being referenced if the work is a dictionary or encyclopedia.
+        minLength: 1
+        type: string
+      thesis-type:
+        description: The type of the thesis that is the work.
+        minLength: 1
+        type: string
+      title:
+        description: The title of the work.
+        minLength: 1
+        type: string
+      translators:
+        description: The translator(s) of a work.
+        minItems: 1
+        type: array
+        uniqueItems: true
+        items:
+          $ref: '#/definitions/entity'
+      type:
+        description: The type of the work.
+        enum:
+          - art
+          - article
+          - audiovisual
+          - bill
+          - blog
+          - book
+          - catalogue
+          - conference-paper
+          - conference
+          - data
+          - database
+          - dictionary
+          - edited-work
+          - encyclopedia
+          - film-broadcast
+          - generic
+          - government-document
+          - grant
+          - hearing
+          - historical-work
+          - legal-case
+          - legal-rule
+          - magazine-article
+          - manual
+          - map
+          - multimedia
+          - music
+          - newspaper-article
+          - pamphlet
+          - patent
+          - personal-communication
+          - proceedings
+          - report
+          - serial
+          - slides
+          - software-code
+          - software-container
+          - software-executable
+          - software-virtual-machine
+          - software
+          - sound-recording
+          - standard
+          - statute
+          - thesis
+          - unpublished
+          - video
+          - website
+        type: string
+      url:
+        $ref: url
+        description: The URL of the work.
+      version:
+        title: The version of the work.
+        $ref: nonempty_string
+      volume:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The volume of the periodical in which a work appeared.
+      volume-title:
+        description: The title of the volume in which the work appeared.
+        minLength: 1
+        type: string
+      year:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The year in which a work has been published.
+      year-original:
+        anyOf:
+          - type: integer
+          - minLength: 1
+            type: string
+        description: The year of the original publication.
+  identifier:
+    title: Identifier
+    description: An identifier for the work.
+    type: object
+    additionalProperties: false
+    required: [ type, value ]
+    properties:
+      type:
+        title: Type
+        description: The type of the identifier.
+        type: string
+        enum: [ doi, url, swh, other ]
+      value:
+        title: Value
+        description: |
+          The value of the identifier.
+
+          Depending on `type`, this must be:
+          - `doi`: A Digital Object Identifier (DOI) 
+             conforming to the regex pattern `^10\.\d{4,9}(\.\d+)?/[A-Za-z0-9:/_;\-\.\(\)\[\]\\]+$`.
+          - `url`: A URL.
+          - `swh`: A [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html),
+             without further qualifiers, such as origin, visit, anchor, or path.
+             It must conform to the regex pattern `^swh:1:(snp|rel|rev|dir|cnt):[0-9a-fA-F]{40}$`.
+          - `other`: Any other string value.
+        examples:
+          - 10.5281/zenodo.1003150
+          - https://example.com
+          - swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2
+      description:
+        title: Description
+        description: A description for the identifier value.
+        $ref: nonempty_string
+        examples:
+          - The version DOI for this version, which has a relation childOf with the concept
+            DOI specified in the doi field in the root of this file.
+          - The identifier provided by Archival Repository, which points to this version
+            of the software.
+    allOf:
+      - if:
+          properties:
+            type:
+              const: doi
+        then:
+          properties:
+            value:
+              $ref: doi
+      - if:
+          properties:
+            type:
+            const: url
+        then:
+          properties:
+            value:
+              $ref: url
+      - if:
+          properties:
+            type:
+            const: swh
+        then:
+          properties:
+            value:
+              description: |
+                [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html)
+                without further qualifiers, such as origin, visit, anchor, and path.
+              type: string
+              format: swh
+              pattern: ^swh:1:(snp|rel|rev|dir|cnt):[0-9a-fA-F]{40}$
+              examples:
+                - swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2
+                - swh:1:dir:d198bc9d7a6bcf6db04f476d29314f157507d505
+                - swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d
+                - swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f
+                - swh:1:snp:c7c108084bc0bf3d81436bf980b46e98bd338453
+  spdx_license_id:
+    $comment: Use https://github.com/citation-file-format/get-spdx-licenses to update
+      this enum in the future
+    title: [SPDX](https://spdx.org/licenses/) license ID.
+    description: |
+      For a full list of machine-readable SPDX license identifiers, see the
+      [SPDX GitHub repository](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
+      or the [CFF GitHub repository](https://github.com/citation-file-format/get-spdx-licenses).
+    type: string
+    enum:
+      - 0BSD
+      - AAL
+      - Abstyles
+      - Adobe-2006
+      - Adobe-Glyph
+      - ADSL
+      - AFL-1.1
+      - AFL-1.2
+      - AFL-2.0
+      - AFL-2.1
+      - AFL-3.0
+      - Afmparse
+      - AGPL-1.0
+      - AGPL-1.0-only
+      - AGPL-1.0-or-later
+      - AGPL-3.0
+      - AGPL-3.0-only
+      - AGPL-3.0-or-later
+      - Aladdin
+      - AMDPLPA
+      - AML
+      - AMPAS
+      - ANTLR-PD
+      - ANTLR-PD-fallback
+      - Apache-1.0
+      - Apache-1.1
+      - Apache-2.0
+      - APAFML
+      - APL-1.0
+      - APSL-1.0
+      - APSL-1.1
+      - APSL-1.2
+      - APSL-2.0
+      - Artistic-1.0
+      - Artistic-1.0-cl8
+      - Artistic-1.0-Perl
+      - Artistic-2.0
+      - Bahyph
+      - Barr
+      - Beerware
+      - BitTorrent-1.0
+      - BitTorrent-1.1
+      - blessing
+      - BlueOak-1.0.0
+      - Borceux
+      - BSD-1-Clause
+      - BSD-2-Clause
+      - BSD-2-Clause-FreeBSD
+      - BSD-2-Clause-NetBSD
+      - BSD-2-Clause-Patent
+      - BSD-2-Clause-Views
+      - BSD-3-Clause
+      - BSD-3-Clause-Attribution
+      - BSD-3-Clause-Clear
+      - BSD-3-Clause-LBNL
+      - BSD-3-Clause-Modification
+      - BSD-3-Clause-No-Nuclear-License
+      - BSD-3-Clause-No-Nuclear-License-2014
+      - BSD-3-Clause-No-Nuclear-Warranty
+      - BSD-3-Clause-Open-MPI
+      - BSD-4-Clause
+      - BSD-4-Clause-Shortened
+      - BSD-4-Clause-UC
+      - BSD-Protection
+      - BSD-Source-Code
+      - BSL-1.0
+      - BUSL-1.1
+      - bzip2-1.0.5
+      - bzip2-1.0.6
+      - C-UDA-1.0
+      - CAL-1.0
+      - CAL-1.0-Combined-Work-Exception
+      - Caldera
+      - CATOSL-1.1
+      - CC-BY-1.0
+      - CC-BY-2.0
+      - CC-BY-2.5
+      - CC-BY-3.0
+      - CC-BY-3.0-AT
+      - CC-BY-3.0-US
+      - CC-BY-4.0
+      - CC-BY-NC-1.0
+      - CC-BY-NC-2.0
+      - CC-BY-NC-2.5
+      - CC-BY-NC-3.0
+      - CC-BY-NC-4.0
+      - CC-BY-NC-ND-1.0
+      - CC-BY-NC-ND-2.0
+      - CC-BY-NC-ND-2.5
+      - CC-BY-NC-ND-3.0
+      - CC-BY-NC-ND-3.0-IGO
+      - CC-BY-NC-ND-4.0
+      - CC-BY-NC-SA-1.0
+      - CC-BY-NC-SA-2.0
+      - CC-BY-NC-SA-2.5
+      - CC-BY-NC-SA-3.0
+      - CC-BY-NC-SA-4.0
+      - CC-BY-ND-1.0
+      - CC-BY-ND-2.0
+      - CC-BY-ND-2.5
+      - CC-BY-ND-3.0
+      - CC-BY-ND-4.0
+      - CC-BY-SA-1.0
+      - CC-BY-SA-2.0
+      - CC-BY-SA-2.0-UK
+      - CC-BY-SA-2.1-JP
+      - CC-BY-SA-2.5
+      - CC-BY-SA-3.0
+      - CC-BY-SA-3.0-AT
+      - CC-BY-SA-4.0
+      - CC-PDDC
+      - CC0-1.0
+      - CDDL-1.0
+      - CDDL-1.1
+      - CDL-1.0
+      - CDLA-Permissive-1.0
+      - CDLA-Sharing-1.0
+      - CECILL-1.0
+      - CECILL-1.1
+      - CECILL-2.0
+      - CECILL-2.1
+      - CECILL-B
+      - CECILL-C
+      - CERN-OHL-1.1
+      - CERN-OHL-1.2
+      - CERN-OHL-P-2.0
+      - CERN-OHL-S-2.0
+      - CERN-OHL-W-2.0
+      - ClArtistic
+      - CNRI-Jython
+      - CNRI-Python
+      - CNRI-Python-GPL-Compatible
+      - Condor-1.1
+      - copyleft-next-0.3.0
+      - copyleft-next-0.3.1
+      - CPAL-1.0
+      - CPL-1.0
+      - CPOL-1.02
+      - Crossword
+      - CrystalStacker
+      - CUA-OPL-1.0
+      - Cube
+      - curl
+      - D-FSL-1.0
+      - diffmark
+      - DOC
+      - Dotseqn
+      - DRL-1.0
+      - DSDP
+      - dvipdfm
+      - ECL-1.0
+      - ECL-2.0
+      - eCos-2.0
+      - EFL-1.0
+      - EFL-2.0
+      - eGenix
+      - Entessa
+      - EPICS
+      - EPL-1.0
+      - EPL-2.0
+      - ErlPL-1.1
+      - etalab-2.0
+      - EUDatagrid
+      - EUPL-1.0
+      - EUPL-1.1
+      - EUPL-1.2
+      - Eurosym
+      - Fair
+      - Frameworx-1.0
+      - FreeBSD-DOC
+      - FreeImage
+      - FSFAP
+      - FSFUL
+      - FSFULLR
+      - FTL
+      - GD
+      - GFDL-1.1
+      - GFDL-1.1-invariants-only
+      - GFDL-1.1-invariants-or-later
+      - GFDL-1.1-no-invariants-only
+      - GFDL-1.1-no-invariants-or-later
+      - GFDL-1.1-only
+      - GFDL-1.1-or-later
+      - GFDL-1.2
+      - GFDL-1.2-invariants-only
+      - GFDL-1.2-invariants-or-later
+      - GFDL-1.2-no-invariants-only
+      - GFDL-1.2-no-invariants-or-later
+      - GFDL-1.2-only
+      - GFDL-1.2-or-later
+      - GFDL-1.3
+      - GFDL-1.3-invariants-only
+      - GFDL-1.3-invariants-or-later
+      - GFDL-1.3-no-invariants-only
+      - GFDL-1.3-no-invariants-or-later
+      - GFDL-1.3-only
+      - GFDL-1.3-or-later
+      - Giftware
+      - GL2PS
+      - Glide
+      - Glulxe
+      - GLWTPL
+      - gnuplot
+      - GPL-1.0
+      - GPL-1.0-only
+      - GPL-1.0-or-later
+      - GPL-1.0+
+      - GPL-2.0
+      - GPL-2.0-only
+      - GPL-2.0-or-later
+      - GPL-2.0-with-autoconf-exception
+      - GPL-2.0-with-bison-exception
+      - GPL-2.0-with-classpath-exception
+      - GPL-2.0-with-font-exception
+      - GPL-2.0-with-GCC-exception
+      - GPL-2.0+
+      - GPL-3.0
+      - GPL-3.0-only
+      - GPL-3.0-or-later
+      - GPL-3.0-with-autoconf-exception
+      - GPL-3.0-with-GCC-exception
+      - GPL-3.0+
+      - gSOAP-1.3b
+      - HaskellReport
+      - Hippocratic-2.1
+      - HPND
+      - HPND-sell-variant
+      - HTMLTIDY
+      - IBM-pibs
+      - ICU
+      - IJG
+      - ImageMagick
+      - iMatix
+      - Imlib2
+      - Info-ZIP
+      - Intel
+      - Intel-ACPI
+      - Interbase-1.0
+      - IPA
+      - IPL-1.0
+      - ISC
+      - JasPer-2.0
+      - JPNIC
+      - JSON
+      - LAL-1.2
+      - LAL-1.3
+      - Latex2e
+      - Leptonica
+      - LGPL-2.0
+      - LGPL-2.0-only
+      - LGPL-2.0-or-later
+      - LGPL-2.0+
+      - LGPL-2.1
+      - LGPL-2.1-only
+      - LGPL-2.1-or-later
+      - LGPL-2.1+
+      - LGPL-3.0
+      - LGPL-3.0-only
+      - LGPL-3.0-or-later
+      - LGPL-3.0+
+      - LGPLLR
+      - Libpng
+      - libpng-2.0
+      - libselinux-1.0
+      - libtiff
+      - LiLiQ-P-1.1
+      - LiLiQ-R-1.1
+      - LiLiQ-Rplus-1.1
+      - Linux-OpenIB
+      - LPL-1.0
+      - LPL-1.02
+      - LPPL-1.0
+      - LPPL-1.1
+      - LPPL-1.2
+      - LPPL-1.3a
+      - LPPL-1.3c
+      - MakeIndex
+      - MirOS
+      - MIT
+      - MIT-0
+      - MIT-advertising
+      - MIT-CMU
+      - MIT-enna
+      - MIT-feh
+      - MIT-Modern-Variant
+      - MIT-open-group
+      - MITNFA
+      - Motosoto
+      - mpich2
+      - MPL-1.0
+      - MPL-1.1
+      - MPL-2.0
+      - MPL-2.0-no-copyleft-exception
+      - MS-PL
+      - MS-RL
+      - MTLL
+      - MulanPSL-1.0
+      - MulanPSL-2.0
+      - Multics
+      - Mup
+      - NAIST-2003
+      - NASA-1.3
+      - Naumen
+      - NBPL-1.0
+      - NCGL-UK-2.0
+      - NCSA
+      - Net-SNMP
+      - NetCDF
+      - Newsletr
+      - NGPL
+      - NIST-PD
+      - NIST-PD-fallback
+      - NLOD-1.0
+      - NLPL
+      - Nokia
+      - NOSL
+      - Noweb
+      - NPL-1.0
+      - NPL-1.1
+      - NPOSL-3.0
+      - NRL
+      - NTP
+      - NTP-0
+      - Nunit
+      - O-UDA-1.0
+      - OCCT-PL
+      - OCLC-2.0
+      - ODbL-1.0
+      - ODC-By-1.0
+      - OFL-1.0
+      - OFL-1.0-no-RFN
+      - OFL-1.0-RFN
+      - OFL-1.1
+      - OFL-1.1-no-RFN
+      - OFL-1.1-RFN
+      - OGC-1.0
+      - OGDL-Taiwan-1.0
+      - OGL-Canada-2.0
+      - OGL-UK-1.0
+      - OGL-UK-2.0
+      - OGL-UK-3.0
+      - OGTSL
+      - OLDAP-1.1
+      - OLDAP-1.2
+      - OLDAP-1.3
+      - OLDAP-1.4
+      - OLDAP-2.0
+      - OLDAP-2.0.1
+      - OLDAP-2.1
+      - OLDAP-2.2
+      - OLDAP-2.2.1
+      - OLDAP-2.2.2
+      - OLDAP-2.3
+      - OLDAP-2.4
+      - OLDAP-2.5
+      - OLDAP-2.6
+      - OLDAP-2.7
+      - OLDAP-2.8
+      - OML
+      - OpenSSL
+      - OPL-1.0
+      - OSET-PL-2.1
+      - OSL-1.0
+      - OSL-1.1
+      - OSL-2.0
+      - OSL-2.1
+      - OSL-3.0
+      - Parity-6.0.0
+      - Parity-7.0.0
+      - PDDL-1.0
+      - PHP-3.0
+      - PHP-3.01
+      - Plexus
+      - PolyForm-Noncommercial-1.0.0
+      - PolyForm-Small-Business-1.0.0
+      - PostgreSQL
+      - PSF-2.0
+      - psfrag
+      - psutils
+      - Python-2.0
+      - Qhull
+      - QPL-1.0
+      - Rdisc
+      - RHeCos-1.1
+      - RPL-1.1
+      - RPL-1.5
+      - RPSL-1.0
+      - RSA-MD
+      - RSCPL
+      - Ruby
+      - SAX-PD
+      - Saxpath
+      - SCEA
+      - Sendmail
+      - Sendmail-8.23
+      - SGI-B-1.0
+      - SGI-B-1.1
+      - SGI-B-2.0
+      - SHL-0.5
+      - SHL-0.51
+      - SimPL-2.0
+      - SISSL
+      - SISSL-1.2
+      - Sleepycat
+      - SMLNJ
+      - SMPPL
+      - SNIA
+      - Spencer-86
+      - Spencer-94
+      - Spencer-99
+      - SPL-1.0
+      - SSH-OpenSSH
+      - SSH-short
+      - SSPL-1.0
+      - StandardML-NJ
+      - SugarCRM-1.1.3
+      - SWL
+      - TAPR-OHL-1.0
+      - TCL
+      - TCP-wrappers
+      - TMate
+      - TORQUE-1.1
+      - TOSL
+      - TU-Berlin-1.0
+      - TU-Berlin-2.0
+      - UCL-1.0
+      - Unicode-DFS-2015
+      - Unicode-DFS-2016
+      - Unicode-TOU
+      - Unlicense
+      - UPL-1.0
+      - Vim
+      - VOSTROM
+      - VSL-1.0
+      - W3C
+      - W3C-19980720
+      - W3C-20150513
+      - Watcom-1.0
+      - Wsuipa
+      - WTFPL
+      - wxWindows
+      - X11
+      - Xerox
+      - XFree86-1.1
+      - xinetd
+      - Xnet
+      - xpp
+      - XSkat
+      - YPL-1.0
+      - YPL-1.1
+      - Zed
+      - Zend-2.0
+      - Zimbra-1.3
+      - Zimbra-1.4
+      - Zlib
+      - zlib-acknowledgement
+      - ZPL-1.1
+      - ZPL-2.0
+      - ZPL-2.1

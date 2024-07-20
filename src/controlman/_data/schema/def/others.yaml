@@ -1,0 +1,383 @@
+dependency:
+  title: Definition of a package dependency.
+  type: object
+  additionalProperties: false
+  required: [ import_name ]
+  anyOf:
+    - required: [ pip ]
+    - required: [ conda ]
+  properties:
+    name:
+      title: Name of the package.
+      auto_default: determined from `pip.spec` or `conda.spec`
+      type: string
+    import_name:
+      type: string
+    pip:
+      type: object
+      required: [ spec ]
+      properties:
+        spec:
+          title: |
+            Dependency specification for pip, according to 
+            [PEP 508](https://peps.python.org/pep-0508/#specification).
+          description: |
+            See [Version Specifiers](https://packaging.python.org/en/latest/specifications/version-specifiers/#id5)
+            in PyPA's Python Packaging User Guide for more details.
+          examples:
+            - "numpy >= 1.21.2"
+          type: string
+    conda:
+      title: Conda Specification
+      type: object
+      required: [ spec, channel ]
+      properties:
+        spec:
+          title: |
+            Dependency specification for Conda, according to
+            [Conda Build](https://conda.io/projects/conda-build/en/stable/resources/package-spec.html#package-match-specifications).
+          examples:
+            - ">=1.21.2"
+          type: string
+        channel:
+          type: string
+          default: conda-forge
+          examples:
+            - anaconda
+            - my-channel
+    url:
+      type: object
+      additionalProperties:
+        type: object
+        required: [ url ]
+        properties:
+          title:
+            type: string
+          description:
+            type: string
+          url:
+            $ref: url
+      properties:
+        docs:
+          type: string
+          format: uri
+        pip:
+          title: URL of the pip package.
+          default_auto: "https://pypi.org/project/${{ ..name }}"
+        conda:
+          type: string
+          format: uri
+          default: "https://anaconda.org/${{ .channel }}/${{ ..name }}"
+        source:
+          type: string
+          format: uri
+    intersphinx_mapping:
+      type: object
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        target:
+          type: string
+          format: uri
+        inventory:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - target
+    description:
+      type: string
+    notes:
+      type: string
+  examples:
+    - - pip_spec: "numpy >= 1.21.2"
+        usage: Numerical computing.
+        url_source: ""
+        url_homepage: ""
+        url_docs: ""
+        conda_spec: ""
+        conda_channel: ""
+color_config:
+  title: Color Configuration
+  description: Configurations for the colors of a specific element in the project's user interfaces.
+  type: object
+  additionalProperties: false
+  properties:
+    light:
+      title: Color of the element for light themes.
+      $ref: '#/definitions/hex_color'
+    dark:
+      title: Color of the element for dark themes.
+      $ref: '#/definitions/hex_color'
+static_badge:
+  type: object
+  default: { }
+  additionalProperties: false
+  properties:
+    style:
+      type: string
+      enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
+    label:
+      type: string
+    message:
+      type: string
+    label_color:
+      type: string
+    color:
+      type: string
+    logo:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [ path, url, data, name ]
+        value:
+          type: string
+        extension:
+          type: string
+          enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
+      required: [ type, value ]
+    logo_color:
+      type: string
+    logo_size:
+      type: string
+      enum: [ "auto" ]
+    logo_width:
+      type: string
+    label_color_dark:
+      type: string
+    color_dark:
+      type: string
+    logo_color_dark:
+      type: string
+    link:
+      type: string
+    alt:
+      type: string
+    title:
+      type: string
+    width:
+      type: string
+    height:
+      type: string
+    align:
+      type: string
+      enum: [ left, center, right ]
+  required: [ message ]
+footer_config_pypackit:
+  description: Footer configurations for PyPackIT's default theme.
+  type: object
+  default: { }
+  additionalProperties: false
+  properties:
+    common:
+      type: object
+      default: { }
+      additionalProperties: false
+      properties:
+        style:
+          type: string
+          enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
+          default: for-the-badge
+        height:
+          type: string
+          default: ""
+        label_color:
+          type: string
+          default: ""
+        label_color_dark:
+          type: string
+          default: ""
+    project:
+      default:
+        style: for-the-badge
+        label: "${{ name }}"
+        message: "©${{ copyright.notice }}"
+        color: "${{ theme.color.primary.light }}"
+        color_dark: "${{ theme.color.primary.dark }}"
+        logo: "${{ path.dir.control }}/ui/branding/favicon.svg"
+        link: "${{ url.website.home }}"
+        title: "${{ badge.project.text_left }} ${{ badge.project.text_right }}"
+        alt: "${{ badge.project.title }}"
+      $ref: '#/definitions/static_badge'
+    license:
+      default:
+        style: for-the-badge
+        label: License
+        message: "${{ license.shortname }}"
+        color: "${{ theme.color.secondary.light }}"
+        color_dark: "${{ theme.color.secondary.dark }}"
+        link: "${{ url.website.home }}/${{ web.path.license }}"
+        alt: "${{ license.fullname }}"
+        title: "${{ name }} is licensed under the ${{ license.fullname }}"
+      $ref: '#/definitions/static_badge'
+    show_pypackit_badge:
+      type: boolean
+      default: true
+  required: [ badge_style, badge_height, project_badge, license_badge, show_pypackit_badge ]
+readme_config_pypackit:
+  description: Configurations for the theme.
+  additionalProperties: false
+  properties:
+    header:
+      type: object
+      default: { }
+      additionalProperties: false
+      properties:
+        style:
+          type: string
+          enum: [ horizontal, vertical ]
+          default: vertical
+        logo:
+          type: object
+          default: { }
+          additionalProperties: false
+          properties:
+            alt_text:
+              type: string
+              default: "${{ name }}: ${{ tagline }}"
+            title:
+              type: string
+              default: "Welcome to ${{ name }}! Click to visit our website and learn more."
+            width:
+              type: string
+              default: "80%"
+            height:
+              type: string
+              default: "300px"
+        menu_top:
+          type: object
+          default: { }
+          additionalProperties: false
+          properties:
+            height:
+              title: Height
+              description: Height of the buttons in the top menu.
+              type: string
+              default: 35px
+            num_spaces:
+              type: integer
+              default: 2
+        menu_bottom:
+          type: object
+          default: { }
+          additionalProperties: false
+          properties:
+            num_spaces:
+              type: integer
+              default: 2
+            buttons:
+              type: array
+              default: [ ]
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  path:
+                    type: string
+                required: [ title, path ]
+          required: [ num_spaces, buttons ]
+    body:
+      type: object
+      default: { }
+      additionalProperties: false
+      properties:
+        sections:
+          type: array
+          default:
+            - type: keynotes
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: [ keynotes ]
+              config:
+                type: object
+                default: { }
+            allOf:
+              - if:
+                  properties:
+                    type:
+                      const: keynotes
+                then:
+                  properties:
+                    config:
+                      $ref: '#/definitions/theme-pypackit-default_body-section-keynotes_config'
+            required: [ type, config ]
+    footer:
+      $ref: '#/definitions/theme-pypackit-default-footer'
+theme-pypackit-default_body-section-keynotes_config:
+  additionalProperties: false
+  properties:
+    title:
+      type: string
+      default: Key Features
+doc_file:
+  title: Documentation File
+  description: |
+    Configurations for a documentation file.
+    
+    These include README files (cf. [`readme`](#cc.readme))
+    and GitHub community health files (cf. [`health`](#cc.health)).
+  type: object
+  additionalProperties: false
+  required: [ config, path, include_footer ]
+  properties:
+    config:
+      title: Configurations
+      oneOf:
+        - type: string
+        - type: object
+          required: [ id ]
+          properties:
+            id:
+              title: ID
+              type: string
+    include_footer:
+      type: boolean
+      default: true
+web_section:
+  title: Section
+  description: A (sub)section of the website.
+  type: object
+  additionalProperties: false
+  properties:
+    title:
+      title: Section Title
+      description: Title of the section.
+      type: string
+      examples:
+        - Introduction
+        - User Manual
+        - Installation
+    path:
+      title: Section Path
+      description: Relative path to the section.
+      type: string
+      examples:
+        - intro
+        - intro/index
+        - user-manual
+        - user-manual/installation/index
+readme_config_selector:
+  allOf:
+    - if:
+        properties:
+          config:
+            type: object
+            properties:
+              id:
+                const: pypackit
+      then:
+        properties:
+          config:
+            $ref: '#/definitions/readme_config_pypackit'

@@ -2,110 +2,96 @@ from pathlib import Path
 from typing import Literal, Type
 from types import ModuleType as _ModuleType
 
-import jsonschema
-import referencing
 import fileex as _fileex
 import pkgdata as _pkgdata
 import pyserials
 from loggerman import logger as _logger
 
 from controlman import exception as _exception
+from controlman.data_man.manager import DataManager
+from controlman import const
+from controlman.nested_dict import NestedDict as _NestedDict
+from controlman.center_man.cache import CacheManager as _CacheManager
+from controlman import _util as _util
 
 
-def read_datafile(
-    path_repo: str | Path,
-    path_data: str,
-    schema: str = "",
-    root_type: Type[dict | list] = dict,
+_data_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_data"
+
+
+def read_data_from_file(
+    path: Path | str,
+    base_path: Path | str | None = None,
     extension: Literal["json", "yaml", "toml"] | None = None,
-    log_section_title: str = "Read Datafile",
-) -> dict | list:
-    _logger.section(log_section_title)
-    fullpath_data = Path(path_repo).resolve() / path_data
-    _logger.info("Path", fullpath_data)
-    _logger.info("Root Type", root_type.__name__)
-    file_exists = fullpath_data.is_file()
-    _logger.info("File Exists", file_exists)
-    if not file_exists:
-        content = root_type()
-    else:
-        raw_content = fullpath_data.read_text().strip()
-        if raw_content == "":
-            content = root_type()
-        else:
-            extension = extension or fullpath_data.suffix.removeprefix(".")
-            if extension == "yml":
-                extension = "yaml"
-            try:
-                content = pyserials.read.from_string(
-                    data=raw_content,
-                    data_type=extension,
-                    json_strict=True,
-                    yaml_safe=True,
-                    toml_as_dict=False,
-                )
-            except pyserials.exception.read.PySerialsReadFromStringException as e:
-                raise _exception.content.ControlManFileReadError(
-                    relpath_data=path_data, data=raw_content
-                ) from e
-            if content is None:
-                _logger.info("File is empty.")
-                content = root_type()
-            if not isinstance(content, root_type):
-                raise _exception.content.ControlManFileDataTypeError(
-                    relpath_data=path_data, data=content, expected_type=root_type
-                )
-    if schema:
-        validate_data(data=content, schema=schema)
-    _logger.info(f"Successfully read data file at '{fullpath_data}'.")
-    _logger.debug(f"File Content: {content}")
-    _logger.section_end()
-    return content
-
-
-@_logger.sectioner("Validate Datafile Against Schema")
-def validate_data(
-    data: dict | list,
-    schema: str,
-    datafile_ext: str = "yaml",
-    is_dir: bool = False,
-    has_extension: bool = False,
-) -> None:
-    """
-    Validate data against a schema.
-
-    Parameters
-    ----------
-    data
-    schema : str
-        Name of the schema defined in `_SCHEMA_NAMES`.
-    datafile_ext
-    is_dir
-    has_extension
-
-    Returns
-    -------
-
-    """
+    raise_errors: bool = True,
+) -> dict | None:
     try:
-        pyserials.validate.jsonschema(
-            data=data,
-            schema=_SCHEMA[schema],
-            validator=jsonschema.Draft202012Validator,
-            registry=_registry,
-            fill_defaults=True,
-            raise_invalid_data=True,
+        data = pyserials.read.from_file(
+            path=path,
+            data_type=extension,
+            json_strict=True,
+            yaml_safe=True,
+            toml_as_dict=False,
         )
-    except pyserials.exception.validate.PySerialsSchemaValidationError as e:
-        raise _exception.content.ControlManSchemaValidationError(
-            rel_path=schema,
-            file_ext=datafile_ext,
-            is_dir=is_dir,
-            has_extension=has_extension,
-        ) from e
-    _logger.info(f"Successfully validated data against schema '{schema}'.")
-    return
+    except pyserials.exception.read.PySerialsReadException as e:
+        if raise_errors:
+            raise _exception.ControlManFileReadError(
+                path=Path(path).relative_to(base_path) if base_path else path,
+                data=getattr(e, "data", None),
+            ) from e
+        return
+    if not isinstance(data, dict):
+        if raise_errors:
+            raise _exception.ControlManFileDataTypeError(
+                expected_type=dict,
+                path=Path(path).relative_to(base_path) if base_path else path,
+                data=data,
+            )
+        return
+    return data
 
+
+def read_datafile_from_string(
+    data: str,
+    extension: Literal["json", "yaml", "toml"],
+    raise_errors: bool = True,
+) -> dict | None:
+    try:
+        data = pyserials.read.from_string(
+            data=data,
+            data_type=extension,
+            json_strict=True,
+            yaml_safe=True,
+            toml_as_dict=False,
+        )
+    except pyserials.exception.read.PySerialsReadException as e:
+        if raise_errors:
+            raise _exception.ControlManFileReadError(data=data) from e
+        return
+    if not isinstance(data, dict):
+        if raise_errors:
+            raise _exception.ControlManFileDataTypeError(
+                expected_type=dict,
+                data=data,
+            )
+        return
+    return data
+
+
+def read_control_center_file(
+    path: Path | str,
+    cache_manager: _CacheManager,
+    tag_name: str = u"!ext",
+):
+    return pyserials.read.yaml_from_file(
+        path=path,
+        safe=True,
+        constructors={
+            tag_name: _util.yaml.create_external_tag_constructor(
+                tag_name=tag_name,
+                cache_manager=cache_manager
+            )
+        },
+    )
 
 def get_package_datafile(path: str) -> str | dict | list:
     """
@@ -116,7 +102,7 @@ def get_package_datafile(path: str) -> str | dict | list:
     path : str
         The path of the data file relative to the package's '_data' directory.
     """
-    full_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_data" / path
+    full_path = _data_dir_path / path
     data = full_path.read_text()
     if full_path.suffix == ".yaml":
         return pyserials.read.yaml_from_string(data=data, safe=True)
@@ -157,28 +143,6 @@ def import_module_from_path(path: str | Path) -> _ModuleType:
         The imported module.
     """
     return _pkgdata.import_module_from_path(path=path)
-
-
-_SCHEMA = {
-    schema_name: get_package_datafile(f"schema/user/{schema_name}.yaml")
-    for schema_name in ("ci", "its", "main", "pkg", "vcs")
-}
-_registry = referencing.Registry().with_resources(
-    [(schema_name, referencing.Resource.from_contents(schema)) for schema_name, schema in _SCHEMA.items()]
-)
-_SCHEMA |= {
-    schema_name: get_package_datafile(f"schema/{schema_name}.yaml")
-    for schema_name in ("cache", "full", "local")
-}
-
-
-
-
-import requests
-from ruamel.yaml import YAML
-from ruamel.yaml.constructor import SafeConstructor
-from ruamel.yaml.nodes import ScalarNode
-import jsonpath_ng
 
 
 

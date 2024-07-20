@@ -1,0 +1,3592 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Issue Tracking
+description: |
+  The schema for the issue tracking system of a project.
+examples:
+  - changelog:
+      package_public:
+        name: Public API
+        path: CHANGELOG.md
+        title: ${{name}} Changelog - Public API
+        intro: |
+          This document records all changes to the public API of ${{ name }} in each new final release.
+          The changes documented here are only those that affect the end-users of the software,
+          such as added, changed, or removed features, bug fixes, and performance improvements.
+
+          All notable changes to this project will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+        entry:
+          title: "[{ver_dist}] – {date}"
+          intro: |
+            - Commit Type: {commit_type}
+            - Commit Title: {commit_title}
+            - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+        sections:
+          - id: removed
+            title: ⛔ Removed Features
+            description: |
+              Features that have been removed from the public API.
+          - id: changed
+            title: 🚫 Changed Features
+            description: |
+              Features that have been changed in the public API.
+          - id: deprecated
+            title: ⚠️ Deprecated Features
+            description: |
+              Features that have been deprecated in the public API.
+          - id: added
+            title: 🌱 New Features
+            description: |
+              Features that have been added to the public API.
+          - id: enhanced
+            title: ✨ Enhanced Features
+            description: |
+              Features that have been enhanced in the public API.
+          - id: security
+            title: 🛡️ Security Fixes
+            description: |
+              Security fixes that have been applied to the public API.
+          - id: fixed
+            title: 🐞 Bug Fixes
+            description: |
+              Bug fixes that have been applied to the public API.
+          - id: improved
+            title: 🚀 Performance Improvements
+            description: |
+              Performance improvements that have been applied to the public API.
+          - id: docs
+            title: 📝 Docstring Fixes
+            description: |
+              Docstring fixes that have been applied to the public API.
+          - id: notes
+            title: 📔️ Release-Notes Fixes
+            description: |
+              Release-Notes fixes that have been applied to the public API.
+      package_public_prerelease:
+        name: Pre-release Public API
+        path: CHANGELOG_PRERELEASE.md
+        title: ${{name}} Changelog - Pre-release Public API
+        intro: |
+          This document records all changes to the public API of ${{ name }} during a pre-release period.
+          The changes documented here are only those that affect the end-users of the software,
+          such as added, changed, or removed features, bug fixes, and performance improvements.
+
+          All notable changes to this project will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+        entry:
+          title: "[{ver_dist}] – {date}"
+          intro: |
+            - Commit Type: {commit_type}
+            - Commit Title: {commit_title}
+            - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+      website:
+        name: Website
+        path: docs/website/CHANGELOG.md
+        title: "${{name}} Changelog (Website)"
+        intro: |
+          This changelog documents the changes to the website.
+        entry:
+          title: "[{ver_dist}] – {date}"
+          intro: |
+            - Commit Type: {commit_type}
+            - Commit Title: {commit_title}
+            - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+        sections:
+          - id: content
+            title: Content
+            description: Changes to website content.
+          - id: design
+            title: Design
+            description: Changes to website design.
+          - id: backend
+            title: Backend
+            description: Changes to website backend.
+      package_private:
+        name: Private API
+        path: ".dev/CHANGELOG.md"
+        title: "${{name}} Changelog (Private API)"
+        intro: |
+          This file contains changes to the private API, as well as changes that
+          do not induce a version bump.
+        sections:
+          - id: removed
+            title: ⛔ Removed Features
+            description: Features that have been removed from the private API.
+          - id: changed
+            title: 🚫 Changed Features
+            description: Features that have been changed in the private API.
+          - id: added
+            title: 🌱 New Features
+            description: Features that have been added to the private API.
+          - id: enhanced
+            title: ✨ Enhanced Features
+            description: Features that have been enhanced in the private API.
+          - id: fixed
+            title: 🐞 Bug Fixes
+            description: Bug fixes that have been applied to the private API.
+          - id: improved
+            title: 🚀 Performance Improvements
+            description: Performance improvements that have been applied to the private API.
+          - id: docs
+            title: 📝 Docstring Fixes
+            description: Docstring fixes that have been applied to the private API.
+          - id: build
+            title: 🛠️ Build System Changes
+            description: Changes to the package build system.
+          - id: refactor
+            title: 🧹 Refactorings
+            description: Code refactorings.
+          - id: style
+            title: 🎨 Style Changes
+            description: Code style changes.
+      tests:
+        name: Test Suite
+        path: "tests/CHANGELOG.md"
+        title: "${{name}} Changelog (Test Suite)"
+        intro: |
+          This changelog documents the changes to the test suite.
+        sections:
+          - id: removed
+            title: ⛔ Removed Features
+            description: Features that have been removed from the test suite.
+          - id: changed
+            title: 🚫 Changed Features
+            description: Features that have been changed in the test suite.
+          - id: added
+            title: 🌱 New Features
+            description: Features that have been added to the test suite.
+          - id: enhanced
+            title: ✨ Enhanced Features
+            description: Features that have been enhanced in the test suite.
+          - id: fixed
+            title: 🐞 Bug Fixes
+            description: Bug fixes that have been applied to the test suite.
+          - id: improved
+            title: 🚀 Performance Improvements
+            description: Performance improvements that have been applied to the test suite.
+          - id: docs
+            title: 📝 Docstring Fixes
+            description: Docstring fixes that have been applied to the test suite.
+          - id: build
+            title: 🛠️ Build System Changes
+            description: Changes to the test-suite build system.
+          - id: refactor
+            title: 🧹 Refactorings
+            description: Code refactorings in the test-suite.
+          - id: style
+            title: 🎨 Style Changes
+            description: Code style changes in the test-suite.
+      meta:
+        name: Meta Content
+        path: .meta/CHANGELOG.md
+        title: ${{name}} Changelog (Meta)
+        intro: This changelog documents the changes to the meta content.
+        sections:
+          - id: credits
+            title: Credits
+            description: Changes to core/credits.yaml file.
+          - id: extensions
+            title: Extensions
+            description: Changes to core/extensions.yaml file.
+          - id: intro
+            title: Intro
+            description: Changes to core/intro.yaml file.
+          - id: license
+            title: License
+            description: Changes to core/license.yaml file.
+          - id: changelog
+            title: Changelogs
+            description: Changes to dev/changelogs.yaml file.
+          - id: commits
+            title: Commits
+            description: Changes to dev/commits.yaml file.
+          - id: issues
+            title: Issues
+            description: Changes to dev/issues.yaml file.
+          - id: labels
+            title: Labels
+            description: Changes to dev/labels.yaml file.
+          - id: maintainers
+            title: Maintainers
+            description: Changes to dev/maintainers.yaml file.
+          - id: repo
+            title: Repo
+            description: Changes to dev/repo.yaml file.
+          - id: workflows
+            title: Workflows
+            description: Changes to dev/workflows.yaml file.
+          - id: package_metadata
+            title: Package Metadata
+            description: Changes to package/metadata.yaml file.
+          - id: package_build
+            title: Package Build System.
+            description: Changes to package/config_build files.
+          - id: package_tools
+            title: Package Configurations.
+            description: Changes to package/config_tools files.
+      workflows:
+        name: Workflows
+        path: .github/CHANGELOG.md
+        title: ${{name}} Changelog (Workflows)
+        intro: This changelog documents the changes to the workflows.
+        sections:
+          - id: workflows
+            title: Workflows
+            description: Changes to workflows.
+    commit:
+      auto:
+        sync:
+          type: auto-sync
+        maintain:
+          type: auto-maintain
+      primary:
+        major:
+          type: major
+          subtypes:
+            any: [ remove, change ]
+            exclude: [ ci, meta-extensions, meta-changelog, meta-commits, meta-issues, meta-labels ]
+          description: |
+            Remove features/components from - or introduce breaking changes to - the public API,
+            and publish a new major release of the package.
+        minor:
+          type: minor
+          subtypes:
+            any: [ deprecate, feat, enhance ]
+          description: |
+            Add features/components to, or enhance/deprecate existing features in, the public API,
+            and publish a new minor release of the package.
+        patch:
+          type: patch
+          subtypes:
+            any: [ secure, fix, perf ]
+          description: |
+            Fix bugs or security issues in the public API,
+            or improve the performance of existing functionalities,
+            and publish a new patch release of the package.
+        post:
+          type: post
+          subtypes:
+            any: [ docs, notes ]
+          description: |
+            Fix documentation or release notes in a previous package release,
+            and publish a new post release.
+        web:
+          type: web
+          subtypes:
+            any: [ web-content, web-design, web-backend ]
+          description: |
+            Change the website content, design or backend.
+        config:
+          type: config
+          subtypes:
+            any:
+              - meta-credits
+              - meta-extensions
+              - meta-intro
+              - meta-license
+              - meta-changelog
+              - meta-commits
+              - meta-issues
+              - meta-labels
+              - meta-maintainers
+              - meta-repo
+              - meta-workflows
+          description: Change project configuration files in control center.
+        package_private:
+          type: pkg
+          subtypes:
+            any:
+              - priv-remove
+              - priv-change
+              - priv-feat
+              - priv-enhance
+              - priv-fix
+              - priv-perf
+              - priv-docs
+              - build
+              - refactor
+              - style
+          description: |
+            Change the private API, the build system, or refactor code,
+            without affecting the public API,
+            and without publishing a new package release.
+        tests:
+          type: test
+          subtypes:
+            any:
+              - test-remove
+              - test-change
+              - test-feat
+              - test-enhance
+              - test-fix
+              - test-perf
+              - test-docs
+              - test-build
+              - test-refactor
+              - test-style
+          description: |
+            Change the test-suite, without affecting the public API,
+            and without publishing a new package release.
+        workflows:
+          type: ci
+          subtypes:
+            any: [ ci ]
+          description: |
+            Change the GitHub workflows of the repository.
+      secondary:
+        remove:
+          description: 'Remove a feature/component from the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'removed'
+        change:
+          description: 'Change a feature/component in the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'changed'
+        deprecate:
+          description: 'Deprecate a feature/component from the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'deprecated'
+        feat:
+          description: 'Add a feature/component to the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'added'
+        enhance:
+          description: 'Enhance a feature/component in the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'enhanced'
+        secure:
+          description: 'Fix a security issue in the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'security'
+        fix:
+          description: 'Fix a bug in the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'fixed'
+        perf:
+          description: 'Improve performance in the public API.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'improved'
+        docs:
+          description: 'Fix documentation.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'docs'
+        notes:
+          description: 'Fix release notes.'
+          changelog_id: 'package_public'
+          changelog_section_id: 'notes'
+        web-content:
+          description: 'Change the website content.'
+          changelog_id: 'website'
+          changelog_section_id: 'content'
+        web-design:
+          description: 'Change the website design.'
+          changelog_id: 'website'
+          changelog_section_id: 'design'
+        web-backend:
+          description: 'Change the website backend.'
+          changelog_id: 'website'
+          changelog_section_id: 'backend'
+        priv-remove:
+          description: 'Remove a feature/component from the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'removed'
+        priv-change:
+          description: 'Change a feature/component in the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'changed'
+        priv-feat:
+          description: 'Add a feature/component to the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'added'
+        priv-enhance:
+          description: 'Enhance a feature/component in the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'enhanced'
+        priv-fix:
+          description: 'Fix a bug in the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'fixed'
+        priv-perf:
+          description: 'Improve performance in the private API.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'improved'
+        priv-docs:
+          description: 'Fix documentation.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'docs'
+        build:
+          description: 'Change the build system.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'build'
+        refactor:
+          description: 'Refactor code.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'refactor'
+        style:
+          description: 'Change text style and formatting without affecting the meaning.'
+          changelog_id: 'package_private'
+          changelog_section_id: 'style'
+        test-remove:
+          description: 'Remove a feature/component from the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'removed'
+        test-change:
+          description: 'Change a feature/component in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'changed'
+        test-feat:
+          description: 'Add a feature/component to the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'added'
+        test-enhance:
+          description: 'Enhance a feature/component in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'enhanced'
+        test-fix:
+          description: 'Fix a bug in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'fixed'
+        test-perf:
+          description: 'Improve performance in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'improved'
+        test-docs:
+          description: 'Fix documentation in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'docs'
+        test-build:
+          description: 'Change the test-suite build system.'
+          changelog_id: 'tests'
+          changelog_section_id: 'build'
+        test-refactor:
+          description: 'Refactor code in the test-suite.'
+          changelog_id: 'tests'
+          changelog_section_id: 'refactor'
+        test-style:
+          description: 'Change text style and formatting in the test-suite without affecting the meaning.'
+          changelog_id: 'tests'
+          changelog_section_id: 'style'
+        ci:
+          description: 'Change the CI configuration files and scripts.'
+          changelog_id: 'workflows'
+          changelog_section_id: 'workflows'
+        meta-credits:
+          description: 'Change credits meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'credits'
+        meta-extensions:
+          description: 'Change extensions meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'extensions'
+        meta-intro:
+          description: 'Change intro meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'intro'
+        meta-license:
+          description: 'Change license meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'license'
+        meta-changelog:
+          description: 'Change changelog meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'changelog'
+        meta-commits:
+          description: 'Change commits meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'commits'
+        meta-issues:
+          description: 'Change issues meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'issues'
+        meta-labels:
+          description: 'Change labels meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'labels'
+        meta-maintainers:
+          description: 'Change maintainers meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'maintainers'
+        meta-repo:
+          description: 'Change repo meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'repo'
+        meta-workflows:
+          description: 'Change workflows meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'workflows'
+        meta-package:
+          description: 'Change package meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'package'
+        meta-package-build:
+          description: 'Change package build meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'package_build'
+        meta-package-tools:
+          description: 'Change package tools meta content.'
+          changelog_id: 'meta'
+          changelog_section_id: 'package_tools'
+    label:
+      auto:
+        version:
+          prefix: "Version: "
+          description: Related to this specific version of the package.
+          color: "0366d6"
+        branch:
+          prefix: "Target: "
+          description: Related to this specific branch of the repository.
+          color: "0366d6"
+      primary:
+        prefix: 'Type: '
+        color: A00000
+        labels:
+          major:
+            suffix: 'major-release'
+            description: |
+              Resolving/merging the labeled issue/pull-request will result in a major release of the package.
+          minor:
+            suffix: 'minor-release'
+            description: |
+              Resolving/merging the labeled issue/pull-request will result in a minor release of the package.
+          patch:
+            suffix: 'patch-release'
+            description: |
+              Resolving/merging the labeled issue/pull-request will result in a patch release of the package.
+          post:
+            suffix: 'post-release'
+            description: |
+              Resolving/merging the labeled issue/pull-request will result in a post release of the package.
+          web:
+            suffix: 'website'
+            description: |
+              Resolving/merging the labeled issue/pull-request will result in deployment of the website.
+          config:
+            suffix: 'config'
+            description: |
+              An issue/pull-request about the meta content of the repository.
+          package_private:
+            suffix: 'package'
+            description: |
+              An issue/pull-request about the package that does not result in a new release.
+          tests:
+            suffix: 'test'
+            description: |
+              An issue/pull-request about the test suite.
+          workflows:
+            suffix: 'ci'
+            description: |
+              An issue/pull-request about the GitHub workflows of the repository.
+      secondary:
+        prefix: 'SubType: '
+        color: '0366d6'
+        labels:
+          api:
+            suffix: 'api'
+            description: |
+              Related to the public API.
+          gui:
+            suffix: 'gui'
+            description: |
+              Related to the graphical user interface.
+          cli:
+            suffix: 'cli'
+            description: |
+              Related to the command-line interface.
+          setup:
+            suffix: 'setup'
+            description: |
+              Related to package installation.
+          enhancement:
+            suffix: 'enhancement'
+            description: |
+              An enhancement to an existing feature or functionality.
+          feat:
+            suffix: 'feat'
+            description: |
+              A new feature or functionality.
+          breaking:
+            suffix: 'breaking'
+            description: |
+              A backward-incompatible change to the API.
+      status:
+        prefix: 'Status: '
+        color: '0366d6'
+        labels:
+          triage:
+            suffix: 'triage'
+            description: The issue is being triaged.
+          rejected:
+            suffix: 'rejected'
+            description: |
+              The issue/pull-request has been rejected.
+          duplicate:
+            suffix: 'duplicate'
+            description: |
+              The issue/pull-request is a duplicate.
+          invalid:
+            suffix: 'invalid'
+            description: |
+              The issue/pull-request is invalid.
+          planning:
+            suffix: 'planning'
+            description: The issue is in the planning phase.
+          requirement_analysis:
+            suffix: 'req. analysis'
+            description: The issue is in the requirement analysis phase.
+          design:
+            suffix: 'design'
+            description: The issue is in the design phase.
+          implementation:
+            suffix: 'implementation'
+            description: The issue is in the implementation phase.
+          testing:
+            suffix: 'testing'
+            description: The issue is in the testing phase.
+          deploy_alpha:
+            suffix: 'alpha'
+            description: The issue/pull-request is in alpha release.
+          deploy_beta:
+            suffix: 'beta'
+            description: The issue/pull-request is in beta release.
+          deploy_rc:
+            suffix: 'rc'
+            description: The issue/pull-request is published as a release candidate.
+          deploy_final:
+            suffix: 'final'
+            description: The issue/pull-request has been merged into a release branch.
+      custom:
+        group:
+          remark:
+            prefix: 'Remark: '
+            color: '0366d6'
+            labels:
+              queued:
+                suffix: 'queued'
+                description: The issue/pull-request is queued for processing.
+              discuss:
+                suffix: 'discuss'
+                description: The issue/pull-request requires more discussion.
+              need_volunteer:
+                suffix: 'need volunteer'
+                description: The issue/pull-request requires a volunteer.
+    issue:
+      blank_enabled: false
+      contact_links:
+        - name: '🎓️  Learn More'
+          about: Not sure where to start? Read our contribution guide to learn more.
+          url: ${{ url.website.contributing }}
+        - name: '💬  Contact Us'
+          about: Have another inquiry or need help? Contact us directly!
+          url: ${{ url.website.contact }}
+      forms:
+        - id: app_bug_api
+          primary_type: release_patch
+          subtype: api
+          name: ' 🖥 App 🐞 Bug Report 📱 API'
+          description: >-
+            Report a problem (e.g., errors and unexpected results) encountered
+            while using the application's Python API.
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for providing feedback on ${{ name }}; we greatly appreciate your contribution!
+                    Before submitting a ticket, please take a moment to review and accept our terms and conditions.
+                  </p>
+                  <h2>Terms and Conditions</h2>
+                  <h3>⛔ Choosing the Right Form</h3>
+                  <p align="justify">
+                    Please note that this form is specifically for reporting a
+                    <b>non-security-related bug in ${{name}}'s Python API</b>,
+                    i.e. an unexpected behavior that occurs while using the application as an import package.
+                    To report a security vulnerability please first read our
+                    <a href="${{url.github.security.policy}}">security policy</a>, and fill a
+                    <a href="${{url.github.security.new_advisory}}">private security advisory form</a> instead.
+                    For other types of issues, such as problems in the
+                    <a href="${{url.github.issues.new.app_bug_setup]}">installation process</a>,
+                    <a href="${{url.github.issues.new.docs_bug_site]}">website</a>, or
+                    <a href="${{url.github.issues.new.docs_bug_content]}">documentation</a>,
+                    or for requesting new features and enhancements, please select the appropriate form
+                    from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                  </p>
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+                  <h3>⚠️ Verifying the Bug</h3>
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      The issue you are experiencing is in fact a bug, and not a documented expected behavior.
+                    </li>
+                    <li>
+                      The bug is reproducible in the latest version of the release, and has not yet been reported.
+                    </li>
+                  </ol>
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the bug is verified.
+                  </blockquote>
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              id: collab
+              attributes:
+                label: |
+                  Thank you again for filling this bug report.
+                  If you are willing to collaborate on fixing the issue, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Please select all operating systems on which you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: true
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Please select all Python versions in which you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Please select the package manager used to download and install ${{ name }}.
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: true
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Please select all ${{ name }} versions in which you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: textarea
+              id: environment
+              attributes:
+                label: Environment
+                description: >-
+                  Please provide the details of all installed packages and their exact versions
+                  in the environment where you have encountered the bug. Follow the instructions below
+                  based on the package manager you have selected:
+
+                  1. **`pip`**: Run `pip freeze > requirements.txt` in your terminal within the environment,
+                  and copy the contents of the generated `requirements.txt` file here.
+
+                  2. **`conda`**: Run `conda env export > environment.yml` in your terminal within the environment
+                  (or alternatively `conda env export -n {YOUR_ENVIRONMENT_NAME} > environment.yml`),
+                  and copy the contents of the generated `environment.yml` file here.
+              validations:
+                required: true
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Bug Report</h2>
+            - type: input
+              id: api_entry
+              attributes:
+                label: Fully Qualified Name
+                description: >-
+                  Please provide the fully qualified name (e.g., `package_name.module_name.ClassName.method_name`)
+                  of the API endpoint that is causing the problem.
+                value: ${{package.import_name}}.
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: Please provide a brief summary of the bug.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: textarea
+              id: code
+              attributes:
+                label: Test Case or Minimal Reproducible Example (MRE)
+                description: >-
+                  Please provide a test case (preferred), or a
+                  minimal complete verifiable code example to reproduce the bug.
+                value: |
+                  import ${{package.import_name}}
+
+                  def test():
+                      ...
+                      assert ...
+                render: python
+              validations:
+                required: true
+            - type: textarea
+              id: log
+              attributes:
+                label: Error Message / Output
+                description: >-
+                  If you have provided an MRE instead of a test case, please copy the output of the MRE here.
+                  This may be the full traceback of an error, or some other output that demonstrates the bug.
+                render: shell
+              validations:
+                required: false
+          post_process:
+            assign_creator:
+              if_checkbox:
+                id: collab
+                number: 1
+                is_checked: true
+            body: |
+              <h2>Bug Location</h2>
+              <ul>
+              <li><b>Package Version</b>: {version}</li>
+              <li><b>Fully Qualified Name</b>: {api_entry}</li>
+              </ul>
+              <h2>System and Version Specifications</h2>
+              <li><b>Operating System</b>: {os}</li>
+              <li><b>Python Version</b>: {python_version}</li>
+              <li><b>Package Manager</b>: {package_manager}</li>
+              <li>
+              <details>
+              <summary><b>Environment</b></summary>
+
+              ```
+              {environment}
+              ```
+
+              </details></li>
+              </ul>
+              <h2>Bug Summary</h2>
+
+              {summary}
+
+              <h2>Test Case / Minimal Reproducible Example (MRE)</h2>
+
+              {code}
+
+              <h2>Error Message</h2>
+
+              {log}
+        - id: app_bug_cli
+          primary_type: release_patch
+          subtype: cli
+          pre_process:
+            if_any: [ "${{ package.releases.cli_scripts }}" ]
+          name: ' 🖥 App 🐞 Bug Report ⌨️ CLI'
+          description: >-
+            Report a problem (e.g. errors and unexpected results) encountered
+            while using the application's command-line interface (CLI).
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for providing feedback on ${{ name }}; we greatly appreciate your contribution!
+                    Before submitting a ticket, please take a moment to review and accept our terms and conditions.
+                  </p>
+                  <h2>Terms and Conditions</h2>
+                  <h3>⛔ Choosing the Right Form</h3>
+                  <p align="justify">
+                    Please note that this form is specifically for reporting a
+                    <b>non-security-related bug in ${{name}}'s CLI</b>,
+                    i.e. an unexpected behavior that occurs while using the
+                    application via its command-line interface (i.e. console script).
+                    To report a security vulnerability, please first read our
+                    <a href="${{url.github.security.policy}}">security policy</a>, and fill a
+                    <a href="${{url.github.security.new_advisory}}">private security advisory form</a> instead.
+                    For other types of issues, such as problems in the
+                    <a href="${{url.github.issues.new.app_bug_api]}">Python API</a>,
+                    <a href="${{url.github.issues.new.app_bug_setup]}">installation process</a>,
+                    <a href="${{url.github.issues.new.docs_bug_site]}">website</a>, or
+                    <a href="${{url.github.issues.new.docs_bug_content]}">documentation</a>,
+                    or for requesting new features and enhancements, please select the appropriate form
+                    from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+
+                    For other types of issues, such as problems in the
+                    <a href="${{url.github.issues.new.app_bug_setup]}">installation process</a>,
+                    <a href="${{url.github.issues.new.docs_bug_site]}">website</a>, or
+                    <a href="${{url.github.issues.new.docs_bug_content]}">documentation</a>,
+                    or for requesting new features and enhancements, please select the appropriate form
+                    from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                  </p>
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+                  <h3>⚠️ Verifying the Bug</h3>
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      The issue you are experiencing is in fact a bug, and not a documented expected behavior.
+                    </li>
+                    <li>
+                      The bug is reproducible in the latest version of the release, and has not yet been reported.
+                    </li>
+                  </ol>
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the bug is verified.
+                  </blockquote>
+                  <h3>✅ Agreements</h3>
+
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        To 🚨 <a href="${{url.github.security.home}}"><b>report a security vulnerability</b></a>
+                        🚨 please first read our
+                        <a href="${{url.github.security.policy}}">security policy</a>, and fill a
+                        <a href="${{url.github.security.new_advisory}}">private security advisory form</a> instead.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the bug</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      The issue you are experiencing is in fact a bug, and not a documented expected behavior.
+                    </li>
+                    <li>
+                      The bug is reproducible in the latest version of the release, and has not yet been reported.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_bug}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the bug is verified.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              attributes:
+                label: |
+                  Thank you again for filling this bug report.
+                  If you are willing to collaborate on fixing the issue, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Which operating systems have you tested?
+                  Please select all options where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: true
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Which Python versions have you tested?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Which package manager have you used to download and install the package?
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: true
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which versions of our software are affected?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: textarea
+              id: environment
+              attributes:
+                label: Environment
+                description: >-
+                  Please provide the details of all installed packages and their exact versions
+                  in the environment where you have encountered the bug. Follow the instructions below
+                  based on the package manager you have selected:
+
+                  1. **`pip`**: Run `pip freeze > requirements.txt` in your terminal within the environment,
+                  and copy the contents of the generated `requirements.txt` file here.
+
+                  2. **`conda`**: Run `conda env export > environment.yml` in your terminal within the environment
+                  (or alternatively `conda env export -n {YOUR_ENVIRONMENT_NAME} > environment.yml`),
+                  and copy the contents of the generated `environment.yml` file here.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Bug Report</h2>
+            - type: dropdown
+              id: cli_entry
+              attributes:
+                label: CLI Entry Point
+                description: |
+                  Which CLI entry point is causing the problem?
+                multiple: false
+                options: ${{ package.releases.cli_scripts }}
+              validations:
+                required: true
+            - type: input
+              attributes:
+                label: Console Command
+                description: |
+                  Please provide the exact command (with all arguments) you are using.
+                placeholder: ${{ package.releases.cli_scripts }} --help
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: Please provide a brief summary of the bug.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: textarea
+              id: log
+              attributes:
+                label: Console Output
+                description: |
+                  Please provide the output of the command-line script.
+                render: shell
+              validations:
+                required: true
+        - id: app_bug_gui
+          pre_process:
+            if_any: [ "${{ package.releases.gui_scripts }}" ]
+          primary_type: release_patch
+          subtype: gui
+          name: ' 🖥 App 🐞 Bug Report 🖱 GUI'
+          description: >-
+            Report a problem (e.g. errors and unexpected results) encountered
+            while using the application's graphical user interface (GUI).
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for taking the time to report a problem in ${{ name }};
+                    we greatly appreciate your contribution! ❤️🙏
+                  </p>
+
+                  <h2>Terms and Conditions</h2>
+                  <p align="justify">
+                    Before submitting a report, please take a moment to review and accept our terms and conditions;
+                    they will help us process the issue as fast as possible,
+                    and not bother you with additional questions.
+                  </p>
+
+                  <h3>⛔ Choosing the right form</h3>
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+                        Please note that this form is specifically for reporting a <b>non-security-related bug</b>
+                        in the ${{name}} GUI, i.e. an unexpected behavior that occurs while using the
+                        application via a graphical user interface it provides.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        To 🚨 <a href="${{url.github.security.home}}"><b>report a security vulnerability</b></a>
+                        🚨 please first read our
+                        <a href="${{url.github.security.policy}}">security policy</a>, and fill a
+                        <a href="${{url.github.security.new_advisory}}">private security advisory form</a> instead.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        For other types of issues, such as problems in the
+                        <a href="${{url.github.issues.new.app_bug_api]}">Python API</a>,
+                        <a href="${{url.github.issues.new.app_bug_setup]}">installation process</a>,
+                        <a href="${{url.github.issues.new.docs_bug_site]}">website</a>, or
+                        <a href="${{url.github.issues.new.docs_bug_content]}">documentation</a>,
+                        or for requesting new features and enhancements, please select the appropriate form
+                        from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the bug</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      The issue you are experiencing is in fact a bug, and not a documented expected behavior.
+                    </li>
+                    <li>
+                      The bug is reproducible in the latest version of the release, and has not yet been reported.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_bug}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the bug is verified.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              attributes:
+                label: |
+                  Thank you again for filling this bug report.
+                  If you are willing to collaborate on fixing the issue, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Which operating systems have you tested?
+                  Please select all options where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: true
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Which Python versions have you tested?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Which package manager have you used to download and install the package?
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: true
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which versions of our software are affected?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: textarea
+              id: environment
+              attributes:
+                label: Environment
+                description: >-
+                  Please provide the details of all installed packages and their exact versions
+                  in the environment where you have encountered the bug. Follow the instructions below
+                  based on the package manager you have selected:
+
+                  1. **`pip`**: Run `pip freeze > requirements.txt` in your terminal within the environment,
+                  and copy the contents of the generated `requirements.txt` file here.
+
+                  2. **`conda`**: Run `conda env export > environment.yml` in your terminal within the environment
+                  (or alternatively `conda env export -n {YOUR_ENVIRONMENT_NAME} > environment.yml`),
+                  and copy the contents of the generated `environment.yml` file here.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Bug Report</h2>
+            - type: dropdown
+              id: gui_entry
+              attributes:
+                label: GUI Entry Point
+                description: |
+                  Which GUI entry point is causing the problem?
+                multiple: false
+                options: ${{ package.releases.gui_scripts }}
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: Please provide a brief summary of the bug.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: textarea
+              id: reproduce
+              attributes:
+                label: Minimal Reproducible Example (MRE)
+                description: >-
+                  Please provide an exact step-by-step instruction to reproduce the bug.
+                  You can also include screenshots/recordings by dragging and dropping them here.
+                value: |
+                  1.
+                  2.
+                  3.
+              validations:
+                required: true
+        - id: app_bug_setup
+          primary_type: release_patch
+          subtype: setup
+          name: ' 🖥 App 🐞 Bug Report ⚙️ Setup'
+          description: >-
+            Report a problem in downloading, installation, or initialization of the application.
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for taking the time to report a problem in ${{ name }};
+                    we greatly appreciate your contribution! ❤️🙏
+                  </p>
+
+                  <h2>Terms and Conditions</h2>
+
+                  <p align="justify">
+                    Before submitting a report, please take a moment to review and accept our terms and conditions;
+                    they will help us process the issue as fast as possible,
+                    and not bother you with additional questions.
+                  </p>
+
+                  <h3>⛔ Choosing the right form</h3>
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+                        Please note that this form is specifically for reporting a <b>non-security-related bug</b>
+                        in the ${{name}} setup process, i.e. an unexpected behavior that occurs during the
+                        download, installation, or initialization of the application.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        To 🚨 <a href="${{url.github.security.home}}"><b>report a security vulnerability</b></a>
+                        🚨 please first read our
+                        <a href="${{url.github.security.policy}}">security policy</a>, and fill a
+                        <a href="${{url.github.security.new_advisory}}">private security advisory form</a> instead.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        For other types of issues, such as problems in the
+                        <a href="${{url.github.issues.new.app_bug_api]}">Python API</a>,
+                        <a href="${{url.github.issues.new.docs_bug_site]}">website</a>, or
+                        <a href="${{url.github.issues.new.docs_bug_content]}">documentation</a>,
+                        or for requesting new features and enhancements, please select the appropriate form
+                        from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the bug</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      The issue you are experiencing is in fact a bug, and not a documented expected behavior.
+                    </li>
+                    <li>
+                      The bug is reproducible in the latest version of the release, and has not yet been reported.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the bug is verified.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              attributes:
+                label: |
+                  Thank you again for filling this bug report.
+                  If you are willing to collaborate on fixing the issue, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Which operating systems have you tested?
+                  Please select all options where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: true
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Which Python versions have you tested?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Which package manager have you used to download and install the package?
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: true
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which versions of our software are affected?
+                  Please select all versions where you have encountered the bug.
+                multiple: true
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: textarea
+              id: environment
+              attributes:
+                label: Environment
+                description: >-
+                  Please provide the details of all installed packages and their exact versions
+                  in the environment where you have encountered the bug. Follow the instructions below
+                  based on the package manager you have selected:
+
+                  1. **`pip`**: Run `pip freeze > requirements.txt` in your terminal within the environment,
+                  and copy the contents of the generated `requirements.txt` file here.
+
+                  2. **`conda`**: Run `conda env export > environment.yml` in your terminal within the environment
+                  (or alternatively `conda env export -n {YOUR_ENVIRONMENT_NAME} > environment.yml`),
+                  and copy the contents of the generated `environment.yml` file here.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Bug Report</h2>
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: Please provide a brief summary of the bug, and the steps necessary to reproduce it.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+            - type: textarea
+              id: log
+              attributes:
+                label: Error Message
+                description: |
+                  If applicable, provide the full traceback of the error message.
+                render: shell
+              validations:
+                required: false
+        - id: app_request_enhancement
+          primary_type: release_minor
+          subtype: enhancement
+          name: ' 🖥 App 🔔 Request 🚀 Enhancement'
+          description: >-
+            Request an improvement to an existing feature in the application,
+            for example in terms of performance, functionality, or ease of use.
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for taking the time to report a problem in ${{ name }};
+                    we greatly appreciate your contribution! ❤️🙏
+                  </p>
+
+                  <h2>Terms and Conditions</h2>
+
+                  <p align="justify">
+                    Before submitting a report, please take a moment to review and accept our terms and conditions;
+                    they will help us process the issue as fast as possible,
+                    and not bother you with additional questions.
+                  </p>
+
+                  <h3>⛔ Choosing the right form</h3>
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+                        Please note that this form is specifically for requesting a <b>non-breaking enhancement</b>
+                        in one of ${{name}}'s existing features and functionalities.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        For other types of issues, such as requesting
+                        <a href="${{url.github.issues.new.app_request_feature]}">new features</a>,
+                        <a href="${{url.github.issues.new.app_request_breaking]}">breaking changes</a>, and
+                        <a href="${{url.github.issues.new.web_request_frontend]}">changes in the website content</a>,
+                        or for reporting bugs, please select the appropriate form
+                        from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the request</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      Your request is in fact for a non-breaking enhancement, and not a breaking change or new feature.
+                    </li>
+                    <li>
+                      The request is not implemented in the latest version of the release,
+                      and has not yet been filed by another person.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the request is valid.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              attributes:
+                label: |
+                  Thank you again for filling this bug report.
+                  If you are willing to collaborate on fixing the issue, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Does this enhancement request apply to a specific operating system?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: false
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Does this enhancement request apply to a specific Python version?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: false
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Does this enhancement request apply to a specific package manager?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: true
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Enhancement Request</h2>
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which version of our software is this request for?
+                multiple: false
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_interface
+              pre_process:
+                if_any: [ "${{ package.releases.has_scripts }}" ]
+              attributes:
+                label: Package Interface
+                description: |
+                  Which interface of our software is this request for?
+                multiple: true
+                options: ${{ package.releases.interfaces }}
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: |
+                  Please provide a brief summary of your enhancement request,
+                  including the motivation, use case, or problem it solves.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+        - id: app_request_feature
+          primary_type: release_minor
+          subtype: feat
+          name: ' 🖥 App 🔔 Request ✨ New Feature'
+          description: >-
+            Request a brand new feature that is not yet available in the application.
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for taking the time to report a problem in ${{ name }};
+                    we greatly appreciate your contribution! ❤️🙏
+                  </p>
+
+                  <h2>Terms and Conditions</h2>
+
+                  <p align="justify">
+                    Before submitting a report, please take a moment to review and accept our terms and conditions;
+                    they will help us process the issue as fast as possible,
+                    and not bother you with additional questions.
+                  </p>
+
+                  <h3>⛔ Choosing the right form</h3>
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+                        Please note that this form is specifically for requesting a
+                        <b>non-breaking new feature</b> in ${{name}}.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        For other types of issues, such as requesting
+                        <a href="${{url.github.issues.new.app_request_enhancement]}">enhancements</a>,
+                        <a href="${{url.github.issues.new.app_request_breaking]}">breaking changes</a>, and
+                        <a href="${{url.github.issues.new.web_request_frontend]}">changes in the website content</a>,
+                        or for reporting bugs, please select the appropriate form
+                        from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the request</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      Your request is in fact for a non-breaking new feature, and not a breaking change or an enhancement.
+                    </li>
+                    <li>
+                      The feature is not implemented in the latest version of the release,
+                      and has not yet been requested by another person.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the request is valid.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              id: collab
+              attributes:
+                label: |
+                  Thank you again for filling this feature request.
+                  If you are willing to collaborate on implementing the new feature, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Does this feature request apply to a specific operating system?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: false
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Does this feature request apply to a specific Python version?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: false
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Does this feature request apply to a specific package manager?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: false
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Feature Request</h2>
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which version of our software is this request for?
+                multiple: false
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_interface
+              pre_process:
+                if_any: [ "${{ package.releases.has_scripts }}" ]
+              attributes:
+                label: Package Interface
+                description: |
+                  Which interface of our software is this request for?
+                multiple: true
+                options: ${{ package.releases.interfaces }}
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: |
+                  Please provide a brief summary of your request,
+                  including the motivation, use case, or problem it solves.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+          post_process:
+            assign_creator:
+              if_checkbox:
+                id: collab
+                number: 1
+                is_checked: true
+            body: |
+              ### Feature Location
+              - **Package Version**: {version}
+              - **Package Interface**: {package_interface}
+              - **Operating System**: {os}
+              - **Python Version**: {python_version}
+              - **Package Manager**: {package_manager}
+
+              ### Request Summary
+
+              {summary}
+
+        - id: app_request_breaking
+          primary_type: release_major
+          subtype: breaking
+          name: ' 🖥 App 🔔 Request 💥 Breaking Change'
+          description: >-
+            Request a backward-incompatible change to the API,
+            such as a change in the behavior of an existing functionality.
+          body:
+            - type: markdown
+              attributes:
+                value: >-
+                  <p align="justify">
+                    Thank you for taking the time to report a problem in ${{ name }};
+                    we greatly appreciate your contribution! ❤️🙏
+                  </p>
+
+                  <h2>Terms and Conditions</h2>
+
+                  <p align="justify">
+                    Before submitting a report, please take a moment to review and accept our terms and conditions;
+                    they will help us process the issue as fast as possible,
+                    and not bother you with additional questions.
+                  </p>
+
+                  <h3>⛔ Choosing the right form</h3>
+
+                  <ul>
+                    <li>
+                      <p align="justify">
+                        Please note that this form is specifically for requesting a
+                        <b>breaking change</b> in ${{name}}.
+                      </p>
+                    </li>
+                    <li>
+                      <p align="justify">
+                        For other types of issues, such as requesting
+                        <a href="${{url.github.issues.new.app_request_enhancement]}">enhancements</a>,
+                        <a href="${{url.github.issues.new.app_request_feature]}">new features</a>, and
+                        <a href="${{url.github.issues.new.web_request_frontend]}">changes in the website content</a>,
+                        or for reporting bugs, please select the appropriate form
+                        from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
+                      </p>
+                    </li>
+                  </ul>
+
+                  <blockquote>
+                    💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                    <br>
+                    <p align="justify">
+                      Can't find the right form or unsure about which one to choose?
+                      Ask a question and get help in the
+                      <a href="${{url.github.discussions.new.question_issues}}">discussion forum</a>.
+                    </p>
+                  </blockquote>
+
+                  <h3>⚠️ Verifying the request</h3>
+
+                  Before submitting a report, please make sure that you are following our
+                  <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                  <ol>
+                    <li>
+                      Your request is in fact for a breaking change, and not a new feature or an enhancement.
+                    </li>
+                    <li>
+                      The request has not yet been filed by another person.
+                    </li>
+                  </ol>
+
+                  <blockquote>
+                      💡 <a href="${{url.github.discussions.new.question_issues}}"><b>Open a discussion instead!</b></a>
+                      <br>
+                      This verification process is non-trivial, and can be time-consuming.
+                      If you are not a collaborator and don't have the time to go through the process,
+                      you can always open a discussion instead; we will investigate the problem as soon as possible,
+                      and convert the discussion into an issue if the request is valid.
+                  </blockquote>
+
+                  <h3>🤝 Code of conduct</h3>
+
+                  <p align="justify">
+                    Please make sure that you are following our
+                    <a href="${{url.github.health_file.code_of_conduct}}">Code of Conduct</a>,
+                    so that we can process the issue as soon as possible.
+                  </p>
+
+                  <h3>✅ Agreements</h3>
+            - type: checkboxes
+              id: terms
+              attributes:
+                label: >-
+                  To submit an issue, please agree to the following terms and conditions:
+                options:
+                  - label: >-
+                      I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
+                      and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    required: true
+                  - label: >-
+                      I have read, understood, and agree to follow the
+                      [Code of Conduct](${{url.github.health_file.code_of_conduct}}).
+                    required: true
+            - type: markdown
+              attributes:
+                value: <h3>🧑‍💻 Collaborate</h3>
+            - type: checkboxes
+              id: collab
+              attributes:
+                label: |
+                  Thank you again for filling this feature request.
+                  If you are willing to collaborate on implementing the new feature, please select the option below.
+                options:
+                  - label: >-
+                      I am willing to work on the issue and submit a pull request.
+                    required: false
+            - type: markdown
+              attributes:
+                value: <br><h2>System and Version Specifications</h2>
+            - type: dropdown
+              id: os
+              attributes:
+                label: Operating System
+                description: |
+                  Does this request apply to a specific operating system?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.os_titles }}
+              validations:
+                required: false
+            - type: dropdown
+              id: python_version
+              attributes:
+                label: Python Version
+                description: |
+                  Does this request apply to a specific Python version?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.python_versions }}
+              validations:
+                required: false
+            - type: dropdown
+              id: package_manager
+              attributes:
+                label: Package Manager
+                description: |
+                  Does this request apply to a specific package manager?
+                  If so, please select the appropriate option.
+                multiple: false
+                options: ${{ package.releases.package_managers }}
+              validations:
+                required: false
+            - type: markdown
+              attributes:
+                value: |
+                  <br>
+                  <h2>Modification Request</h2>
+            - type: dropdown
+              id: version
+              attributes:
+                label: Package Version
+                description: |
+                  Which version of our software is this request for?
+                multiple: false
+                options: ${{ package.releases.package_versions }}
+              validations:
+                required: true
+            - type: dropdown
+              id: package_interface
+              pre_process:
+                if_any: [ "${{ package.releases.has_scripts }}" ]
+              attributes:
+                label: Package Interface
+                description: |
+                  Which interface of our software is this request for?
+                multiple: true
+                options: ${{ package.releases.interfaces }}
+              validations:
+                required: true
+            - type: textarea
+              id: summary
+              attributes:
+                label: Summary
+                description: |
+                  Please provide a brief summary of your request,
+                  including the motivation, use case, or problem it solves.
+              #            placeholder: Tell us what you see!
+              validations:
+                required: true
+          post_process:
+            assign_creator:
+              if_checkbox:
+                id: collab
+                number: 1
+                is_checked: true
+            body: |
+              ### Change Location
+              - **Package Version**: {version}
+              - **Package Interface**: {package_interface}
+              - **Operating System**: {os}
+              - **Python Version**: {python_version}
+              - **Package Manager**: {package_manager}
+
+              ### Request Summary
+
+              {summary}
+
+
+
+        - id: web_bug_frontend
+          primary_type: web
+          name: '📚 Docs  🪲 Bug Report  📄 Content'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report a problem in the contents of the documentation,
+            e.g. missing details, ambiguous explanations, mechanical errors, broken links etc.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '📚 Docs  🪲 Bug Report  🌐 Website'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report a technical problem in the documentation website,
+            including broken page formatting, loading issues, and unexpected behavior.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '📚 Docs  🔔 Request  💫 New Content'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Request a brand new feature that is not yet available in the application.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '📚 Docs  🔔 Request  ✨ New Feature'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Request a brand new feature that is not yet available in the application.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '🧪 Tests  🪲 Bug Report'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report problems in the test suite, such as  etc.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '🧪 Tests  🔔 Request'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report problems in the test suite, such as  etc.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '🏗 DevOps  🪲 Bug Report'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report a development problem in the repository, e.g. in CI/CD workflows, .
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '🏗 DevOps  🔔 Request'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Request an improvement in an existing feature, e.g. in terms of functionality,
+            performance, or ease of use.
+          body:
+        - id: web_bug_frontend
+          primary_type: web
+          name: '🧹  Maintenance  🔔 Request'
+          labels: [ "SubType: breaking" ]
+          description: >-
+            Report a development problem in the repository, e.g. in CI/CD workflows, .
+          body:
+    document:
+      prerelease_temp_path: docs/prerelease_dev_protocols.md
+      template:
+        title: Development Process Protocol
+        body: |
+          - Issue {issue_number}
+          ## Plan
+          {issue_body}
+
+
+          ## Software Requirements Specification
+          TBD
+
+
+          ## Design Specification
+          TBD
+
+
+          ## Implementation
+          TBD
+          {primary_commit_summary}
+          {secondary_commits_tasklist}
+
+
+          ## References
+          {references}
+
+
+          ## Timeline
+          {timeline}
+
+
+    pull:
+      template:
+        default: |
+          ## Description
+          Provide a brief description of the PR's purpose here.
+
+          ## Content
+          Notable points that this PR has either accomplished or will accomplish.
+          - [ ] TODO 1
+
+          ## Questions
+          - [ ] Question1
+
+          ## Status
+           - [ ] Tests
+           - [ ] Docs
+           - [ ] CHANGELOG updated
+           - [ ] Issue raised/referenced
+           - [ ] Ready to merge
+
+    discussion:
+      category:
+        form:
+          question_issues:
+            # A default title that will be pre-populated in the discussion submission form.
+            title: "[General] "
+
+            # Labels that will automatically be added to discussions created with this template.
+            labels: [ "General Introduction" ]
+
+            # Definition of the input types in the discussion form.
+            body:
+              - type: markdown
+                attributes:
+                  value: |
+                    This is text that will show up in the template!
+              - type: textarea
+                id: improvements
+                attributes:
+                  label: Top 3 improvements
+                  description: "What are the top 3 improvements we could make to this project?"
+                  value: |
+                    1.
+                    2.
+                    3.
+                    ...
+                  render: bash
+                validations:
+                  required: true
+              - type: markdown
+                attributes:
+                  value: |
+                    ## Markdown header
+                    And some more markdown
+              - type: input
+                id: has-id
+                attributes:
+                  label: Suggestions
+                  description: A description about suggestions to help you
+                validations:
+                  required: true
+              - type: dropdown
+                id: download
+                attributes:
+                  label: Which area of this project could be most improved?
+                  options:
+                    - Documentation
+                    - Pull request review time
+                    - Bug fix time
+                    - Release cadence
+                validations:
+                  required: true
+              - type: checkboxes
+                attributes:
+                  label: Check that box!
+                  options:
+                    - label: This one!
+                      required: true
+                    - label: I won't stop you if you check this one, too
+              - type: markdown
+                attributes:
+                  value: |
+                    ### The thrilling conclusion
+                    _to our template_
+
+          question_bug:
+            title: Is this a bug?
+            labels:
+              - bug
+            body:
+              - type: markdown
+                id: bug
+                attributes:
+                  value: |
+                    **Describe the bug**
+
+properties:
+  changelog:
+    title: Changelog Configurations
+    description: |
+      Configurations for different changelog files.
+      Project's changelog templates and paths.
+      Configurations and templates for your project's changelogs and release notes.
+    root_key: changelog
+    type: object
+    additionalProperties:
+      title: Changelog
+      description: |
+        Configurations for a changelog file.
+        For each changelog, add a key-value pair,
+        where the key is the ID of the changelog, to reference in other places.
+      type: object
+      additionalProperties: false
+      required: [ name, title, path, intro, entry, sections ]
+      properties:
+        name:
+          title: Name
+          description: Name of the changelog.
+          type: string
+          minLength: 1
+          examples:
+            - Public API
+        path:
+          title: Path
+          description: Path to the changelog file, relative to the root of the repository.
+          type: string
+          minLength: 1
+          examples:
+            - CHANGELOG.md
+        title:
+          title: Title
+          description: Title of the changelog document.
+          type: string
+          minLength: 1
+          examples:
+            - ${{name}} Changelog (Public API)
+        intro:
+          title: Introduction
+          description: Introduction text of the changelog.
+          type: string
+          minLength: 1
+          examples: |
+            All notable changes to this project will be documented in this file.
+
+            The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+            and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+        entry:
+          title: Entry
+          description: Configurations for the entries in the changelog.
+          type: object
+          default: { }
+          additionalProperties: false
+          required: [ title, intro ]
+          properties:
+            title:
+              title: Title
+              description: Title of the entry.
+              type: string
+              minLength: 1
+              default: "[{ver_dist}] – {date}"
+            intro:
+              title: Introduction
+              description: Introduction text of the entry.
+              type: string
+              minLength: 1
+              default: |
+                - Commit Type: {commit_type}
+                - Commit Title: {commit_title}
+                - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+        sections:
+          title: Sections
+          description: Sections of each entry in the changelog.
+          type: array
+          minItems: 1
+          items:
+            title: Section
+            description: Section of the changelog.
+            type: object
+            additionalProperties: false
+            required: [ id, title, description ]
+            properties:
+              id:
+                title: ID
+                description: ID of the section, to reference in other places.
+                type: string
+              title:
+                title: Title
+                description: Title of the section.
+                type: string
+              description:
+                title: Description
+                description: Description of the section.
+                type: string
+  commit:
+    title: Configurations for different types of commits in your repository.
+    description: Configurations for development-related tasks
+    type: object
+    additionalProperties: false
+    properties:
+      commit:
+        title: Commit Configurations
+        description: Commit types, sub-types and descriptions
+        type: object
+        additionalProperties: false
+        required: [ primary, secondary ]
+        properties:
+          auto:
+            title: Automatic Commits
+            description: Automatic commit types
+            type: object
+            additionalProperties: false
+            required: [ maintain, sync ]
+            properties:
+              maintain:
+                title: Maintain
+                description: |
+                  Continuous maintenance and refactoring tasks.
+                $ref: '#/definitions/commit_auto'
+              sync:
+                title: Sync
+                description: |
+                  Continuous configuration automation and synchronization of dynamic files.
+                $ref: '#/definitions/commit_auto'
+          primary:
+            title: Primary Commits
+            description: Primary action commit types
+            type: object
+            additionalProperties:
+              title: Custom Primary Commit
+              description: |
+                Configurations for a custom primary commit type.
+                For each custom commit type, a key-value pair must be added,
+                where the key is the ID of the commit type, to reference in other places.
+              $ref: '#/definitions/commit_primary'
+            properties:
+              major:
+                title: Major Release
+                description: Configurations for a major release commit type.
+                $ref: '#/definitions/commit_primary'
+              minor:
+                title: Minor Release
+                description: Configurations for a minor release commit type.
+                $ref: '#/definitions/commit_primary'
+              patch:
+                title: Patch Release
+                description: Configurations for a patch release commit type.
+                $ref: '#/definitions/commit_primary'
+              post:
+                title: Post-release
+                description: Configurations for a post-release commit type.
+                $ref: '#/definitions/commit_primary'
+              web:
+                title: Website
+                description: Configurations for a website commit type.
+                $ref: '#/definitions/commit_primary'
+          secondary:
+            title: Secondary Commits
+            description: |
+              Secondary action commit types.
+              For each commit type, a key-value pair must be added,
+              where the key is both the ID of the commit type (to reference in other places)
+              and its commit message type.
+            type: object
+            additionalProperties:
+              title: Custom Secondary Commit
+              description: Configurations for a secondary commit type.
+              type: object
+              additionalProperties: false
+              properties:
+                description:
+                  title: Description
+                  description: Description of the commit type.
+                  type: string
+                changelog_id:
+                  title: Changelog ID
+                  description: ID of the changelog to which the commit will be added.
+                  type: string
+                changelog_section_id:
+                  title: Changelog Section ID
+                  description: ID of the section of the changelog to which the commit will be added.
+                  type: string
+
+    definitions:
+      commit_auto:
+        title: Automatic Commit
+        description: Automatic commit type
+        type: object
+        additionalProperties: false
+        required: [ type ]
+        properties:
+          type:
+            type: string
+          changelog_id:
+            type: string
+          changelog_section_id:
+            type: string
+      commit_primary:
+        title: Primary Commit
+        description: Configurations for a primary commit type.
+        type: object
+        additionalProperties: false
+        required: [ type ]
+        properties:
+          type:
+            title: Conventional Commit Type
+            description: |
+              A [Conventional Commits](https://www.conventionalcommits.org/)-like type for the commit message.
+            type: string
+            examples:
+              - major
+              - minor
+              - patch
+              - web
+              - config
+          description:
+            title: Type Description
+            type: string
+            examples:
+              - Remove features/components from - or introduce breaking changes to - the public API,
+                and publish a new major release of the package.
+          subtypes:
+            title: Subtypes
+            description: Configurations for commit sub-types of the commit.
+            type: object
+            properties:
+              any:
+                title: Any
+                description: |
+                  A list of `secondary` commit-type IDs,
+                  of which at least one must be present in the head branch.
+                type: array
+                items:
+                  type: string
+                minItems: 1
+                uniqueItems: true
+              all:
+                type: array
+                items:
+                  type: string
+                minItems: 1
+                uniqueItems: true
+              include:
+                type: array
+                items:
+                  type: string
+                minItems: 1
+                uniqueItems: true
+              exclude:
+                title: Exclude
+                description: |
+                  A list of `secondary` commit-type IDs
+                  that must not be present in the head branch.
+                type: array
+                items:
+                  type: string
+                minItems: 1
+                uniqueItems: true
+            allOf:
+              - anyOf:
+                  - required: [ any ]
+                  - required: [ all ]
+              - not:
+                  anyOf:
+                    - required: [ include, exclude ]
+  label:
+    title: GitHub labels settings for the project
+    description: |
+      [GitHub docs](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels)
+    type: object
+    additionalProperties: false
+    required: [ version, branch, primary_type, status ]
+    properties:
+      primary:
+        title: Primary Labels
+        description: Labels for primary commit types.
+        type: object
+        additionalProperties: false
+        properties:
+          prefix:
+            title: Prefix
+            description: Prefix for label names.
+            $ref: '#/definitions/label_prefix'
+          color:
+            title: Color
+            description: Color of the labels.
+            $ref: '#/definitions/label_color'
+          label:
+            title: Labels
+            description: Primary labels.
+            type: object
+            additionalProperties:
+              title: Custom Primary Labels
+              description: Custom primary labels.
+              $ref: '#/definitions/label_group_element'
+            properties:
+              major:
+                title: Major Release
+                description: Label for major release.
+                $ref: '#/definitions/label_group_element'
+              minor:
+                title: Minor Release
+                description: Label for minor release.
+                $ref: '#/definitions/label_group_element'
+              patch:
+                title: Patch Release
+                description: Label for patch release.
+                $ref: '#/definitions/label_group_element'
+              post:
+                title: Post Release
+                description: Label for post release.
+                $ref: '#/definitions/label_group_element'
+              web:
+                title: Website
+                description: Label for website deployment.
+                $ref: '#/definitions/label_group_element'
+      secondary:
+        title: Secondary Type Labels
+        description: Issue sub types
+        $ref: '#/definitions/label_group'
+      status:
+        title: Status
+        description: Issue/pull status
+        type: object
+        additionalProperties: false
+        required: [ prefix, color, labels ]
+        properties:
+          prefix:
+            title: Prefix
+            description: Prefix for the label name
+            $ref: '#/definitions/label_prefix'
+          color:
+            title: Color
+            description: Color of the label.
+            $ref: '#/definitions/label_color'
+          label:
+            title: Labels
+            description: Labels for the issue sub-type
+            type: object
+            additionalProperties: false
+            required:
+              - triage
+              - rejected
+              - duplicate
+              - invalid
+              - planning
+              - requirement_analysis
+              - design
+              - implementation
+              - testing
+              - deploy_alpha
+              - deploy_beta
+              - deploy_rc
+              - deploy_final
+            properties:
+              triage:
+                title: Triage
+                description: The issue is being triaged.
+                $ref: '#/definitions/label_group_element'
+              rejected:
+                title: Rejected
+                description: The issue/pull-request has been rejected.
+                $ref: '#/definitions/label_group_element'
+              duplicate:
+                title: Duplicate
+                description: The issue/pull-request is a duplicate.
+                $ref: '#/definitions/label_group_element'
+              invalid:
+                title: Invalid
+                description: The issue/pull-request is invalid.
+                $ref: '#/definitions/label_group_element'
+              planning:
+                title: Planning
+                description: The issue is in the planning phase.
+                $ref: '#/definitions/label_group_element'
+              requirement_analysis:
+                title: Requirement Analysis
+                description: The issue is in the requirement analysis phase.
+                $ref: '#/definitions/label_group_element'
+              design:
+                title: Design
+                description: The issue is in the design phase.
+                $ref: '#/definitions/label_group_element'
+              implementation:
+                title: Implementation
+                description: The issue is in the implementation phase.
+                $ref: '#/definitions/label_group_element'
+              testing:
+                title: Testing
+                description: The issue is in the testing phase.
+                $ref: '#/definitions/label_group_element'
+              deploy_alpha:
+                title: Alpha Release
+                description: The issue/pull-request is in alpha release.
+                $ref: '#/definitions/label_group_element'
+              deploy_beta:
+                title: Beta Release
+                description: The issue/pull-request is in beta release.
+                $ref: '#/definitions/label_group_element'
+              deploy_rc:
+                title: Release Candidate
+                description: The issue/pull-request is published as a release candidate.
+                $ref: '#/definitions/label_group_element'
+              deploy_final:
+                title: Final Release
+                description: The issue/pull-request has been merged into a release branch.
+                $ref: '#/definitions/label_group_element'
+      branch:
+        title: Branch
+        description: Branch labels. This is an automatic label group.
+        $ref: '#/definitions/label_group_auto'
+      version:
+        title: Version
+        description: Version labels. This is an automatic label group.
+        $ref: '#/definitions/label_group_auto'
+      custom:
+        title: Custom Labels
+        description: Custom labels.
+        type: object
+        additionalProperties: false
+        properties:
+          single:
+            title: Single
+            description: Custom single labels.
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              required: [ name, color, description ]
+              properties:
+                name:
+                  title: Name
+                  description: Name of the label
+                  type: string
+                color:
+                  title: Color
+                  description: Color of the label
+                  $ref: '#/definitions/label_color'
+                description:
+                  title: Description
+                  description: Description of the label.
+                  $ref: '#/definitions/label_description'
+          group:
+            title: Label Groups
+            description: Custom label groups.
+            type: object
+            additionalProperties:
+              title: Label Group
+              description: A group of labels.
+              $ref: '#/definitions/label_group'
+      all:
+        title: All labels
+        type: array
+        items:
+          type: object
+  issue:
+    title: Issues
+    description: |
+      Configurations of the project's issue tracking system (cf. [GitHub Issues](https://docs.github.com/en/issues/tracking-your-work-with-issues)).
+      
+      These include [issue form](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#creating-issue-forms)
+      templates used to automatically maintain issue ticket forms,
+      and settings for the project's [issue template chooser]()https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser),
+      which is automatically maintained via the `.github/ISSUE_TEMPLATE/config.yaml` configuration file.
+    type: object
+    additionalProperties: false
+    required: [ blank_enabled, contact_links, forms, dev_protocol ]
+    properties:
+      blank_enabled:
+        description: Whether to allow submission of free-form issues
+        type: boolean
+        default: false
+      contact_links:
+        description: External links to be shown on the issue template chooser
+        type: array
+        default: [ ]
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            name:
+              description: Title shown on the issue template chooser
+              type: string
+            about:
+              description: Description shown on the issue template chooser
+              type: string
+            url:
+              description: URL to the external link
+              type: string
+              format: uri
+          required: [ name, about, url ]
+      forms:
+        title: Issue form definitions and configurations.
+        type: array
+        default: [ ]
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              title: Unique identifier of the issue form.
+              description: |
+                This is used to reference the form in other places
+                (e.g. as a key of the `maintainer.issue` object, to assign the issue to a maintainer),
+                and to generate the filename of the issue template's YAML file.
+                The ID must start with an alphanumeric character,
+                and can only contain alphanumeric characters, underscores, and hyphens.
+              type: string
+              pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+            primary_type:
+              title: Primary type of the issue.
+              description: |
+                Each form must be assigned a primary type,
+                which must match the key of one of the [primary type labels](../label/index.md#primary-types),
+                and consequently, the key of either one of the [primary action commit types](../commit/index.md#primary-action-types),
+                or one of the [primary custom commit types](../commit/index.md#primary-custom-types).
+                
+                This is used to correlate each issue in the repository with a primary commit type:
+                {{ pp_meta.name }} automatically adds the corresponding primary type label
+                to each issue that is created using the form.
+                Subsequently, when a development branch is merged into a release branch,
+                {{ pp_meta.name }} first determines the corresponding issue of the branch from the branch name,
+                and then ascertains the corresponding primary commit type from the issue's primary type label,
+                in order to decide which actions to perform on the release branch.
+              type: string
+            subtype:
+              title: Subtype of the issue.
+              description: |
+                If two or more forms are assigned the same [primary type](#primary-type),
+                they must each define a unique subtype.
+                The subtype must match the key of one of the [subtype labels](../label/index.md#subtypes).
+                {{ pp_meta.name }} automatically adds the corresponding subtype label
+                to each issue that is created using the form,
+                and uses that with conjunction with the primary type label
+                to unambiguously identify the form that was used to create each issue in the repository.
+                It also helps maintainers and users
+                differentiate between issues with the same primary type.
+              type: string
+              default: ''
+            pre_process:
+              description: |
+                Some issue forms, or some elements of an issue form, may only need to be present
+                when certain conditions are met. Instead of you having to manually modify issue forms
+                each time one of these conditions changes, {{ pp_meta.name }} allows you to dynamically
+                define conditions for each form and each of its elements, so that they are automatically
+                added/removed according to the specified conditions. This is done by adding a `pre_process`
+                key either to the form itself, or to specific elements of the form. The value of the
+                `pre_process` key must be an object with one of the following keys:
+                - `if_any`: The form/element is only displayed if any of the specified values evaluate to `True`.
+                - `if_all`: The form/element is only displayed if all of the specified values evaluate to `True`.
+                - `if_none`: The form/element is only displayed if none of the specified values evaluate to `True`.
+                - `if_equal`: The form/element is only displayed if all of the specified values are equal.
+
+                For any of the above keys, the value must be an array, where the elements of the array
+                can have any type (e.g., string, integer, boolean, etc.). For boolean conditions
+                (i.e., `if_any`, `if_all`, and `if_none`), the value of each element is cast to a boolean
+                in Python, thus for example, `0`, `0.0`, `""`, `[]`, `{}`, and `null` all evaluate to `False`,
+                while any non-zero number, non-empty string, non-empty list, and non-empty dictionary evaluates to `True`.
+
+                For example, in {{ pp_meta.name }}'s default configurations, there are three separate issue forms
+                defined for reporting bugs in the package's API, GUI, and CLI. However, your package may only have
+                some of these interfaces, in which case it makes sense to only show the corresponding issue forms
+                when the corresponding interfaces are present. This is achieved by adding a condition to each form.
+              examples:
+                - if_any: [ "${‎{ package.releases.gui_scripts }}" ] # Display a form only if the package has a GUI interface
+                - if_any: [ "${‎{ package.releases.cli_scripts }}" ] # Display a form only if the package has a CLI interface
+                - if_any: [ "${‎{ package.releases.has_scripts }}" ] # Display an element within a form only if the package has scripts
+              $ref: '#/definitions/pre_process'
+            post_process:
+              description: |
+                {{ pp_meta.name }} allows you to define post-processing instructions for each form,
+                which are executed after an issue is created using the form.
+                
+                Issues that are created using GitHub's issue forms are visually not very appealing,
+                since GitHub simply creates a new `<h3>` heading for each form element,
+                and adds the user input underneath, without any formatting.
+                Moreover, there may be some elements that are only meant for the submission step,
+                and are not meant to be displayed in the issue body (e.g., checkboxes for agreeing with terms and conditions).
+                Therefore, {{ pp_meta.name }} allows you to define a template for the issue body,
+                which is used to reformat the issue body after the issue is created.
+                The template must be defined as a string representing valid Markdown and/or HTML syntax,
+                where the user input for each form element is referenced (similiar to Python strings)
+                using the syntax `{id}`, where `id` is the `id` of the corresponding form element.
+              examples:
+                - body: |
+                    <h2>Bug Location</h2>
+                    
+                    <ul>
+                    <li><b>Package Version</b>: {version}</li>
+                    <li><b>Fully Qualified Name</b>: {api_entry}</li>
+                    </ul>
+                    
+                    <h2>System and Version Specifications</h2>
+                    
+                    <ul>
+                    <li><b>Operating System</b>: {os}</li>
+                    <li><b>Python Version</b>: {python_version}</li>
+                    <li><b>Package Manager</b>: {package_manager}</li>
+                    <li>
+                    <details>
+                    <summary><b>Environment</b></summary>
+                    
+                    ```
+                    {environment}
+                    ```
+                    
+                    </details>
+                    </li>
+                    </ul>
+                    
+                    <h2>Bug Summary</h2>
+                    
+                    {summary}
+                    
+                    <h2>Unit-Test / Minimal Reproducible Example (MRE)</h2>
+                    
+                    {code}
+                    
+                    <h2>Error Message</h2>
+                    
+                    {log}
+              type: object
+              additionalProperties: false
+              properties:
+                assign_creator:
+                  title: Adding the Issue Creator as Assignee
+                  description: |
+                    You may want to ask the person who created an issue whether they would like to contribute
+                    to the resolution of the issue, and if so, add them as an assignee to the issue.
+                    {{ pp_meta.name }} allows you to do this automatically; first you need to add a `checkbox` element
+                    to the form, which asks the user whether they would like to be added as an assignee.
+                    Then, add a key `assign_creator` to the `post_process` object of the form, and under that,
+                    add a key `if_checkbox` whose value must be an object with a key `id`,
+                    specifying the `id` of the corresponding checkbox element.
+                    If the checkbox element has multiple checkboxes,
+                    you can also specify the `number` of the checkbox (starting from 1) that must be checked.
+                    Also, if you have formulated the checkbox label in a way that the creator must be added as an assignee
+                    if the checkbox is unchecked, you can set the `is_checked` key to `False`.
+                    
+                    ::::{dropdown} Example
+                    :::{code-block} yaml
+                    :caption: 🗂 `.meta/dev/issue.yaml`
+                    forms:
+                      - body:
+                          - type: checkboxes
+                            id: collab
+                            attributes:
+                              label: |
+                                Thank you again for filling this bug report.
+                                If you are willing to collaborate on fixing the issue,
+                                please select the option below.
+                              options:
+                                - label: I am willing to work on the issue and submit a pull request.
+                                  required: false
+                        post_process:
+                          assign_creator:
+                            if_checkbox:
+                              id: collab
+                              number: 1  # optional, default: 1
+                              is_checked: true  # optional, default: true
+                    :::
+                    ::::
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    if_checkbox:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        id:
+                          type: string
+                        number:
+                          type: integer
+                          default: 1
+                        is_checked:
+                          type: boolean
+                          default: true
+                      required: [ id, number, is_checked ]
+                body:
+                  title: Formatting the Issue Body
+                  type: string
+            name:
+              title: Name of the issue form.
+              description: |
+                Each form must have a unique name,
+                which is what is displayed to the user on the template chooser interface
+                when creating a new issue on GitHub.
+              examples:
+                - 🖥 App 🐞 Bug Report 📱 API
+              type: string
+            description:
+              title: Description of the issue form.
+              description: |
+                In addition to a name, each form must also have a description,
+                which appears below its name on the template chooser interface.
+              examples:
+                - Report a problem encountered while using the library's API.
+              type: string
+            labels:
+              title: Labels to be added to the issue.
+              description: |
+                Optionally, a list of additional labels can be assigned to each form,
+                which are then automatically added to each issue that is created using the form.
+                Each assigned label must exactly match the full name of an existing label in the repository,
+                as defined in the [label configurations](../label/index.md).
+
+                Note that the [primary type](../label/index.md#primary-types), [subtype](../label/index.md#subtypes),
+                and [status](../label/index.md#statuses) labels are automatically added to each issue,
+                and do not need to be specified here.
+              examples:
+                - [ first-custom-label, second-custom-label ]
+              type: array
+              uniqueItems: true
+              minItems: 1
+              items:
+                type: string
+            projects:
+              title: Projects to add the issue to.
+              description: |
+                Optionally, a list of projects can be specified for each form,
+                in which case each issue created using the issue form
+                is automatically added to all specified projects.
+                Each project must be specified in the format `PROJECT-OWNER/PROJECT-NUMBER`,
+                where `PROJECT-OWNER` is the username or organization name of the project owner,
+                and `PROJECT-NUMBER` is the number of the project in the project owner's repository.
+
+                Note that for this to work, either your project's
+                [auto-add workflow](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/adding-items-automatically)
+                must be enabled, or the person opening the issue must have write permissions for the specified projects.
+              examples:
+                - [ RepoDynamics/3, AAriam/1 ]
+              type: array
+              uniqueItems: true
+              items:
+                type: string
+            title:
+              description: |
+                Optionally, a default title can be added to each form,
+                which will automatically pre-populate the title field
+                when a user creates a new issue using the form.
+              examples:
+                - "API Bug: "
+              type: string
+            body:
+              description: |
+                Each form must have a body, defined as an array of form elements for requesting user input.
+                Each form element itself is defined as a set of key-value pairs
+                that determine the type of the element, the properties of the element,
+                and the constraints you want to apply to the element.
+                The rules and syntax are identical to that of the
+                [GitHub's form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema),
+                with several additional options and constraints:
+
+                - Each form must have a `dropdown` element whose `id` is set to either `version` or `branch`,
+                  and whose `options` are an array of all the supported package versions (for version)
+                  or active release branches (for branch) in the repository.
+                  The `options` can be defined dynamically, by setting it equal to
+                  `${‎{ package.releases.package_versions }}` (for version) or
+                  `${‎{ package.releases.branch_names }}` (for branch).
+                  It makes sense to add version to forms that concern an issue with the package,
+                  and branch to forms for package-independent issues.
+                  When branch is set, {{ pp_meta.name }} parses the the user input
+                  and automatically adds the corresponding [branch labels](../label/index.md#branches)
+                  to each issue that is created using the form.
+                  Similarly, when version is set, {{ pp_meta.name }} determines the branch
+                  hosting each selected version, and automatically adds both
+                  [version labels](../label/index.md#versions) and branch labels to each issue.
+                  During the triage process, the maintainers can add or remove version/branch labels
+                  as needed; for example, the user may have selected only one version where they encountered the issue,
+                  but during the triage process, the maintainers may determine that the issue affects multiple versions.
+                  Subsequently, when the issue is labeled as [in development](../label/index.md#statuses),
+                  {{ pp_meta.name }} automatically creates a new development branch from each branch that is labeled.
+                - The value of the `label` key for each element that defines it (i.e., all but the `markdown` element)
+                  must be unique across all form elements.
+                  This is needed for the [post-processing](#post-processing) step,
+                  since the `label` is the only way to identify each element in the issue body after it has been created.
+                - You can specify an additional [`pre_process`](#pre-processing) key for each element.
+              type: array
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  type:
+                    type: string
+                    enum: [ checkboxes, dropdown, input, markdown, textarea ]
+                  id:
+                    type: string
+                    pattern: ^[A-Za-z][A-Za-z0-9_-]*$
+                  attributes:
+                    type: object
+                    additionalProperties: true
+                  validations:
+                    type: object
+                    additionalProperties: true
+                  pre_process:
+                    $ref: '#/definitions/pre_process'
+                required: [ type, attributes ]
+          required: [ id, primary_type, name, description, body ]
+  document:
+    description: Development process protocol specifications
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      prerelease_temp_path:
+        description: >-
+          Path to the file relative to the repository root
+          for storing pre-release development process protocols.
+        type: string
+        default: docs/prerelease_dev_protocols.md
+      template:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          title:
+            type: string
+            default: Development Process Protocol
+          body:
+            type: string
+            default: |
+              ## Plan
+              {issue_body}
+
+
+              ## Software Requirements Specification
+              TBD
+
+
+              ## Design Specification
+              TBD
+
+
+              ## Implementation
+              TBD
+              {primary_commit_summary}
+              {secondary_commits_tasklist}
+
+
+              ## References
+              {references}
+
+
+              ## Timeline
+              {timeline}
+        required: [ title, body ]
+    required: [ prerelease_temp_path, template ]
+  pull:
+    title: Pull Requests
+    description: GitHub pull request settings for the project
+    type: object
+    additionalProperties: false
+    properties:
+      template:
+        title: Templates
+        description: |
+          Different [pull request templates](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository)
+          can only be accessed via [query parameters](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/using-query-parameters-to-create-a-pull-request)
+          . Otherwise, the main template directly under [./github] is used.
+        type: object
+        additionalProperties:
+          type: string
+        properties:
+          default:
+            type: string
+  discussion:
+    title: GitHub Discussions
+    description: |
+      [GitHub Discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions)
+      configurations for the repository.
+
+    examples:
+      - form:
+          question_issues:
+            # A default title that will be pre-populated in the discussion submission form.
+            title: "[General] "
+
+            # Labels that will automatically be added to discussions created with this template.
+            labels: [ "General Introduction" ]
+
+            # Definition of the input types in the discussion form.
+            body:
+              - type: markdown
+                attributes:
+                  value: |
+                    This is text that will show up in the template!
+              - type: textarea
+                id: improvements
+                attributes:
+                  label: Top 3 improvements
+                  description: "What are the top 3 improvements we could make to this project?"
+                  value: |
+                    1.
+                    2.
+                    3.
+                    ...
+                  render: bash
+                validations:
+                  required: true
+              - type: markdown
+                attributes:
+                  value: |
+                    ## Markdown header
+                    And some more markdown
+              - type: input
+                id: has-id
+                attributes:
+                  label: Suggestions
+                  description: A description about suggestions to help you
+                validations:
+                  required: true
+              - type: dropdown
+                id: download
+                attributes:
+                  label: Which area of this project could be most improved?
+                  options:
+                    - Documentation
+                    - Pull request review time
+                    - Bug fix time
+                    - Release cadence
+                validations:
+                  required: true
+              - type: checkboxes
+                attributes:
+                  label: Check that box!
+                  options:
+                    - label: This one!
+                      required: true
+                    - label: I won't stop you if you check this one, too
+              - type: markdown
+                attributes:
+                  value: |
+                    ### The thrilling conclusion
+                    _to our template_
+
+          question_bug:
+            title: Is this a bug?
+            labels:
+              - bug
+            body:
+              - type: markdown
+                id: bug
+                attributes:
+                  value: |
+                    **Describe the bug**
+
+
+    type: object
+    additionalProperties: false
+    properties:
+      category:
+        title: Discussion Categories
+        description: |
+          Information about available
+          [discussion categories](https://docs.github.com/en/discussions/managing-discussions-for-your-community/managing-categories-for-discussions),
+          and definition of [discussion category forms](https://docs.github.com/en/discussions/managing-discussions-for-your-community/creating-discussion-category-forms)
+          to customize the templates that are available for community members to use
+          when they open new discussions in the repository.
+
+          To define a form for an existing discussion category,
+          add a key-value pair where the key is the slug of the category name
+          in the repository. For example, to create a template for the "New Releases" category,
+          use the key `new-releases`.
+
+          :::{admonition} Manual Action Required
+          :class: attention
+
+          Defining forms here will automatically
+          [create discussion category forms](https://docs.github.com/en/discussions/managing-discussions-for-your-community/creating-discussion-category-forms)
+          in the `.github/DISCUSSION_TEMPLATE/` directory of the repository.
+          However, unlike issue forms, where adding a new template file in the `.github/ISSUE_TEMPLATE/` directory
+          automatically adds it to the list of available issues, discussion category forms only work when a
+          corresponding discussion category is already created in the repository.
+          Moreover, creating new discussion categories is not yet supported by the GitHub API.
+          This means that for each new discussion category form defined here, you must manually
+          [create the corresponding discussion category](https://docs.github.com/en/discussions/managing-discussions-for-your-community/managing-categories-for-discussions#creating-a-category)
+          in the repository. For example, if you define a form here under the key `new-releases`,
+          you must also create a category named `New Releases`, or any other name that matches the slug.
+          :::
+        type: object
+        additionalProperties:
+          title: Discussion Category
+          description: |
+            Information about a discussion category.
+          type: object
+          additionalProperties: false
+          properties:
+            name:
+              title: Name
+              description: |
+                Name of the discussion category.
+
+                This is automatically fetched from the 
+                [GitHub API](https://docs.github.com/en/graphql/reference/objects#discussioncategory).
+              type: string
+            id:
+              title: ID
+              description: |
+                Node ID of the `DiscussionCategory` object in the GitHub API.
+
+                This is automatically fetched from the 
+                [GitHub API](https://docs.github.com/en/graphql/reference/objects#discussioncategory).
+              type: string
+            form:
+              title: Category Form
+              description: |
+                Form definition for a specific discussion category, according to GitHub's
+                [syntax for discussion category forms](https://docs.github.com/en/discussions/managing-discussions-for-your-community/syntax-for-discussion-category-forms),
+                which is a subset of the [syntax for issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms).
+              type: object
+              additionalProperties: false
+              properties:
+                title:
+                  title: Title
+                  description: A default title that will be pre-populated in the discussion submission form.
+                  type: string
+                labels:
+                  title: Labels
+                  description: Labels that will automatically be added to discussions created with this template.
+                  type: array
+                  uniqueItems: true
+                  items:
+                    title: Label
+                    description: Name of an available label to add.
+                    type: string
+                body:
+                  title: Body
+                  description: |
+                    Definition of the elements in the discussion form, according to GitHub's
+                    [syntax for GitHub's form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema),
+                    which is shared between issue forms and discussion category forms.
+                  type: array
+                  items:
+                    title: Form Element
+                    description: Definition of a form element in the discussion form's body.
+                    type: object
+                    additionalProperties: false
+                    required: [ type, attributes ]
+                    properties:
+                      type:
+                        title: Type
+                        description: Type of the element.
+                        type: string
+                        enum: [ checkboxes, dropdown, input, markdown, textarea ]
+                      id:
+                        title: ID
+                        description: |
+                          The canonical identifier for the element in URL query parameter prefills.
+                          It can only use alpha-numeric characters, hyphens, and underscores,
+                          and must be unique in the form definition.
+                          Note that `markdown` elements cannot have an ID.
+                        type: string
+                        pattern: ^[A-Za-z][A-Za-z0-9_-]*$
+                      attributes:
+                        title: Attributes
+                        description: |
+                          A set of key-value pairs that define the attributes of the element.
+                          Depending on the `type` of the element, different keys are available,
+                          defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
+                        type: object
+                        additionalProperties: true
+                      validations:
+                        title: Validations
+                        description: |
+                          A set of key-value pairs that set constraints on the element.
+                          Depending on the `type` of the element, different keys are available,
+                          defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
+                        type: object
+                        additionalProperties: true
+definitions:
+  label_description:
+    title: GitHub Label Description
+    description: Description of a GitHub label.
+    type: string
+    maxLength: 100
+    examples:
+      - The issue is being triaged.
+  label_color:
+    title: GitHub Label Color
+    description: Color of a GitHub label, in hexadecimal format.
+    type: string
+    pattern: ^[0-9a-fA-F]{6}$
+    examples:
+      - '0366d6'
+      - 'f1e05a'
+  label_prefix:
+    title: GitHub Label Prefix
+    description: Prefix for the names of a group of GitHub labels.
+    type: string
+    examples:
+      - 'Version: '
+      - 'Branch-'
+  label_group_auto:
+    title: Automatic GitHub Label Group
+    description: An automatic group of GitHub labels.
+    type: object
+    required: [ prefix, color, description ]
+    properties:
+      prefix:
+        title: Prefix
+        description: Prefix of the label names in the group.
+        $ref: '#/definitions/label_prefix'
+      color:
+        title: Color
+        description: Color of the label.
+        $ref: '#/definitions/label_color'
+      description:
+        title: Description
+        description: Description of the label.
+        $ref: '#/definitions/label_description'
+  label_group_element:
+    title: GitHub Label Group Element
+    description: An element of a group of GitHub labels.
+    type: object
+    additionalProperties: false
+    required: [ suffix ]
+    properties:
+      suffix:
+        title: Suffix
+        description: Suffix of the label name.
+        type: string
+        examples:
+          - 'major-release'
+          - 'triage'
+      description:
+        title: Description
+        description: Description of the label.
+        $ref: '#/definitions/label_description'
+  label_group:
+    title: GitHub Label Group
+    description: A group of GitHub labels.
+    type: object
+    additionalProperties: false
+    required: [ prefix, color, label ]
+    properties:
+      prefix:
+        title: Prefix
+        description: Prefix for the label name.
+        $ref: '#/definitions/label_prefix'
+      color:
+        title: Color
+        description: Color of the label.
+        $ref: '#/definitions/label_color'
+      label:
+        title: Labels
+        description: Labels for the group.
+        type: object
+        additionalProperties:
+          title: Label
+          description: A label in the group.
+          $ref: '#/definitions/label_group_element'
+  pre_process:
+    type: object
+    additionalProperties: false
+    properties:
+      if_any:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+      if_all:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+      if_none:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+      if_equal:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+    oneOf:
+      - required: [ if_any ]
+      - required: [ if_all ]
+      - required: [ if_none ]
+      - required: [ if_equal ]

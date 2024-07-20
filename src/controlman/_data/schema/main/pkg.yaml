@@ -1,0 +1,583 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Package
+description: |
+  Among others, these settings are used to automatically generate
+  [PEP 621](https://peps.python.org/pep-0621/) compliant
+  [`pyproject.toml`](https://packaging.python.org/en/latest/specifications/pyproject-toml)
+  files for the package and test suite, which contain all metadata and specifications
+  required for building, packaging, and distributing the project.
+examples:
+  - python_version_min: "3.10"
+    urls:
+      Homepage: ${{ url.website.base }}
+      Download: ${{ url.github.releases.home }}
+      News: ${{ url.website.news }}
+      Documentation: ${{ url.website.base }}
+      Issue-Tracker: ${{ url.github.issues.home }}
+      Sponsor: ${{ url.website.sponsor }}
+      Source: ${{ url.github.home }}
+    manifest:
+      - graft ${{ path.dir.source }}/${{ package.import_name }}
+      - include CODE_OF_CONDUCT.md
+      - global-exclude *.py[cod] __pycache__ *.so
+    typed: true
+    trove_classifiers:
+      - "Natural Language :: English"
+    docs:
+      main_init: |
+        ${{name}}
+
+        ${{tagline}}
+
+        ${{description}}
+
+        Copyright ${{copyright.notice}}
+
+        ${{license.notice}}
+    dev_config:
+      max_line_length: 100
+type: object
+additionalProperties: false
+properties:
+  pkg:
+    title: Package
+    description: |
+      Configurations of the project's Python package.
+    $ref: '#/definitions/pkg_config'
+  testsuite:
+    title: Test Suite
+    description: |
+      Configurations of the project's test suite.
+    $ref: '#/definitions/pkg_config'
+definitions:
+  pkg_config:
+    title: Python Package Configuration
+    description: |
+      Configurations of a Python package.
+    type: object
+    additionalProperties: false
+    required: [ name, import_name, typed, build, os, python ]
+    properties:
+      name:
+        title: Name
+        description: |
+          Name of the Python distribution package.
+
+          According to [Python Packaging Authority (PyPA)](https://packaging.python.org/en/latest/specifications/name-normalization/),
+          the package name must consist only of ASCII alphanumeric characters,
+          hyphens, underscores, and periods.
+          Additionally, it must start and end with an alphanumeric character.
+          PyPA then normalizes the package name by lowercasing the non-normalized name,
+          and replacing all runs of consecutive hyphens, underscores, and periods with a single hyphen.
+
+          :::{code-block} python
+          :class: dropdown
+          :caption: Name Normalization Function
+
+          import re
+
+          def normalize_package_name(non_normalized_package_name: str) -> str:
+              """Normalize a package name according to PyPA specifications."""
+              normalized_package_name = re.sub(
+                 r'[._-]+', '-', non_normalized_package_name.lower()
+              )
+              return normalized_package_name
+          :::
+
+          This means that, for example, all following names are equivalent and can be used interchangeably
+          (although they are displayed as-is on PyPI):
+          - `my-project` (normalized form)
+          - `my_project`
+          - `my.project`
+          - `My--Project`
+          - `mY-._.-ProjEcT`
+
+          If not provided, the package name is
+          automatically derived from the [project name](#cc.name),
+          by replacing all spaces, underscores, and periods with a hyphen. 
+
+          :::{code-block} python
+          :class: dropdown
+          :caption: Package Name Derivation Function
+
+          import re
+
+          def derive_package_name(project_name: str) -> str:
+              """Derive a distribution package name from a project name."""
+              package_name = re.sub(
+                 r'[ ._]', '-', project_name
+              )
+              return package_name
+          :::
+
+          If the derived package name is not a valid non-normalized package name
+          (e.g., when the project name contains other characters),
+          the package name must be provided explicitly,
+          otherwise an error will be raised. 
+          However, for consistency it is strongly recommended to **not** provide an explicit package name,
+          and instead choose a project name that can be automatically derived to a valid package name.
+        type: string
+        pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9])$
+      import_name:
+        title: Import Name
+        description: |
+          Name of the top-level Python import package.
+
+          According to [Python rules](https://docs.python.org/3/reference/lexical_analysis.html#identifiers),
+          the import package name must be a valid Python identifier,
+          meaning that it must consist only of ASCII alphanumeric characters and underscores.
+          Moreover, in contrast to the [package name](#cc.package.name), it cannot begin with a digit.
+
+          If not provided, the import name is
+          automatically derived from the normalized [package name](#cc.package.name),
+          by lowercasing it and replacing all hyphens with underscores.
+
+          :::{code-block} python
+          :class: dropdown
+          :caption: Import Name Derivation Function
+
+          import re
+
+          def derive_import_name(package_name: str) -> str:
+              """Derive an import name from a package name."""
+              import_name = re.sub(
+                 r'-', '_', package_name.lower()
+              )
+              return import_name
+          :::
+
+          If the derived import name is not a valid Python identifier
+          (e.g., when the package name starts with a digit),
+          the import name must be provided explicitly,
+          otherwise an error will be raised.
+          However, for consistency, it is strongly recommended to **not** provide an explicit import name,
+          and instead choose a package name that can be automatically derived to a valid import name.
+        type: string
+        pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
+      manifest:
+        description: MANIFEST.in configuration
+        type: array
+        default:
+          - graft ${{ path.dir.source }}/${{ package.import_name }}
+          - include CODE_OF_CONDUCT.md
+          - global-exclude *.py[cod] __pycache__ *.so
+        uniqueItems: true
+        items:
+          type: string
+      typed:
+        description: Whether the package is typed
+        type: boolean
+        default: false
+      classifiers:
+        title: Classifiers
+        description: |
+          Project's [Trove classifiers]().
+          
+          - [Available classifiers in Python code](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
+
+        type: array
+        default: [ "Natural Language :: English" ]
+        uniqueItems: true
+        items:
+          type: string
+          pattern: '^[\w\s\-]+( :: [\w\s\-]+)+$'
+      urls:
+        title: Project URLs
+        description: |
+          URLs of project resources according to
+          [PyPA specifications](https://packaging.python.org/en/latest/specifications/pyproject-toml/#urls).
+          For each entry, the key defines the resource name displayed on PyPI,
+          and the value defines the URL.
+          Following keys (case-insensitive) are automatically recognized by PyPI (cf.
+          [PyPI Warehouse source code](https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62))
+          and displayed with an icon:
+          - `home`, `homepage`, `home page`
+          - `download`
+          - `changelog`, `change log`, `changes`, `release notes`, `news`, `what's new`, `history`
+          - `documentation`, `docs`
+          - Keys starting with:
+            - `issue`, `bug`, `tracker`, `report`
+            - `sponsor`, `funding`, `donate`, `donation`
+        examples:
+          - Homepage: ${{ url.website.base }}
+            Download: ${{ url.github.releases.home }}
+            News: ${{ url.website.news }}
+            Documentation: ${{ url.website.base }}
+            Issue-Tracker: ${{ url.github.issues.home }}
+            Sponsor: ${{ url.website.sponsor }}
+            Source: ${{ url.github.home }}
+        type: object
+        additionalProperties:
+          title: URL
+          description: URL of a project resource
+          type: string
+      url:
+        title: URLs of the project's software package.
+        type: object
+        default: { }
+        properties:
+          pypi:
+            title: URLs of the project's PyPI package.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: Homepage URL of the PyPI package.
+                default: https://pypi.org/project/${{ package.name }}
+                $ref: url
+          conda:
+            title: URLs of the project's Conda package.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: Homepage URL of the Conda package.
+                default: https://anaconda.org/conda-forge/${{ package.name }}
+                $ref: url
+      conda:
+        title: Conda Recipe
+        description: |
+          Conda recipe settings.
+          See [Conda-Build documentation](# https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+          
+          Conda packages are built with [conda-build](https://docs.conda.io/projects/conda-build/),
+          using instructions that are mostly defined in a single YAML file named
+          [meta.yaml](https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+          The YAML file can be created [from scratch](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs.html)
+          , or with help of other utilities, such as [conda skeleton](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs-skeleton.html)
+          . After build, the package distribution can be
+          [uploaded](https://docs.anaconda.com/free/anacondaorg/user-guide/tasks/work-with-packages/#uploading-packages)
+          on an Anaconda channel. While this may be done on a [personal channel](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/create-custom-channels.html)
+          , this complicates the installation process for users as they now have to specify the channel as well.
+          A more convenient alternative is to publish the package on the [conda-forge](https://conda-forge.org/) channel.
+          This requires following the [instructions](https://conda-forge.org/docs/maintainer/adding_pkgs.html).
+        type: object
+        examples:
+          - about:
+              summary: binary diff and patch using the BSDIFF4-format
+              # Long description in Markdown format.
+              description: |
+                A Python library for structural cheminformatics
+              home: https://github.com/ilanschnell/bsdiff4
+              doc_url: https://numpy.org/doc/stable/
+              dev_url: https://github.com/numpy/numpy
+              license: MIT
+              license_family: MIT
+              license_file:
+                - LICENSE
+              prelink_message:
+                - prelink_message_file.txt
+                - folder-with-all-prelink-messages/
+            extra:
+              recipe-maintainers:
+                - jakirkham
+              feedstock-name: scipy
+      docs:
+        title: meta_package_docs
+        description: Package documentation settings
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          init:
+            type: string
+            default: |
+              ${{name}}
+
+              ${{tagline}}
+
+              ${{description}}
+
+              Copyright ${{copyright.notice}}
+
+              ${{license.notice}}
+        required: [ main_init ]
+      dev_config:
+        title: Package Development Tools Configurations
+        description: |
+          Configurations for different package development tools.
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          max_line_length:
+            title: Maximum Line Length
+            description: Maximum line length for source code files.
+            type: integer
+            default: 100
+            minimum: 50
+            maximum: 500
+      cli_scripts:
+        description: Scripts for the project
+        examples:
+          - - name: entry_point_1
+              ref: "my_package:main"
+              description: ""
+        type: array
+        default: [ ]
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - name
+            - ref
+            - description
+          properties:
+            name:
+              type: string
+            ref:
+              type: string
+            description:
+              type: string
+      gui_scripts:
+        description: GUI Scripts for the project
+        examples:
+          - - name: entry_point_1
+              ref: "my_package:main"
+              description: ""
+        type: array
+        default: [ ]
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - name
+            - ref
+            - description
+          properties:
+            name:
+              type: string
+            ref:
+              type: string
+            description:
+              type: string
+      entry_points:
+        examples:
+          - - group_1:
+                description: ""
+                entry_points:
+                  entry_point_1:
+                    ref: "my_package:main"
+                    description: ""
+                  entry_point_2:
+                    ref: "my_package:main"
+                    description: ""
+        type: array
+        default: [ ]
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - group_name
+            - description
+            - entry_points
+          properties:
+            group_name:
+              type: string
+            description:
+              type: string
+            entry_points:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                  - name
+                  - ref
+                  - description
+                properties:
+                  name:
+                    type: string
+                  ref:
+                    type: string
+                  description:
+                    type: string
+      python:
+        type: object
+        properties:
+          version:
+            type: object
+            required: [ spec ]
+            properties:
+              spec:
+                title: Version Specifier
+                type: string
+                examples:
+                  - '>= 3.9'
+                  - '>= 3.10'
+              micros:
+                title: Minimum
+                description: |
+                  Minimum Python version for the project.
+                  We recommend following the
+                  [NumPy Enhancement Proposal (NEP) 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+                type: string
+                pattern: ^3.[1-9][0-9]*(.[1-9][0-9]*)?$
+              minors:
+                title: Maximum
+                description: |
+                  Maximum Python version for the project.
+                  We recommend following the
+                  [NumPy Enhancement Proposal (NEP) 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+                type: string
+                pattern: ^3.[1-9][0-9]*(.[1-9][0-9]*)?$
+              pyxy:
+                title: Python Version
+                description: |
+                  Python version for the project.
+                  We recommend following the
+                  [NumPy Enhancement Proposal (NEP) 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+                type: string
+                pattern: ^3.[1-9][0-9]*(.[1-9][0-9]*)?$
+          pure:
+            type: boolean
+          implementation:
+            type: string
+            enum:
+              - cpython
+              - pypy
+              - ironpython
+              - jython
+              - micropython
+              - stackless
+            default: cpython
+      os:
+        description: Operating systems for the project
+        examples:
+          - linux:
+              runner: ubuntu-latest
+            macos:
+            windows:
+        type: object
+        additionalProperties: false
+        minProperties: 1
+        properties:
+          linux:
+            title: Linux configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                    default: ubuntu-latest
+                    enum:
+                      - ubuntu-latest
+                      - ubuntu-22.04
+                      - ubuntu-20.04
+          macos:
+            title: MacOS configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                    default: macos-latest
+                    enum:
+                      - macos-latest
+                      - macos-latest-xl
+                      - macos-13
+                      - macos-13-xl
+                      - macos-12
+                      - macos-12-xl
+                      - macos-11
+          windows:
+            title: Windows configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                      default: windows-latest
+                      enum:
+                      - windows-latest
+                      - windows-2022
+                      - windows-2019
+          independent:
+            type: bool
+      core_dependencies:
+        title: Package core dependencies.
+        type: array
+        uniqueItems: true
+        items:
+          $ref: dependency
+      optional_dependencies:
+        title: Optional Dependencies
+        description: Optional dependencies for the project
+        examples:
+          - - name: group_1
+              description: ""
+              packages:
+                - pip_spec: "numpy >= 1.21.2"
+                  conda_spec: ""
+                  conda_channel: ""
+                  usage: Numerical computing.
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [ name, packages ]
+          properties:
+            name:
+              type: string
+            packages:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                $ref: dependency
+      build:
+        description: Build system definitions
+        type: object
+        required: [ requires ]
+        properties:
+          requires:
+            description: Build system requirements
+            type: array
+            examples:
+              - [ "setuptools>=61.0", "versioningit" ]
+            uniqueItems: true
+            minItems: 1
+            items:
+              type: string
+          backend:
+            description: Build backend
+            type: string
+            examples:
+              - "setuptools.build_meta"
+          tool:
+            description: Build system definitions
+            type: object
+            additionalProperties:
+              type: object
+      pure_python:
+        description: Whether the package is pure Python
+        type: boolean
+  pkg_config_os:
+    title: Operating System Configuration
+    type: object
+    additionalProperties: false
+    required: [ runner ]
+    properties:
+      name:
+        type: string
+        examples:
+          - Linux
+          - MacOS
+          - Windows
+      runner:
+        type: string
+        examples:
+          - ubuntu-latest
+          - ubuntu-22.04
+          - ubuntu-20.04
+      ci_build:
+        description: |
+          See https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          type: string

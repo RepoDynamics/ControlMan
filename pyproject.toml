@@ -21,7 +21,7 @@ version = "0.0.0.dev264"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
-    "jsonschema >= 4.19, < 5",
+    "jsonschema >= 4.23, < 5",
     "trove-classifiers",
     "readme-renderer[md]",
     "pylinks",
@@ -37,5 +37,7 @@ dependencies = [
     "FileEx",
     "PkgData",
     "PyShellMan",
+    "referencing",
+    "jsonpath-ng"
 ]
 requires-python = ">=3.10"

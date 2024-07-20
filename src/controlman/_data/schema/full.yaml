@@ -1,11 +1,52 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Full Schema
+title: Options
 description: |
-  This schema is used to validate the full configuration of the project.
-  It is a combination of all the other schemas.
+  This section contains a full reference and detailed explanation of all
+  available options in your repository's control center.
+  These are divided into two categories: **non-extendable** and **extendable** options.
+  Non-extendable options are those that are required by {{ pp_meta.name }}
+  during workflow initialization, and thus cannot be extended from other repositories.
+  These are all stored in YAML files at the root of your repository's control center directory.
+  Extendable options, on the other hand, are those that can be freely extended from other repositories,
+  and are organized into subdirectories within your repository's control center.
+  
+  Changing these settings and pushing them to the remote repository's default branch will automatically
+  apply the corresponding changes to the entire repository, i.e., branch protection rules will be updated,
+  and all corresponding branches will be renamed.
 allOf:
-  - $ref: user/ci.yaml
-  - $ref: user/its.yaml
-  - $ref: user/main.yaml
-  - $ref: user/pkg.yaml
-  - $ref: user/vcs.yaml
+  - title: Project
+    description: |
+      Main project metadata and settings, including
+      name, descriptors, copyright, license, citation,
+      funding, team, theme, documentation, and contact information.
+    $ref: main/main
+  - title: Package
+    description: |
+      Python package and test-suite configurations,
+      including build system, dependencies, requirements,
+      entry points, classifiers, and other metadata.
+    $ref: main/pkg
+  - title: Documentation
+    description: |
+      Project documentation and UX configurations, including
+      website, README files, community health files, and theme settings.
+    $ref: main/doc
+  - title: Issue Tracking
+    description: |
+      Issue tracking and development configurations,
+      including templates and settings for issues, labels, 
+      design documents, commits, pull requests, and changelogs.
+    $ref: main/its
+
+  - title: Version Control
+    description: |
+      Version control system (VCS) configurations, such as
+      GitHub/Git repository settings, branch/tag names,
+      protection rules, and directory structure.
+    $ref: main/vcs
+  - title: Workflow
+    description: |
+      Development workflow configurations for 
+      Continuous integration, deployment, configuration automation,
+      maintenance, testing, and refactoring tasks.
+    $ref: main/ci
