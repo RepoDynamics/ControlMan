@@ -19,7 +19,7 @@ allOf:
       Main project metadata and settings, including
       name, descriptors, copyright, license, citation,
       funding, team, theme, documentation, and contact information.
-    $ref: main/main
+    $ref: main/proj
   - title: Package
     description: |
       Python package and test-suite configurations,

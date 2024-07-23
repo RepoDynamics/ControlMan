@@ -1,84 +1,139 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ""
 default:
-  theme:
-    color:
-      primary:
-        light: 0F3460
-        dark: 3A98B9
-      secondary:
-        light: 562B08
-        dark: E3651D
-    footer:
-      type: pypackit
-      config:
-        common:
-          style: flat-square
-          label_color: ""
-          color: ""
-          label_color_dark: ""
-          color_dark: ""
-          height: ""
-        project:
-          style: for-the-badge
-          label: "${{ name }}"
-          message: "©${{ copyright.notice }}"
-          color: "${{ theme.color.primary.light }}"
-          color_dark: "${{ theme.color.primary.dark }}"
-          logo: "${{ path.dir.control }}/ui/branding/favicon.svg"
-          link: "${{ url.website.home }}"
-          title: "${{ badge.project.text_left }} ${{ badge.project.text_right }}"
-          alt: "${{ badge.project.title }}"
-        license:
-          style: for-the-badge
-          label: License
-          message: "${{ license.shortname }}"
-          color: "${{ theme.color.secondary.light }}"
-          color_dark: "${{ theme.color.secondary.dark }}"
-          link: "${{ url.website.home }}/${{ web.path.license }}"
-          alt: "${{ license.fullname }}"
-          title: "${{ name }} is licensed under the ${{ license.fullname }}"
+  announcement:
+    path: ${{ dir.web.root }}/announcement.html
+    retention_days: 30
+  health:
+    code_of_conduct:
+      path: CODE_OF_CONDUCT.md
+      content:
+        id: covenant
+        contact:
+          name: ${{ maintainer.code_of_conduct.name.full }}
+          url: ${{ maintainer.code_of_conduct.email.url }}
+    contributing:
+      path: CONTRIBUTING.md
+      content: |
+        # ${{ name }} Contributing Guidelines
+        
+        <p align="justify">
+            Welcome to the <b>${{name}}</b> community!
+            We are excited to have you here,
+            and grateful that you are considering contributing.
+            ${{name}} is a free and open-source project that evolves with the needs of its users,
+            and can only grow through the help of great members like you.
+        </p>
+        
+        ## How To Contribute
+        
+        <p align="justify">
+            To keep all our project documentation organized and easy to find, the complete
+            <a href="${{ web.page.contrib.url }}">contribution guide</a> is hosted on our website.
+        </p>
+    code_owners:
+      path: .github/CODEOWNERS
   readme:
-    github: &readme-config
-      type: pypackit-default
-      config:
+    github:
+      path: README.md
+      content: &readme_content
+        id: pypackit
         header:
-          menu_bottom:
-            buttons:
-              - title: Overview
-                description: ""
-                path: 'intro/overview'
-              - title: Install
-                description: ""
-                path: 'manual/install'
-              - title: Releases
-                description: ""
-                path: 'news/category/releases'
-              - title: Contact
-                description: ""
-                path: 'help/contact'
-    conda: *readme-config
+          style: vertical
+          logo:
+            src:
+              light: ${{ repo.url.raw }}/${{ dir.media }}/${{ theme.logo.full.light }}
+              dark: ${{ repo.url.raw }}/${{ dir.media }}/${{ theme.logo.full.dark }}
+            href: ${{ web.url.home }}
+            alt: '${{ name }}: ${{ title }}'
+            title: Welcome to ${{ name }}! Click to visit our website and learn more.
+            width: 80%
+            height: 300px
+          menu:
+            height: 35px
+            space: 2
+            color:
+              light: [ ${{ theme.color.primary.light }}, ${{ theme.color.secondary.light }} ]
+              dark: [ ${{ theme.color.primary.dark }}, ${{ theme.color.secondary.dark }} ]
+            top:
+              buttons:
+                - message:
+                    text: Intro
+                  href: ${{ web.page.intro.url }}
+                  title: Introduction and Background
+                - message:
+                    text: Manual
+                  href: ${{ web.page.manual.url }}
+                  title: User Manual
+                - message:
+                    text: News
+                  href: ${{ web.page.blog.url }}
+                  title: Latest News and Releases
+                - message:
+                    text: Contribute
+                  href: ${{ web.page.contrib.url }}
+                  title: How to Contribute
+                - message:
+                    text: About
+                  href: ${{ web.page.about.url }}
+                  title: About the Project
+                - message:
+                    text: Help
+                  href: ${{ web.page.help.url }}
+                  title: Get Help and Support
+            bottom:
+              buttons:
+                - message:
+                    text: Overview
+                  href: ${{ web.page.overview.url }}
+                  title: Project Overview
+                - message:
+                    text: Install
+                  href: ${{ web.page.install.url }}
+                  title: Installation Instructions
+                - message:
+                    text: Releases
+                  href: ${{ web.page.blog_category_releases.url }}
+                  title: Release Notes and Changelogs
+                - message:
+                    text: Contact
+                  href: ${{ web.page.contact.url }}
+                  title: Contact Information
+        body:
+          heading:
+            h2:
+              type: button
+              config:
+                align: center
+            h3:
+              type: text
+              config:
+                align: center
+          sections:
+            - heading:
+                level: 2
+                text: Highlights
+              type: highlights
     pypi:
-      path: ${{ path.dir.source }}/README_PYPI.md
+      path: ${{ dir.pkg.source }}/README_PYPI.md
+      content: *readme_content
     dir:
       .github:
-        type: manual
-        config: |
+        content: |
           # GitHub Directory
 
           ## Workflows
           The `.github/workflows` directory contains GitHub Actions
           [workflow definition files](https://docs.github.com/en/actions/using-workflows/about-workflows).
       .github/DISCUSSION_TEMPLATE:
-        type: manual
-        config: |
+        content: |
           # GitHub Discussion Category Forms
 
           > [!IMPORTANT]
           > Do not manually modify the contents of this directory.
             All files in this directory are automatically maintained; do not modify them manually.
-            They can be managed through the [`user/discussion.yaml`](${{ path.dir.control }}/user/discussion.yaml)
-            configuration file of the repository's [control center](${{ path.dir.control }}).
+            They can be managed through the [`user/discussion.yaml`](${{ dir.control }}/user/discussion.yaml)
+            configuration file of the repository's [control center](${{ dir.control }}).
 
           This directory contains templates for GitHub discussion category forms,
           which are used to customize the templates
@@ -91,11 +146,11 @@ default:
 
           Each YAML file defines a form for a specific discussion category, indicated by the
           filename, which must correspond with the slug for one of the discussion categories.
-          For example, the template for the "New Announcements" category should be stored in `.github/DISCUSSION_TEMPLATE/new-announcements.yml`.
+          For example, the template for the "New Announcements" category should be stored in 
+          `.github/DISCUSSION_TEMPLATE/new-announcements.yml`.
 
       .github/ISSUE_TEMPLATE:
-        type: manual
-        config: |
+        content: |
           # GitHub Issues Settings
           This directory contains templates and configurations used when an issue is opened in the repository.
 
@@ -123,8 +178,7 @@ default:
           ## References
           - [GitHub Documentation](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates)
       .github/PULL_REQUEST_TEMPLATE:
-        type: manual
-        config: |
+        content: |
           # GitHub Pull Requests Templates
           This directory contains additional templates for pull requests.
 
@@ -142,48 +196,58 @@ default:
 
           ## References
           - [GitHub Documentation](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository)
-      '.github/workflows': |
-        # GitHub Actions Workflows
-        This directory contains [workflows](https://docs.github.com/en/actions/using-workflows/about-workflows)
-        used in the CI/CD operations of the repository.
-
-        ## [docs_rtd_pr_preview](_docs_rtd-pr-preview.yaml)
-        https://docs.readthedocs.io/en/latest/pull-requests.html
-        https://docs.readthedocs.io/en/latest/guides/pull-requests.html
-
-        ## Releases
-        GitHub has [built-in functionality](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes)
-        to automatically generate release notes.
-
-
-        ## Syntax
-
-        ## References
-        - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-        - [Workflow Syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
-
-        ## Useful Links
-        - [Workflow security: `pull_request` vs `pull_request_target`](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
-      "${{ path.dir.control }}":
-        type: manual
-        config: |
+      .github/workflows:
+        content: |
+          # GitHub Actions Workflows
+          This directory contains [workflows](https://docs.github.com/en/actions/using-workflows/about-workflows)
+          used in the CI/CD operations of the repository.
+  
+          ## [docs_rtd_pr_preview](_docs_rtd-pr-preview.yaml)
+          https://docs.readthedocs.io/en/latest/pull-requests.html
+          https://docs.readthedocs.io/en/latest/guides/pull-requests.html
+  
+          ## Releases
+          GitHub has [built-in functionality](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes)
+          to automatically generate release notes.
+  
+  
+          ## Syntax
+  
+          ## References
+          - [GitHub Actions Documentation](https://docs.github.com/en/actions)
+          - [Workflow Syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
+  
+          ## Useful Links
+          - [Workflow security: `pull_request` vs `pull_request_target`](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+      "${{ dir.control }}":
+        content: |
           # Control Center
-
-          ## Media
-
-
-          ### Social Media Preview
-
-          However, this is now less relevant after GitHub introduced its own [framework for automatically
-          generating Open Graph images](https://github.blog/2021-06-22-framework-building-open-graph-images/)
-          for repositories on the fly.
-
-      "${{ path.dir.website }}":
-        type: manual
-        config: |
-          # Documentation Website
-
-
+      "${{ dir.media }}":
+        content: |
+          # Media Files
+      "${{ dir.web.root }}":
+        content: |
+          # Website
+  theme:
+    color:
+      primary:
+        light: 0F3460
+        dark: 3A98B9
+      secondary:
+        light: 562B08
+        dark: E3651D
+    logo:
+      icon: favicon.svg
+      simple:
+        light: logo_simple_light.svg
+        dark: logo_simple_dark.svg
+        raster: logo_simple_light.png
+      full:
+        light: logo_full_light.svg
+        dark: logo_full_dark.svg
+        raster: logo_full_light.png
+    footer:
+      id: pypackit
   web:
     sphinx:
       dependency:
@@ -232,7 +296,7 @@ default:
           - /${{ dir.path.media }}
         html_secnumber_suffix: ". "
         html_extra_path: [ 404.html ]
-        html_use_opensearch: ${{ url.web.base }}
+        html_use_opensearch: ${{ web.url.home }}
         html_show_sphinx: false
         html_math_renderer: mathjax
         html_context:
@@ -254,152 +318,54 @@ default:
             \setlength{\cftchapnumwidth}{0.75cm}
             \setlength{\cftsecindent}{\cftchapnumwidth}
             \setlength{\cftsecnumwidth}{1.25cm}
-          fncychap: "\usepackage[Bjornstrup]{fncychap}"
-          printindex: "\footnotesize\raggedright\printindex"
+          fncychap: '\usepackage[Bjornstrup]{fncychap}'
+          printindex: '\footnotesize\raggedright\printindex'
         latex_theme: manual
+        latex_show_urls: footnote
+        latex_show_pagerefs: true
+        latex_logo: _static/${{ theme.logo.full.light.raster }}
         python_display_short_literal_types: true
         python_maximum_signature_line_length: 80
-    extensions:
-      - name: myst_parser
-        usage: Adding MyST Markdown functionalities to Sphinx.
-        url_docs: https://myst-parser.readthedocs.io/
-        url_source: https://github.com/executablebooks/MyST-Parser
-        pip_spec: myst-parser == 3.0.1
-        conda_spec: myst-parser = 3.0.1
-        conda_channel: conda-forge
-        config:
-          # https://myst-parser.readthedocs.io/en/latest/configuration.html
-          myst_enable_extensions:
-            # Ref: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
-            - amsmath
-            - attrs_inline
-            - attrs_block
-            - colon_fence
-            - deflist
-            - dollarmath
-            - fieldlist
-            - html_admonition
-            - html_image
-            - linkify
-            - replacements
-            - smartquotes
-            - substitution
-            - tasklist
-          myst_links_external_new_tab: true
-          myst_heading_anchors: 6
-          myst_sub_delimiters:
-            - "|"
-            - "|"
-      - name: sphinx_design
-        usage: Adding responsive web components, such as grids, cards, tabs, etc.
-        url_docs: https://sphinx-design.readthedocs.io/
-        url_source: https://github.com/executablebooks/sphinx-design
-        pip_spec: sphinx-design == 0.6.0
-        conda_spec: sphinx-design = 0.6.0
-        conda_channel: conda-forge
-        config:
-          sd_fontawesome_latex: true
-      - name: ablog
-        usage: Adding a news blog to the website.
-        url_docs: https://ablog.readthedocs.io/
-        url_source: https://github.com/sunpy/ablog
-        pip_spec: ablog == 0.11.10
-        conda_spec: ablog = 0.11.10
-        conda_channel: conda-forge
-        config:
-          # https://ablog.readthedocs.io/en/stable/manual/ablog-configuration-options.html
-          blog_path: ${{ web.path.news }}
-          blog_title: ${{ name }} News
-          blog_baseurl: ${{ url.web.base }}
-          blog_default_author: ${{ team.owner.name.full }}
-          post_auto_image: 1
-          post_always_section: true
-          blog_post_pattern:
-            - ${{ web.extensions.ablog.blog_path }}/post/*.rst
-            - ${{ web.extensions.ablog.blog_path }}/post/*.md
-          blog_feed_archives: true
-          fontawesome_included: true
-      - name: sphinx_copybutton
-        usage: Adding a copy button to code blocks.
-        url_docs: https://sphinx-copybutton.readthedocs.io/
-        url_source: https://github.com/executablebooks/sphinx-copybutton
-        pip_spec: sphinx-copybutton == 0.5.2
-        conda_spec: sphinx-copybutton = 0.5.2
-        conda_channel: conda-forge
-      - dependency:
-          import_name: sphinx_last_updated_by_git
-          pip:
-            spec: sphinx-last-updated-by-git == 0.3.7
-          description: Adding page-specific last-updated dates to each page.
-          url:
-            docs: https://sphinx-last-updated-by-git.readthedocs.io/
-            source: https://github.com/mgeier/sphinx-last-updated-by-git
-      - name: sphinxext.opengraph
-        usage: Generating OpenGraph metadata for each page.
-        url_docs: https://sphinxext-opengraph.readthedocs.io/
-        url_source: https://github.com/wpilibsuite/sphinxext-opengraph/
-        pip_spec: sphinxext-opengraph == 0.9.1
-        conda_spec: sphinxext-opengraph = 0.9.1
-        conda_channel: conda-forge
-        config:
-          ogp_site_url: ${{ url.web.base }}
-          ogp_social_cards:
-            image: ${{ path.dir.website }}/img/ogp.png  #TODO
-            line_color: ${{ theme.color.primary.light }}
-      - name: sphinxcontrib.bibtex
-        usage: Adding BibTeX-style citations.
-        url_docs: https://sphinxcontrib-bibtex.readthedocs.io/
-        url_source: https://github.com/mcmtroffaes/sphinxcontrib-bibtex
-        pip_spec: sphinxcontrib-bibtex == 2.6.2
-        conda_spec: sphinxcontrib-bibtex = 2.6.2
-        conda_channel: conda-forge
-        config:
-          bibtex_bibfiles: [refs.bib]
-          bibtex_default_style: plain
-          bibtex_reference_style: label
-      - name: sphinx_togglebutton
-        usage: Adding toggle buttons to admonitions and other content.
-        url_docs: https://sphinx-togglebutton.readthedocs.io/
-        url_source: https://github.com/executablebooks/sphinx-togglebutton
-        pip_spec: sphinx-togglebutton == 0.3.2
-        conda_spec: sphinx-togglebutton = 0.3.2
-        conda_channel: conda-forge
-      - name: sphinxcontrib.mermaid
-        usage: Adding Mermaid diagrams and charts.
-        url_docs: https://sphinxcontrib-mermaid-demo.readthedocs.io/en/stable/
-        url_source: https://github.com/mgaitan/sphinxcontrib-mermaid
-        pip_spec: sphinxcontrib-mermaid == 0.9.2
-        conda_spec: sphinxcontrib-mermaid = 0.9.2
-        conda_channel: conda-forge
-      - name: sphinxcontrib.rsvgconverter
-        usage: Converting SVG images to PNG for LaTeX.
-        notes: |
-          This doesn't work on `latex_logo`.
-          
-          References:
-          - https://github.com/missinglinkelectronics/sphinxcontrib-svg2pdfconverter
-          - https://nbsphinx.readthedocs.io/en/latest/markdown-cells.html
-      - name: sphinx.ext.autosummary
-        url_docs: https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
-        config:
-          autosummary_generate: true
-          autosummary_generate_overwrite: true
-          autosummary_imported_members: false
-          autosummary_ignore_module_all: false
-      - name: sphinx.ext.autodoc
-      - name: sphinx.ext.mathjax
-      - name: sphinx.ext.viewcode
-      - name: sphinx.ext.intersphinx
-        usage: Adding links to external documentation.
-        url_docs: https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
-        config:
-          intersphinx_mapping:
-            python: [ https://docs.python.org/3/, null ]
-            numpy: [ https://numpy.org/doc/stable/, null ]
-            matplotlib: [ https://matplotlib.org/stable/, null ]
-      - name: sphinx.ext.extlinks
-      - name: sphinx.ext.duration
-      - name: sphinx.ext.doctest
+      extension:
+        autosummary:
+          dependency:
+            import_name: sphinx.ext.autosummary
+            url:
+              docs: https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
+          config:
+            autosummary_generate: true
+            autosummary_generate_overwrite: true
+            autosummary_imported_members: false
+            autosummary_ignore_module_all: false
+        extlinks:
+          dependency:
+            import_name: sphinx.ext.extlinks
+        duration:
+          dependency:
+            import_name: sphinx.ext.duration
+        doctest:
+          dependency:
+            import_name: sphinx.ext.doctest
+        autodoc:
+          dependency:
+            import_name: sphinx.ext.autodoc
+        mathjax:
+          dependency:
+            import_name: sphinx.ext.mathjax
+        viewcode:
+          dependency:
+            import_name: sphinx.ext.viewcode
+        intersphinx:
+          dependency:
+            import_name: sphinx.ext.intersphinx
+            description: Adding links to external documentation.
+            url:
+              docs: https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+          config:
+            intersphinx_mapping:
+              python: [ 'https://docs.python.org/3/', null ]
+              numpy: [ 'https://numpy.org/doc/stable/', null ]
+              matplotlib: [ 'https://matplotlib.org/stable/', null ]
     theme:
       dependency:
         import_name: pydata_sphinx_theme
@@ -420,8 +386,8 @@ default:
           navbar_persistent: [ search-button ]  # header right persistent
           navbar_align: left  # alignment of `navbar_center`: {"left", "right", "content"}
           article_header_start: [ breadcrumbs ]  # article header left
-          article_header_end: []  # article header right
-          primary_sidebar_end: []  # left sidebar bottom
+          article_header_end: [ ]  # article header right
+          primary_sidebar_end: [ ]  # left sidebar bottom
           secondary_sidebar_items:
             - "page-toc"
             - "last-updated"
@@ -430,48 +396,271 @@ default:
           article_footer_items: [ ]
           show_prev_next: True
           content_footer_items: [ ]
-          footer_start: [ "version", "copyright", "pypackit_ver" ],  # footer left
+          footer_start: [ "version", "copyright", "pypackit_ver" ]  # footer left
           footer_end: [ "quicklinks" ]  # footer right
           show_nav_level: 2
           navigation_depth: 5
           show_toc_level: 3
           header_links_before_dropdown: 7
-          icon_links: meta["web"]["navbar_icons"]
           icon_links_label: "External links"
-          use_edit_page_button: True
-          announcement: ${{ repo.url.raw }}/${{ announcement.path }}
+          use_edit_page_button: true
+          announcement: ${{ announcement.url }}
           search_bar_text: Search ${{ name }}
           logo:
-            image_light: _static/logo_simple_light.svg
+            image_light: _static/
             image_dark: _static/logo_simple_dark.svg
             alt_text: ${{ name }}
-          pygment_light_style: default  # https://pygments.org/styles/
+          pygment_light_style: default  # Code highlighting color themes. See: https://pygments.org/styles/
           pygment_dark_style: monokai   # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/styling.html#configure-pygments-theme
           sidebarwidth: 270
           sidebar_includehidden: True
+          icon_links:
+            - name: PyPI Distribution
+              icon: fa-brands fa-python
+              url: ${{ pkg.pypi.url.home }}
+            - name: Source Repository
+              icon: fa-brands fa-github
+              url: ${{ repo.url.home }}
+            - name: Issues
+              icon: fa-regular fa-circle-dot
+              url: ${{ repo.url.issues.home }}
+            - name: Pull Requests
+              icon: fa-solid fa-code-pull-request
+              url: ${{ repo.url.pulls.home }}
+            - name: Discussions
+              icon: fa-solid fa-comments
+              url: ${{ repo.url.discussions.home }}
+            - name: License
+              icon: fa-solid fa-copyright
+              url: ${{ repo.url.license }}
         html_context:
-          github_user: ${{ repo.info.owner.login }}
-          github_repo: ${{ repo.info.name }}
-          github_version: ${{ repo.info.default_branch }}
-          doc_path: ${{ dir.path.website }}/source
+          github_user: ${{ team.owner.github.user }}
+          github_repo: ${{ repo.name }}
+          github_version: ${{ repo.default_branch }}
+          doc_path: ${{ dir.web.source }}
           default_mode: auto  # Default theme mode: {'light', 'dark', 'auto'}
+        html_sidebars:
+          "**": [ sidebar-nav-bs ]
+    extension:
+      myst:
+        dependency:
+          import_name: myst_parser
+          description: Adding MyST Markdown functionalities to Sphinx.
+          url:
+            source: https://github.com/executablebooks/MyST-Parser
+            docs: https://myst-parser.readthedocs.io/
+            docs_config: https://myst-parser.readthedocs.io/en/latest/configuration.html
+            docs_extensions: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
+          pip:
+            spec: myst-parser == 3.0.1
+          conda:
+            spec: myst-parser = 3.0.1
+            channel: conda-forge
+        config:
+          myst_enable_extensions:
+            - amsmath
+            - attrs_inline
+            - attrs_block
+            - colon_fence
+            - deflist
+            - dollarmath
+            - fieldlist
+            - html_admonition
+            - html_image
+            - linkify
+            - replacements
+            - smartquotes
+            - substitution
+            - tasklist
+          myst_links_external_new_tab: true
+          myst_heading_anchors: 6
+          myst_sub_delimiters:
+            - "|"
+            - "|"
+      design:
+        dependency:
+          import_name: sphinx_design
+          description: Adding responsive web components, such as grids, cards, tabs, etc.
+          url:
+            docs: https://sphinx-design.readthedocs.io/
+            source: https://github.com/executablebooks/sphinx-design
+          pip:
+            spec: sphinx-design == 0.6.0
+          conda:
+            spec: sphinx-design = 0.6.0
+            channel: conda-forge
+        config:
+          sd_fontawesome_latex: true
+      autodoc2:
+        dependency:
+          import_name: autodoc2
+          description: Automatically generating Python API documentation from docstrings.
+          url:
+            docs: https://sphinx-autodoc2.readthedocs.io/
+            source: https://github.com/sphinx-extensions2/sphinx-autodoc2
+          pip:
+            spec: sphinx-autodoc2 == 0.5.0
+          conda:
+            spec: sphinx-autodoc2 = 0.5.0
+            channel: conda-forge
+      ablog:
+        dependency:
+          import_name: ablog
+          description: Adding a news blog to the website.
+          url:
+            docs: https://ablog.readthedocs.io/
+            source: https://github.com/sunpy/ablog
+            config: https://ablog.readthedocs.io/en/stable/manual/ablog-configuration-options.html
+          pip:
+            spec: ablog == 0.11.10
+          conda:
+            spec: ablog = 0.11.10
+            channel: conda-forge
+        config:
+          html_sidebars:
+            "${{ web.extension.ablog.config.blog_path }}/**":
+              - ablog/postcard.html
+              - ablog/recentposts.html
+              - ablog/tagcloud.html
+              - ablog/categories.html
+              - ablog/archives.html
+          blog_path: ${{ web.page.blog.path }}
+          blog_title: ${{ name }} News
+          blog_baseurl: ${{ web.url.base }}
+          blog_default_author: ${{ team.owner.name.full }}
+          post_auto_image: 1
+          post_always_section: true
+          blog_post_pattern:
+            - ${{ web.extension.ablog.config.blog_path }}/post/*.rst
+            - ${{ web.extension.ablog.config.blog_path }}/post/*.md
+          blog_feed_archives: true
+          fontawesome_included: true
+      copy_button:
+        dependency:
+          import_name: sphinx_copybutton
+          description: Adding a copy button to code blocks.
+          url:
+            docs: https://sphinx-copybutton.readthedocs.io/
+            source: https://github.com/executablebooks/sphinx-copybutton
+          pip:
+            spec: sphinx-copybutton == 0.5.2
+          conda:
+            spec: sphinx-copybutton = 0.5.2
+            channel: conda-forge
+      last_update:
+        dependency:
+          import_name: sphinx_last_updated_by_git
+          pip:
+            spec: sphinx-last-updated-by-git == 0.3.7
+          description: Adding page-specific last-updated dates to each page.
+          url:
+            docs: https://sphinx-last-updated-by-git.readthedocs.io/
+            source: https://github.com/mgeier/sphinx-last-updated-by-git
+      opengraph:
+        dependency:
+          import_name: sphinxext.opengraph
+          description: |
+            Generating [Open Graph](https://ogp.me/) metadata for each page.
+          url:
+            docs: https://sphinxext-opengraph.readthedocs.io/
+            source: https://github.com/wpilibsuite/sphinxext-opengraph/
+          pip:
+            spec: sphinxext-opengraph == 0.9.1
+          conda:
+            spec: sphinxext-opengraph = 0.9.1
+            channel: conda-forge
+        config:
+          ogp_site_url: ${{ url.web.base }}
+          ogp_social_cards:
+            image: ${{ dir.web }}/img/ogp.png  #TODO
+            line_color: ${{ theme.color.primary.light }}
+      bibtex:
+        dependency:
+          import_name: sphinxcontrib.bibtex
+          description: Adding BibTeX-style citations.
+          url:
+            docs: https://sphinxcontrib-bibtex.readthedocs.io/
+            source: https://github.com/mcmtroffaes/sphinxcontrib-bibtex
+          pip:
+            spec: sphinxcontrib-bibtex == 2.6.2
+          conda:
+            spec: sphinxcontrib-bibtex = 2.6.2
+            channel: conda-forge
+        config:
+          bibtex_bibfiles: [refs.bib]
+          bibtex_default_style: plain
+          bibtex_reference_style: label
+      toggle_button:
+        dependency:
+          import_name: sphinx_togglebutton
+          description: Adding toggle buttons to admonitions and other content.
+          url:
+            docs: https://sphinx-togglebutton.readthedocs.io/
+            source: https://github.com/executablebooks/sphinx-togglebutton
+          pip:
+            spec: sphinx-togglebutton == 0.3.2
+          conda:
+            spec: sphinx-togglebutton = 0.3.2
+            channel: conda-forge
+      mermaid:
+        dependency:
+          import_name: sphinxcontrib.mermaid
+          description: Adding Mermaid diagrams and charts.
+          url:
+            docs: https://sphinxcontrib-mermaid-demo.readthedocs.io/en/stable/
+            source: https://github.com/mgaitan/sphinxcontrib-mermaid
+          pip:
+            spec: sphinxcontrib-mermaid == 0.9.2
+          conda:
+            spec: sphinxcontrib-mermaid = 0.9.2
+            channel: conda-forge
+      svg2pdf:
+        dependency:
+          import_name: sphinxcontrib.rsvgconverter
+          description: Converting SVG images to PNG for LaTeX.
+          pip:
+            spec: sphinxcontrib-svg2pdfconverter[CairoSVG] == 1.2.2
+          url:
+            source: https://github.com/missinglinkelectronics/sphinxcontrib-svg2pdfconverter
+          notes: |
+            This doesn't work on `latex_logo`;
+            see [nbsphinx](https://nbsphinx.readthedocs.io/en/latest/markdown-cells.html).
     announcement:
-      path: ${{ path.dir.website }}/announcement.html
+      path: ${{ dir.web }}/announcement.html
     path:
       license: about/license
       contact: help/contact
       blog: news
-    dependencies:
-      - name: librsvg
-        description: |
-          Library for rendering SVG files and using them 
-          in PDF (via LaTeX) builds done by latexmk.
+    env:
+      file:
         conda:
-          spec: librsvg
-          channel: conda-forge
-        url:
-          docs: https://wiki.gnome.org/Projects/LibRsvg
-          source: https://gitlab.gnome.org/GNOME/librsvg
+          name: ${{ repo.name }}-docs
+          path: ${{ dir.web.root }}/environment.yaml
+        pip:
+          path: ${{ dir.web }}/requirements.txt
+      dependency:
+        autobuild:
+          import_name: sphinx-autobuild
+          description: Automatically rebuilding the documentation when changes are made.
+          notes: |
+            This is added to the `Makefile` of Sphinx under the `livehtml` target,
+            meaning that you can run `make livehtml` in the website directory
+            to start the autobuild server.
+          url:
+            source: https://github.com/sphinx-doc/sphinx-autobuild
+          pip:
+            spec: sphinx-autobuild >= 2024.4.16
+        librsvg:
+          import_name: librsvg
+          description: |
+            Library for rendering SVG files and using them 
+            in PDF (via LaTeX) builds done by latexmk.
+          conda:
+            spec: librsvg
+            channel: conda-forge
+          url:
+            docs: https://wiki.gnome.org/Projects/LibRsvg
+            source: https://gitlab.gnome.org/GNOME/librsvg
 type: object
 additionalProperties: false
 required: [ url ]
@@ -479,22 +668,28 @@ properties:
   announcement:
     title: Configurations of project announcements.
     type: object
+    required: [ path, retention_days, url ]
     properties:
       path:
         title: Path to the announcement banner file.
         type: string
-        default: ${{ path.dir.website }}/announcement.html
+        default: ${{ dir.web.root }}/announcement.html
         examples:
           - docs/announcement.html
       retention_days:
         title: Number of days to keep an announcement.
         default: 30
-        $ref: 'defs#/definitions/non_negative_integer'
+        $ref: non_negative_integer
+      url:
+        title: URL to the announcement page.
+        $ref: url
+        default: ${{ repo.url.raw }}/${{ announcement.path }}
   health:
     title: |
       Configurations for 
       [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
     type: object
+    default: { }
     additionalProperties: false
     properties:
       contributing:
@@ -511,27 +706,35 @@ properties:
           and other resources. We recommend to keep this file short,
           and only include links to resources on the project's website,
           as to avoid duplication of content.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-                  file.
-                description: |
-                  This file must be named `CONTRIBUTING` (case-insensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
-                type: string
-                pattern: (?i)^(?:|.github/|docs/)CONTRIBUTING(?:.(txt|md|rst))?$
-                default: CONTRIBUTING.md
-                examples:
-                  - CONTRIBUTING
-                  - CONTRIBUTING.md
-                  - contributing.rst
-                  - docs/CONTRIBUTING.txt
-                  - .github/contributing.md
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: |
+              Path to the
+              [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+              file.
+            description: |
+              This file must be named `CONTRIBUTING` (case-insensitive)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
+            type: string
+            default: CONTRIBUTING.md
+            pattern: (?i)^(?:|.github/|docs/)CONTRIBUTING(?:.(txt|md|rst))?$
+            examples:
+              - CONTRIBUTING
+              - CONTRIBUTING.md
+              - contributing.rst
+              - docs/CONTRIBUTING.txt
+              - .github/contributing.md
+          content:
+            title: Content of the `CONTRIBUTING` file.
+            type: string
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       governance:
         title: Governance model of the project.
         description: |
@@ -545,24 +748,31 @@ properties:
           We recommend to keep this file short,
           and only include links to resources on the project's website,
           as to avoid duplication of content.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - properties:
-              path:
-                title: Path to the `GOVERNANCE` file.
-                description: |
-                  This file must be named `GOVERNANCE` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
-                default: GOVERNANCE.md
-                examples:
-                  - GOVERNANCE
-                  - GOVERNANCE.md
-                  - docs/GOVERNANCE.txt
-                  - .github/GOVERNANCE.md
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            title: Path to the `GOVERNANCE` file.
+            description: |
+              This file must be named `GOVERNANCE` (case-sensitive)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository. 
+              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            type: string
+            pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
+            default: GOVERNANCE.md
+            examples:
+              - GOVERNANCE
+              - GOVERNANCE.md
+              - docs/GOVERNANCE.txt
+              - .github/GOVERNANCE.md
+          content:
+            title: Content of the `GOVERNANCE` file.
+            type: string
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       security:
         title: Security policy of the project.
         description: |
@@ -578,27 +788,35 @@ properties:
           We recommend to keep this file short,
           and only include links to resources on the project's website,
           as to avoid duplication of content.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-                  file.
-                description: |
-                  This file must be named `SECURITY` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
-                default: SECURITY.md
-                examples:
-                  - SECURITY
-                  - SECURITY.md
-                  - docs/SECURITY.txt
-                  - .github/SECURITY.md
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: |
+              Path to the
+              [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
+              file.
+            description: |
+              This file must be named `SECURITY` (case-sensitive)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository. 
+              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            type: string
+            pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
+            default: SECURITY.md
+            examples:
+              - SECURITY
+              - SECURITY.md
+              - docs/SECURITY.txt
+              - .github/SECURITY.md
+          content:
+            title: Content of the `SECURITY` file.
+            type: string
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       support:
         title: Support resources of the project.
         description: |
@@ -612,28 +830,36 @@ properties:
           We recommend to keep this file short,
           and only include links to resources on the project's website,
           as to avoid duplication of content.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - properties:
-              path:
-                title: Support Policy
-                description: |
-                  Path to the
-                  [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-                  file (cf. [`doc.support`](#cc.doc.support)).
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: Support Policy
+            description: |
+              Path to the
+              [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
+              file (cf. [`doc.support`](#cc.doc.support)).
 
-                  This file must be named `SUPPORT` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
-                default: SUPPORT.md
-                examples:
-                  - SUPPORT
-                  - SUPPORT.md
-                  - docs/SUPPORT.txt
-                  - .github/SUPPORT.md
+              This file must be named `SUPPORT` (case-sensitive)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository. 
+              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            type: string
+            pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
+            default: SUPPORT.md
+            examples:
+              - SUPPORT
+              - SUPPORT.md
+              - docs/SUPPORT.txt
+              - .github/SUPPORT.md
+          content:
+            title: Content of the `SUPPORT` file.
+            type: string
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       code_of_conduct:
         title: Code of conduct of the project.
         description: |
@@ -650,60 +876,67 @@ properties:
           This file is used to communicate the standards of behavior expected from contributors,
           and may include information on how to report violations, how they are triaged,
           and how they are resolved.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-                  file.
-                description: |
-                  This file must be named `CODE_OF_CONDUCT` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository.
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
-                default: CODE_OF_CONDUCT.md
-                examples:
-                  - CODE_OF_CONDUCT
-                  - CODE_OF_CONDUCT.md
-                  - docs/CODE_OF_CONDUCT.txt
-                  - .github/CODE_OF_CONDUCT.MD
-          - if:
-              properties:
-                config:
-                  type: object
-                  properties:
-                    id:
-                      const: covenant
-            then:
-              properties:
-                config:
-                  title: |
-                    Configurations for the Contributor Covenant Code of Conduct.
-                  type: object
-                  default: { }
-                  additionalProperties: false
-                  properties:
-                    contact:
-                      title: |
-                        Contact information of the maintainer for the code of conduct.
-                      type: object
-                      default: { }
-                      additionalProperties: false
-                      properties:
-                        display:
-                          title: Display text of the link.
-                          type: string
-                          default: "${{ maintainer.email.code_of_conduct }}"
-                        url:
-                          title: URL of the link.
-                          description: |
-                            For email addresses, use `mailto:`.
-                          type: string
-                          default: "${{ maintainer.email.code_of_conduct }}"
+        properties:
+          path:
+            title: |
+              Path to the
+              [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
+              file.
+            description: |
+              This file must be named `CODE_OF_CONDUCT` (case-sensitive)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository.
+              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            type: string
+            pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
+            default: CODE_OF_CONDUCT.md
+            examples:
+              - CODE_OF_CONDUCT
+              - CODE_OF_CONDUCT.md
+              - docs/CODE_OF_CONDUCT.txt
+              - .github/CODE_OF_CONDUCT.MD
+          content:
+            oneOf:
+              - type: string
+              - title: Configurations for the Contributor Covenant Code of Conduct.
+                type: object
+                additionalProperties: false
+                required: [ id, contact ]
+                properties:
+                  id:
+                    title: ID of the code of conduct.
+                    type: string
+                    enum: [ covenant ]
+                    default: covenant
+                    examples:
+                      - covenant
+                  contact:
+                    title: |
+                      Contact information of the maintainer for the code of conduct.
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    required: [ name, url ]
+                    examples:
+                      - display: ${{ maintainer.code_of_conduct.name.full }}
+                        url: ${{ maintainer.code_of_conduct.email.url }}
+                    properties:
+                      name:
+                        title: Display text of the link.
+                        type: string
+                        examples:
+                          - ${{ maintainer.code_of_conduct.name.full }}
+                      url:
+                        title: URL of the link.
+                        description: |
+                          For email addresses, use `mailto:`.
+                        type: string
+                        examples:
+                          - ${{ maintainer.code_of_conduct.email.url }}
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       code_owners:
         title: Code owners of the project.
         description: |
@@ -722,8 +955,8 @@ properties:
               and placed either in the `.github` directory, the `docs` directory,
               or the root of the repository.
             type: string
-            pattern: ^(?:|.github/|docs/)CODEOWNERS$
             default: .github/CODEOWNERS
+            pattern: ^(?:|.github/|docs/)CODEOWNERS$
             examples:
               - CODEOWNERS
               - .github/CODEOWNERS
@@ -766,55 +999,79 @@ properties:
         title: |
           Main [`README`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
           file of the GitHub repository.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - $ref: '#/definitions/readme_config_selector'
-          - properties:
-              path:
-                title: Filepath
-                description: |
-                  Path to the README file.
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: Filepath
+            description: |
+              Path to the README file.
 
-                  It must be named `README` (case-sensitive) and placed either in the
-                  `.github` directory, the `docs` directory, or the root of the repository,
-                  and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                  If more than one of such files are present, the order of precedence is
-                  `.github`, then root, and finally the `docs` directory.
-                type: string
-                pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
-                default: README.md
-                examples:
-                  - README
-                  - README.md
-                  - .github/README.txt
-                  - docs/README.rst
+              It must be named `README` (case-sensitive) and placed either in the
+              `.github` directory, the `docs` directory, or the root of the repository,
+              and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+              If more than one of such files are present, the order of precedence is
+              `.github`, then root, and finally the `docs` directory.
+            type: string
+            pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
+            default: README.md
+            examples:
+              - README
+              - README.md
+              - .github/README.txt
+              - docs/README.rst
+          content:
+            oneOf:
+              - type: string
+              - $ref: '#/definitions/readme_theme/pypackit/main'
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       pypi:
         title: README file of the PyPI/TestPyPI package.
         description: |
           `readme` metadata of your package
           (formerly known as `long_description`)
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - $ref: '#/definitions/readme_config_selector'
-          - properties:
-              path:
-                title: Path to the PyPI README file.
-                type: string
-                examples:
-                  - ${{ path.dir.source }}/README_PYPI.md
-                  - README_PYPI.md
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: Path to the PyPI README file.
+            type: string
+            examples:
+              - ${{ dir.pkg.source }}/README_PYPI.md
+              - README_PYPI.md
+          content:
+            oneOf:
+              - type: string
+              - $ref: '#/definitions/readme_theme/pypackit/main'
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       conda:
         title: README file of the Conda package.
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - $ref: '#/definitions/readme_config_selector'
-          - properties:
-              path:
-                title: Path to the Conda README file.
-                type: string
-                examples:
-                  - ${{ path.dir.source }}/README_CONDA.md
-                  - README_CONDA.md
+        type: object
+        additionalProperties: false
+        required: [ path, content, footer ]
+        properties:
+          path:
+            title: Path to the Conda README file.
+            type: string
+            examples:
+              - ${{ dir.pkg.source }}/README_CONDA.md
+              - README_CONDA.md
+          content:
+            oneOf:
+              - type: string
+              - $ref: '#/definitions/readme_theme/pypackit/main'
+          footer:
+            title: Whether to include a footer.
+            type: boolean
+            default: true
       dir:
         title: Directory READMEs
         description: |
@@ -823,7 +1080,17 @@ properties:
         type: object
         additionalProperties:
           title: Configuration for a directory README file.
-          $ref: '#/definitions/doc_file'
+          type: object
+          additionalProperties: false
+          required: [ content, footer ]
+          properties:
+            content:
+              title: Content of the directory README file.
+              type: string
+            footer:
+              title: Whether to include a footer.
+              type: boolean
+              default: true
   theme:
     title: Configurations defining the visual theme of the project.
     type: object
@@ -831,6 +1098,9 @@ properties:
     required: [ color ]
     properties:
       logo:
+        title: Logo of the project.
+        description: |
+          All values must be filenames of files in the [media](#cc.dir.media) directory.
         type: object
         properties:
           icon:
@@ -842,12 +1112,16 @@ properties:
                 type: string
               dark:
                 type: string
+              raster:
+                type: string
           full:
             type: object
             properties:
               light:
                 type: string
               dark:
+                type: string
+              raster:
                 type: string
       color:
         title: Colors of the project's theme.
@@ -867,96 +1141,11 @@ properties:
         description: |
           The footer is automatically added to the project's [README](#cc.readme) and
           [community health files](#cc.health).
-        allOf:
-          - $ref: '#/definitions/doc_file'
-          - if:
-              properties:
-                config:
-                  type: object
-                  properties:
-                    id:
-                      const: pypackit
-            then:
-              properties:
-                config:
-                  $ref: '#/definitions/footer_config_pypackit'
+        oneOf:
+          - type: string
+          - $ref: '#/definitions/readme_theme/pypackit/footer'
   web:
     title: Configurations for the project's website.
-    examples:
-      - theme:
-          color:
-            primary:
-              light: '135400'
-              dark: 'C2726D'
-            secondary:
-              light: '055005'
-              dark: 'C7A43C'
-        analytics:
-          plausible:
-            domain: ""
-            url: ""
-          google_id: "G-0X66W6TGL2"
-        announcement_retention_days: 30
-        navbar_icons:
-          - name: PyPI Distribution
-            icon: fa-brands fa-python
-            url: ${{ url.pypi }}
-          - name: Conda Distribution
-            icon: fa-custom fa-conda #_static/img/icon/conda.svg
-            url: ${{ url.conda }}
-            #            type: local
-            attributes:
-              class: nav-link fa-conda
-          - name: Source Repository
-            icon: fa-brands fa-github
-            url: ${{ url.github.home }}
-          - name: Issues
-            icon: fa-regular fa-circle-dot
-            url: ${{ url.github.issues.home }}
-          - name: Pull Requests
-            icon: fa-solid fa-code-pull-request
-            url: ${{ url.github.pulls.home }}
-          - name: Discussions
-            icon: fa-solid fa-comments
-            url: ${{ url.github.discussions.home }}
-          - name: Email
-            icon: fa-regular fa-envelope
-            url: mailto:${{ maintainer.email.main }}
-          - name: License
-            icon: fa-solid fa-copyright
-            url: ${{ url.website.license }}
-        path:
-          contact: 'help/contact'
-          news: 'news'
-          contributors: 'about/#contributors'
-          contributing: 'contribute'
-          bug_report: 'contribute/feedback/report'
-          license: 'license'
-          security_measures: 'contribute/collaborate/maintain/security'
-          sponsor: 'contribute/collaborate/maintain/sponsor'
-        quicklinks: subsections
-        readthedocs:
-          name: ${{ package.name }}
-          build:
-            os: ubuntu-22.04
-            tools:
-              python: "mambaforge-4.10"
-            jobs:
-              post_checkout:
-                # versioningit needs the full git history to determine the package's version at build time.
-                # see: https://github.com/readthedocs/readthedocs.org/issues/5989#issuecomment-853039401
-                - git fetch --unshallow
-          conda:
-            environment: ${{ path.dir.website }}/requirements.yaml
-          python:
-            install:
-              - method: pip
-                path: .
-          sphinx:
-            configuration: ${{ path.dir.website }}/source/conf.py
-            builder: dirhtml
-            fail_on_warning: false
-          formats: all
     type: object
     additionalProperties: false
     required: [ sphinx ]
@@ -969,20 +1158,15 @@ properties:
           They are automatically added to `conf.py` file during the website build process.
           Note that not all keys are explicitly listed in the schema,
           but any valid key can still be added here. However, there are some exceptions:
-          - [`version`](https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-version)
-            and [`release`](https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-release)
-            are automatically determined from git tags during the build process,
-            and should not be set here.
           - [`extensions`](https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions)
             are automatically added based on the definitions in [`extension`](#cc.web.extension),
             and should not be set here.
-
         type: object
         additionalProperties: false
         required: [ dependency ]
         properties:
           dependency:
-            $ref: 'defs#/definitions/dependency'
+            $ref: dependency
           config:
             type: object
             additionalProperties: true
@@ -1002,14 +1186,16 @@ properties:
               version:
                 title: Public (`major.minor`) version of the project.
                 description: |
-                  When not set, this is determined at build time from the latest
+                  When not set (recommended),
+                  this is determined at build time from the latest
                   [version tag](#cc.tag.version) in the branch.
                 type: string
                 default_auto: determined from git tags
               release:
                 title: Full version of the project.
                 description: |
-                  When not set, this is determined at build time from the latest
+                  When not set (recommended),
+                  this is determined at build time from the latest
                   [version tag](#cc.tag.version) in the branch.
                 type: string
                 default_auto: determined from git tags
@@ -1098,6 +1284,27 @@ properties:
                 type: string
                 enum: [ manual, howto ]
                 default: manual
+          extension:
+            title: Internal Sphinx extensions to be added.
+            description: |
+              All information about Sphinx internal extensions are added here.
+              These are used to add the [`extensions`](https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions)
+              key and each extension's configurations to the `conf.py` file.
+            type: object
+            additionalProperties:
+              type: object
+              required: [ dependency ]
+              properties:
+                dependency:
+                  title: Extension information.
+                  description: |
+                    The `import_name` must be the name of the extension as it is imported in Python,
+                    i.e., what's added to the `extensions` list in the `conf.py` file.
+                  $ref: module_dependency
+                config:
+                  title: Configuration to be added to the Sphinx configuration.
+                  type: object
+                  additionalProperties: true
       theme:
         title: Theme of the website.
         type: object
@@ -1106,13 +1313,14 @@ properties:
         properties:
           dependency:
             title: Name of the theme.
-            $ref: 'defs#/definitions/dependency'
-            default: 'pydata_sphinx_theme'
+            oneOf:
+              - $ref: dependency
+              - $ref: module_dependency
           config:
             title: Configuration options for the theme.
             type: object
             additionalProperties: true
-      extensions:
+      extension:
         title: Extensions to be added to the Sphinx configuration.
         description: |
           All information about extensions, including dependencies and configurations, are added here.
@@ -1120,16 +1328,13 @@ properties:
           key and each extension's configurations to the `conf.py` file.
           They are also used to create the `requirements.txt` and `env.yaml`
           files for the website build environment.
-        type: array
-        items:
+        type: object
+        additionalProperties:
           type: object
           properties:
-            name:
-              title: Module name of the extension.
-              type: string
             dependency:
               title: Dependency to be installed.
-              $ref: 'defs#/definitions/dependency'
+              $ref: dependency
             config:
               title: Configuration to be added to the Sphinx configuration.
               type: object
@@ -1147,6 +1352,7 @@ properties:
           examples:
             - about/license
             - help/contact
+
         properties:
           blog:
             title: Path to the website's blog directory.
@@ -1161,6 +1367,29 @@ properties:
             items:
               title: A main section of the website.
               $ref: "#/definitions/web_section"
+              web_section:
+                title: Section
+                description: A (sub)section of the website.
+                type: object
+                additionalProperties: false
+                properties:
+                  title:
+                    title: Section Title
+                    description: Title of the section.
+                    type: string
+                    examples:
+                      - Introduction
+                      - User Manual
+                      - Installation
+                  path:
+                    title: Section Path
+                    description: Relative path to the section.
+                    type: string
+                    examples:
+                      - intro
+                      - intro/index
+                      - user-manual
+                      - user-manual/installation/index
           subsections:
             title: Paths to subsections of the website, i.e., level-2 sections.
             description: |
@@ -1225,381 +1454,484 @@ properties:
             examples:
               - ${{ url.web.base }}/some/path
             $ref: '#/definitions/url'
+      env:
+        title: Environment file configurations.
+        type: object
+        additionalProperties: false
+        required: [ file ]
+        properties:
+          dependency:
+            type: object
+            minProperties: 1
+            additionalProperties:
+              $ref: dependency
+          file:
+            $ref: env_file_config
 definitions:
-  color_config:
-    title: Color Configuration
-    description: Configurations for the colors of a specific element in the project's user interfaces.
-    type: object
-    additionalProperties: false
-    properties:
-      light:
-        title: Light Color
-        description: Color of the element for light themes.
-        type: string
-        pattern: ^[0-9a-fA-F]{6}$
-      dark:
-        title: Dark Color
-        description: Color of the element for dark themes.
-        type: string
-        pattern: ^[0-9a-fA-F]{6}$
-  static_badge:
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      style:
-        type: string
-        enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
-      label:
-        type: string
-      message:
-        type: string
-      label_color:
-        type: string
-      color:
-        type: string
-      logo:
-        type: object
+  sphinx_theme:
+    pydata:
+      type: object
+      additionalProperties: false
+      properties:
+        html_theme_options:
+          type: object
+          properties:
+            analytics:
+              title: |
+                [Configurations](https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/analytics.html)
+                of web analytics services.
+              type: object
+              additionalProperties: false
+              properties:
+                google_analytics_id:
+                  title: Google Analytics ID
+                  type: string
+                plausible_analytics_domain:
+                  title: Domain for Plausible Analytics
+                  type: string
+                plausible_analytics_url:
+                  title: URL for Plausible Analytics
+                  $ref: 'defs#/definitions/url'
+              anyOf:
+                - required: [ google_analytics_id ]
+                - required: [ plausible_analytics_domain, plausible_analytics_url ]
+            icon_links:
+              title: Icons to be shown in the navigation bar of the website.
+              type: array
+              uniqueItems: true
+              items:
+                type: object
+                additionalProperties: false
+                required: [ name, icon, url, type ]
+                examples:
+                  - name: Conda Distribution
+                    icon: fa-custom fa-conda
+                    url: ${{ pkg.conda.url.home }}
+                  - name: Email
+                    icon: fa-regular fa-envelope
+                    url: ${{ team.owner.email.url }}
+                  - name: Twitter
+                    icon: fa-brands fa-twitter
+                    url: ${{ team.owner.twitter.url }}
+                  - name: LinkedIn
+                    icon: fa-brands fa-linkedin
+                    url: ${{ team.owner.linkedin.url }}
+                  - name: ResearchGate
+                    icon: fa-brands fa-researchgate
+                    url: ${{ team.owner.researchgate.url }}
+                  - name: ORCiD
+                    icon: fa-brands fa-orcid
+                    url: ${{ team.owner.orcid.url }}
+                properties:
+                  name:
+                    title: Label for the icon.
+                    description: |
+                      This is the HTML `title` attribute,
+                      i.e., the text that appears when hovering over the icon.
+                    type: string
+                  url:
+                    title: Link of the icon.
+                    description: |
+                      This is the URL that the icon will link to.
+                    type: string
+                    $ref: url
+                  type:
+                    title: Type of the icon.
+                    type: string
+                    enum: [ fontawesome, url, local ]
+                    default: fontawesome
+                  icon:
+                    title: Icon definition.
+                    description: |
+                      Depending on `type`, this must be either
+                      a Font Awesome icon class (e.g., `fa-brands fa-twitter`),
+                      a URL to an image file (e.g., `https://example.com/icon.png`),
+                      or a path to a local image file (e.g., `img/icon.png`).
+                    type: string
+                  attributes:
+                    type: object
+            quicklinks:
+              title: Quicklinks for the navbar.
+              type: array
+              uniqueItems: true
+              default: ${{ path.web.subsections }}
+              items:
+                type: object
+                additionalProperties: false
+                required: [ title, entries ]
+                properties:
+                  section_title:
+                    type: string
+                  subsections:
+                    type: array
+                    uniqueItems: true
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [ title, path ]
+                      properties:
+                        title:
+                          type: string
+                        path:
+                          type: string
+  readme_theme:
+    pypackit:
+      main:
+        description: Configurations for the PyPackIT README theme.
         additionalProperties: false
+        required: [ id ]
         properties:
-          type:
+          id:
+            title: ID of the theme.
             type: string
-            enum: [ path, url, data, name ]
-          value:
-            type: string
-          extension:
-            type: string
-            enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
-        required: [ type, value ]
-      logo_color:
-        type: string
-      logo_size:
-        type: string
-        enum: [ "auto" ]
-      logo_width:
-        type: string
-      label_color_dark:
-        type: string
-      color_dark:
-        type: string
-      logo_color_dark:
-        type: string
-      link:
-        type: string
-      alt:
-        type: string
-      title:
-        type: string
-      width:
-        type: string
-      height:
-        type: string
-      align:
-        type: string
-        enum: [ left, center, right ]
-    required: [ message ]
-  footer_config_pypackit:
-    description: Footer configurations for PyPackIT's default theme.
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      common:
-        type: object
-        default: { }
-        additionalProperties: false
-        properties:
-          style:
-            type: string
-            enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
-            default: for-the-badge
-          height:
-            type: string
-            default: ""
-          label_color:
-            type: string
-            default: ""
-          label_color_dark:
-            type: string
-            default: ""
-      project:
-        default:
-          style: for-the-badge
-          label: "${{ name }}"
-          message: "©${{ copyright.notice }}"
-          color: "${{ theme.color.primary.light }}"
-          color_dark: "${{ theme.color.primary.dark }}"
-          logo: "${{ path.dir.control }}/ui/branding/favicon.svg"
-          link: "${{ url.website.home }}"
-          title: "${{ badge.project.text_left }} ${{ badge.project.text_right }}"
-          alt: "${{ badge.project.title }}"
-        $ref: '#/definitions/static_badge'
-      license:
-        default:
-          style: for-the-badge
-          label: License
-          message: "${{ license.shortname }}"
-          color: "${{ theme.color.secondary.light }}"
-          color_dark: "${{ theme.color.secondary.dark }}"
-          link: "${{ url.website.home }}/${{ web.path.license }}"
-          alt: "${{ license.fullname }}"
-          title: "${{ name }} is licensed under the ${{ license.fullname }}"
-        $ref: '#/definitions/static_badge'
-      show_pypackit_badge:
-        type: boolean
-        default: true
-    required: [ badge_style, badge_height, project_badge, license_badge, show_pypackit_badge ]
-  readme_config_pypackit:
-    description: Configurations for the theme.
-    additionalProperties: false
-    properties:
+            const: pypackit
+          header:
+            title: Header configurations.
+            $ref: '#/definitions/readme_theme/pypackit/header/main'
+          body:
+            title: Body configurations.
+            $ref: '#/definitions/readme_theme/pypackit/body/main'
+          badge:
+            title: General badge configurations.
+            description: |
+              Settings here will be used as the default value for all badges in the theme.
+            $ref: '#/definitions/badge/normal'
       header:
-        type: object
-        default: { }
-        additionalProperties: false
-        properties:
-          style:
-            type: string
-            enum: [ horizontal, vertical ]
-            default: vertical
-          logo:
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              alt_text:
-                type: string
-                default: "${{ name }}: ${{ tagline }}"
-              title:
-                type: string
-                default: "Welcome to ${{ name }}! Click to visit our website and learn more."
-              width:
-                type: string
-                default: "80%"
-              height:
-                type: string
-                default: "300px"
-          menu_top:
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              height:
-                title: Height
-                description: Height of the buttons in the top menu.
-                type: string
-                default: 35px
-              num_spaces:
-                type: integer
-                default: 2
-          menu_bottom:
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              num_spaces:
-                type: integer
-                default: 2
-              buttons:
-                type: array
-                default: [ ]
-                items:
+        main:
+          type: object
+          default: { }
+          additionalProperties: false
+          properties:
+            style:
+              type: string
+              enum: [ horizontal, vertical ]
+              default: vertical
+            logo:
+              allOf:
+                - $ref: '#/definitions/html/attrs'
+                - required: [ src ]
+                  properties:
+                    src:
+                      type: object
+                      additionalProperties: false
+                      required: [ light ]
+                      properties:
+                        light:
+                          $ref: url
+                        dark:
+                          $ref: url
+            menu:
+              type: object
+              additionalProperties: false
+              required: [ space ]
+              properties:
+                style:
+                  $ref: '#/definitions/badge_style'
+                  default: for-the-badge
+                height:
+                  title: Height of the buttons in the menu.
+                  $ref: '#/definitions/html_height'
+                  default: 35px
+                space:
+                  title: Number of spaces between buttons.
+                  $ref: non_negative_integer
+                  default: 2
+                align:
+                  $ref: '#/definitions/html_align'
+                  default: center
+                color:
                   type: object
                   additionalProperties: false
                   properties:
-                    title:
-                      type: string
-                    description:
-                      type: string
-                    path:
-                      type: string
-                  required: [ title, path ]
-            required: [ num_spaces, buttons ]
+                    light:
+                      default: [ ${{ theme.color.primary.light }}, ${{ theme.color.secondary.light }} ]
+                      oneOf:
+                        - $ref: '#/definitions/hex_color'
+                        - $ref: '#/definitions/hex_color_grad'
+                    dark:
+                      default: [ ${{ theme.color.primary.dark }}, ${{ theme.color.secondary.dark }} ]
+                      oneOf:
+                        - $ref: '#/definitions/hex_color'
+                        - $ref: '#/definitions/hex_color_grad'
+                top:
+                  $ref: '#/definitions/readme_theme/pypackit/header/menu'
+                bottom:
+                  $ref: '#/definitions/readme_theme/pypackit/header/menu'
+        menu:
+          type: object
+          additionalProperties: false
+          properties:
+            buttons:
+              type: array
+              items:
+                $ref: '#/definitions/badge/button'
       body:
-        type: object
-        default: { }
-        additionalProperties: false
-        properties:
-          sections:
-            type: array
-            default:
-              - type: keynotes
-            items:
+        main:
+          type: object
+          default: { }
+          additionalProperties: false
+          properties:
+            heading:
+              title: Configurations for headings.
               type: object
-              additionalProperties: false
               properties:
-                type:
-                  type: string
-                  enum: [ keynotes ]
-                config:
-                  type: object
-                  default: { }
-              allOf:
-                - if:
-                    properties:
-                      type:
-                        const: keynotes
-                  then:
-                    properties:
-                      config:
-                        $ref: '#/definitions/theme-pypackit-default_body-section-keynotes_config'
-              required: [ type, config ]
+                h2:
+                  title: Configurations for level-2 headings.
+                  $ref: '#/definitions/readme_theme/pypackit/body/heading'
+                h3:
+                  title: Configurations for level-3 headings.
+                  $ref: '#/definitions/readme_theme/pypackit/body/heading'
+                h4:
+                  title: Configurations for level-4 headings.
+                  $ref: '#/definitions/readme_theme/pypackit/body/heading'
+                h5:
+                  title: Configurations for level-5 headings.
+                  $ref: '#/definitions/readme_theme/pypackit/body/heading'
+                h6:
+                  title: Configurations for level-6 headings.
+                  $ref: '#/definitions/readme_theme/pypackit/body/heading'
+            sections:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [ type, config ]
+                properties:
+                  heading:
+                    allOf:
+                      - $ref: '#/definitions/readme_theme/pypackit/body/heading'
+                      - required: [ level ]
+                        properties:
+                          level:
+                            type: integer
+                            minimum: 2
+                            maximum: 6
+                          text:
+                            type: string
+                  type:
+                    type: string
+                    enum: [ manual, highlights ]
+                    default: manual
+                  config:
+                    title: Configuration for the section.
+                allOf:
+                  - if:
+                      properties:
+                        type:
+                          const: manual
+                    then:
+                      properties:
+                        config:
+                          type: string
+        heading:
+          title: Body headings configurations.
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum: [ text, button ]
+            config:
+              title: Configuration for the heading.
+          if:
+            properties:
+              type:
+                const: text
+          then:
+            properties:
+              config:
+                $ref: '#/definitions/html/attrs'
+          else:
+            properties:
+              config:
+                $ref: '#/definitions/badge/button'
       footer:
-        $ref: '#/definitions/theme-pypackit-default-footer'
-  theme-pypackit-default_body-section-keynotes_config:
-    additionalProperties: false
-    properties:
-      title:
-        type: string
-        default: Key Features
-  doc_file:
-    title: Documentation File
-    description: |
-      Configurations for a documentation file.
-
-      These include README files (cf. [`readme`](#cc.readme))
-      and GitHub community health files (cf. [`health`](#cc.health)).
-    type: object
-    additionalProperties: false
-    required: [ config, path, include_footer ]
-    properties:
-      config:
-        title: Configurations
-        oneOf:
-          - type: string
-          - type: object
-            required: [ id ]
-            properties:
-              id:
-                title: ID
-                type: string
-      include_footer:
-        type: boolean
-        default: true
-  web_section:
-    title: Section
-    description: A (sub)section of the website.
-    type: object
-    additionalProperties: false
-    properties:
-      title:
-        title: Section Title
-        description: Title of the section.
-        type: string
-        examples:
-          - Introduction
-          - User Manual
-          - Installation
-      path:
-        title: Section Path
-        description: Relative path to the section.
-        type: string
-        examples:
-          - intro
-          - intro/index
-          - user-manual
-          - user-manual/installation/index
-  readme_config_selector:
-    allOf:
-      - if:
-          properties:
-            config:
-              type: object
-              properties:
-                id:
-                  const: pypackit
-        then:
-          properties:
-            config:
-              $ref: '#/definitions/readme_config_pypackit'
-  pydata_sphinx_theme_config:
-    type: object
-    additionalProperties: false
-    properties:
-      html_theme_options:
+        description: Footer configurations for PyPackIT theme.
         type: object
+        additionalProperties: false
+        required: [ id, project, license, pypackit ]
         properties:
-          analytics:
-            title: |
-              [Configurations](https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/analytics.html)
-              of web analytics services.
-            type: object
-            additionalProperties: false
-            properties:
-              google_analytics_id:
-                title: Google Analytics ID
-                type: string
-              plausible_analytics_domain:
-                title: Domain for Plausible Analytics
-                type: string
-              plausible_analytics_url:
-                title: URL for Plausible Analytics
-                $ref: 'defs#/definitions/url'
-            anyOf:
-              - required: [ google_analytics_id ]
-              - required: [ plausible_analytics_domain, plausible_analytics_url ]
-          navbar_icons:
-            title: Icons to be shown in the navigation bar of the website.
-            type: array
-            default: [ ]
-            uniqueItems: true
-            items:
+          id:
+            title: ID of the footer theme.
+            type: string
+            const: pypackit
+          project:
+            title: Project badge.
+            $ref: '#/definitions/badge/static'
+            default:
+              label:
+                text: ${{ name }}
+              message:
+                text: ©${{ copyright.notice }}
+                color:
+                  light: ${{ theme.color.primary.light }}"
+                  dark: ${{ theme.color.primary.dark }}
+              logo:
+                light:
+                  type: path
+                  src: ${{ dir.media }}/${{ theme.logo.icon }}
+                dark:
+                  type: path
+                  src: ${{ dir.media }}/${{ theme.logo.icon }}
+              href: ${{ url.website.home }}
+              title: '${{ name }}: ${{ copyright.notice }}'
+              alt: ${{ name }}
+          license:
+            title: License badge.
+            $ref: '#/definitions/badge/static'
+            default:
+              label:
+                text: License
+              message:
+                text: ${{ license.id }}
+              color:
+                light: ${{ theme.color.secondary.light }}
+                dark: ${{ theme.color.secondary.dark }}
+              href: ${{ repo.url.license }}"
+              alt: ${{ license.name }}
+              title: ${{ name }} is licensed under the ${{ license.name }}
+          pypackit:
+            title: Whether to show the PyPackIT badge.
+            type: boolean
+            default: true
+          badge:
+            title: General badge configurations.
+            description: |
+              Any settings here will be used as the default value for all footer badges.
+            $ref: '#/definitions/badge/normal'
+            default:
+              style: for-the-badge
+  badge:
+    static:
+      allOf:
+        - $ref: '#/definitions/badge/normal'
+        - additionalProperties: false
+          required: [ message ]
+          properties:
+            message:
+              required: [ text ]
+    normal:
+      allOf:
+        - $ref: '#/definitions/badge/settings'
+        - properties:
+            label:
               type: object
               additionalProperties: false
-              examples:
-                - name: Twitter
-                  icon: fa-brands fa-twitter
-                  url: ${{ owner.url.twitter }}
-                - name: LinkedIn
-                  icon: fa-brands fa-linkedin
-                  url: ${{ owner.url.linkedin }}
-                - name: ResearchGate
-                  icon: fa-brands fa-researchgate
-                  url: ${{ owner.url.researchgate }}
-                - name: ORCiD
-                  icon: fa-brands fa-orcid
-                  url: ${{ owner.url.orcid }}
               properties:
-                id:
-                  title: ID of the icon.
+                text:
                   type: string
-                name:
-                  type: string
-                icon:
-                  type: string
-                url:
-                  type: string
-                  $ref: url
-                type:
-                  type: string
-                  enum:
-                    - fontawesome
-                    - url
-                    - local
-                attributes:
-                  type: object
-          quicklinks:
-            title: Quicklinks for the navbar.
-            type: array
-            uniqueItems: true
-            default: ${{ path.web.subsections }}
-            items:
-              type: object
-              additionalProperties: false
-              required: [ title, entries ]
-              properties:
-                section_title:
-                  type: string
-                subsections:
-                  type: array
-                  uniqueItems: true
-                  minItems: 1
-                  items:
-                    type: object
-                    additionalProperties: false
-                    required: [ title, path ]
-                    properties:
-                      title:
-                        type: string
-                      path:
-                        type: string
+                color:
+                  $ref: '#/definitions/color/theme'
+    button:
+      allOf:
+        - $ref: '#/definitions/html/attrs'
+        - $ref: '#/definitions/badge/settings'
+        - required: [ message, href ]
+          properties:
+            message:
+              required: [ text ]
+    settings:
+      properties:
+        style:
+          $ref: '#/definitions/badge/style'
+        message:
+          type: object
+          additionalProperties: false
+          properties:
+            text:
+              type: str
+            color:
+              $ref: '#/definitions/color/theme'
+        logo:
+          type: object
+          additionalProperties: false
+          required: [ light ]
+          properties:
+            light:
+              $ref: '#/definitions/badge/logo'
+            dark:
+              $ref: '#/definitions/badge/logo'
+            size:
+              type: string
+              enum: [ "auto" ]
+            width:
+              type: string
+    logo:
+      title: Badge logo.
+      type: object
+      additionalProperties: false
+      required: [ type, value ]
+      properties:
+        type:
+          title: Type of data.
+          type: string
+          enum: [ path, url, data, name ]
+        src:
+          title: Source of data.
+          type: string
+        ext:
+          title: Data type, i.e., file extension.
+          type: string
+          enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
+        color:
+          title: Logo color.
+          $ref: '#/definitions/color/hex'
+    style:
+      title: Badge style.
+      type: string
+      enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]
+  html:
+    attrs:
+      type: object
+      properties:
+        href:
+          type: string
+        alt:
+          type: string
+        title:
+          type: string
+        width:
+          type: string
+        height:
+          $ref: '#/definitions/html/height'
+        align:
+          $ref: '#/definitions/html/align'
+    align:
+      type: string
+      enum: [ left, center, right ]
+    height:
+      title: Height of an HTML element.
+      type: string
+      pattern: ^\d+(px|em|rem|%)$
+  color:
+    theme:
+      title: Light/dark theme color configurations.
+      type: object
+      additionalProperties: false
+      required: [ light ]
+      properties:
+        light:
+          title: Light Color
+          description: Color of the element for light themes.
+          $ref: '#/definitions/color/hex'
+        dark:
+          title: Dark Color
+          description: Color of the element for dark themes.
+          $ref: '#/definitions/color/hex'
+    grad:
+      title: Color gradient between two colors.
+      type: array
+      minItems: 2
+      maxItems: 2
+      items:
+        $ref: '#/definitions/color/hex'
+    hex:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      title: A hexadecimal color code.
+      type: string
+      pattern: ^[0-9a-fA-F]{6}$
+      examples:
+        - 'ff0000'
+        - '00ff00'
+        - '0000ff'

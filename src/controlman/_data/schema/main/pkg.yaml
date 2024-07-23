@@ -6,36 +6,87 @@ description: |
   [`pyproject.toml`](https://packaging.python.org/en/latest/specifications/pyproject-toml)
   files for the package and test suite, which contain all metadata and specifications
   required for building, packaging, and distributing the project.
-examples:
-  - python_version_min: "3.10"
+default:
+  pkg:
+    name: ${{ name }}
+    import_name: ${{ pkg.name }}
+    classifiers: [ "Natural Language :: English" ]
     urls:
-      Homepage: ${{ url.website.base }}
-      Download: ${{ url.github.releases.home }}
-      News: ${{ url.website.news }}
-      Documentation: ${{ url.website.base }}
-      Issue-Tracker: ${{ url.github.issues.home }}
-      Sponsor: ${{ url.website.sponsor }}
-      Source: ${{ url.github.home }}
-    manifest:
-      - graft ${{ path.dir.source }}/${{ package.import_name }}
-      - include CODE_OF_CONDUCT.md
-      - global-exclude *.py[cod] __pycache__ *.so
+      Homepage: ${{ web.url.home }}
+      Documentation: ${{ web.url.home }}
+      Source: ${{ repo.url.home }}
+      Download: ${{ repo.url.releases.home }}
+      News: ${{ web.page.blog.url }}
+      Issue-Tracker: ${{ repo.url.issues.home }}
+      Sponsor: ${{ web.page.sponsor.url }}
     typed: true
-    trove_classifiers:
-      - "Natural Language :: English"
-    docs:
-      main_init: |
-        ${{name}}
+    os:
+      linux:
+        name: Linux
+        runner: ubuntu-latest
+      macos:
+        name: MacOS
+        runner: macos-latest
+      windows:
+        name: Windows
+        runner: windows-latest
+    python:
+      version:
+        spec: ">= 3.10"
+    build:
+      requires: [ "setuptools>=61.0", "versioningit" ]
+      backend: "setuptools.build_meta"
+      tool:
+        setuptools:
+          include-package-data: true
+          zip-safe: false
+          packages:
+            find:
+              where: [ '${{dir.pkg.source}}' ]
+              namespaces: true
+        versioningit:
+          vcs:
+            method: git
+            match: ["${{tag.version.prefix}}[0-9]*.[0-9]*.[0-9]*"]
+            default-tag: "${{tag.version.prefix}}0.0.0"
+          tag2version:
+            rmprefix: "${{tag.version.prefix}}"
+          format:
+            distance: "{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}"
+            dirty: "{base_version}+0.{committer_date:%Y.%m.%d}.{revision}.dirty"
+            distance-dirty: "{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}.dirty"
+          onbuild:
+            method: replace-version
+            regex: ^\\s*__version_details__\\s*=\\s*(?P<version>.*)
+            require-match: true
+            source-file: "${{ dir.pkg.import }}/__init__.py"
+            build-file: "${{ pkg.import_name }}/__init__.py"
+            replacement: |
+              dict(
+                version:"{version}",
+                version_tuple:{version_tuple},
+                author_date:"{author_date:%Y.%m.%d}",
+                build_date:"{build_date:%Y.%m.%d}",
+                branch:"{branch}",
+                distance:"{distance}",
+                head_commit_hash:"{revision}",
+              )
 
-        ${{tagline}}
-
-        ${{description}}
-
-        Copyright ${{copyright.notice}}
-
-        ${{license.notice}}
-    dev_config:
-      max_line_length: 100
+    manifest:
+      - graft ${{ dir.pkg.source }}/${{ pkg.import_name }}
+      - global-exclude *.py[cod] __pycache__ *.so
+    file:
+      __init__.py:
+        docstring: |
+          ${{name}}
+      
+          ${{title}}
+      
+          ${{description}}
+      
+          Copyright ${{copyright.notice}}
+      
+          ${{license.notice}}
 type: object
 additionalProperties: false
 properties:
@@ -44,7 +95,7 @@ properties:
     description: |
       Configurations of the project's Python package.
     $ref: '#/definitions/pkg_config'
-  testsuite:
+  test:
     title: Test Suite
     description: |
       Configurations of the project's test suite.
@@ -154,29 +205,16 @@ definitions:
           and instead choose a package name that can be automatically derived to a valid import name.
         type: string
         pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
-      manifest:
-        description: MANIFEST.in configuration
-        type: array
-        default:
-          - graft ${{ path.dir.source }}/${{ package.import_name }}
-          - include CODE_OF_CONDUCT.md
-          - global-exclude *.py[cod] __pycache__ *.so
-        uniqueItems: true
-        items:
-          type: string
-      typed:
-        description: Whether the package is typed
-        type: boolean
-        default: false
       classifiers:
         title: Classifiers
         description: |
           Project's [Trove classifiers]().
-          
+
           - [Available classifiers in Python code](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
 
         type: array
-        default: [ "Natural Language :: English" ]
+        examples:
+          - [ "Natural Language :: English" ]
         uniqueItems: true
         items:
           type: string
@@ -199,204 +237,72 @@ definitions:
             - `issue`, `bug`, `tracker`, `report`
             - `sponsor`, `funding`, `donate`, `donation`
         examples:
-          - Homepage: ${{ url.website.base }}
-            Download: ${{ url.github.releases.home }}
-            News: ${{ url.website.news }}
-            Documentation: ${{ url.website.base }}
-            Issue-Tracker: ${{ url.github.issues.home }}
-            Sponsor: ${{ url.website.sponsor }}
-            Source: ${{ url.github.home }}
+          - Homepage: ${{ web.url.home }}
+            Documentation: ${{ web.url.home }}
+            Source: ${{ repo.url.home }}
+            Download: ${{ repo.url.releases.home }}
+            News: ${{ web.page.blog.url }}
+            Issue-Tracker: ${{ repo.url.issues.home }}
+            Sponsor: ${{ web.page.sponsor.url }}
         type: object
         additionalProperties:
           title: URL
           description: URL of a project resource
           type: string
-      url:
-        title: URLs of the project's software package.
-        type: object
-        default: { }
-        properties:
-          pypi:
-            title: URLs of the project's PyPI package.
-            type: object
-            default: { }
-            properties:
-              home:
-                title: Homepage URL of the PyPI package.
-                default: https://pypi.org/project/${{ package.name }}
-                $ref: url
-          conda:
-            title: URLs of the project's Conda package.
-            type: object
-            default: { }
-            properties:
-              home:
-                title: Homepage URL of the Conda package.
-                default: https://anaconda.org/conda-forge/${{ package.name }}
-                $ref: url
-      conda:
-        title: Conda Recipe
-        description: |
-          Conda recipe settings.
-          See [Conda-Build documentation](# https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
-          
-          Conda packages are built with [conda-build](https://docs.conda.io/projects/conda-build/),
-          using instructions that are mostly defined in a single YAML file named
-          [meta.yaml](https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
-          The YAML file can be created [from scratch](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs.html)
-          , or with help of other utilities, such as [conda skeleton](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs-skeleton.html)
-          . After build, the package distribution can be
-          [uploaded](https://docs.anaconda.com/free/anacondaorg/user-guide/tasks/work-with-packages/#uploading-packages)
-          on an Anaconda channel. While this may be done on a [personal channel](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/create-custom-channels.html)
-          , this complicates the installation process for users as they now have to specify the channel as well.
-          A more convenient alternative is to publish the package on the [conda-forge](https://conda-forge.org/) channel.
-          This requires following the [instructions](https://conda-forge.org/docs/maintainer/adding_pkgs.html).
-        type: object
+      typed:
+        description: Whether the package is typed
+        type: boolean
+        default: false
+      os:
+        description: Operating systems for the project
         examples:
-          - about:
-              summary: binary diff and patch using the BSDIFF4-format
-              # Long description in Markdown format.
-              description: |
-                A Python library for structural cheminformatics
-              home: https://github.com/ilanschnell/bsdiff4
-              doc_url: https://numpy.org/doc/stable/
-              dev_url: https://github.com/numpy/numpy
-              license: MIT
-              license_family: MIT
-              license_file:
-                - LICENSE
-              prelink_message:
-                - prelink_message_file.txt
-                - folder-with-all-prelink-messages/
-            extra:
-              recipe-maintainers:
-                - jakirkham
-              feedstock-name: scipy
-      docs:
-        title: meta_package_docs
-        description: Package documentation settings
+          - linux:
+              runner: ubuntu-latest
+            macos:
+            windows:
         type: object
-        default: { }
         additionalProperties: false
+        minProperties: 1
         properties:
-          init:
-            type: string
-            default: |
-              ${{name}}
-
-              ${{tagline}}
-
-              ${{description}}
-
-              Copyright ${{copyright.notice}}
-
-              ${{license.notice}}
-        required: [ main_init ]
-      dev_config:
-        title: Package Development Tools Configurations
-        description: |
-          Configurations for different package development tools.
-        type: object
-        default: { }
-        additionalProperties: false
-        properties:
-          max_line_length:
-            title: Maximum Line Length
-            description: Maximum line length for source code files.
-            type: integer
-            default: 100
-            minimum: 50
-            maximum: 500
-      cli_scripts:
-        description: Scripts for the project
-        examples:
-          - - name: entry_point_1
-              ref: "my_package:main"
-              description: ""
-        type: array
-        default: [ ]
-        uniqueItems: true
-        items:
-          type: object
-          additionalProperties: false
-          required:
-            - name
-            - ref
-            - description
-          properties:
-            name:
-              type: string
-            ref:
-              type: string
-            description:
-              type: string
-      gui_scripts:
-        description: GUI Scripts for the project
-        examples:
-          - - name: entry_point_1
-              ref: "my_package:main"
-              description: ""
-        type: array
-        default: [ ]
-        uniqueItems: true
-        items:
-          type: object
-          additionalProperties: false
-          required:
-            - name
-            - ref
-            - description
-          properties:
-            name:
-              type: string
-            ref:
-              type: string
-            description:
-              type: string
-      entry_points:
-        examples:
-          - - group_1:
-                description: ""
-                entry_points:
-                  entry_point_1:
-                    ref: "my_package:main"
-                    description: ""
-                  entry_point_2:
-                    ref: "my_package:main"
-                    description: ""
-        type: array
-        default: [ ]
-        uniqueItems: true
-        items:
-          type: object
-          additionalProperties: false
-          required:
-            - group_name
-            - description
-            - entry_points
-          properties:
-            group_name:
-              type: string
-            description:
-              type: string
-            entry_points:
-              type: array
-              minItems: 1
-              uniqueItems: true
-              items:
-                type: object
-                additionalProperties: false
-                required:
-                  - name
-                  - ref
-                  - description
-                properties:
-                  name:
-                    type: string
-                  ref:
-                    type: string
-                  description:
-                    type: string
+          linux:
+            title: Linux configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                    default: ubuntu-latest
+                    enum:
+                      - ubuntu-latest
+                      - ubuntu-22.04
+                      - ubuntu-20.04
+          macos:
+            title: MacOS configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                    default: macos-latest
+                    enum:
+                      - macos-latest
+                      - macos-latest-xl
+                      - macos-13
+                      - macos-13-xl
+                      - macos-12
+                      - macos-12-xl
+                      - macos-11
+          windows:
+            title: Windows configurations.
+            allOf:
+              - $ref: '#/definitions/pkg_os_config'
+              - properties:
+                  runner:
+                    default: windows-latest
+                    enum:
+                      - windows-latest
+                      - windows-2022
+                      - windows-2019
+          independent:
+            type: bool
       python:
         type: object
         properties:
@@ -446,90 +352,13 @@ definitions:
               - micropython
               - stackless
             default: cpython
-      os:
-        description: Operating systems for the project
-        examples:
-          - linux:
-              runner: ubuntu-latest
-            macos:
-            windows:
-        type: object
-        additionalProperties: false
-        minProperties: 1
-        properties:
-          linux:
-            title: Linux configurations.
-            allOf:
-              - $ref: '#/definitions/pkg_os_config'
-              - properties:
-                  runner:
-                    default: ubuntu-latest
-                    enum:
-                      - ubuntu-latest
-                      - ubuntu-22.04
-                      - ubuntu-20.04
-          macos:
-            title: MacOS configurations.
-            allOf:
-              - $ref: '#/definitions/pkg_os_config'
-              - properties:
-                  runner:
-                    default: macos-latest
-                    enum:
-                      - macos-latest
-                      - macos-latest-xl
-                      - macos-13
-                      - macos-13-xl
-                      - macos-12
-                      - macos-12-xl
-                      - macos-11
-          windows:
-            title: Windows configurations.
-            allOf:
-              - $ref: '#/definitions/pkg_os_config'
-              - properties:
-                  runner:
-                      default: windows-latest
-                      enum:
-                      - windows-latest
-                      - windows-2022
-                      - windows-2019
-          independent:
-            type: bool
-      core_dependencies:
-        title: Package core dependencies.
-        type: array
-        uniqueItems: true
-        items:
-          $ref: dependency
-      optional_dependencies:
-        title: Optional Dependencies
-        description: Optional dependencies for the project
-        examples:
-          - - name: group_1
-              description: ""
-              packages:
-                - pip_spec: "numpy >= 1.21.2"
-                  conda_spec: ""
-                  conda_channel: ""
-                  usage: Numerical computing.
-        type: array
-        uniqueItems: true
-        items:
-          type: object
-          additionalProperties: false
-          required: [ name, packages ]
-          properties:
-            name:
-              type: string
-            packages:
-              type: array
-              minItems: 1
-              uniqueItems: true
-              items:
-                $ref: dependency
       build:
-        description: Build system definitions
+        title: Build system definitions.
+        description: |
+          References:
+          - [Python Packaging User Guide](https://packaging.python.org) by the Python Packaging Authority (PyPA)
+          - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
+          - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
         type: object
         required: [ requires ]
         properties:
@@ -548,13 +377,155 @@ definitions:
             examples:
               - "setuptools.build_meta"
           tool:
-            description: Build system definitions
+            title: Build system definitions
+            description: |
+              Configurations for the build backend, e.g.,
+              [Setuptools]([SetupTools](https://setuptools.pypa.io/).
             type: object
             additionalProperties:
               type: object
-      pure_python:
-        description: Whether the package is pure Python
-        type: boolean
+      manifest:
+        description: MANIFEST.in configuration
+        type: array
+        examples:
+          - - graft ${{ dir.pkg.import }}
+            - global-exclude *.py[cod] __pycache__ *.so
+        uniqueItems: true
+        items:
+          type: string
+      dependency:
+        type: object
+        properties:
+          core:
+            title: Package core dependencies.
+            type: object
+            additionalProperties:
+              $ref: dependency
+          optional:
+            title: Optional Dependencies
+            description: Optional dependencies for the project
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                package:
+                  type: object
+                  additionalProperties:
+                    $ref: dependency
+          env:
+            $ref: env_file_config
+      entry:
+        type: object
+        properties:
+          cli:
+            description: Scripts for the project
+            $ref: '#/definitions/entry_points'
+          gui:
+            description: GUI Scripts for the project
+            $ref: '#/definitions/entry_points'
+          api:
+            examples:
+              - - group_1:
+                    description: ""
+                    entry_points:
+                      entry_point_1:
+                        ref: "my_package:main"
+                        description: ""
+                      entry_point_2:
+                        ref: "my_package:main"
+                        description: ""
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              required:
+                - name
+                - description
+                - entry
+              properties:
+                name:
+                  title: Group name
+                  type: string
+                description:
+                  type: string
+                entry:
+                  $ref: '#/definitions/entry_points'
+      file:
+        title: meta_package_docs
+        description: Package documentation settings
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            docstring:
+              type: string
+      pypi:
+        title: URLs of the project's PyPI package.
+        type: object
+        default: { }
+        properties:
+          url:
+            title: URLs of the package on PyPI.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: Homepage URL of the PyPI package.
+                default: https://pypi.org/project/${{ package.name }}
+                $ref: url
+      conda:
+        title: Conda Recipe
+        description: |
+          Conda recipe settings.
+          See [Conda-Build documentation](# https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+          
+          Conda packages are built with [conda-build](https://docs.conda.io/projects/conda-build/),
+          using instructions that are mostly defined in a single YAML file named
+          [meta.yaml](https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+          The YAML file can be created [from scratch](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs.html)
+          , or with help of other utilities, such as [conda skeleton](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs-skeleton.html)
+          . After build, the package distribution can be
+          [uploaded](https://docs.anaconda.com/free/anacondaorg/user-guide/tasks/work-with-packages/#uploading-packages)
+          on an Anaconda channel. While this may be done on a [personal channel](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/create-custom-channels.html)
+          , this complicates the installation process for users as they now have to specify the channel as well.
+          A more convenient alternative is to publish the package on the [conda-forge](https://conda-forge.org/) channel.
+          This requires following the [instructions](https://conda-forge.org/docs/maintainer/adding_pkgs.html).
+        type: object
+        properties:
+          url:
+            title: URLs of the package on Conda.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: Homepage URL of the Conda package.
+                default: https://anaconda.org/conda-forge/${{ package.name }}
+                $ref: url
+        examples:
+          - about:
+              summary: binary diff and patch using the BSDIFF4-format
+              # Long description in Markdown format.
+              description: |
+                A Python library for structural cheminformatics
+              home: https://github.com/ilanschnell/bsdiff4
+              doc_url: https://numpy.org/doc/stable/
+              dev_url: https://github.com/numpy/numpy
+              license: MIT
+              license_family: MIT
+              license_file:
+                - LICENSE
+              prelink_message:
+                - prelink_message_file.txt
+                - folder-with-all-prelink-messages/
+            extra:
+              recipe-maintainers:
+                - jakirkham
+              feedstock-name: scipy
   pkg_config_os:
     title: Operating System Configuration
     type: object
@@ -581,3 +552,26 @@ definitions:
         uniqueItems: true
         items:
           type: string
+  entry_points:
+    title: Entry points for the package.
+    type: object
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [ name, ref, description ]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        ref:
+          type: string
+    examples:
+      - main:
+          name: ${{ pkg.import_name }}
+          description: Main CLI entry of the package.
+          ref: "${{ pkg.import_name }}:__main__"
+      - gui_main:
+          name: entry_point_1
+          description: Main GUI entry of the package.
+          ref: "${{ pkg.import_name}}:gui"

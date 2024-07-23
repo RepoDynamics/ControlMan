@@ -1,7 +1,7 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 type: object
 additionalProperties: false
-required: [ url ]
+required: [ name, team ]
 default:
   title: A Placeholder Project Title
   abstract: |
@@ -45,7 +45,7 @@ default:
     id: AGPL-3.0-or-later
   copyright:
     notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-  maintain:
+  maintainer:
     pull:
       code_owners:
         - "*": [ owner ]
@@ -94,7 +94,7 @@ properties:
     default_auto: |
       repository name (hyphens replaced with spaces)
     templating: load
-    type: string
+    type: nonempty_string
   title:
     title: A single-line description or slogan of the project.
     description: |
@@ -104,7 +104,7 @@ properties:
       PyPI, and TestPyPI repositories
       (cf. [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
       key of the `pyproject.toml` file).
-    $ref: 'defs#/definitions/one_line_string'
+    $ref: one_line_string
   abstract:
     title: A short description of the project.
     description: |
@@ -122,7 +122,7 @@ properties:
       is styled as bold/italic and linked to the project's website.
       The text can also contain (GitHub Flavored) HTML syntax,
       for example, to make text bold, italic, or to add hyperlinks.
-    type: string
+    type: nonempty_string
   keywords:
     title: Keywords categorizing the project.
     description: |
@@ -131,36 +131,10 @@ properties:
       to the GitHub repository (cf. [`repo.config.topics`](#cc.repo.config.topics)), and as
       [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
       metadata to the package's `pyproject.toml` file, helping to make it easier to discover.
-    type: object
-    additionalProperties: false
-    properties:
-      display:
-        title: Display-friendly keywords.
-        description: |
-          These can contain capital letters, spaces, and other characters,
-          and are used on platforms that accept such keywords,
-          including PyPI and TestPyPI.
-        type: array
-        uniqueItems: true
-        maxItems: 20
-        items:
-          type: string
-      slug:
-        title: Machine-friendly keywords.
-        description: |
-          These are used in places that only accept keyword slugs, such as GitHub
-          (cf. [`repo.config.topics`](#cc.repo.config.topics)).
-          By default, these are automatically generated from the `display` keywords
-          by converting them to slug format and discarding any resulting slug
-          that does not meet the requirements (i.e. max. length > 50).
-        default_auto: slugs of [`keywords.display`](#cc.keywords.display)
-        type: array
-        uniqueItems: true
-        maxItems: 20
-        items:
-          type: string
-          maxLength: 50
-          pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+    type: array
+    uniqueItems: true
+    items:
+      type: nonempty_string
   highlights:
     title: Key features of the project.
     description: |
@@ -178,10 +152,10 @@ properties:
       properties:
         title:
           title: Title of the feature.
-          type: string
+          type: nonempty_string
         description:
           title: Description of the feature.
-          type: string
+          type: nonempty_string
   team:
     title: Natural and legal persons involved in the project.
     description: |
@@ -224,21 +198,11 @@ properties:
       - [SPDX License List Data (JSON)](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
       :::
     examples:
-      - id: unlicense
-      - id: mit
+      - id: Unlicense
+      - id: MIT
         notice: |
           This is a custom license notice that overwrites
           the default MIT license's notice.
-      - shortname: MCL v1.0
-        fullname: My Custom License 1.0
-        text: |
-          My Custom License
-          Version 1.0, January 2024
-          https://mywebsite.com/my-custom-license
-        notice: |
-          Licensed under My Custom License, Version 1.0 (the "License");
-          you may not use this file except in compliance with the License.
-          You may obtain a copy of the License at https://mywebsite.com/my-custom-license
     type: object
     additionalProperties: false
     required: [ id ]
@@ -356,18 +320,7 @@ properties:
         type: integer
         minimum: 1980
         maximum: 2040
-  contact:
-    title: Contact information of the project.
-    type: object
-    additionalProperties: false
-    properties:
-      email:
-        title: Email address of the project.
-        $ref: email
-      orcid:
-        title: ORCID iD of the project.
-        $ref: orcid
-  maintain:
+  maintainer:
     title: Maintainers of the project.
     description: |
       Here you can define maintainers for different parts of the project,
@@ -424,7 +377,7 @@ properties:
         type: object
         additionalProperties:
           title: ID of assignees, as defined in [`team`](#cc.team).
-          $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+          $ref: nonempty_array_of_unique_strings
       discussion:
         title: Assignees of project discussions
         description: |
@@ -437,7 +390,7 @@ properties:
         type: object
         additionalProperties:
           title: ID of assignees, as defined in [`team`](#cc.team).
-          $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+          $ref: nonempty_array_of_unique_strings
       security:
         title: ID of project's security maintainer, as defined in [`team`](#cc.team).
         type: string
@@ -524,7 +477,7 @@ properties:
         description: |
           These can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
         examples:
-          - [ 10.13039/501100000780::283595, 283595 ]
+          - [ '10.13039/501100000780::283595', 283595 ]
         $ref: array_of_unique_strings
       zenodo_communities:
         title: ID list of Zenodo communities you wish the project to appear in.
@@ -640,31 +593,24 @@ properties:
         properties:
           build:
             title: URL of the project in a build artifact/binary repository.
-            default: ${{ url.pkg.pypi.home }}
+            default: ${{ pkg.url.pypi.home }}
             $ref: url
           source:
             title: URL of the project in a source code repository.
-            default: ${{ url.repo.home }}
+            default: ${{ repo.url.home }}
             $ref: url
           other:
             title: URL of the project in another type of repository.
             $ref: url
       url:
         title: URL of a landing page for the project.
-        default: ${{ url.web.home }}
+        default: ${{ web.url.home }}
         $ref: url
       type:
         title: Type of the project.
         type: string
         enum: [ dataset, software ]
         default: software
-      path:
-        title: Path to the CITATION file.
-        description: |
-          Currently, GitHub only recognizes this file at `CITATION.cff`.
-        type: string
-        enum: [ CITATION.cff ]
-        default: CITATION.cff
   funding:
     title: Available funding options of the project.
     description: |
@@ -683,6 +629,7 @@ properties:
         tideleft: pypi/${{ package.name }}
     type: object
     additionalProperties: false
+    required: [ platform, path ]
     properties:
       community_bridge:
         title: |
@@ -742,19 +689,12 @@ properties:
         items:
           $ref: github_username
       custom:
-        title: URLs of up to four custom funding platforms.
-        type: array
-        maxItems: 4
-        uniqueItems: true
-        items:
-          $ref: url
-      path:
-        title: Path to the funding configuration file.
-        description: |
-          Currently, GitHub only recognizes this file at `.github/FUNDING.yml`.
-        type: string
-        enum: [ .github/FUNDING.yml ]
-        default: .github/FUNDING.yml
+            title: URLs of up to four custom funding platforms.
+            type: array
+            maxItems: 4
+            uniqueItems: true
+            items:
+              $ref: url
   custom:
     title: User-defined custom metadata and configurations.
     description: |
@@ -1791,9 +1731,11 @@ definitions:
                 - swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f
                 - swh:1:snp:c7c108084bc0bf3d81436bf980b46e98bd338453
   spdx_license_id:
-    $comment: Use https://github.com/citation-file-format/get-spdx-licenses to update
+    $comment: |
+      Use https://github.com/citation-file-format/get-spdx-licenses to update
       this enum in the future
-    title: [SPDX](https://spdx.org/licenses/) license ID.
+    title: >-
+      [SPDX](https://spdx.org/licenses/) license ID.
     description: |
       For a full list of machine-readable SPDX license identifiers, see the
       [SPDX GitHub repository](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)

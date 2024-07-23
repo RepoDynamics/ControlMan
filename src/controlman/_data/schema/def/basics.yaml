@@ -43,15 +43,7 @@ date:
   examples:
     - '1900-01-01'
     - '2020-12-31'
-hex_color:
-  $schema: https://json-schema.org/draft/2020-12/schema
-  title: A hexadecimal color code.
-  type: string
-  pattern: ^[0-9a-fA-F]{6}$
-  examples:
-    - 'ff0000'
-    - '00ff00'
-    - '0000ff'
+
 url:
   $schema: https://json-schema.org/draft/2020-12/schema
   title: A URL.
