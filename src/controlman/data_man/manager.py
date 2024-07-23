@@ -29,7 +29,7 @@ class DataManager:
         return
 
     @property
-    def dict(self) -> _NestedDict:
+    def ndict(self) -> _NestedDict:
         return self._data
 
     @property

@@ -24,7 +24,6 @@ from controlman import const
 from controlman import _util
 from controlman import exception as _exception
 from controlman.center_man.cache import CacheManager
-from controlman._path_manager import PathManager as _PathManager
 from controlman.nested_dict import NestedDict as _NestedDict
 
 
@@ -55,24 +54,19 @@ class CenterManager:
         self._results: list[tuple[_DynamicFile, _Diff]] = []
         self._changes: dict[_DynamicFileType, dict[str, bool]] = {}
         self._summary: str = ""
-
-        self._path_manager = _PathManager(repo_path=self._path_root)
         return
-
-    @property
-    def path_manager(self) -> _PathManager:
-        return self._path_manager
 
     def load(self) -> _NestedDict:
         if self._contents_raw:
             return self._contents_raw
         if not self._path_cc:
             self._data_before = controlman.data_man.from_json_file(repo_path=self._path_root).dict
-            self._path_cc = self._data_before["dir.control"]
+            self._path_cc = self._path_root / self._data_before["dir.control"]
             cache_retention_hours = self._data_before["control.cache.retention_hours"]
         else:
             self._data_before = _NestedDict(data={})
-            cache_retention_hours = {"api": 0, "extensions": 0}
+            self._path_cc = self._path_root / self._path_cc
+            cache_retention_hours = {k: 0 for k in ("extension", "repo", "user", "orcid", "doi", "python")}
         self._hook_manager = _HookManager(
             dir_path=self._path_root / self._path_cc / const.DIRNAME_CC_HOOK
         )
@@ -126,6 +120,12 @@ class CenterManager:
                 data=data,
                 website_dir_path=self._path_root / website_path,
             ).generate()
+        _data_gen.RepoDataGenerator(
+            data=data,
+            git_manager=self._git,
+            data_main=self._data_main,
+            future_versions=self._future_vers,
+        ).generate()
         if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_DATA):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_DATA,
@@ -150,7 +150,6 @@ class CenterManager:
 
     def generate(
         content_manager: _DataManager,
-        path_manager: _PathManager,
         custom_generator: _HookManager,
     ) -> list[tuple[_DynamicFile, str]]:
         return _generator.generate(content_manager=content_manager, path_manager=path_manager,

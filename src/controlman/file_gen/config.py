@@ -7,171 +7,261 @@ import pylinks
 from pylinks.exceptions import WebAPIError
 import markitup as _miu
 
-from controlman._path_manager import PathManager
-from controlman.datatype import DynamicFile, DynamicFileType
+from controlman.datatype import DynamicFile_, GeneratedFile
 from controlman.nested_dict import NestedDict as _NestedDict
 from controlman.file_gen import unit as _unit
+from controlman import const as _const
 
 
 class ConfigFileGenerator:
     def __init__(
         self,
         data: _NestedDict,
-        path_manager: PathManager,
+        data_before: _NestedDict,
+        repo_path: _Path,
     ):
         self._data = data
-        self._path_manager = path_manager
+        self._data_before = data_before
+        self._path_repo = repo_path
         return
 
-    def generate(self) -> list[tuple[DynamicFile, str]]:
+    def generate(self) -> tuple[list[GeneratedFile], dict | str | None, dict | str | None]:
+        tools_out, pyproject_pkg, pyproject_test = self.tools()
         return (
             self.web_requirements()
             + self.funding()
-            + self.workflow_requirements()
-            + self.pre_commit_config()
-            + self.read_the_docs()
-            + self.codecov_config()
+            + tools_out
             + self.issue_template_chooser()
             + self.gitignore()
             + self.gitattributes()
-        )
+        ), pyproject_pkg, pyproject_test
 
-    def web_requirements(self):
-        if not self._data["web"]:
+    def web_requirements(self) -> list[GeneratedFile]:
+        if not (self._data["web"] or self._data_before["web"]):
             return []
+        conda_env_file = {
+            "type": DynamicFile_.WEB_ENV_CONDA,
+            "path": self._data["web.env.file.conda.path"],
+            "path_before": self._data_before["web.env.file.conda.path"],
+        }
+        pip_env_file = {
+            "type": DynamicFile_.WEB_ENV_PIP,
+            "path": self._data["web.env.file.pip.path"],
+            "path_before": self._data_before["web.env.file.pip.path"],
+        }
+        if not self._data["web"]:
+            return [GeneratedFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
         dependencies = []
         for path in ("web.sphinx.dependency", "web.theme.dependency"):
             dependency = self._data.get(path)
             if dependency:
                 dependencies.append(dependency)
-        for path in ("web.extensions", "web.packages"):
-            for item in self._data.get(path, []):
-                dependency = item["dependency"]
-                if dependency:
-                    dependencies.append(dependency)
-        if not dependencies:
-            return []
+        for extension in self._data.get("web.extension", {}).values():
+            dependency = extension.get("dependency")
+            if dependency:
+                dependencies.append(dependency)
+        for add_dep in self._data.get("web.env.dependency", {}).values():
+            dependencies.append(add_dep)
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
-            env_name=f"{_miu.txt.slug(self._data['name'])}-website",
+            env_name=_miu.txt.slug(self._data["web.env.file.conda.name"]),
         )
-        rel_path_base = _Path(self._data["dir.path.web"])
-        conda_env_file_info = DynamicFile(
-            id="website_conda_env",
-            category=DynamicFileType.CONFIG,
-            rel_path=rel_path_base/"environment.yaml"
-        )
-        output = [()]
-        return
+        return [
+            GeneratedFile(content=conda_env, **conda_env_file),
+            GeneratedFile(content=pip_env if pip_full else "", **pip_env_file)
+        ]
 
     @logger.sectioner("Generate GitHub Funding Configuration File")
-    def funding(self) -> list[tuple[DynamicFile, str]]:
+    def funding(self) -> list[GeneratedFile]:
         """
         References
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
-        file_info = self._path_manager.funding
-        funding = self._data["funding"]
-        if not funding:
-            file_content = ""
-        else:
-            output = {}
-            for funding_platform, users in funding.items():
-                if funding_platform in ["github", "custom"]:
-                    if isinstance(users, list):
-                        output[funding_platform] = pyserials.format.to_yaml_array(data=users, inline=True)
-                    elif isinstance(users, str):
-                        output[funding_platform] = users
-                    # Other cases are not possible because of the schema
-                else:
-                    output[funding_platform] = users
-            file_content = pyserials.write.to_yaml_string(data=output, end_of_file_newline=True)
-        logger.info(code_title="File info", code=file_info)
+        if not (self._data["funding"] or self._data_before["funding"]):
+            return []
+        funding_file = {
+            "type": DynamicFile_.GITHUB_FUNDING,
+            "path": _const.FILEPATH_FUNDING_CONFIG,
+            "path_before": _const.FILEPATH_FUNDING_CONFIG,
+        }
+        if not self._data["funding"]:
+            return [GeneratedFile(**funding_file)]
+        output = {}
+        for funding_platform, users in self._data["funding.platform"].items():
+            if isinstance(users, list):
+                output[funding_platform] = pyserials.format.to_yaml_array(data=users, inline=True)
+            else:
+                output[funding_platform] = users
+        file_content = pyserials.write.to_yaml_string(data=output, end_of_file_newline=True)
         logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
+        return [GeneratedFile(content=file_content, **funding_file)]
 
     @logger.sectioner("Generate Workflow Requirements Files")
-    def workflow_requirements(self) -> list[tuple[DynamicFile, str]]:
-        tools = self._data["workflow"]["tool"]
-        out = []
-        for tool_name, tool_spec in tools.items():
-            logger.section(f"Tool: {tool_name}")
-            file_info = self._path_manager.workflow_requirements(tool_name)
-            file_content = "\n".join(tool_spec["pip_spec"])
-            out.append((file_info, file_content))
-            logger.info(code_title="File info", code=str(file_info))
-            logger.debug(code_title="File content", code=file_content)
-            logger.section_end()
-        return out
-
-    @logger.sectioner("Generate Pre-Commit Configuration Files")
-    def pre_commit_config(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.pre_commit_config
-        config = self._data["workflow"].get("pre_commit")
-        if not config:
-            file_content = ""
-        else:
-            file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
-        logger.info(code_title="File info", code=str(file_info))
-        logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
-
-    @logger.sectioner("Generate ReadTheDocs Configuration File")
-    def read_the_docs(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.read_the_docs_config
-        config = self._data["web"].get("readthedocs")
-        if not config:
-            file_content = ""
-        else:
-            file_content = pyserials.write.to_yaml_string(
-                data={
-                    key: val for key, val in config.items()
-                    if key not in ["name", "platform", "versioning_scheme", "language"]
-                },
-                end_of_file_newline=True
-            )
-        logger.info(code_title="File info", code=str(file_info))
-        logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
-
-    @logger.sectioner("Generate Codecov Configuration File")
-    def codecov_config(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.codecov_config
-        config = self._data["workflow"].get("codecov")
-        if not config:
-            file_content = ""
-        else:
-            file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True)
-            try:
-                # Validate the config file
-                # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
-                pylinks.http.request(
-                    verb="POST",
-                    url="https://codecov.io/validate",
-                    data=file_content.encode(),
+    def tools(self) -> tuple[list[GeneratedFile], dict | str | None, dict | str | None]:
+        # Collect all environment and config data per env/config file
+        env_conda = {}
+        env_pip = {}
+        conf = {}
+        for tool_name, tool in self._data.get("tool", {}).items():
+            tool_env = tool.get("env")
+            if tool_env:
+                env_file = tool_env["file"]
+                env_conda_entry = env_conda.setdefault(
+                    env_file["conda"]["path"], {"name": env_file["conda"]["name"], "deps": [], "tool_names": []}
                 )
-            except WebAPIError as e:
-                logger.error("Validation of Codecov configuration file failed.", str(e))
-        logger.info(code_title="File info", code=str(file_info))
-        logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
+                if env_conda_entry["name"] != env_file["conda"]["name"]:
+                    raise ValueError()
+                env_conda_entry["deps"].extend(list(tool_env["dependency"].values()))
+                env_conda_entry["tool_names"].append(tool_name)
+                env_file_pip = env_file.get("pip")
+                if env_file_pip:
+                    env_pip_entry = env_pip.setdefault(env_file_pip["path"], {"deps": [], "tool_names": []})
+                    env_pip_entry["deps"].extend(list(tool_env["dependency"].values()))
+                    env_pip_entry["tool_names"].append(tool_name)
+            conf_file = tool.get("config", {}).get("file")
+            if conf_file:
+                conf_entry = conf.setdefault(conf_file["path"], {"type": conf_file["type"], "contents": [], "tool_names": []})
+                if conf_entry["type"] != conf_file["type"]:
+                    raise ValueError()
+                if conf_file["type"] == "txt":
+                    if not isinstance(conf_file["content"], str):
+                        raise ValueError()
+                elif not isinstance(conf_file["content"], (list, dict)):
+                    raise ValueError()
+                for content in conf_entry["contents"]:
+                    if type(content) is not type(conf_file["content"]):
+                        raise ValueError()
+                conf_entry["contents"].append(conf_file["content"])
+                conf_entry["tool_names"].append(tool_name)
+                if tool_name == "codecov":
+                    self.validate_codecov_config(config=conf_file["content"])
+        out = []
+        # Write conda environment files
+        for conda_env_path, conda_env_data in env_conda.items():
+            conda_env = _unit.create_environment_files(
+                dependencies=conda_env_data["deps"],
+                env_name=conda_env_data["name"],
+            )[0]
+            out.append(
+                GeneratedFile(
+                    type=(DynamicFile_.TOOL_ENV_CONDA, ", ".join(conda_env_data["tool_names"])),
+                    content=conda_env,
+                    path=conda_env_path,
+                    path_before=conda_env_path
+                )
+            )
+        # Write pip environment files
+        for pip_env_path, pip_env_data in env_pip.items():
+            _, pip_env, pip_full = _unit.create_environment_files(dependencies=pip_env_data)
+            if not pip_full:
+                logger.warning(f"Tool environment file '{pip_env_path}' does not contain all dependencies.")
+            out.append(
+                GeneratedFile(
+                    type=(DynamicFile_.TOOL_ENV_PIP, ", ".join(pip_env_data["tool_names"])),
+                    content=pip_env,
+                    path=pip_env_path,
+                    path_before=pip_env_path
+                )
+            )
+        # Write configuration files
+        pyproject_pkg = None
+        pyproject_test = None
+        untouchable_paths = []
+        # These are package and test-suite pyproject.toml files that are being used
+        # regardless of whether other tools use it as their configuration file.
+        for typ in ("pkg", "test"):
+            pkg_root = self._data[f"dir.{typ}.root"]
+            untouchable_paths.append(str(_Path(pkg_root / _const.FILENAME_PKG_PYPROJECT)) if pkg_root else None)
+        for conf_path, conf_data in conf.items():
+            if conf_data["type"] == "txt":
+                content = "\n\n".join(conf_data["contents"])
+                full = content
+            else:
+                if isinstance(conf_data["contents"][0], list):
+                    full = [elem for content in conf_data["contents"] for elem in content]
+                else:
+                    for dic in conf_data["contents"][1:]:
+                        pyserials.update.dict_from_addon(
+                            data=conf_data["contents"][0],
+                            addon=dic,
+                            append_list=True,
+                            append_dict=True,
+                            raise_duplicates=True,
+                        )
+                    full = conf_data["contents"][0]
+                content = pyserials.write.to_string(
+                    data=full,
+                    data_type=conf_data["type"],
+                    end_of_file_newline=True,
+                    sort_keys=True,
+                )
+            if conf_path not in untouchable_paths:
+                out.append(
+                    GeneratedFile(
+                        type=(DynamicFile_.TOOL_CONFIG, ", ".join(conf_data["tool_names"])),
+                        content=content,
+                        path=conf_path,
+                        path_before=conf_path
+                    )
+                )
+            elif conf_path == untouchable_paths[0]:
+                pyproject_pkg = full
+            elif conf_path == untouchable_paths[1]:
+                pyproject_test = full
+        # Check old data to remove obsoleted files
+        env_conda_old = {}
+        env_pip_old = {}
+        conf_old = {}
+        for tool_name, tool in self._data_before.get("tool", {}).items():
+            tool_env = tool.get("env")
+            if tool_env:
+                env_conda_old.setdefault(tool_env["file"]["conda"]["path"], []).append(tool_name)
+                env_file_pip = tool_env["file"].get("pip")
+                if env_file_pip:
+                    env_pip_old.setdefault(env_file_pip["path"], []).append(tool_name)
+            conf_file = tool.get("config", {}).get("file")
+            if conf_file:
+                conf_old.setdefault(conf_file["path"], []).append(tool_name)
+        for dic_old, dic_new, typ in (
+            (env_conda_old, env_conda, DynamicFile_.TOOL_ENV_CONDA),
+            (env_pip_old, env_pip, DynamicFile_.TOOL_ENV_PIP),
+            (conf_old, conf, DynamicFile_.TOOL_CONFIG),
+        ):
+            for path, tool_names in dic_old.items():
+                if path not in dic_new and path not in untouchable_paths:
+                    out.append(
+                        GeneratedFile(
+                            type=(typ, ", ".join(tool_names)),
+                            path_before=path
+                        )
+                    )
+        return out, pyproject_pkg, pyproject_test
 
     @logger.sectioner("Generate Issue Template Chooser Configuration File")
-    def issue_template_chooser(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.issue_template_chooser_config
-        file = {"blank_issues_enabled": self._data["issue"]["blank_enabled"]}
-        if self._data["issue"].get("contact_links"):
-            file["contact_links"] = self._data["issue"]["contact_links"]
-        file_content = pyserials.write.to_yaml_string(data=file, end_of_file_newline=True)
-        logger.info(code_title="File info", code=str(file_info))
+    def issue_template_chooser(self) -> list[GeneratedFile]:
+        if not (self._data["issue"] or self._data_before["issue"]):
+            return []
+        generate_file = {
+            "type": DynamicFile_.GITHUB_ISSUES_CONFIG,
+            "path": _const.FILEPATH_ISSUES_CONFIG,
+            "path_before": _const.FILEPATH_ISSUES_CONFIG,
+        }
+        issues = self._data["issue"]
+        if not issues:
+            return [GeneratedFile(**generate_file)]
+        config = {}
+        if issues.get("blank_enabled"):
+            config["blank_issues_enabled"] = issues["blank_enabled"]
+        if issues.get("contact_links"):
+            config["contact_links"] = self._data["issue"]["contact_links"]
+        file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
         logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
+        return [GeneratedFile(content=file_content, **generate_file)]
 
     @logger.sectioner("Generate Gitignore File")
-    def gitignore(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.gitignore
-        local_dir = self._data["path"]["dir"]["local"]["root"]
+    def gitignore(self) -> list[GeneratedFile]:
+        local_dir = self._data["dir.local"]
         file_content = "\n".join(
             self._data["repo"].get("gitignore", [])
             + [
@@ -180,13 +270,24 @@ class ConfigFileGenerator:
                 f"!{local_dir}/**/README.md",
             ]
         )
-        logger.info(code_title="File info", code=str(file_info))
         logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
+        generated_file = GeneratedFile(
+            type=DynamicFile_.GIT_IGNORE,
+            content=file_content,
+            path=_const.FILEPATH_GITIGNORE,
+            path_before=_const.FILEPATH_GITIGNORE
+        )
+        return [generated_file]
 
     @logger.sectioner("Generate Gitattributes File")
-    def gitattributes(self) -> list[tuple[DynamicFile, str]]:
-        file_info = self._path_manager.gitattributes
+    def gitattributes(self) -> list[GeneratedFile]:
+        if not (self._data["repo.gitattributes"] or self._data_before["repo.gitattributes"]):
+            return []
+        file_info = dict(
+            type=DynamicFile_.GIT_ATTRIBUTES,
+            path=_const.FILEPATH_GIT_ATTRIBUTES,
+            path_before=_const.FILEPATH_GIT_ATTRIBUTES,
+        )
         file_content = ""
         attributes = self._data["repo"].get("gitattributes", [])
         max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
@@ -200,9 +301,9 @@ class ConfigFileGenerator:
             file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
         logger.info(code_title="File info", code=str(file_info))
         logger.debug(code_title="File content", code=file_content)
-        return [(file_info, file_content)]
+        return [GeneratedFile(content=file_content, **file_info)]
 
-    def citation(self) -> dict | None:
+    def citation(self) -> list[GeneratedFile]:
 
         def create_person(person_id):
             person = self._data["people"][person_id]
@@ -259,21 +360,27 @@ class ConfigFileGenerator:
             return out
 
         def get_commit() -> str:
-            return
+            return ""
 
-        if not self._data.get("citation"):
-            return
+        if not (self._data.get("citation") or self._data_before.get("citation")):
+            return []
+        generated_file = {
+            "type": DynamicFile_.GITHUB_CITATION,
+            "path": _const.FILEPATH_CITATION_CONFIG,
+            "path_before": _const.FILEPATH_CITATION_CONFIG,
+        }
         cite = self._data["citation"]
-        cite_old = pyserials.read.yaml_from_file(
-            path=self._path_manager.citation.path
-        ) if self._path_manager.citation.path.is_file() else {}
+        if not cite:
+            return [GeneratedFile(**generated_file)]
+        filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
+        cite_old = pyserials.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
         out = {
             "message": cite["message"],
             "title": cite["title"],
             "version": cite_old.get("version", ""),
             "date-released": cite_old.get("date-released", ""),
             "doi": cite_old.get("doi", ""),
-            "commit": get_commit(),
+            "commit": cite_old.get("commit") or get_commit(),
         }
         for key in ("license", "license_url", "url"):
             if cite.get(key):
@@ -301,7 +408,8 @@ class ConfigFileGenerator:
         if cite.get("references"):
             out["references"] = [create_reference(ref) for ref in cite["references"]]
         out["cff-version"] = "1.2.0"
-        return out
+        file_content = pyserials.write.to_yaml_string(data=out, end_of_file_newline=True)
+        return [GeneratedFile(content=file_content, **generated_file)]
 
     def prepare_citation_for_release(
         self,
@@ -315,3 +423,17 @@ class ConfigFileGenerator:
         cit_cur["doi"] = doi
         cit_cur["date-released"] = datetime.datetime.now().strftime('%Y-%m-%d')
         cit_cur.pop("commit", None)
+
+    @logger.sectioner("Generate Codecov Configuration File")
+    def validate_codecov_config(self, config: str) -> None:
+        try:
+            # Validate the config file
+            # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
+            pylinks.http.request(
+                verb="POST",
+                url="https://codecov.io/validate",
+                data=config.encode(),
+            )
+        except WebAPIError as e:
+            logger.error("Validation of Codecov configuration file failed.", str(e))
+        return

@@ -8,11 +8,9 @@ import markitup as _miu
 from loggerman import logger as _logger
 
 from controlman import _util
-from controlman._path_manager import PathManager
 from controlman.nested_dict import NestedDict as _NestedDict
 from controlman.center_man.cache import CacheManager
 from controlman.protocol import Git as _Git
-from controlman.center_man.hook import HookManager
 from controlman import exception as _exception
 
 
@@ -103,19 +101,19 @@ class MainDataGenerator:
             _logger.info(f"Set from repository name: {name}")
         return
 
-    @_logger.sectioner("Keyword Slugs")
+    @_logger.sectioner("GitHub Topics")
     def _keywords(self) -> None:
-        if self._data["keywords.slug"]:
-            _logger.info("Already set manually.")
+        if not self._data["repo.topics"]:
+            _logger.info("No GitHub topics specified.")
             return
-        if not self._data["keywords.display"]:
-            _logger.info("No keywords specified.")
-            return
-        slugs = self._data.setdefault("keywords.slug", [])
-        keywords = self._data.fill("keywords.display")
+        keywords = self._data.fill("repo.topics")
+        slugs = []
         for keyword in keywords:
+            if len(slugs) >= 20:
+                break
             if len(keyword) <= 50:
                 slugs.append(_miu.txt.slug(keyword))
+        self._data["repo.topics"] = slugs
         _logger.info("Set from keywords.")
         _logger.debug("Keyword slugs:", code=str(slugs))
         return
@@ -285,7 +283,7 @@ class MainDataGenerator:
             if "suffix" in data["name"]:
                 full_name += f', {data["name"]["suffix"]}'
             data["name"]["full"] = full_name
-        if "orcid" in data and data["orcid"]["get_pubs"]:
+        if "orcid" in data and data["orcid"].get("get_pubs"):
             data["orcid"]["pubs"] = self._get_orcid_publications(orcid_id=data["orcid"]["user"])
         return
 
@@ -296,7 +294,7 @@ class MainDataGenerator:
             socials[name] = {"user": user, "url": url}
             return
 
-        user_info = self._cache.get(f"github_user__{username}")
+        user_info = self._cache.get("user", username)
         if user_info:
             _logger.section_end()
             return user_info
@@ -332,7 +330,7 @@ class MainDataGenerator:
                     generics.append(account["url"])
                     _logger.info(title=f"Unknown account", msg=account['url'])
         _logger.section_end()
-        self._cache.set(f"github_user__{username}", user_info)
+        self._cache.set("user", username, user_info)
         return user_info
 
     @_logger.sectioner("Get Publications")

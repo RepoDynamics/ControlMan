@@ -55,7 +55,8 @@ def _make_registry():
                 if key in added_keys:
                     raise RuntimeError(f"Duplicate schema key '{key}'")
                 added_keys.append(key)
-                ref_resources.append((key, schema_dict))
+                schema_pared = _referencing.Resource.from_contents(schema_dict)
+                ref_resources.append((key, schema_pared))
             else:
                 for def_schema_key, def_schema in schema_dict.items():
                     if def_schema_key in added_keys:

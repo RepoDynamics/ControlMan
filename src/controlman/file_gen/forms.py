@@ -1,139 +1,166 @@
+from pathlib import Path as _Path
+
 import pyserials
 from loggerman import logger
 
-from controlman._path_manager import PathManager
-from controlman.datatype import DynamicFile
-from controlman import ControlCenterContentManager
+from controlman.datatype import DynamicFile_, GeneratedFile
+from controlman.nested_dict import NestedDict as _NestedDict
+from controlman import const as _const
 
 
-def generate(
-    content_manager: ControlCenterContentManager,
-    path_manager: PathManager,
-) -> list[tuple[DynamicFile, str]]:
-    return _FormGenerator(content_manager=content_manager, path_manager=path_manager).generate()
-
-
-class _FormGenerator:
-    def __init__(self, content_manager: ControlCenterContentManager, path_manager: PathManager):
-        self._ccm = content_manager
-        self._pathman = path_manager
+class FormGenerator:
+    def __init__(
+        self,
+        data: _NestedDict,
+        data_before: _NestedDict,
+        repo_path: _Path,
+    ):
+        self._data = data
+        self._repo_path = repo_path
         return
 
-    def generate(self) -> list[tuple[DynamicFile, str]]:
+    def generate(self) -> list[GeneratedFile]:
         return self.issue_forms() + self.discussion_forms() + self.pull_request_templates()
 
     @logger.sectioner("Generate Issue Forms")
-    def issue_forms(self) -> list[tuple[DynamicFile, str]]:
+    def issue_forms(self) -> list[GeneratedFile]:
         out = []
-        issues = self._ccm["issue"]["forms"]
-        issue_maintainers = self._ccm["maintainer"].get("issue", {})
+        forms = self._data.get("issue.forms", [])
+        maintainers = self._data.get("maintainer.issue", {})
         paths = []
-        label_meta = self._ccm["label"]["group"]
-        for idx, issue in enumerate(issues):
-            logger.section(f"Issue Form {idx + 1}")
-            file_info = self._pathman.issue_form(issue["id"], idx + 1)
-            pre_process = issue.get("pre_process")
+        for form_idx, form in enumerate(forms):
+            logger.section(f"Issue Form {form_idx + 1}")
+            pre_process = form.get("pre_process")
             if pre_process and not pre_process_existence(pre_process):
                 logger.section_end()
                 continue
-            form = {
+            form_output = {
                 key: val
-                for key, val in issue.items()
-                if key not in ["id", "primary_type", "subtype", "body", "pre_process", "post_process"]
+                for key, val in form.items()
+                if key not in ["id", "type", "subtype", "body", "pre_process", "post_process"]
             }
-
-            labels = form.setdefault("labels", [])
-            type_label_prefix = label_meta["primary_type"]["prefix"]
-            type_label_suffix = label_meta["primary_type"]["labels"][issue["primary_type"]]["suffix"]
+            labels = form_output.setdefault("labels", [])
+            type_label_prefix = self._data["label.type.prefix"]
+            type_label_suffix = self._data["label.type.label"][form["type"]]["suffix"]
             labels.append(f"{type_label_prefix}{type_label_suffix}")
-            if issue["subtype"]:
-                subtype_label_prefix = label_meta["subtype"]["prefix"]
-                subtype_label_suffix = label_meta["subtype"]["labels"][issue["subtype"]]["suffix"]
+            if form["subtype"]:
+                subtype_label_prefix = self._data["label.subtype.prefix"]
+                subtype_label_suffix = self._data["label.subtype.label"][form["subtype"]]["suffix"]
                 labels.append(f"{subtype_label_prefix}{subtype_label_suffix}")
-            status_label_prefix = label_meta["status"]["prefix"]
-            status_label_suffix = label_meta["status"]["labels"]["triage"]["suffix"]
+            status_label_prefix = self._data["label.status.prefix"]
+            status_label_suffix = self._data["label.status.label.triage.suffix"]
             labels.append(f"{status_label_prefix}{status_label_suffix}")
-            if issue["id"] in issue_maintainers.keys():
-                form["assignees"] = issue_maintainers[issue["id"]]
-
-            form["body"] = []
-            for elem in issue["body"]:
+            if form["id"] in maintainers.keys():
+                form_output["assignees"] = [maintainer["github"]["user"] for maintainer in maintainers[form["id"]]]
+            form_output["body"] = []
+            for elem in form["body"]:
                 pre_process = elem.get("pre_process")
                 if pre_process and not pre_process_existence(pre_process):
                     continue
-                form["body"].append(
+                form_output["body"].append(
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                 )
-            file_content = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
-            out.append((file_info, file_content))
-            paths.append(file_info.path)
-            logger.info(code_title="File info", code=file_info)
+            file_content = pyserials.write.to_yaml_string(data=form_output, end_of_file_newline=True)
+            filename = f"{form_idx + 1:02}_{form['id']}.yaml"
+            path = f"{_const.DIRPATH_ISSUES}/{filename}"
+            out.append(
+                GeneratedFile(
+                    type=(DynamicFile_.GITHUB_ISSUE_FORM, filename.removesuffix(".yaml")),
+                    content=file_content,
+                    path=path,
+                    path_before=path,
+                )
+            )
+            paths.append(path)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_issues = self._pathman.dir_issue_forms
-        path_template_chooser = self._pathman.issue_template_chooser_config.path
+        dir_issues = self._repo_path / _const.DIRPATH_ISSUES
         if dir_issues.is_dir():
             for file in dir_issues.glob("*.yaml"):
-                if file not in paths and file != path_template_chooser:
-                    logger.section(f"Outdated Issue Form: {file.name}")
-                    file_info = self._pathman.issue_form_outdated(path=file)
-                    file_content = ""
-                    out.append((file_info, file_content))
-                    logger.info(code_title="File info", code=str(file_info))
-                    logger.debug(code_title="File content", code=file_content)
-                    logger.section_end()
+                file_relpath = str(file.relative_to(self._repo_path))
+                if file_relpath not in paths and file_relpath != _const.FILEPATH_ISSUES_CONFIG:
+                    logger.info(f"Outdated Issue Form: {file.name}")
+                    out.append(
+                        GeneratedFile(
+                            type=(DynamicFile_.GITHUB_ISSUE_FORM, file.stem),
+                            content="",
+                            path=None,
+                            path_before=file_relpath,
+                        )
+                    )
         return out
 
     @logger.sectioner("Generate Discussion Forms")
-    def discussion_forms(self) -> list[tuple[DynamicFile, str]]:
+    def discussion_forms(self) -> list[GeneratedFile]:
         out = []
         paths = []
-        forms = self._ccm["discussion"]["form"]
-        for slug, form in forms.items():
+        forms = self._data.get("discussion.category", [])
+        for slug, category_data in forms.items():
             logger.section(f"Discussion Form '{slug}'")
-            file_info = self._pathman.discussion_form(slug)
-            file_content = pyserials.write.to_yaml_string(data=form, end_of_file_newline=True)
-            out.append((file_info, file_content))
-            paths.append(file_info.path)
-            logger.info(code_title="File info", code=str(file_info))
+            filename = f"{slug}.yaml"
+            path = f"{_const.DIRPATH_DISCUSSIONS}/{filename}"
+            file_content = pyserials.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
+            out.append(
+                GeneratedFile(
+                    type=(DynamicFile_.GITHUB_DISCUSSION_FORM, filename.removesuffix(".yaml")),
+                    content=file_content,
+                    path=path,
+                    path_before=path,
+                )
+            )
+            paths.append(filename)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_discussions = self._pathman.dir_discussion_forms
+        dir_discussions = self._repo_path / _const.DIRPATH_DISCUSSIONS
         if dir_discussions.is_dir():
             for file in dir_discussions.glob("*.yaml"):
-                if file not in paths:
+                file_relpath = str(file.relative_to(self._repo_path))
+                if file_relpath not in paths:
                     logger.section(f"Outdated Discussion Form: {file.name}")
-                    file_info = self._pathman.discussion_form_outdated(path=file)
-                    file_content = ""
-                    out.append((file_info, file_content))
-                    logger.info(code_title="File info", code=str(file_info))
-                    logger.debug(code_title="File content", code=file_content)
+                    out.append(
+                        GeneratedFile(
+                            type=(DynamicFile_.GITHUB_DISCUSSION_FORM, file.stem),
+                            content="",
+                            path=None,
+                            path_before=file_relpath,
+                        )
+                    )
                     logger.section_end()
         return out
 
     @logger.sectioner("Generate Pull Request Templates")
-    def pull_request_templates(self) -> list[tuple[DynamicFile, str]]:
+    def pull_request_templates(self) -> list[GeneratedFile]:
         out = []
         paths = []
-        templates = self._ccm["pull"]["template"]
+        templates = self._data.get("pull.template", {})
         for name, file_content in templates.items():
             logger.section(f"Template '{name}'")
-            file_info = self._pathman.pull_request_template(name=name)
-            out.append((file_info, file_content))
-            paths.append(file_info.path)
-            logger.info(code_title="File info", code=str(file_info))
+            path = _const.FILEPATH_PULL_TEMPLATE_MAIN if name == "default" else f"{_const.DIRPATH_PULL_TEMPLATES}/{name}.md"
+            out.append(
+                GeneratedFile(
+                    type=(DynamicFile_.GITHUB_PULL_TEMPLATE, name),
+                    content=file_content,
+                    path=path,
+                    path_before=path,
+                )
+            )
+            paths.append(path)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_templates = self._pathman.dir_pull_request_templates
+        dir_templates = self._repo_path / _const.DIRPATH_PULL_TEMPLATES
         if dir_templates.is_dir():
             for file in dir_templates.glob("*.md"):
-                if file not in paths and file.name != "README.md":
+                file_relpath = str(file.relative_to(self._repo_path))
+                if file_relpath not in paths and file.name != "README.md":
                     logger.section(f"Outdated Template: {file.name}")
-                    file_info = self._pathman.pull_request_template_outdated(path=file)
-                    file_content = ""
-                    out.append((file_info, file_content))
-                    logger.info(code_title="File info", code=str(file_info))
-                    logger.debug(code_title="File content", code=file_content)
+                    out.append(
+                        GeneratedFile(
+                            type=(DynamicFile_.GITHUB_PULL_TEMPLATE, file.stem),
+                            content="",
+                            path=None,
+                            path_before=file_relpath,
+                        )
+                    )
                     logger.section_end()
         return out
 

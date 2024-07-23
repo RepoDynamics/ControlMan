@@ -122,7 +122,7 @@ class RepoDataGenerator:
     @_logger.sectioner("Repository Labels")
     def _repo_labels(self) -> None:
         out = []
-        for label_type in ("primary", "secondary", "status"):
+        for label_type in ("type", "subtype", "status"):
             group = self._data.get(f"label.{label_type}", {})
             if not group:
                 continue

@@ -1,9 +1,10 @@
 import pyserials as _ps
 
+
 class NestedDict:
 
-    def __init__(self, data: dict):
-        self._data = data
+    def __init__(self, data: dict | None = None):
+        self._data = data or {}
         self._templater = _ps.update.TemplateFiller(
             template_start="${{",
             template_end="}}",

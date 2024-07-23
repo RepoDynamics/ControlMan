@@ -4,6 +4,7 @@ These include paths to files and directories in the user repository.
 """
 
 
+# ControlMan Constants
 DIRPATH_CC_DEFAULT = ".control"
 
 FILEPATH_METADATA = ".github/.control/.metadata.json"
@@ -20,19 +21,29 @@ FUNCNAME_CC_HOOK_POST_DATA = "post_data"
 
 CC_EXTENSION_TAG = u"!ext"
 
+# GitHub Constants
+DIRPATH_ISSUES = ".github/ISSUE_TEMPLATE"
+FILEPATH_ISSUES_CONFIG = f"{DIRPATH_ISSUES}/config.yml"
+FILEPATH_FUNDING_CONFIG = ".github/FUNDING.yml"
+FILEPATH_CITATION_CONFIG = "CITATION.cff"
+DIRPATH_DISCUSSIONS = ".github/DISCUSSION_TEMPLATE"
+FILEPATH_PULL_TEMPLATE_MAIN = ".github/PULL_REQUEST_TEMPLATE.md"
+DIRPATH_PULL_TEMPLATES = ".github/PULL_REQUEST_TEMPLATE"
+
+# Git Constants
+FILEPATH_GITIGNORE = ".gitignore"
+FILEPATH_GIT_ATTRIBUTES = ".gitattributes"
+
+# Python Constants
+FILENAME_PACKAGE_TYPING_MARKER = "py.typed"
+FILEPATH_PACKAGE_ENV_CONDA = "environment.yaml"
+FILEPATH_PACKAGE_ENV_PIP = "requirements.txt"
+FILENAME_PACKAGE_MANIFEST = "MANIFEST.in"
+FILENAME_PKG_PYPROJECT = "pyproject.toml"
 
 
-
-
-FILE_ISSUE_TEMPLATE_CHOOSER_CONFIG = ".github/ISSUE_TEMPLATE/config.yml"
-FILE_PYTHON_PYPROJECT = "pyproject.toml"
 FILE_PYTHON_REQUIREMENTS = "requirements.txt"
-FILE_PYTHON_MANIFEST = "MANIFEST.in"
-FILE_GITIGNORE = ".gitignore"
-FILE_GITATTRIBUTES = ".gitattributes"
+
 DIR_GITHUB = ".github/"
 DIR_GITHUB_WORKFLOWS = ".github/workflows/"
 DIR_GITHUB_WORKFLOW_REQUIREMENTS = ".github/workflow_requirements/"
-DIR_GITHUB_ISSUE_TEMPLATE = ".github/ISSUE_TEMPLATE/"
-DIR_GITHUB_PULL_REQUEST_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE/"
-DIR_GITHUB_DISCUSSION_TEMPLATE = ".github/DISCUSSION_TEMPLATE/"

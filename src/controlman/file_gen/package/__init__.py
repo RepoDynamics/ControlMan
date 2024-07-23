@@ -10,7 +10,7 @@ def generate(
 ) -> list[tuple[DynamicFile, str]]:
     if content_manager["package"]["type"] == "python":
         return PythonPackageFileGenerator(
-            content_manager=content_manager, path_manager=path_manager
+            data=content_manager, path_manager=path_manager
         ).generate()
     else:
         return []

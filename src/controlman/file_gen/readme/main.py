@@ -10,8 +10,9 @@ from readme_renderer.markdown import render
 import controlman
 from controlman._path_manager import PathManager
 from controlman.datatype import DynamicFile
-from controlman import ControlCenterContentManager, _util
+from controlman import _util
 from controlman.center_man.hook import HookManager as _ControlCenterCustomContentGenerator
+from controlman.nested_dict import NestedDict as _NestedDict
 
 
 class ReadmeFileGenerator:
@@ -30,16 +31,18 @@ class ReadmeFileGenerator:
 
     def __init__(
         self,
-        content_manager: ControlCenterContentManager,
+        data: _NestedDict,
         path_manager: PathManager,
         custom_generator: _ControlCenterCustomContentGenerator,
         target: Literal["github", "pypi", "conda"],
     ):
-        self._ccm = content_manager
+        self._data = data
         self._pathman = path_manager
         self._custom_gen = custom_generator
         self._target = target
         self._target_name = self._TARGET_NAME[target]
+
+        self._path_root = path_manager.root
 
         self.repo_readme_path = {
             "github": path_manager.readme_main,
@@ -47,7 +50,6 @@ class ReadmeFileGenerator:
             "conda": path_manager.readme_conda,
         }
 
-        self._badge_default = self._ccm["badge"]["default"]
 
         self._supports_dark = self.SUPPORTS_DARK_THEME[target]
         # self._github_repo_link_gen = pylinks.github.user(self.github["user"]).repo(
@@ -61,7 +63,7 @@ class ReadmeFileGenerator:
         return
 
     def generate(self) -> list[tuple[DynamicFile, str]]:
-        footer = self._generate_footer(config=self._ccm["readme"]["repo"]["footer"])
+        footer = self._generate_footer(config=self._data["readme"]["repo"]["footer"])
         return self.generate_health_files(footer=footer) + self.generate_dir_readmes(footer=footer)
 
     @logger.sectioner("Generate Health Files")
@@ -77,7 +79,7 @@ class ReadmeFileGenerator:
             ----------
             https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
             """
-            codeowners = self._ccm["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
+            codeowners = self._data["maintainer"].get("pull", {}).get("reviewer", {}).get("by_path")
             if not codeowners:
                 return ""
             # Get the maximum length of patterns to align the columns when writing the file
@@ -103,13 +105,13 @@ class ReadmeFileGenerator:
             return
 
         out = []
-        for health_file_id, data in self._ccm["readme"]["repo"]["health"].items():
+        for health_file_id, data in self._data["readme"]["repo"]["health"].items():
             logger.section(health_file_id.replace("_", " ").title())
             file_info = self._pathman.health_file(health_file_id, target_path=data["path"])
             if health_file_id == "codeowners":
                 file_content = generate_codeowners()
             elif data["type"] == "custom":
-                file_content = self._custom_gen.generate("generate_health_file", health_file_id, self._ccm, self._pathman)
+                file_content = self._custom_gen.generate("generate_health_file", health_file_id, self._data, self._pathman)
                 if file_content is None:
                     logger.critical("Custom health file generator not found.")
             elif data["type"] == "manual":
@@ -130,11 +132,11 @@ class ReadmeFileGenerator:
     @logger.sectioner("Generate Directory Readme Files")
     def generate_dir_readmes(self, footer: str) -> list[tuple[DynamicFile, str]]:
         out = []
-        for dir_path, readme_config in self._ccm["readme"]["repo"]["dir"].items():
+        for dir_path, readme_config in self._data["readme"]["repo"]["dir"].items():
             logger.section(f"Directory '{dir_path}'", group=True)
             file_info = self._pathman.readme_dir(dir_path)
             if readme_config["type"] == "custom":
-                file_content = self._custom_gen.generate("generate_directory_readme", dir_path, self._ccm, self._pathman)
+                file_content = self._custom_gen.generate("generate_directory_readme", dir_path, self._data, self._pathman)
                 if file_content is None:
                     logger.critical("Custom directory README generator not found.")
                     continue
@@ -155,7 +157,7 @@ class ReadmeFileGenerator:
         if config["type"] == "pypackit-default":
             return self.footer(settings=config["config"])
         if config["type"] == "custom":
-            content = self._custom_gen.generate("generate_footer", self._ccm, self._pathman)
+            content = self._custom_gen.generate("generate_footer", self._data, self._pathman)
             if content is None:
                 logger.critical("Custom footer generator not found.")
             return f"{content.strip()}\n"
@@ -167,7 +169,7 @@ class ReadmeFileGenerator:
         project_badge.set(settings=bdg.BadgeSettings(align="left"))
         left_badges = [project_badge]
         right_badges = []
-        if self._ccm["license"]:
+        if self._data["license"]:
             license_badge = self.create_static_badge(settings["license"] | settings["common"])
             license_badge.set(settings=bdg.BadgeSettings(align="left" if settings["show_pypackit_badge"] else "right"))
             side = left_badges if settings["show_pypackit_badge"] else right_badges
@@ -210,23 +212,56 @@ class ReadmeFileGenerator:
 
     def create_static_badge(self, settings: dict) -> bdg.Badge | bdg.ThemedBadge:
 
-        def set_value(k: str, d: dict) -> None:
-            value = settings.get(k) or self._badge_default.get(k)
+        def set_value(key_in: str, key_out: str, d: dict) -> None:
+            value = settings[key_in]
             if value:
-                d[k] = value
+                d[key_out] = value
             return
-
+        settings = _NestedDict(settings)
         shields_settings = {}
-        for key in ["style", "logo", "logo_color", "logo_size", "logo_width", "label", "label_color", "color"]:
-            set_value(key, shields_settings)
+        for controlman_key, pybadger_key in (
+            ("style", "style"),
+            ("label.text", "label"),
+            ("label.color.light", "label_color"),
+            ("message.color.light", "color"),
+            ("logo.size", "logo_size"),
+            ("logo.width", "logo_width"),
+            ("logo.light.color", "logo_color"),
+        ):
+            set_value(controlman_key, pybadger_key, shields_settings)
         if self._supports_dark:
-            for key in ["logo_dark", "logo_color_dark", "label_color_dark", "color_dark"]:
-                set_value(key, shields_settings)
+            for controlman_key, pybadger_key in (
+                ("label.color.dark", "label_color_dark"),
+                ("message.color.dark", "color_dark"),
+                ("logo.dark.color", "logo_color_dark"),
+            ):
+                set_value(controlman_key, pybadger_key, shields_settings)
+        if "logo" in settings:
+            for theme_type, pybadger_key in (("light", "logo"), ("dark", "logo_dark")):
+                if theme_type == "dark" and not self._supports_dark:
+                    continue
+                theme_logo = settings["logo"][theme_type]
+                if theme_logo["type"] == "path":
+                    logo = self._path_root / theme_logo["value"]
+                else:
+                    logo = theme_logo["value"]
+                if "extension" in theme_logo:
+                    logo = (logo, theme_logo["extension"])
+                shields_settings[pybadger_key] = logo
         badge_settings = {}
-        for key in ["link", "title", "alt", "width", "height", "align", "tag_seperator", "content_indent"]:
-            set_value(key, badge_settings)
+        for controlman_key, pybadger_key in (
+            ("href", "link"),
+            ("title", "title"),
+            ("alt", "alt"),
+            ("width", "width"),
+            ("height", "height"),
+            ("align", "align"),
+            ("tag_seperator", "tag_seperator"),
+            ("content_indent", "content_indent"),
+        ):
+            set_value(controlman_key, pybadger_key, badge_settings)
         badge = bdg.shields.core.static(
-            message=settings["message"],
+            message=settings["message.text"],
             shields_settings=bdg.shields.ShieldsSettings(**shields_settings),
             badge_settings=bdg.BadgeSettings(**badge_settings),
         )
@@ -234,7 +269,7 @@ class ReadmeFileGenerator:
 
     @property
     def github(self):
-        return self._ccm["globals"]["github"]
+        return self._data["globals"]["github"]
 
     def github_link_gen(self, branch: bool = False):
         if branch:

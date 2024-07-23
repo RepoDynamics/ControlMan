@@ -39,7 +39,7 @@ def generate(
         "conda": path_manager.readme_conda,
     }
     out = ReadmeFileGenerator(
-        content_manager=content_manager, path_manager=path_manager, custom_generator=custom_generator, target="github"
+        data=content_manager, path_manager=path_manager, custom_generator=custom_generator, target="github"
     ).generate()
     for repo_name in ["github", "pypi", "conda"]:
         out.extend(gen_repo(repo_name))

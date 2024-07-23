@@ -1,5 +1,4 @@
-"""
-Writer
+"""Writer
 """
 
 from pathlib import Path
@@ -10,7 +9,7 @@ from loggerman import logger
 from markitup import html, md
 
 from controlman.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType, Diff
-
+from controlman.datatype import DynamicFile_, GeneratedFile
 
 class FileComparer:
     def __init__(self, path_root: str | Path):
@@ -60,6 +59,28 @@ class FileComparer:
                 else (DynamicFileChangeType.MODIFIED if content else DynamicFileChangeType.REMOVED)
             )
         return Diff(status=status, before=before, after=content)
+
+    def compare(self, file: GeneratedFile):
+        if not file.content:
+            if not file.path_before:
+                return DynamicFileChangeType.DISABLED
+            filepath_before = self.path_root/file.path_before
+            if filepath_before.is_file():
+                return DynamicFileChangeType.REMOVED
+            return DynamicFileChangeType.DISABLED
+        if not file.path:
+            return DynamicFileChangeType.DISABLED
+        if not file.path_before:
+            return DynamicFileChangeType.CREATED
+        fullpath_before = self.path_root/file.path_before
+        if not fullpath_before.is_file():
+            return DynamicFileChangeType.CREATED
+        with open(self.path_root/file.path_before) as f:
+            content_before = f.read()
+        if file.content.strip() == content_before.strip():
+            return DynamicFileChangeType.UNCHANGED
+        return DynamicFileChangeType.MODIFIED
+
 
     def _compare_file_multiloc(self, path: Path, alt_paths: list[Path], content: str) -> Diff:
         alts = self._remove_alts(alt_paths)
@@ -185,3 +206,5 @@ class FileComparer:
             details_.append(html.details(content=md.code_block(diff, "diff"), summary="Content"))
         details.append(html.ul(details_))
         return output
+
+
