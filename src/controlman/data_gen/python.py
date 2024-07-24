@@ -194,38 +194,3 @@ class PythonDataGenerator:
             classifiers.extend(common_classifiers)
             self._data[f"{path}.classifiers"] = sorted(classifiers)
         return
-
-    def _package_development_status(self) -> dict:
-        curr_branch, _ = self._git.get_all_branch_names()
-        future_ver = self._future_vers.get(curr_branch)
-        if future_ver:
-            ver = _PEP440SemVer(str(future_ver))
-        else:
-            tag_prefix = self._data_main.fill("tag.version.prefix")
-            if not tag_prefix:
-                return
-            ver = self._git.get_latest_version(tag_prefix=ver_tag_prefix)
-        if not ver:
-            _logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
-            continue
-        if branch == curr_branch:
-            branch_metadata = self._data
-        elif branch == main_branch:
-
-
-        phase = {
-            1: "Planning",
-            2: "Pre-Alpha",
-            3: "Alpha",
-            4: "Beta",
-            5: "Production/Stable",
-            6: "Mature",
-            7: "Inactive",
-        }
-        output = {
-            "dev_phase": phase[status_code],
-            "trove_classifier": f"Development Status :: {status_code} - {phase[status_code]}",
-        }
-        _logger.info(f"Development info: {output}")
-        _logger.section_end()
-        return output

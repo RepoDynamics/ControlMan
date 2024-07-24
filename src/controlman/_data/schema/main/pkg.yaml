@@ -270,6 +270,8 @@ definitions:
             allOf:
               - $ref: '#/definitions/pkg_os_config'
               - properties:
+                  name:
+                    default: Linux
                   runner:
                     default: ubuntu-latest
                     enum:
@@ -281,6 +283,8 @@ definitions:
             allOf:
               - $ref: '#/definitions/pkg_os_config'
               - properties:
+                  name:
+                    default: MacOS
                   runner:
                     default: macos-latest
                     enum:
@@ -296,6 +300,8 @@ definitions:
             allOf:
               - $ref: '#/definitions/pkg_os_config'
               - properties:
+                  name:
+                    default: Windows
                   runner:
                     default: windows-latest
                     enum:
@@ -506,12 +512,10 @@ definitions:
       pypi:
         title: URLs of the project's PyPI package.
         type: object
-        default: { }
         properties:
           url:
             title: URLs of the package on PyPI.
             type: object
-            default: { }
             properties:
               home:
                 title: Homepage URL of the PyPI package.
@@ -569,7 +573,7 @@ definitions:
     title: Operating System Configuration
     type: object
     additionalProperties: false
-    required: [ runner ]
+    required: [ name, runner ]
     properties:
       name:
         type: string

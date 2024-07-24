@@ -15,9 +15,11 @@ class DataValidator:
     @_logger.sectioner("Validate Control Center Contents")
     def validate(self):
         _util.jsonschema.validate_data(data=self._ccm(), schema="full")
-        self.issue_forms()
         self.branch_names()
         self.changelogs()
+        self.commits()
+        self.issue_forms()
+        self.labels()
         return
 
     def branch_names(self):
@@ -43,28 +45,28 @@ class DataValidator:
         changelog_names = []
         for changelog_id, changelog_data in self._ccm["changelog"].items():
             if changelog_data["path"] in changelog_paths:
-                _logger.critical(
-                    title=f"Duplicate changelog path: {changelog_data['path']}",
-                    msg=f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
+                raise _exception.ControlManSchemaValidationError(
+                    f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
+                    key=f"changelog.{changelog_id}.path"
                 )
             changelog_paths.append(changelog_data["path"])
             if changelog_data["name"] in changelog_names:
-                _logger.critical(
-                    title=f"Duplicate changelog name: {changelog_data['name']}",
-                    msg=f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
+                raise _exception.ControlManSchemaValidationError(
+                    f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
+                    key=f"changelog.{changelog_id}.name"
                 )
             changelog_names.append(changelog_data["name"])
-            if changelog_id == "package_public_prerelease":
-                continue
+            # if changelog_id == "package_public_prerelease": #TODO: check package_public_prerelease
+            #     continue
             section_ids = []
-            for section in changelog_data["sections"]:
+            for idx, section in enumerate(changelog_data.get("sections", [])):
                 if section["id"] in section_ids:
-                    _logger.critical(
-                        title=f"Duplicate changelog section ID: {section['id']}",
-                        msg=f"The section ID '{section['id']}' set for changelog '{changelog_id}' "
+                    raise _exception.ControlManSchemaValidationError(
+                        f"The changelog section ID '{section['id']}' set for changelog '{changelog_id}' "
                         f"is already used by another earlier section.",
+                        key=f"changelog.{changelog_id}.sections[{idx}]"
                     )
                 section_ids.append(section["id"])
         return
@@ -72,13 +74,13 @@ class DataValidator:
     def commits(self):
         """Verify that commit types are unique, and that subtypes are defined."""
         commit_types = []
-        for main_type in ("primary_action", "primary_custom"):
+        for main_type in ("primary", "primary_custom"):
             for commit_id, commit_data in self._ccm["commit"][main_type].items():
                 if commit_data["type"] in commit_types:
-                    _logger.critical(
-                        title=f"Duplicate commit type: {commit_data['type']}",
-                        msg=f"The type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
+                    raise _exception.ControlManSchemaValidationError(
+                        f"The commit type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
                         f"is already used by another earlier commit.",
+                        key=f"commit.{main_type}.{commit_id}.type"
                     )
                 commit_types.append(commit_data["type"])
                 for subtype_type, subtypes in commit_data["subtypes"]:

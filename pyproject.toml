@@ -28,7 +28,6 @@ dependencies = [
     "markitup",
     "pycolorit",
     "pybadger",
-    "github-contexts",
     "ConventionalCommits",
     "actionman",
     "loggerman",
@@ -37,7 +36,7 @@ dependencies = [
     "FileEx",
     "PkgData",
     "PyShellMan",
-    "referencing",
-    "jsonpath-ng"
+    "referencing == 0.35.1",
+    "jsonpath-ng == 1.6.1"
 ]
 requires-python = ">=3.10"

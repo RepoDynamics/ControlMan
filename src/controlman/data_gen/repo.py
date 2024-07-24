@@ -7,6 +7,7 @@ from controlman.nested_dict import NestedDict as _NestedDict
 from controlman.protocol import Git as _Git
 from controlman import data_man as _data_man
 from controlman import exception as _exception
+from controlman import version as _version
 
 
 class RepoDataGenerator:
@@ -37,9 +38,10 @@ class RepoDataGenerator:
         )
         branch_pattern = _re.compile(rf"^({release_prefix}|{pre_release_prefix}|{main_branch})")
         self._git.fetch_remote_branches_by_pattern(branch_pattern=branch_pattern)
-        ver_tag_prefix = self._data_main["tag.version.prefix"]
+        ver_tag_prefix = self._data_main.fill("tag.version.prefix")
         branches = other_branches + [curr_branch]
         release_info: dict = {}
+        curr_branch_latest_version = None
         self._git.stash()
         for branch in branches:
             if not (branch.startswith(allowed_prefixes) or branch == main_branch):
@@ -48,12 +50,13 @@ class RepoDataGenerator:
             if self._future_versions.get(branch):
                 ver = PEP440SemVer(str(self._future_versions[branch]))
             else:
-                ver = self._git.get_latest_version(tag_prefix=ver_tag_prefix)
+                ver, dist = _version.get_latest_version(version_tag_prefix=ver_tag_prefix, git_manager=self._git)
             if not ver:
                 _logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
             if branch == curr_branch:
                 branch_metadata = self._data
+                curr_branch_latest_version = ver
             elif branch == main_branch:
                 branch_metadata = self._data_main
             else:
@@ -64,26 +67,36 @@ class RepoDataGenerator:
                     _logger.debug("Error Details", e)
                     continue
             if branch == main_branch:
-                branch_name = self._data["branch.main.name"]
+                branch_name = self._data.fill("branch.main.name")
             elif branch.startswith(release_prefix):
-                new_prefix = self._data["branch.release.name"]
+                new_prefix = self._data.fill("branch.release.name")
                 branch_name = f"{new_prefix}{branch.removeprefix(release_prefix)}"
             else:
-                new_prefix = self._data["branch.pre.prefix"]
+                new_prefix = self._data.fill("branch.pre.name")
                 branch_name = f"{new_prefix}{branch.removeprefix(pre_release_prefix)}"
             version_info = {"branch": branch_name}
             pkg_info = branch_metadata["pkg"]
             if pkg_info:
+                package_managers = [
+                    package_man_name for platform_name, package_man_name in (
+                        ("pypi", "pip"), ("conda", "conda")
+                    ) if platform_name in pkg_info
+                ]
+                if branch == curr_branch:
+                    branch_metadata.fill("pkg.entry")
                 version_info |= {
                     "python_version_minors": branch_metadata["pkg.python.version.minors"],
-                    "os_titles": [os["title"] for os in branch_metadata["pkg.os"].values()],
-                    "package_managers": ["pip"] + (["conda"] if branch_metadata["pkg.conda"] else []),
-                    "cli_scripts": [
-                        script["name"] for script in branch_metadata.get("pkg.cli_scripts", [])
+                    "os_names": [os["name"] for os in branch_metadata["pkg.os"].values()],
+                    "package_managers": package_managers,
+                    "cli_names": [
+                        script["name"] for script in branch_metadata.get("pkg.entry.cli", {}).values()
                     ],
-                    "gui_scripts": [
-                        script["name"] for script in branch_metadata.get("pkg.gui_scripts", [])
+                    "gui_names": [
+                        script["name"] for script in branch_metadata.get("pkg.entry.gui", {}).values()
                     ],
+                    "api_names": [
+                        script["name"] for script in branch_metadata.get("pkg.entry.api", {}).values()
+                    ]
                 }
             release_info[str(ver)] = version_info
         self._git.checkout(curr_branch)
@@ -101,11 +114,43 @@ class RepoDataGenerator:
                 set(val),
                 key=lambda x: x if key!="python_versions_minors" else tuple(map(int, x.split(".")))
             )
-        for key in ("cli_scripts", "gui_scripts"):
+        for key in ("cli_names", "gui_names", "api_names"):
             if key in out:
-                out["interfaces"].append(key.removesuffix("_scripts").upper())
+                out["interfaces"].append(key.removesuffix("_names").upper())
                 out["has_scripts"] = True
         self._data["project"] = out
+        if curr_branch_latest_version and self._data["pkg"]:
+            self._package_development_status(curr_branch_latest_version)
+        return
+
+    def _package_development_status(self, ver: PEP440SemVer) -> dict:
+        phase = {
+            1: "Planning",
+            2: "Pre-Alpha",
+            3: "Alpha",
+            4: "Beta",
+            5: "Production/Stable",
+            6: "Mature",
+            7: "Inactive",
+        }
+        if ver.release == (0, 0, 0):
+            status_code = 1
+        elif ver.dev is not None:
+            status_code = 2
+        elif ver.pre:
+            if ver.pre[0] == "a":
+                status_code = 3
+            else:
+                status_code = 4
+        elif ver.major == 0:
+            status_code = 4
+        else:
+            latest_ver = max(PEP440SemVer(ver) for ver in self._data["project"]["versions"])
+            if ver.major < latest_ver.major:
+                status_code = 6
+            else:
+                status_code = 5
+        self._data["pkg.classifiers"].append(f"Development Status :: {status_code} - {phase[status_code]}")
         return
 
     @_logger.sectioner("Repository Labels")

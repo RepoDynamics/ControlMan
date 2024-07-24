@@ -48,26 +48,26 @@ default:
   maintainer:
     pull:
       code_owners:
-        - "*": [ owner ]
+        - "*": [ '${{ team.owner }}' ]
     issue:
-      app_bug_gui: [ owner ]
-      app_bug_cli: [ owner ]
-      app_bug_api: [ owner ]
-      app_bug_setup: [ owner ]
-      app_request_enhancement: [ owner ]
-      app_request_feature: [ owner ]
-      app_request_breaking: [ owner ]
+      app_bug_gui: [ '${{ team.owner }}' ]
+      app_bug_cli: [ '${{ team.owner }}' ]
+      app_bug_api: [ '${{ team.owner }}' ]
+      app_bug_setup: [ '${{ team.owner }}' ]
+      app_request_enhancement: [ '${{ team.owner }}' ]
+      app_request_feature: [ '${{ team.owner }}' ]
+      app_request_breaking: [ '${{ team.owner }}' ]
     discussion:
-      announcements: [ owner ]
-    security: owner
-    code_of_conduct: owner
-    support: owner
+      announcements: [ '${{ team.owner }}' ]
+    security: '${{ team.owner }}'
+    code_of_conduct: '${{ team.owner }}'
+    support: '${{ team.owner }}'
   citation:
     title: '${{ name }}: ${{ title }}'
     authors:
-      - id: owner
+      - '${{ team.owner }}'
     contacts:
-      - owner
+      - '${{ team.owner }}'
     message: If you use ${{ name }}, please cite it using the metadata from this file.
 properties:
   name:
@@ -156,6 +156,33 @@ properties:
         description:
           title: Description of the feature.
           type: nonempty_string
+  role:
+    title: Author role definitions.
+    description: |
+      For each role, add a key-value pair
+      where the key is the ID of the role, used to attribute roles to authors
+      (cf. [`entity.roles`](#cc-def.entity)).
+    type: object
+    examples:
+      - concept:
+          title: Conceptualization
+          description: Formulation and evolution of overarching project goals and aims.
+          abbreviation: CNP
+        dev:
+          title: Software Development
+          description: Implementation of the software.
+          abbreviation: DEV
+        manage:
+          title: Management
+          description: Project administration and coordination.
+          abbreviation: MAN
+        maint:
+          title: Maintenance
+          description: Maintenance of the software and development workflows.
+          abbreviation: MNT
+    additionalProperties:
+      title: An author role definition.
+      $ref: '#/definitions/role_definition'
   team:
     title: Natural and legal persons involved in the project.
     description: |
@@ -163,9 +190,20 @@ properties:
       define a key-value pair, where the key is the ID of the person
       ([`owner`](#cc.team.owner)) is pre-defined).
       The ID can then be used to reference the person in other configurations
-      (e.g. see [`maintain`](#cc.maintain) and [`citation`](#cc.citation)).
+      using templating
+      (e.g. see [`maintainer`](#cc.maintain) and [`citation`](#cc.citation)).
       Also, the information of each person can be used directly
       (e.g. see [`copyright.notice`](#cc.copyright.notice)).
+      
+      :::{admonition} Automatic Data Filling
+      :class: important
+      
+      For any person added here, additional information will be automatically filled
+      from web APIs, if available (see [`entity`](#cc.def.entity)).
+      This is not done for other `entity` objects defined elsewhere in the control center.
+      It is therefore recommended to define all persons involved in the project here,
+      and reference them elsewhere using templating.
+
     type: object
     properties:
       owner:
@@ -329,6 +367,10 @@ properties:
       and their information will be added tp the project's documentation,
       including website, citation, README, and community files,
       as well as package metadata.
+      
+      Each maintainer must be defined as an [`entity`](#cc-def.entity) object.
+      It is recommended to define all maintainers in [`team`](#cc.team),
+      and reference them here (and elsewhere) using templating.
     type: object
     additionalProperties: false
     properties:
@@ -347,59 +389,69 @@ properties:
               based on the modified files.
               For each path or glob pattern, add a key-value pair,
               where the key is the path or glob pattern,
-              and the value is an array of code owners' IDs, as defined in [`team`](#cc.team).
+              and the value is an array of code owners, i.e., [`entities`](#cc-def.entities).
               Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
               the last matching pattern takes the most precedence.
             type: array
             minItems: 1
             uniqueItems: true
             examples:
-              - - "*": [ owner ]  # Default owners for all unassigned files.
-                - "/*": [ a_maintainer ]  # All files directly under root directory.
-                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
+              - - "*": [ '${{ team.owner }}' ]  # Default owners for all unassigned files.
+                - "/*": [ '${{ team.a_maintainer }}' ]  # All files directly under root directory.
+                - "/.github/": [ '${{ team.a_maintainer}}', '${{ team.another_maintainer }}' ]  # All files in `.github` directory.
             items:
               title: Code owners of a specific path or glob pattern.
               type: object
               minProperties: 1
               maxProperties: 1
               additionalProperties:
-                title: IDs of the code owners, as defined in [`team`](#cc.team).
-                $ref: 'defs#/definitions/nonempty_array_of_unique_strings'
+                title: Code owners of the path or glob pattern.
+                $ref: '#/definitions/entities'
       issue:
         title: Assignees of project issues.
         description: |
           For each issue form defined in [`issue.forms`](#cc.issue.forms),
           add a key-value pair where the key is the issue form's [`id`](#cc.issue.forms[i].id),
-          and the value is an array of assignees' IDs, as defined in [`team`](#cc.team).
+          and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
         examples:
-          - app_bug_api: [ owner ]
-            app_bug_cli: [ owner, some_maintainer ]
+          - app_bug_api: [ '${{ team.owner }}' ]
+            app_bug_cli: [ '${{ team.owner }}', '${{ team.a_maintainer }}' ]
         type: object
         additionalProperties:
-          title: ID of assignees, as defined in [`team`](#cc.team).
-          $ref: nonempty_array_of_unique_strings
+          title: Assignees of the issue form.
+          $ref: '#/definitions/entities'
       discussion:
-        title: Assignees of project discussions
+        title: Assignees of project discussions.
         description: |
           For each discussion category form defined in
           [`discussion.category.*.form`](#cc.discussion.category.*.form),
           add a key-value pair where the key is the category's [slug](#cc.discussion.category),
-          and the value is an array of assignees' IDs, as defined in [`team`](#cc.team).
+          and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
         examples:
-          - announcements: [ some_maintainer_id, some-other-maintainer-id ]
+          - announcements: [ '${{ team.some_maintainer_id }}', '${{ team.some-other-maintainer-id }}' ]
+            questions: [ '${{ team.a_maintainer }}' ]
         type: object
         additionalProperties:
-          title: ID of assignees, as defined in [`team`](#cc.team).
-          $ref: nonempty_array_of_unique_strings
+          title: Assignees of the discussion category.
+          $ref: '#/definitions/entities'
       security:
-        title: ID of project's security maintainer, as defined in [`team`](#cc.team).
-        type: string
+        title: Project's security maintainer.
+        examples:
+          - '${{ team.owner }}'
+          - '${{ team.some_maintainer_id }}'
+        $ref: '#/definitions/entity'
       code_of_conduct:
-        title: ID of project's code of conduct enforcer, as defined in [`team`](#cc.team).
-        type: string
+        title: Project's code of conduct enforcer.
+        examples:
+          - '${{ team.owner }}'
+          - '${{ team.some_maintainer_id }}'
+        $ref: '#/definitions/entity'
       support:
-        title: ID of project's support contact, as defined in [`team`](#cc.team).
-        type: string
+        title: Project's support contact.
+        examples:
+          - '${{ team.owner }}'
+          - '${{ team.some_maintainer_id }}'
+        $ref: '#/definitions/entity'
   citation:
     title: Project citation information.
     description: |
@@ -435,29 +487,37 @@ properties:
           the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
           key of the `pyproject.toml` file).
         examples:
-          - - id: owner
-              roles: [ concept, dev, manage ]
-            - id: some_author_id
-              roles: [ dev, maint ]
-        default: [ owner ]
+          - [ '${{ team.owner }}', '${{ team.some_author }}' ]
+          - - name:
+                first: Jane
+                last: Doe
+            - name:
+                first: John
+                last: Doe
+        default: [ '${{ team.owner }}' ]
         type: array
         uniqueItems: true
         minItems: 1
         items:
           title: An author of the project/package.
-          type: object
-          additionalProperties: false
-          required: [ id ]
-          properties:
-            id:
-              title: ID of the author, as defined in [`team`](#cc.team).
-              type: string
-            roles:
-              title: ID of the author's roles, defined as a key in [`citation.role`](#cc.citation.role).
-              $ref: array_of_unique_strings
+          $ref: '#/definitions/entity'
       contacts:
-        title: IDs of project's contact persons, as defined in [`team`](#cc.team).
-        $ref: nonempty_array_of_unique_strings
+        title: Project's contact persons.
+        description: |
+          It is recommended to define the persons in 
+          [`team`](#cc.team) and reference them here using templating.
+        examples:
+          - [ '${{ team.owner }}', '${{ team.some_author }}' ]
+          - - name:
+                first: Jane
+                last: Doe
+              email:
+                user: janedoe@example.com
+            - name:
+                first: John
+                last: Doe
+              website: 'https://johndoe.com'
+        $ref: '#/definitions/entities'
       message:
         title: A message to the human reader of the file.
         examples:
@@ -487,61 +547,6 @@ properties:
         examples:
           - [ ecfunded ]
         $ref: array_of_unique_strings
-      role:
-        title: Author role definitions.
-        description: |
-          For each role, add a key-value pair
-          where the key is the ID of the role, used to attribute roles to authors
-          (cf. [`citation.authors[i].roles`](#cc.citation.authors[i].roles)).
-        type: object
-        examples:
-          - concept:
-              title: Conceptualization
-              description: Formulation and evolution of overarching project goals and aims.
-              abbreviation: CNP
-            dev:
-              title: Software Development
-              description: Implementation of the software.
-              abbreviation: DEV
-            manage:
-              title: Management
-              description: Project administration and coordination.
-              abbreviation: MAN
-            maint:
-              title: Maintenance
-              description: Maintenance of the software and development workflows.
-              abbreviation: MNT
-        additionalProperties:
-          title: An author role definition.
-          examples:
-            - title: Conceptualization
-              description: Formulation and evolution of overarching project goals and aims.
-              abbreviation: CNP
-          type: object
-          additionalProperties: false
-          required: [ title, description, abbreviation ]
-          properties:
-            title:
-              title: Name of the role.
-              type: string
-              examples:
-                - Conceptualization
-                - Software Development
-                - Management
-            description:
-              title: A short description of the role.
-              type: string
-              examples:
-                - Formulation and evolution of overarching project goals and aims.
-                - Implementation of the software.
-                - Project administration and coordination.
-            abbreviation:
-              title: Abbreviation of the role title.
-              type: string
-              examples:
-                - CNP
-                - DEV
-                - MAN
       references:
         title: Reference(s) to other creative works.
         type: array
@@ -875,6 +880,19 @@ definitions:
               (`particle ` and `, suffix` are only added when provided)
               for natural persons, and to `legal` for legal persons.
             type: string
+      roles:
+        title: Roles of the person in the project.
+        description: |
+          Define all roles in the project in [`role`](#cc.role),
+          and use them here with templating.
+        examples:
+          - [ ${{ role.concept}} ]
+          - [ ${{ role.concept}}, ${{ role.dev }} ]
+        type: array
+        uniqueItems: true
+        items:
+          title: A role definition for the person.
+          $ref: '#/definitions/role_definition'
       affiliation:
         title: Affiliation
         description: |
@@ -1300,15 +1318,15 @@ definitions:
         uniqueItems: true
         minItems: 1
         items:
-          title: Author
-          description: |
-            An author of the work.
-            
-            This can either be set to the ID of a person defined in [`team`](#cc.team),
-            or to an [`entity`](#cc.) object.
-          oneOf:
-            - type: string
-            - $ref: '#/definitions/entity'
+          title: An author of the work.
+          examples:
+            - ${{ team.owner }}
+            - ${{ team.some_author_id }}
+            - name:
+                first: John
+                last: Doe
+                suffix: Jr.
+          $ref: '#/definitions/entity'
       collection-doi:
         $ref: doi
         description: The DOI of a collection containing the work.
@@ -2226,3 +2244,42 @@ definitions:
       - ZPL-1.1
       - ZPL-2.0
       - ZPL-2.1
+  role_definition:
+    title: Definition of a role in the project.
+    examples:
+      - title: Conceptualization
+        description: Formulation and evolution of overarching project goals and aims.
+        abbreviation: CNP
+    type: object
+    additionalProperties: false
+    required: [ title, description, abbreviation ]
+    properties:
+      title:
+        title: Name of the role.
+        type: string
+        examples:
+          - Conceptualization
+          - Software Development
+          - Management
+      description:
+        title: A short description of the role.
+        type: string
+        examples:
+          - Formulation and evolution of overarching project goals and aims.
+          - Implementation of the software.
+          - Project administration and coordination.
+      abbreviation:
+        title: Abbreviation of the role title.
+        type: string
+        examples:
+          - CNP
+          - DEV
+          - MAN
+  entities:
+    title: A list of natural or legal persons.
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      title: An entity.
+      $ref: '#/definitions/entity'

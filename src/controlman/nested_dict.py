@@ -19,14 +19,18 @@ class NestedDict:
             value = self.__getitem__(path)
         if not value:
             return
-        filled_value = self._templater.fill(
-            templated_data=value,
+        filled_value = self.fill_data(value)
+        self.__setitem__(path, filled_value)
+        return filled_value
+
+    def fill_data(self, data):
+        return self._templater.fill(
+            templated_data=data,
             source_data=self._data,
             single_as_list=False,
             recursive=True,
         )
-        self.__setitem__(path, filled_value)
-        return filled_value
+
 
     def __call__(self):
         return self._data
