@@ -60,7 +60,7 @@ class CenterManager:
         if self._contents_raw:
             return self._contents_raw
         if not self._path_cc:
-            self._data_before = controlman.data_man.from_json_file(repo_path=self._path_root).dict
+            self._data_before = controlman.data_man.from_json_file(repo_path=self._path_root).ndict
             self._path_cc = self._path_root / self._data_before["dir.control"]
             cache_retention_hours = self._data_before["control.cache.retention_hours"]
         else:
@@ -107,6 +107,21 @@ class CenterManager:
             git_manager=self._git,
             github_api=self._github_api,
         ).generate()
+        if not self._data_main:
+            curr_branch, other_branches = self._git.get_all_branch_names()
+            main_branch = data["repo.default_branch"]
+            if curr_branch == main_branch:
+                self._data_main = self._data_before or data
+            else:
+                self._git.fetch_remote_branches_by_name(main_branch)
+                self._git.stash()
+                self._git.checkout(main_branch)
+                if (self._git.repo_path / const.FILEPATH_METADATA).is_file():
+                    self._data_main = controlman.data_man.from_json_file(repo_path=self._git.repo_path)
+                else:
+                    self._data_main = data
+                self._git.checkout(curr_branch)
+                self._git.stash_pop()
         if data.get("pkg"):
             _data_gen.PythonDataGenerator(
                 data=data,

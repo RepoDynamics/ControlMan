@@ -3,6 +3,8 @@ import re as _re
 
 # Non-standard libraries
 from packaging import specifiers as _specifiers
+
+from versionman import PEP440SemVer as _PEP440SemVer
 import pylinks
 import trove_classifiers as _trove_classifiers
 from loggerman import logger as _logger
@@ -21,11 +23,15 @@ class PythonDataGenerator:
         git_manager: _Git,
         cache: CacheManager,
         github_api: pylinks.api.GitHub,
+        data_main: _NestedDict | None = None,
+        future_versions: dict[str, str | _PEP440SemVer] | None = None,
     ):
         self._data = data
         self._git = git_manager
         self._cache = cache
         self._github_api = github_api
+        self._data_main = data_main
+        self._future_vers = future_versions or {}
         return
 
     def generate(self):
@@ -38,11 +44,15 @@ class PythonDataGenerator:
     @_logger.sectioner("Package Name")
     def _package_name(self) -> None:
         for path in ("pkg.name", "testsuite.name"):
-            if self._data.get(path):
-                self._data[path] = _re.sub(r"[ ._-]+", "-", self._data.fill(path))
+            name = self._data.fill(path)
+            if name:
+                name_cleaned = _re.sub(r'[^a-zA-Z0-9._-]', '-', name)
+                self._data[path] = _re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', name_cleaned)
         for path in ("pkg.import_name", "testsuite.import_name"):
-            if self._data.get(path):
-                self._data[path] = _re.sub(r"[ ._-]+", "_", self._data.fill(path))
+            import_name = self._data.fill(path)
+            if import_name:
+                import_name_cleaned = _re.sub(r'[^a-zA-Z0-9]', '_', import_name.lower())
+                self._data[path] = _re.sub(r'^[0-9]+', "", import_name_cleaned)
         return
 
     @_logger.sectioner("Package Python Versions")
@@ -66,8 +76,21 @@ class PythonDataGenerator:
             self._cache.set("python", "releases", live_versions)
             return live_versions
 
-        data_py_version = self._data["pkg.python.version"]
-        spec = _specifiers.SpecifierSet(data_py_version["spec"])
+        version_spec_key = "pkg.python.version.spec"
+        spec_str = self._data.fill(version_spec_key)
+        if not spec_str:
+            _exception.ControlManSchemaValidationError(
+                "The package has not specified a Python version specifier.",
+                key=version_spec_key,
+            )
+        try:
+            spec = _specifiers.SpecifierSet(spec_str)
+        except _specifiers.InvalidSpecifier as e:
+            raise _exception.ControlManSchemaValidationError(
+                f"Invalid Python version specifier '{spec_str}'.",
+                key=version_spec_key,
+            ) from e
+
         current_python_versions = get_python_releases()
         micro_str = []
         micro_int = []
@@ -86,22 +109,30 @@ class PythonDataGenerator:
             minor_str_pyxy.append(f"py{''.join(map(str, compat_ver_micro_int[:2]))}")
 
         if len(micro_str) == 0:
-            _logger.error(
-                f"pkg.python.version '{data_py_version['spec']}' is does not match any "
-                f"released Python version: '{current_python_versions}'."
+            raise _exception.ControlManSchemaValidationError(
+                f"The Python version specifier '{spec_str}' does not match any "
+                f"released Python version: '{current_python_versions}'.",
+                key=version_spec_key,
             )
         output = {
             "micros": sorted(micro_str, key=lambda x: tuple(map(int, x.split(".")))),
             "minors": sorted(minor_str, key=lambda x: tuple(map(int, x.split(".")))),
             "pyxy": sorted(minor_str_pyxy),
         }
-        data_py_version.update(output)
-        _logger.debug("Generated data:", code=str(output))
+        self._data["pkg.python.version"].update(output)
+        if self._data["test"]:
+            self._data["test.python.version.spec"] = spec_str
+        _logger.debug(f"Generated data: {str(output)}")
         return output
 
     @_logger.sectioner("Package Operating Systems")
     def _package_operating_systems(self):
-        data_os = self._data["pkg.os"]
+        data_os = self._data.fill("pkg.os")
+        if not isinstance(data_os, dict):
+            raise _exception.ControlManSchemaValidationError(
+                "The package has not specified any operating systems.",
+                key="pkg.os",
+            )
         pure_python = not any("ci_build" in os for os in data_os.values())
         self._data["pkg.python.pure"] = pure_python
         self._data["pkg.os.independent"] = len(data_os) == 3 and pure_python
@@ -146,16 +177,42 @@ class PythonDataGenerator:
         # common_classifiers.append(self._package_development_status())
         if self._data["pkg.typed"]:
             common_classifiers.append("Typing :: Typed")
-        for path in ("pkg", "testsuite"):
+        for common_classifier in common_classifiers:
+            if common_classifier not in _trove_classifiers.classifiers:
+                raise RuntimeError(
+                    f"Auto-generated trove classifier '{common_classifier}' is not valid. "
+                    "Please file an issue ticket at https://github.com/RepoDynamics/ControlMan."
+                )
+        for path in ("pkg", "test"):
             classifiers = self._data.get(f"{path}.classifiers", [])
-            classifiers.extend(common_classifiers)
             for classifier in classifiers:
                 if classifier not in _trove_classifiers.classifiers:
-                    _logger.error(f"Trove classifier '{classifier}' is not supported.")
+                    raise _exception.ControlManSchemaValidationError(
+                        f"Trove classifier '{classifier}' is not valid.",
+                        key=f"{path}.classifiers"
+                    )
+            classifiers.extend(common_classifiers)
             self._data[f"{path}.classifiers"] = sorted(classifiers)
         return
 
     def _package_development_status(self) -> dict:
+        curr_branch, _ = self._git.get_all_branch_names()
+        future_ver = self._future_vers.get(curr_branch)
+        if future_ver:
+            ver = _PEP440SemVer(str(future_ver))
+        else:
+            tag_prefix = self._data_main.fill("tag.version.prefix")
+            if not tag_prefix:
+                return
+            ver = self._git.get_latest_version(tag_prefix=ver_tag_prefix)
+        if not ver:
+            _logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
+            continue
+        if branch == curr_branch:
+            branch_metadata = self._data
+        elif branch == main_branch:
+
+
         phase = {
             1: "Planning",
             2: "Pre-Alpha",

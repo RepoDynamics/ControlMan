@@ -79,7 +79,9 @@ class MainDataGenerator:
             repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
         ).strftime("%Y-%m-%d")
         ccm_repo = self._data.setdefault("repo", {})
-        ccm_repo.update({k: repo_info[k] for k in ("id", "node_id", "name", "full_name", "created_at", "default_branch")})
+        ccm_repo.update(
+            {k: repo_info[k] for k in ("id", "node_id", "name", "full_name", "created_at", "default_branch")}
+        )
         ccm_repo.setdefault("url", {})["home"] = repo_info["html_url"]
         self._data["team.owner.github.user"] = repo_info["owner"]["login"]
         return
@@ -93,29 +95,24 @@ class MainDataGenerator:
 
     @_logger.sectioner("Project Name")
     def _name(self) -> None:
-        name = self._data["name"]
-        if name:
-            _logger.info(f"Already set manually: '{name}'")
-        else:
-            self._data["name"] = self._data["repo.name"].replace("-", " ")
-            _logger.info(f"Set from repository name: {name}")
+        name = self._data.fill("name")
+        repo_name = self._data["repo.name"]
+        if not name:
+            name = self._data["name"] = repo_name.replace("-", " ")
+            _logger.info(f"Set `name`", f"Set to '{name}' from repository name")
+        self._data["slug.name"] = _miu.txt.slug(name)
+        self._data["slug.repo_name"] = _miu.txt.slug(repo_name)
         return
 
-    @_logger.sectioner("GitHub Topics")
+    @_logger.sectioner("Keyword slugs")
     def _keywords(self) -> None:
-        if not self._data["repo.topics"]:
-            _logger.info("No GitHub topics specified.")
-            return
-        keywords = self._data.fill("repo.topics")
-        slugs = []
-        for keyword in keywords:
-            if len(slugs) >= 20:
-                break
-            if len(keyword) <= 50:
-                slugs.append(_miu.txt.slug(keyword))
-        self._data["repo.topics"] = slugs
-        _logger.info("Set from keywords.")
-        _logger.debug("Keyword slugs:", code=str(slugs))
+        keywords = self._data.fill("keywords")
+        if not keywords:
+            _logger.info("No keywords specified.")
+        slugs = [_miu.txt.slug(keyword) for keyword in keywords if len(keyword) <= 50]
+        self._data["slug.keywords"] = slugs
+        _logger.info("Set `slug.keywords`", f"Set from `keywords`")
+        _logger.debug(f"Keyword slugs: {str(slugs)}")
         return
 
     @_logger.sectioner("Project License")
@@ -209,16 +206,18 @@ class MainDataGenerator:
 
     @_logger.sectioner("Website URLs")
     def _urls_website(self) -> None:
-        if self._data.get("web.url.home"):
-            return
         base_url = self._data.get("web.url.base")
-        if base_url:
-            home_url = base_url
-        elif self._data["repo.name"] == f"{self._data['team.owner.github.user']}.github.io":
-            home_url = f"https://{self._data['team.owner.github.user']}.github.io"
-        else:
-            home_url = f"https://{self._data['team.owner.github.user']}.github.io/{self._data['repo.name']}"
-        self._data["web.url.home"] = home_url
+        if not base_url:
+            cname = self._data.fill("web.url.cname")
+            if cname:
+                base_url = f"https://{cname}"
+            elif self._data["repo.name"] == f"{self._data['team.owner.github.user']}.github.io":
+                base_url = f"https://{self._data['team.owner.github.user']}.github.io"
+            else:
+                base_url = f"https://{self._data['team.owner.github.user']}.github.io/{self._data['repo.name']}"
+            self._data["web.url.base"] = base_url
+        if not self._data["web.url.home"]:
+            self._data["web.url.home"] = base_url
         return
 
     def fill_entity(self, data: dict) -> None:
