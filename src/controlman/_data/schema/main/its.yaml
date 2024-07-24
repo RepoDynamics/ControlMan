@@ -674,10 +674,10 @@ default:
     contact_links:
       - name: '🎓️  Learn More'
         about: Not sure where to start? Read our contribution guide to learn more.
-        url: ${{ url.website.contributing }}
+        url: ${{ web.url.contributing }}
       - name: '💬  Contact Us'
         about: Have another inquiry or need help? Contact us directly!
-        url: ${{ url.website.contact }}
+        url: ${{ web.url.contact }}
     forms:
       - id: app_bug_api
         type: patch
@@ -711,7 +711,7 @@ default:
                   from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
                 </p>
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -721,7 +721,7 @@ default:
                 </blockquote>
                 <h3>⚠️ Verifying the Bug</h3>
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                <a href="${{web.url.bug_report}}">Bug Report Guidelines</a> to verify that:
                 <ol>
                   <li>
                     The issue you are experiencing is in fact a bug, and not a documented expected behavior.
@@ -747,7 +747,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -955,7 +955,7 @@ default:
                   from the <a href="${{url.github.issues.template_chooser]}">issue template chooser</a>.
                 </p>
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -965,7 +965,7 @@ default:
                 </blockquote>
                 <h3>⚠️ Verifying the Bug</h3>
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                <a href="${{web.url.bug_report}}">Bug Report Guidelines</a> to verify that:
                 <ol>
                   <li>
                     The issue you are experiencing is in fact a bug, and not a documented expected behavior.
@@ -1007,7 +1007,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -1019,7 +1019,7 @@ default:
                 <h3>⚠️ Verifying the bug</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                <a href="${{web.url.bug_report}}">Bug Report Guidelines</a> to verify that:
                 <ol>
                   <li>
                     The issue you are experiencing is in fact a bug, and not a documented expected behavior.
@@ -1055,7 +1055,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -1234,7 +1234,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -1246,7 +1246,7 @@ default:
                 <h3>⚠️ Verifying the bug</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                <a href="${{web.url.bug_report}}">Bug Report Guidelines</a> to verify that:
                 <ol>
                   <li>
                     The issue you are experiencing is in fact a bug, and not a documented expected behavior.
@@ -1282,7 +1282,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -1454,7 +1454,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -1466,7 +1466,7 @@ default:
                 <h3>⚠️ Verifying the bug</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.bug_report}}">Bug Report Guidelines</a> to verify that:
+                <a href="${{web.url.bug_report}}">Bug Report Guidelines</a> to verify that:
                 <ol>
                   <li>
                     The issue you are experiencing is in fact a bug, and not a documented expected behavior.
@@ -1502,7 +1502,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -1652,7 +1652,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -1664,7 +1664,7 @@ default:
                 <h3>⚠️ Verifying the request</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                <a href="${{web.url.contributing}}">Contributing Guidelines</a> to verify that:
                 <ol>
                   <li>
                     Your request is in fact for a non-breaking enhancement, and not a breaking change or new feature.
@@ -1701,7 +1701,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -1837,7 +1837,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -1849,7 +1849,7 @@ default:
                 <h3>⚠️ Verifying the request</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                <a href="${{web.url.contributing}}">Contributing Guidelines</a> to verify that:
                 <ol>
                   <li>
                     Your request is in fact for a non-breaking new feature, and not a breaking change or an enhancement.
@@ -1886,7 +1886,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the
@@ -2042,7 +2042,7 @@ default:
                 </ul>
 
                 <blockquote>
-                  💡 <a href="${{url.website.contact}}"><b>Contact us</b></a>
+                  💡 <a href="${{web.url.contact}}"><b>Contact us</b></a>
                   <br>
                   <p align="justify">
                     Can't find the right form or unsure about which one to choose?
@@ -2054,7 +2054,7 @@ default:
                 <h3>⚠️ Verifying the request</h3>
 
                 Before submitting a report, please make sure that you are following our
-                <a href="${{url.website.contributing}}">Contributing Guidelines</a> to verify that:
+                <a href="${{web.url.contributing}}">Contributing Guidelines</a> to verify that:
                 <ol>
                   <li>
                     Your request is in fact for a breaking change, and not a new feature or an enhancement.
@@ -2090,7 +2090,7 @@ default:
               options:
                 - label: >-
                     I have read the [Contributing Guidelines](${{url.github.health_file.contributing}})
-                    and am following the [Bug Report Guidelines](${{url.website.bug_report}}).
+                    and am following the [Bug Report Guidelines](${{web.url.bug_report}}).
                   required: true
                 - label: >-
                     I have read, understood, and agree to follow the

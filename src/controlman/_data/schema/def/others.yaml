@@ -127,26 +127,43 @@ env_file_config:
   additionalProperties: false
   required: [ conda ]
   properties:
-    pip:
-      title: Pip
-      description: Configurations for the output `requirements.txt`-style environment files.
-      type: object
-      additionalProperties: false
-      properties:
-        path:
-          type: string
     conda:
-      title: Conda
-      description: Configurations for the output `environment.yaml`-style environment files.
+      title: Conda environment.
+      description: Configurations for the output `environment.yaml`-style conda environment file.
       type: object
       additionalProperties: false
       required: [ name, path ]
       properties:
         name:
+          title: Name of the environment.
           type: string
+          examples:
+            - ${{ repo.name }}-dev
+            - ${{ repo.name }}-web
+            - ${{ pkg.name }}-test
+            - my-custom-env
         path:
+          title: Path to the environment file.
           type: string
-
+          examples:
+            - ${{ dir.pkg.root }}/environment.yaml
+            - ${{ dir.web.root }}/env.yml
+            - .github/dev_env.yaml
+            - environment.yaml
+    pip:
+      title: Pip environment.
+      description: Configurations for the output `requirements.txt`-style pip environment file.
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          title: Path to the environment file.
+          type: string
+          examples:
+            - ${{ dir.pkg.root }}/requirements.txt
+            - ${{ dir.web.root }}/requirements.txt
+            - .github/dev_req.txt
+            - requirements.txt
 
 
 

@@ -289,14 +289,14 @@ default:
         show_warning_types: true
         html_title: ${{ name }}
         html_short_title: ${{ name }}
-        html_baseurl: ${{ url.web.base }}
+        html_baseurl: ${{ web.url.base }}
         html_favicon: ${{ theme.logo.icon }}
         html_static_path:
           - _static
           - /${{ dir.path.media }}
         html_secnumber_suffix: ". "
         html_extra_path: [ 404.html ]
-        html_use_opensearch: ${{ web.url.home }}
+        html_use_opensearch: ${{ web.url.base }}
         html_show_sphinx: false
         html_math_renderer: mathjax
         html_context:
@@ -570,7 +570,7 @@ default:
             spec: sphinxext-opengraph = 0.9.1
             channel: conda-forge
         config:
-          ogp_site_url: ${{ url.web.base }}
+          ogp_site_url: ${{ web.url.base }}
           ogp_social_cards:
             image: ${{ dir.web }}/img/ogp.png  #TODO
             line_color: ${{ theme.color.primary.light }}
@@ -1415,45 +1415,6 @@ properties:
                   items:
                     title: A subsection of the main section.
                     $ref: "#/definitions/web_section"
-      url:
-        title: Website
-        type: object
-        default: { }
-        additionalProperties:
-          title: A URL of the project's website.
-          description: |
-            For each path set in [`path.web`](#cc.path.web),
-            a key-value pair is automatically added here,
-            where the key is the same as in `path.web`,
-            and the value is the URL of the corresponding page.
-          type: string
-          format: uri
-          $ref: url
-        properties:
-          base:
-            title: Custom Base URL (cname) of the website.
-            description: |
-              To use the GitHub Pages default domain (i.e., when no custom domain is available),
-              this should be set to `https://${{ repo.info.owner.login }}.github.io/${{ repo.info.name }}`,
-              unless the repository is for a
-              [user page](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)
-              (i.e., named `{USERNAME}.github.io`),
-              in which case the base URL should be set to `https://${{ repo.info.owner.login }}.github.io`.
-            type: string
-            format: uri
-            default: 'https://${{ team.owner.github.user }}.github.io/${{ repo.name }}'
-            examples:
-              - 'https://${{ repo.info.owner.login }}.github.io'
-          home:
-            title: URL of the project's homepage.
-            description: |
-              This should point to the main `index` file of the website.
-            type: string
-            format: uri
-            default: ${{ url.web.base }}
-            examples:
-              - ${{ url.web.base }}/some/path
-            $ref: '#/definitions/url'
       env:
         title: Environment file configurations.
         type: object
@@ -1467,6 +1428,50 @@ properties:
               $ref: dependency
           file:
             $ref: env_file_config
+      url:
+        title: Website URLs.
+        type: object
+        default: { }
+        properties:
+          cname:
+            title: Custom domain (cname) for the website.
+            description: |
+              Custom domain of the website, if available.
+              Setting this will automatically deploy the GitHub Pages website to the given domain,
+              instead of the default GitHub Pages domain.
+              To learn more about configuring a custom domain with your DNS provider,
+              see [GitHub's documentation](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
+            type: string
+            format: uri
+            examples:
+              - example.com
+              - www.example.com
+              - subdomain.example.com
+          base:
+            title: Base URL of the website.
+            description: |
+              If not set, this will be set to `https://${{ web.url.cname }}` if specified,
+              or the default GitHub Pages domain,
+              which is `https://${{ team.owner.github.user }}.github.io/${{ repo.name }}`,
+              unless the repository is for a
+              [user page](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)
+              (i.e., named `${{ team.owner.github.user }}.github.io`),
+              in which case the base URL is set to `https://${{ team.owner.github.user }}.github.io`.
+            type: string
+            format: uri
+            examples:
+              - 'https://${{ repo.info.owner.login }}.github.io'
+          home:
+            title: Homepage URL of the website.
+            description: |
+              This should point to the main landing page (i.e., `index` file) of the website.
+              If not set, this will be set to the base URL.
+            type: string
+            format: uri
+            default: ${{ web.url.base }}
+            examples:
+              - ${{ web.url.base }}/some/path
+            $ref: '#/definitions/url'
 definitions:
   sphinx_theme:
     pydata:
@@ -1774,7 +1779,7 @@ definitions:
                 dark:
                   type: path
                   src: ${{ dir.media }}/${{ theme.logo.icon }}
-              href: ${{ url.website.home }}
+              href: ${{ web.url.home }}
               title: '${{ name }}: ${{ copyright.notice }}'
               alt: ${{ name }}
           license:

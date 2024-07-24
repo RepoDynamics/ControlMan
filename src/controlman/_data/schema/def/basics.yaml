@@ -25,15 +25,7 @@ one_line_string:
   pattern: ^[^\n\r]*$
   examples:
     - 'A one-line description of the project.'
-non_negative_integer:
-  $schema: https://json-schema.org/draft/2020-12/schema
-  title: A non-negative integer.
-  type: integer
-  minimum: 0
-  examples:
-    - 0
-    - 1
-    - 2
+
 date:
   $schema: https://json-schema.org/draft/2020-12/schema
   title: A date in the format YYYY-MM-DD.
@@ -106,3 +98,22 @@ nonempty_string:
   minLength: 1
   examples:
     - some text
+non_negative_number:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  title: A non-negative number.
+  type: number
+  minimum: 0
+  examples:
+    - 0
+    - 0.25
+    - 1
+    - 2.5
+non_negative_integer:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  title: A non-negative integer.
+  type: integer
+  minimum: 0
+  examples:
+    - 0
+    - 1
+    - 2

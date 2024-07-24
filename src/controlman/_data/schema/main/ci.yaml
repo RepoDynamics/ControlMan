@@ -4,8 +4,8 @@ default:
   control:
     cache:
       retention_hours:
-        extension: 24
-        repo: 24
+        extension: 0
+        repo: 1
         user: 24
         orcid: 240
         doi: 1000
@@ -202,16 +202,16 @@ additionalProperties: false
 required: [ control ]
 properties:
   control:
-    title: Control Center
-    description: Configurations for the project's control center.
+    title: Configurations for the project's control center.
     type: object
     additionalProperties: false
+    required: [ cache ]
+    default: { }
     properties:
       cache:
-        title: Cache
+        title: Settings for cached data.
         description: |
-          Settings for cached data,
-          such as extension files downloaded from other GitHub repositories
+          These include configuration extensions downloaded from external URLs
           and data obtained through web-APIs.
 
           :::{admonition} Not Extensible
@@ -233,195 +233,241 @@ properties:
           or pushed to the remote repository.
           This allows you to maintain a local caching configuration 
           without affecting the remote repository.
-
-
           :::
         type: object
         additionalProperties: false
+        default: { }
+        required: [ retention_hours ]
         properties:
           retention_hours:
-            title: Retention Time
+            title: Number of hours to keep different cached data.
             description: |
-              Number of hours to keep cached data,
-              before it is considered stale and synced with the source.
+              After the specified duration,
+              the cached data is considered stale
+              and will be automatically synced with the source.
             type: object
             additionalProperties: false
+            default: { }
+            required: [ extension, repo, user, orcid, doi, python ]
             properties:
               extension:
-                title: Extension Files
+                title: Configuration extensions retrieved from external URLs.
                 description: |
-                  Number of days to keep the cached extension files (defined in `extensions.yaml`)
-                  retrieved from other GitHub repositories.
-                type: number
-                minimum: 0
+                  These are extended data in control center configuration files
+                  defined with the `!ext` tag.
+                default: 0
+                $ref: non_negative_number
               repo:
-                title: Discussion Categories
+                title: Repository data retrieved from GitHub API.
                 description: |
-                  Number of days to keep the cached data retrieved from the GitHub Discussions categories.
-                type: number
-                minimum: 0
+                  This includes general repository settings,
+                  as well as details about discussion categories,
+                  which are used for the website's blog.
+                default: 1
+                $ref: non_negative_number
               user:
-                title: API Data
+                title: Team member data retrieved from GitHub API.
                 description: |
-                  Number of days to keep the cached data retrieved from various web APIs,
-                  such as GitHub repo/users data, software versions, publications etc.
-                type: number
-                minimum: 0
+                  This includes GitHub user data such as
+                  name, email, avatar, bio, and other profile information.
+                default: 24
+                $ref: non_negative_number
               orcid:
-                title: ORCID Data
+                title: Publications data retrieved from ORCID API.
                 description: |
-                  Number of days to keep the cached data retrieved from the ORCID API.
-                type: number
-                minimum: 0
+                  This includes a list of all publication DOIs associated with an ORCID ID.
+                default: 240
+                $ref: non_negative_number
               doi:
-                title: DOI Data
+                title: Publication data retrieved from DOI API.
                 description: |
-                  Number of days to keep the cached data retrieved from the DOI API.
-                type: number
-                minimum: 0
+                  This corresponds to citation details associated with a specific DOI.
+                default: 1000
+                $ref: non_negative_number
               python:
-                title: Python Data
+                title: Python version data retrieved from the Python GitHub repository.
                 description: |
-                  Number of days to keep the cached data retrieved from the Python API.
-                type: number
-                minimum: 0
+                  This is a list of currently available Python versions,
+                  used to update workflow configurations such as CI/CD/CT pipelines.
+                default: 500
+                $ref: non_negative_number
   schedule:
-    title: Scheduled Jobs
+    title: Configurations for scheduled workflow jobs.
     description: |
-      Configurations for the workflow's scheduled Continuous pipelines,
-      triggered by GHA's [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule) event.
+      These are the Continuous pipelines
+      triggered by GitHub Actions'
+      [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
+      event.
     type: object
     additionalProperties: false
     properties:
       update:
-        title: Updates
+        title: Updating jobs.
         description: |
           Configurations for scheduled jobs that may result in updates to repository files and settings.
           These include Continuous Configuration Automation (CCA) to synchronize project configurations,
           as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
         $ref: '#/definitions/scheduled_job'
       test:
-        title: Tests
+        title: Testing jobs.
         description: |
           Configurations for the Continuous Testing (CT) pipeline of the package.
         $ref: '#/definitions/scheduled_job'
   tool:
-    title: Tools
+    title: Configurations for tools used in the development workflow.
     description: |
-      Configurations for tools used in the development workflow.
+      These include pre-integrated tools as well as any additional tools
+      that you can add to the project's workflow.
     type: object
     additionalProperties:
       title: Additional tools
+      description: |
+        Configurations for additional tools that can be added to the project's workflow.
       $ref: '#/definitions/tool_config'
     properties:
       pre-commit:
-        allOf:
-          - $ref: '#/definitions/tool_config'
+        title: Pre-commit hooks.
+        description: |
+          [Pre-commit](https://pre-commit.com/) is a framework for managing and maintaining
+          multi-language hooks.
+          These configurations define the pre-commit hooks to be used in the project.
+        $ref: '#/definitions/tool_config'
       codecov:
-        title: CodeCov
+        title: Codecov test coverage reporting.
         description: |
-          Configurations for CodeCov.
-          https://docs.codecov.com/docs/codecov-yaml
-          https://docs.codecov.com/docs/codecovyml-reference
-        allOf:
-          - $ref: '#/definitions/tool_config'
-          - properties:
-              config:
+          [Codecov](https://about.codecov.io/) is an online platform
+          that provides code coverage metrics for your project.
+          After [signing up on Codecov](https://docs.codecov.com/docs/quick-start),
+          these configurations will automatically control the generation of coverage reports
+          and the submission of these reports to Codecov.
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            title: Configurations for CodeCov.
+            type: object
+            additionalProperties: false
+            properties:
+              file:
+                title: Configuration file.
+                description: |
+                  This will be used by CodeCov to generate coverage reports.
+                  Learn more about the [Codecov YAML configuration file](https://docs.codecov.com/docs/codecov-yaml),
+                type: object
+                additionalProperties: false
                 properties:
-                  file:
-                    properties:
-                      type:
-                        const: yaml
-                      path:
-                        default: ".github/.codecov.yml"
-                      content:
-                        title: Configurations
-                        description: |
-                          Configurations for CodeCov.
-                          https://docs.codecov.com/docs/codecov-yaml
-                          https://docs.codecov.com/docs/codecovyml-reference
-                        $ref: 'https://json.schemastore.org/codecov.json'
+                  type:
+                    title: Type of the configuration file.
+                    description: |
+                      CodeCov only supports YAML configuration files.
+                    const: yaml
+                    default: yaml
+                  path:
+                    title: Path to the configuration file.
+                    description: |
+                      CodeCov only looks for a `codecov.yml` or `.codecov.yml` file
+                      either in the root of the repository, or in `.github/` and `dev/` directories.
+                      (cf. [CodeCov documentation](https://docs.codecov.com/docs/codecov-yaml#can-i-name-the-file-codecovyml)).
+                    type: string
+                    pattern: ^(.github/|dev/)?.?codecov.yml$
+                    default: .github/.codecov.yml
+                  content:
+                    title: Configurations for CodeCov.
+                    description: |
+                      For a full reference, see the
+                      [Codecov YAML reference](https://docs.codecov.com/docs/codecovyml-reference).
+                    $ref: 'https://json.schemastore.org/codecov.json'
       readthedocs:
-        title: ReadTheDocs Website Configurations
+        title: ReadTheDocs website hosting.
         description: |
-          This will be used by ReadTheDocs to build the website on readthedocs.io.
-          The syntax of this configuration file is documented at:
-             https://docs.readthedocs.io/en/stable/config-file/v2.html
-          In addition to the properties documented in the above link, the following
-          properties can be set:
-             name : string
-                Slug name of the project on ReadTheDocs.
-          Configurations for the ReadTheDocs website.
-          See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
-        allOf:
-          - $ref: '#/definitions/tool_config'
-          - properties:
-              config:
+          In addition to GitHub Pages, you can also host your project's documentation on ReadTheDocs.
+          This includes some manual steps to set up the website on ReadTheDocs,
+          but the rest of the process, including build configurations and preview links,
+          can be controlled through these configurations.
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            title: Configurations for the project's website on ReadTheDocs.
+            properties:
+              file:
+                title: Configuration file.
+                description: |
+                  This will be used by ReadTheDocs to build the website on readthedocs.io.
                 properties:
-                  file:
+                  type:
+                    title: Type of the configuration file.
+                    description: |
+                      ReadTheDocs only supports YAML configuration files.
+                    const: yaml
+                    default: yaml
+                  path:
+                    title: Path to the configuration file.
+                    description: |
+                      By default, [ReadtheDocs](https://docs.readthedocs.io/en/stable/config-file/index.html#where-to-put-your-configuration-file)
+                      only looks for a `.readthedocs.yaml` file in the root of the repository.
+                      However, you can [change this manually](https://docs.readthedocs.io/en/stable/guides/setup/monorepo.html#how-to-use-a-readthedocs-yaml-file-in-a-sub-folder)
+                      by setting another path on the ReadTheDocs website,
+                      and then specifying that path here.
+                    type: string
+                    default: .readthedocs.yaml
+                    examples:
+                      - .github/.readthedocs.yaml
+                  content:
+                    title: Config
+                    description: |
+                      Configuration settings for the ReadTheDocs website.
+                      See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
+                    type: object
+              workflow:
+                title: Workflow configurations for the ReadTheDocs website.
+                description: |
+                  These are used to create website preview links for pull requests.
+                type: object
+                additionalProperties: false
+                required: [ name, platform, version_scheme, language ]
+                properties:
+                  name:
+                    title: Name of the project on ReadTheDocs.
+                    description: |
+                      This is the slug name of the project.
+                    type: string
+                    default: ${{ repo.name }}
+                  platform:
+                    title: ReadTheDocs hosting platform type.
+                    type: string
+                    enum: [ community, business ]
+                    default: community
+                  version_scheme:
+                    title: Versioning scheme of the website.
+                    description: |
+                      See [ReadTheDocs documentation](https://docs.readthedocs.io/en/stable/versioning-schemes.html)
+                      for more information.
+                    type: object
+                    default: { }
+                    additionalProperties: false
                     properties:
-                      type:
-                        const: yaml
-                      path:
-                        title: Path to the configuration file.
-                        description: |
-                          By default, [ReadtheDocs](https://docs.readthedocs.io/en/stable/config-file/index.html#where-to-put-your-configuration-file)
-                          only looks for a `.readthedocs.yaml` file in the root of the repository.
-                          However, you can [change this manually](https://docs.readthedocs.io/en/stable/guides/setup/monorepo.html#how-to-use-a-readthedocs-yaml-file-in-a-sub-folder)
-                          by setting another path on the ReadTheDocs website,
-                          and then specifying that path here.
-                        type: string
-                        default: .readthedocs.yaml
-                        examples:
-                          - .github/.readthedocs.yaml
-                      content:
-                        title: Config
-                        description: |
-                          Configuration settings for the ReadTheDocs website.
-                          See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
-                  workflow:
-                    required: [ name, platform, version_scheme, language ]
-                    properties:
-                      name:
-                        description: Name of the project on ReadTheDocs, i.e. the project slug
-                        type: string
-                      platform:
-                        description: ReadTheDocs hosting platform; either 'community' or 'business'
-                        type: string
-                        enum: [ community, business ]
-                        default: community
-                      version_scheme:
-                        title: Versioning Scheme
-                        description: |
-                          Versioning scheme of the website.
-                          See also: https://docs.readthedocs.io/en/stable/versioning-schemes.html
-                        type: object
-                        default: { }
-                        additionalProperties: false
-                        properties:
-                          single_version:
-                            title: Single Version
-                            description: Whether the website has a single version or multiple versions.
-                            type: boolean
-                            default: false
-                          translation:
-                            title: Translation
-                            description: Whether the website supports multiple languages.
-                            type: boolean
-                            default: false
-                      language:
-                        title: Language
-                        description: Language of the website.
-                        type: string
-                        default: en
+                      single_version:
+                        title: Whether the website has a single version (vs. multiple versions).
+                        type: boolean
+                        default: false
+                      translation:
+                        title: Whether the website supports multiple languages.
+                        type: boolean
+                        default: false
+                  language:
+                    title: Language of the website.
+                    type: string
+                    default: en
 definitions:
   scheduled_job:
+    title: Configurations for a scheduled job.
     type: object
     additionalProperties: false
     required: [ cron, branch ]
     properties:
       cron:
-        title: Crontab Job
+        title: Crontab job
         description: |
           The [POSIX cron expression](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07)
           of the task's scheduled time.
@@ -430,75 +476,105 @@ definitions:
           [`on.schedule`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule) key.
         type: string
       branch:
+        title: Behavior for each branch.
+        description: |
+          For each branch, you can choose to either
+          - `disable` the job,
+          - only `report` the results,
+          - report the results, apply changes (if any) in a new branch, and submit a `pull` request,
+          - report the results, and directly `commit` the changes (if any) to the target branch.
         type: object
         default: { }
         additionalProperties: false
+        required: [ main, release, pre ]
         properties:
           main:
+            title: Main branch
             type: string
             enum: [ disable, report, pull, commit ]
             default: pull
           release:
+            title: Release branches
             type: string
             enum: [ disable, report, pull, commit ]
             default: pull
           pre:
+            title: Pre-release branches
             type: string
             enum: [ disable, report, pull, commit ]
             default: pull
-        required: [ main, release, pre-release ]
   tool_config:
+    title: Configurations for a tool used in the development workflow.
     type: object
     additionalProperties: false
     minProperties: 1
     properties:
       env:
         title: Environment file configurations.
+        description: |
+          Here you can define the dependencies for the tool,
+          and the environment files to write the dependencies to.
         type: object
         additionalProperties: false
         required: [ dependency, file ]
         properties:
           dependency:
-            title: Dependencies
+            title: Tool dependencies.
+            description: |
+              For each dependency, add a key-value pair with the key being
+              an ID for the dependency (so you can easily reference it elsewhere)
+              and the value being a `dependency` object defining the dependency.
             type: object
             minProperties: 1
             additionalProperties:
+              title: A dependency.
               $ref: dependency
           file:
-            title: Environment Files
-            description: Configurations for output environment files to write the dependencies.
+            title: Environment files to write the dependencies.
+            description: |
+              The environment files to write the dependencies to.
+              Specifying a conda environment file is required,
+              but a pip environment file is optional.
+              Multiple tools can share the same environment file(s).
             $ref: env_file_config
       config:
         tile: Configurations for the tool.
+        description: |
+          Here you can define the tool configurations
+          to be written to a configuration file
+          or be used directly in the workflow.
         type: object
         additionalProperties: false
         properties:
           file:
+            title: The configuration file for the tool.
+            description: |
+              Here you can define configurations to be written to a specific file.
             type: object
             additionalProperties: false
             required: [ type, path, content ]
             properties:
               type:
-                title: Type
+                title: Type of the configuration file.
                 description: |
-                  Type of the configuration file.
+                  If `txt` is selected, the content will be written to the given file as is.
+                  For other types, the content will be written in the specified format.
                 type: string
                 enum: [ yaml, json, toml, txt ]
               path:
-                title: Paths
-                description: |
-                  Path to the configuration file.
+                title: Path to the configuration file to write.
                 type: string
                 examples:
                   - .github/.pre-commit-config.yaml
               content:
-                title: Settings
-                type: [ string, array, object ]
+                title: Configurations for the tool.
                 description: |
-                  Configurations for the tool.
+                  The content will be written to the given filepath in the format specified by `type`.
+                type: [ string, array, object ]
           workflow:
-            title: Workflows
+            title: Workflow configurations for the tool.
             description: |
-              Configurations for the tool's workflows.
+              These are not meant to be written to any file,
+              but to be used directly in the workflow.
             type: object
             additionalProperties: true

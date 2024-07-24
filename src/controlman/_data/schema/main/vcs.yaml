@@ -4,7 +4,7 @@ default:
   repo:
     description: ${{ title }}
     topics: ${{ keywords }}
-    homepage: "${{ url.website.base }}"
+    homepage: "${{ web.url.base }}"
     secret_scanning: true
     secret_scanning_push_protection: true
     vulnerability_alerts: true
@@ -396,14 +396,12 @@ properties:
         type: array
         uniqueItems: true
         maxItems: 20
-        default: ${{ keywords }}
+        default: ${{ slug.keywords[:20] }}
         items:
           title: A project keyword.
           description: |
             It must start with an alphanumeric character,
             and can contain 50 or less ASCII alphanumeric characters and hyphens.
-            Any keyword entered here will first be converted to its slug form,
-            and discarded if it does not meet the requirements.
           type: string
           maxLength: 50
           pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
@@ -413,7 +411,7 @@ properties:
           This is displayed on the GitHub repository's homepage,
           helping users to easily find your project's website.
         $ref: 'defs#/definitions/url'
-        default: ${{ url.web.home }}
+        default: ${{ web.url.home }}
       secret_scanning:
         title: Enable secret scanning.
         type: boolean
