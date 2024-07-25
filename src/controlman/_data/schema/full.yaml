@@ -50,3 +50,44 @@ allOf:
       Continuous integration, deployment, configuration automation,
       maintenance, testing, and refactoring tasks.
     $ref: main/ci
+  - additionalProperties: false
+    required: [ name, team, slug ]
+    properties:
+      name: {}
+      title: {}
+      abstract: {}
+      keywords: {}
+      highlights: {}
+      license:
+        required: [ id, name, text, notice, path ]
+      copyright: {}
+      role: {}
+      team:
+        required: [ owner ]
+      maintainer: {}
+      citation: {}
+      funding: {}
+      custom: {}
+      slug:
+        required: [ name, repo_name, keywords ]
+      pkg: {}
+      test: {}
+      web: {}
+      theme: {}
+      readme: {}
+      health: {}
+      announcement: {}
+      repo: {}
+      branch: {}
+      tag: {}
+      dir: {}
+      changelog: {}
+      commit: {}
+      label: {}
+      issue: {}
+      document: {}
+      pull: {}
+      discussion: {}
+      control: {}
+      schedule: {}
+      tool: {}
