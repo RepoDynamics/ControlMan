@@ -118,8 +118,6 @@ module_dependency:
         url_docs: ""
         conda_spec: ""
         conda_channel: ""
-
-
 env_file_config:
   $schema: https://json-schema.org/draft/2020-12/schema
   title: Environment files for dependencies.
