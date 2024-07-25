@@ -1,94 +1,5 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Package
-description: |
-  Among others, these settings are used to automatically generate
-  [PEP 621](https://peps.python.org/pep-0621/) compliant
-  [`pyproject.toml`](https://packaging.python.org/en/latest/specifications/pyproject-toml)
-  files for the package and test suite, which contain all metadata and specifications
-  required for building, packaging, and distributing the project.
-default:
-  pkg:
-    name: ${{ name }}
-    import_name: ${{ pkg.name }}
-    classifiers: [ "Natural Language :: English" ]
-    urls:
-      Homepage: ${{ web.url.home }}
-      Documentation: ${{ web.url.home }}
-      Source: ${{ repo.url.home }}
-      Download: ${{ repo.url.releases.home }}
-      News: ${{ web.page.blog.url }}
-      Issue-Tracker: ${{ repo.url.issues.home }}
-      Sponsor: ${{ web.page.sponsor.url }}
-    typed: true
-    os:
-      linux:
-        name: Linux
-        runner: ubuntu-latest
-      macos:
-        name: MacOS
-        runner: macos-latest
-      windows:
-        name: Windows
-        runner: windows-latest
-    python:
-      version:
-        spec: ">= 3.10"
-    build:
-      requires: [ "setuptools>=61.0", "versioningit" ]
-      backend: "setuptools.build_meta"
-      tool:
-        setuptools:
-          include-package-data: true
-          zip-safe: false
-          packages:
-            find:
-              where: [ '${{dir.pkg.source}}' ]
-              namespaces: true
-        versioningit:
-          vcs:
-            method: git
-            match: ["${{tag.version.prefix}}[0-9]*.[0-9]*.[0-9]*"]
-            default-tag: "${{tag.version.prefix}}0.0.0"
-          tag2version:
-            rmprefix: "${{tag.version.prefix}}"
-          format:
-            distance: "{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}"
-            dirty: "{base_version}+0.{committer_date:%Y.%m.%d}.{revision}.dirty"
-            distance-dirty: "{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}.dirty"
-          onbuild:
-            method: replace-version
-            regex: ^\\s*__version_details__\\s*=\\s*(?P<version>.*)
-            require-match: true
-            source-file: "${{ dir.pkg.import }}/__init__.py"
-            build-file: "${{ pkg.import_name }}/__init__.py"
-            replacement: |
-              dict(
-                version:"{version}",
-                version_tuple:{version_tuple},
-                author_date:"{author_date:%Y.%m.%d}",
-                build_date:"{build_date:%Y.%m.%d}",
-                branch:"{branch}",
-                distance:"{distance}",
-                head_commit_hash:"{revision}",
-              )
-
-    manifest:
-      - graft ${{ dir.pkg.source }}/${{ pkg.import_name }}
-      - global-exclude *.py[cod] __pycache__ *.so
-    file:
-      __init__.py:
-        docstring: |
-          ${{name}}
-      
-          ${{title}}
-      
-          ${{description}}
-      
-          Copyright ${{copyright.notice}}
-      
-          ${{license.notice}}
 type: object
-additionalProperties: false
 properties:
   pkg:
     title: Package
@@ -109,6 +20,15 @@ definitions:
       are only relevant for the package,
       and are automatically reused for the test suite,
       as they must be identical.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      Among others, these settings are used to automatically generate
+      [PEP 621](https://peps.python.org/pep-0621/) compliant
+      [`pyproject.toml`](https://packaging.python.org/en/latest/specifications/pyproject-toml)
+      files for the package and test suite, which contain all metadata and specifications
+      required for building, packaging, and distributing them.
+      :::
     type: object
     additionalProperties: false
     required: [ name, import_name, typed, build, os, python ]
@@ -172,8 +92,8 @@ definitions:
           - `my.project`
           - `My--Project`
           - `mY-._.-ProjEcT`
-          
           ::::
+        default: ${{ name }}
         type: string
         pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9])$
       import_name:
@@ -204,22 +124,34 @@ definitions:
           **choose a package name that is most similar to a valid import name**,
           and to directly use the package name here. For example, you can name
           your package `My-Package`, and the import name will be `my_package`.
+        default: ${{ name }}
         type: string
         pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
       classifiers:
-        title: Classifiers
+        title: |
+          Project's [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers).
         description: |
-          Project's [Trove classifiers]().
-
-          - [Available classifiers in Python code](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
-
+          The main classifiers are automatically generated based on the project's metadata.
+          These are:
+          - `Development Status`: Based on the latest version tag on the branch. 
+          - `License`: Based on [`license.id`](#cc.license.id), for supported licenses. 
+          - `Operating System`: Based on the provided [`os`](#cc-def.pkg_config.os) configurations.
+          - `Programming Language`: Based on the provided [`python.version`](#cc-def.pkg_config.python.version.spec) configurations.
+          - `Typed`: Based on [`typed`](#cc-def.pkg_config.typed).
+          Here you can add additional classifiers, such as `Topic` or `Intended Audience`.
+          For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/),
+          or the [trove-classifiers](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
+          package from PyPA.
         type: array
-        examples:
-          - [ "Natural Language :: English" ]
+        default: [ "Natural Language :: English" ]
         uniqueItems: true
         items:
+          title: Trove classifier
           type: string
           pattern: '^[\w\s\-]+( :: [\w\s\-]+)+$'
+          examples:
+            - 'Intended Audience :: Science/Research'
+            - 'Topic :: Scientific/Engineering :: Artificial Intelligence'
       urls:
         title: Project URLs
         description: |
@@ -397,73 +329,6 @@ definitions:
               - micropython
               - stackless
             default: cpython
-      build:
-        title: Build system definitions.
-        description: |
-          References:
-          - [Python Packaging User Guide](https://packaging.python.org) by the Python Packaging Authority (PyPA)
-          - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
-          - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
-        type: object
-        required: [ requires ]
-        properties:
-          requires:
-            description: Build system requirements
-            type: array
-            examples:
-              - [ "setuptools>=61.0", "versioningit" ]
-            uniqueItems: true
-            minItems: 1
-            items:
-              type: string
-          backend:
-            description: Build backend
-            type: string
-            examples:
-              - "setuptools.build_meta"
-          tool:
-            title: Build system definitions
-            description: |
-              Configurations for the build backend, e.g.,
-              [Setuptools]([SetupTools](https://setuptools.pypa.io/).
-            type: object
-            additionalProperties:
-              type: object
-      manifest:
-        description: MANIFEST.in configuration
-        type: array
-        examples:
-          - - graft ${{ dir.pkg.import }}
-            - global-exclude *.py[cod] __pycache__ *.so
-        uniqueItems: true
-        items:
-          type: string
-      dependency:
-        type: object
-        properties:
-          core:
-            title: Package core dependencies.
-            type: object
-            additionalProperties:
-              $ref: dependency
-          optional:
-            title: Optional Dependencies
-            description: Optional dependencies for the project
-            type: object
-            additionalProperties:
-              type: object
-              additionalProperties: false
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                package:
-                  type: object
-                  additionalProperties:
-                    $ref: dependency
-          env:
-            $ref: env_file_config
       entry:
         type: object
         properties:
@@ -500,6 +365,32 @@ definitions:
                   type: string
                 entry:
                   $ref: '#/definitions/entry_points'
+      dependency:
+        type: object
+        properties:
+          core:
+            title: Package core dependencies.
+            type: object
+            additionalProperties:
+              $ref: dependency
+          optional:
+            title: Optional Dependencies
+            description: Optional dependencies for the project
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                package:
+                  type: object
+                  additionalProperties:
+                    $ref: dependency
+          env:
+            $ref: env_file_config
       file:
         title: meta_package_docs
         description: Package documentation settings
@@ -509,6 +400,52 @@ definitions:
           properties:
             docstring:
               type: string
+      manifest:
+        title: MANIFEST.in configurations.
+        description: |
+          The `MANIFEST.in` file is used to [control files and directories](https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html#controlling-files-in-the-distribution)
+          when creating a source distribution of the package.
+          It is used by the `sdist` command of `setuptools` to determine which files
+          to include in the source distribution.
+        type: array
+        examples:
+          - - graft ${{ dir.pkg.import }}
+            - global-exclude *.py[cod] __pycache__ *.so
+        uniqueItems: true
+        items:
+          type: string
+      build:
+        title: Build system definitions.
+        description: |
+          References:
+          - [Python Packaging User Guide](https://packaging.python.org) by the Python Packaging Authority (PyPA)
+          - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
+          - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
+        type: object
+        required: [ requires ]
+        properties:
+          requires:
+            description: Build system requirements
+            type: array
+            examples:
+              - [ "setuptools>=61.0", "versioningit" ]
+            uniqueItems: true
+            minItems: 1
+            items:
+              type: string
+          backend:
+            description: Build backend
+            type: string
+            examples:
+              - "setuptools.build_meta"
+          tool:
+            title: Build system definitions
+            description: |
+              Configurations for the build backend, e.g.,
+              [Setuptools]([SetupTools](https://setuptools.pypa.io/).
+            type: object
+            additionalProperties:
+              type: object
       pypi:
         title: URLs of the project's PyPI package.
         type: object

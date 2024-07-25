@@ -1,95 +1,30 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 type: object
-additionalProperties: false
-required: [ name, team ]
-default:
-  title: A Placeholder Project Title
-  abstract: |
-    Replace this text with a short abstract of ${{ name }},
-    describing its purpose and main features.
-    By default, this text is displayed on the repository's main README file,
-    on the homepage of the project's website,
-    on the project's PyPI and TestPyPI pages,
-    and on the package's main docstring.
-    Like all other entries in the repository's control center,
-    this text can also contain dynamic references to other entries,
-    using the `${{ path.to.value }}` syntax.
-    By default, the first occurrence of the name of the project
-    in this text is styled as bold/italic and linked to the project's website.
-    The text can also contain (GitHub Flavored) HTML syntax,
-    such as `<b>` for <b>bold text</b>, `<i>` for <i>italic text</i>,
-    `<u>` for <u>underlined text</u>, and `<a>`
-    for <a href="https://pypackit.repodynamics.com">hyperlinks</a>.
-  keywords:
-    - Project Keyword
-    - Another Keyword
-    - Third Keyword
-  highlights:
-    - title: First Key Feature
-      description: |
-        Description of the first key feature of ${{ name }}.
-        By default, these keynotes are displayed on the repository's main README file,
-        on the homepage of the project's website, and on the project's PyPI and TestPyPI pages.
-    - title: Second Key Feature
-      description: |
-        Description of the second key feature of ${{ name }}.
-        For aesthetic reasons, it is recommended to keep the descriptions of all keynotes
-        approximately the same length.
-    - title: Third Key Feature
-      description: |
-        Description of the third key feature of ${{ name }}.
-        You can add as many keynotes as you want.
-        However, in order to keep the READMEs clean and tidy,
-        it is recommended to keep the number of keynotes between 3 and 7.
-  license:
-    id: AGPL-3.0-or-later
-  copyright:
-    notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-  maintainer:
-    pull:
-      code_owners:
-        - "*": [ '${{ team.owner }}' ]
-    issue:
-      app_bug_gui: [ '${{ team.owner }}' ]
-      app_bug_cli: [ '${{ team.owner }}' ]
-      app_bug_api: [ '${{ team.owner }}' ]
-      app_bug_setup: [ '${{ team.owner }}' ]
-      app_request_enhancement: [ '${{ team.owner }}' ]
-      app_request_feature: [ '${{ team.owner }}' ]
-      app_request_breaking: [ '${{ team.owner }}' ]
-    discussion:
-      announcements: [ '${{ team.owner }}' ]
-    security: '${{ team.owner }}'
-    code_of_conduct: '${{ team.owner }}'
-    support: '${{ team.owner }}'
-  citation:
-    title: '${{ name }}: ${{ title }}'
-    authors:
-      - '${{ team.owner }}'
-    contacts:
-      - '${{ team.owner }}'
-    message: If you use ${{ name }}, please cite it using the metadata from this file.
 properties:
   name:
     title: Name of the project.
     description: |
-      This is used to dynamically reference the project name in various places,
-      such as documentation website, README files, and community health files,
-      and to derive the [package name](#cc.pkg.name) when not explicitly specified.
+      If not provided (recommended), this is automatically derived from the repository name
+      by replacing all hyphens with spaces.
       
-      :::{admonition} Naming Best Practices
-      :class: important dropdown
+      :::{admonition} Usage
+      :class: dropdown note
+      This is used to dynamically reference the project name in various places,
+      such as documentation website, citation data, README files, and community health files.
+      It is also used to derive the [package name](#cc.pkg.name) when not explicitly specified.
+      :::
+      
+      :::{admonition} Best Practices
+      :class: dropdown tip
       The project name on itself has no restrictions and can be any valid unicode string.
       However, by default, it is also used to derive the 
       distribution name (cf. [`pkg.name`](#cc.pkg.name))
       and import name (cf. [`pkg.import_name`](#cc.pkg.import_name)) of the package,
       which have stricter naming specifications.
-      While you can separately set these,
+      While you can separately set these to different values,
       for consistency, it is recommended to **choose a project name
-      that can be used to automatically derive the distribution and import name of the package**.
+      that is as similar as possible to the distribution and import name of the package**.
       This helps to avoid confusion and makes it easier for others to find, install, and use your package.
-      Note that if you do not provide a package name and the project name does not meet the naming requirements
-      after transformation, **an error will be raised**.
       :::
     default_auto: |
       repository name (hyphens replaced with spaces)
@@ -98,39 +33,49 @@ properties:
   title:
     title: A single-line description or slogan of the project.
     description: |
-      This is automatically added to package metadata and is
-      displayed on the About section of the project's GitHub, 
-      (cf. [`repo.config.description`](#cc.repo.config.description)),
+      :::{admonition} Usage
+      :class: dropdown note
+      
+      The title is automatically added to the project's [`citation`](#cc.citation) and package metadata,
+      and is displayed on the About section of the project's GitHub, 
+      (cf. [`repo.description`](#cc.repo.description)),
       PyPI, and TestPyPI repositories
       (cf. [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
-      key of the `pyproject.toml` file).
+      key of the `pyproject.toml` file). It is also used in various other places,
+      such as `title` HTML attributes of project logos and links.
+      :::
     $ref: one_line_string
   abstract:
     title: A short description of the project.
     description: |
-      This is automatically displayed on the repository's main README file
-      (cf. [`readme.github`](#cc.readme.github)),
+      It can contain GitHub Flavored Markdown and HTML syntax,
+      for example, to make text bold, italic, or to add hyperlinks.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      This is automatically added to the project's [`citation`](#cc.citation.abstract) data,
+      and displayed on the repository's [`README`](#cc.readme.github) file,
       on the homepage of the project's website,
       on the project's PyPI and TestPyPI pages
       (cf. [`readme.pypi`](#cc.readme.pypi)),
       and on the package's main docstring
-      (cf. [`pkg.docs.init`](#cc.pkg.docs.init)).
-      It is also added to the citation metadata of the project
-      (cf. [`citation.abstract`](#cc.citation.abstract)).
-      
-      By default, the first occurrence of the project's name
-      is styled as bold/italic and linked to the project's website.
-      The text can also contain (GitHub Flavored) HTML syntax,
-      for example, to make text bold, italic, or to add hyperlinks.
+      (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
+      On online platforms, the first occurrence of the project's name in this text
+      is automatically styled as bold/italic and linked to the project's website.
+      :::
     type: nonempty_string
   keywords:
     title: Keywords categorizing the project.
     description: |
-      These are automatically added as
-      [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics)
-      to the GitHub repository (cf. [`repo.config.topics`](#cc.repo.config.topics)), and as
-      [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
-      metadata to the package's `pyproject.toml` file, helping to make it easier to discover.
+      :::{admonition} Usage
+      :class: dropdown note
+      Keywords are automatically added to project citation data
+      (cf. [`citation.keywords`](#cc.citation.keywords)),
+      the GitHub repository (cf. [`repo.topics`](#cc.repo.topics)), 
+      and package metadata (cf. `pyproject.toml` file's
+      [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords) metadata),
+      helping to make the project easier to discover.      
+      :::
     type: array
     uniqueItems: true
     items:
@@ -138,14 +83,18 @@ properties:
   highlights:
     title: Key features of the project.
     description: |
+      :::{admonition} Usage
+      :class: dropdown note
       These are automatically displayed on the repository's main README file
       (cf. [`readme.github`](#cc.readme.github)),
       on the homepage of the project's website,
       and on the project's PyPI and TestPyPI pages
-      (cf. [`readme.pypi`](#cc.doc.pypi)).
+      (cf. [`readme.pypi`](#cc.readme.pypi)).
+      :::
     type: array
     uniqueItems: true
     items:
+      title: A key feature of the project.
       type: object
       additionalProperties: false
       required: [ title, description ]
@@ -156,12 +105,167 @@ properties:
         description:
           title: Description of the feature.
           type: nonempty_string
+  license:
+    title: License of the project.
+    description: |
+      You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
+      by providing its `id`, or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
+      When a supported `id` is set, all other keys are filled automatically.
+      Nevertheless, you can still override any key by providing the corresponding custom value.
+      The license is then automatically incorporated into the project.
+
+      :::{admonition} Open Source Licenses
+      :class: dropdown seealso
+      For more information about open-source licenses, see:
+      - [SPDX License List](https://spdx.org/licenses/)
+      - [Open Source Initiative](https://opensource.org/license)
+      - [Choose a License](https://choosealicense.com/)
+      - [SPDX License List Data (JSON)](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
+      :::
+    examples:
+      - id: Unlicense
+      - id: MIT
+        notice: |
+          This is a custom license notice that overwrites
+          the default MIT license's notice.
+    type: object
+    additionalProperties: false
+    required: [ id, path ]
+    properties:
+      id:
+        title: |
+          [SPDX](https://spdx.org/licenses/) ID of the license.
+        description: |
+          If one of the supported IDs are selected,
+          the rest of the keys are automatically filled in.
+          Otherwise, `name`, `text`, and `notice` must be provided.
+          Supported IDs are:
+          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
+          - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
+          - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
+          - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
+          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
+          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
+          - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
+          - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
+          - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
+          - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
+          - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
+        $ref: '#/definitions/spdx_license_id'
+      name:
+        title: Full name of the license.
+        type: string
+        examples:
+          - GNU Affero General Public License v3.0 or later
+          - MIT License
+          - BSD 3-Clause License
+      trove:
+        title: |
+          [Trove classifier](https://pypi.org/classifiers/) of the license.
+        description: |
+          :::{admonition} Usage
+          :class: dropdown note
+          This is automatically added to package metadata
+          (cf. [`pkg.classifiers`](#cc.pkg.classifiers))
+          to help PyPI better categorize your package,
+          so that users can find your package when searching for packages with a specific license.
+          :::
+        type: string
+        pattern: "^License :: "
+        examples:
+          - 'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
+          - 'License :: OSI Approved :: MIT License'
+          - 'License :: OSI Approved :: BSD License'
+      text:
+        title: Full text of the license.
+        type: string
+      notice:
+        title: Short text of the license.
+        description: |
+          :::{admonition} Usage
+          :class: dropdown note
+          This is automatically added to the main docstring of the package
+          (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
+          :::
+        type: string
+      path:
+        title: |
+          Path to the repository's
+          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
+          file.
+        description: |
+          This file must be named `LICENSE` (case-sensitive)
+          and placed in the root of the repository. 
+          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+        type: string
+        pattern: ^LICENSE(?i:.(txt|md|rst))?$
+        default: LICENSE
+        examples:
+          - LICENSE.md
+          - LICENSE.txt
+          - LICENSE.rst
+  copyright:
+    title: Copyright information of the project.
+    description: |
+      :::{admonition} Usage
+      :class: dropdown note
+      The copyright [`notice`](#cc.copyright.notice)
+      is automatically included in several places,
+      such as the license texts (when a pre-defined license is used),
+      the main docstring of the package (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)),
+      and the footer of website and documentation files (cf. [`theme.footer`](#cc.theme.footer)).
+      :::
+    examples:
+      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
+      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
+        year_start: 2020
+      - notice: ${{ copyright.period }} John Doe
+      - notice: John Doe
+        year_start: 2020
+    type: object
+    additionalProperties: false
+    required: [ notice ]
+    properties:
+      notice:
+        title: Copyright notice.
+        description: |
+          This is the final form of the notice that will be displayed.
+        type: string
+        examples:
+          - ${{ copyright.period }} ${{ team.owner.name.full }}
+          - ${{ copyright.period }} John Doe
+          - A Custom Copyright Notice
+      period:
+        title: Year period to use in the copyright notice.
+        description: |
+          If not provided, it will be automatically set
+          using the value of [`start_year`](#cc.copyright.start_year), as follows:
+          - If `start_year` is the same as the current year, 
+            the period is set to the current year, e.g., `2024`.
+          - If `start_year` is before the current year,
+            the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
+          - If `start_year` is after the current year, an error is raised.
+        type: string
+      start_year:
+        title: Start year of the project.
+        description: |
+          This can be used to dynamically set the [`period`](#cc.copyright.period).
+        default_auto: repository creation year
+        type: integer
+        minimum: 1980
+        maximum: 2040
   role:
     title: Author role definitions.
     description: |
       For each role, add a key-value pair
-      where the key is the ID of the role, used to attribute roles to authors
-      (cf. [`entity.roles`](#cc-def.entity)).
+      where the key is an ID for the role,
+      and the value is a [`role_definition`](#cc-def.role_definition) object.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      You can attribute roles to [`team`](#cc.team) members (cf. [`entity.roles`](#cc-def.entity.roles)),
+      which will then be displayed on the project's website and citation data.
+      :::
     type: object
     examples:
       - concept:
@@ -203,7 +307,7 @@ properties:
       This is not done for other `entity` objects defined elsewhere in the control center.
       It is therefore recommended to define all persons involved in the project here,
       and reference them elsewhere using templating.
-
+      :::
     type: object
     properties:
       owner:
@@ -217,147 +321,6 @@ properties:
     additionalProperties:
       title: A natural person or entity involved in the project.
       $ref: '#/definitions/entity'
-  license:
-    title: License of the project.
-    description: |
-      You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
-      by providing its `id`, or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
-      When a supported `id` is set, all other keys are filled automatically.
-      Nevertheless, you can still override any key by providing the corresponding custom value.
-      The license is then automatically incorporated into the project.
-      
-      :::{admonition} External Resources
-      :class: dropdown seealso
-
-      For more information about open-source licenses, see:
-      - [SPDX License List](https://spdx.org/licenses/)
-      - [Open Source Initiative](https://opensource.org/license)
-      - [Choose a License](https://choosealicense.com/)
-      - [SPDX License List Data (JSON)](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
-      :::
-    examples:
-      - id: Unlicense
-      - id: MIT
-        notice: |
-          This is a custom license notice that overwrites
-          the default MIT license's notice.
-    type: object
-    additionalProperties: false
-    required: [ id ]
-    properties:
-      id:
-        title: |
-          [SPDX](https://spdx.org/licenses/) ID of the license.
-        description: |
-          If one of the supported IDs are selected,
-          the rest of the keys are automatically filled in.
-          Otherwise, `name`, `text`, and `notice` must be provided.
-          Supported IDs are:
-          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
-          - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
-          - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
-          - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
-          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
-          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
-          - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
-          - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
-          - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
-          - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
-          - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
-        $ref: '#/definitions/spdx_license_id'
-      name:
-        title: Full name of the license.
-        type: string
-        examples:
-          - GNU Affero General Public License v3.0 or later
-          - MIT License
-          - BSD 3-Clause License
-      trove:
-        title: |
-          [Trove classifier](https://pypi.org/classifiers/) of the license.
-        description: |
-          This is automatically added to package metadata
-          (cf. [`pkg.classifiers`](#cc.pkg.classifiers))
-          to help PyPI better categorize your package,
-          so that users can find your package when searching for packages with a specific license.
-        type: string
-        pattern: "^License :: "
-        examples:
-          - 'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
-          - 'License :: OSI Approved :: MIT License'
-          - 'License :: OSI Approved :: BSD License'
-      text:
-        title: Full text of the license.
-        type: string
-      notice:
-        title: Short text of the license.
-        description: |
-          This is automatically added to the main docstring of the package
-          (cf. [`pkg.docs.init`](#cc.pkg.docs.init)).
-        type: string
-      path:
-        title: |
-          Path to the
-          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
-          file.
-        description: |
-          This file must be named `LICENSE` (case-sensitive)
-          and placed in the root of the repository. 
-          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-        type: string
-        pattern: ^LICENSE(?i:.(txt|md|rst))?$
-        default: LICENSE
-        examples:
-          - LICENSE.md
-          - LICENSE.txt
-          - LICENSE.rst
-  copyright:
-    title: Copyright information of the project.
-    description: |
-      The copyright [`notice`](#cc.copyright.notice)
-      is automatically included in several places,
-      such as the license texts (when a pre-defined license is used),
-      the main docstring of the package (cf. [`pkg.docs.init`](#cc.pkg.docs.init)),
-      and the footer of documentation files (cf. [`theme.footer`](#cc.theme.footer)),
-    examples:
-      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-        year_start: 2020
-      - notice: ${{ copyright.period }} John Doe
-      - notice: John Doe
-        year_start: 2020
-    type: object
-    additionalProperties: false
-    required: [ notice ]
-    properties:
-      notice:
-        title: Copyright notice.
-        description: |
-          This is the final form of the notice that will be displayed.
-        type: string
-        examples:
-          - ${{ copyright.period }} ${{ team.owner.name.full }}
-          - ${{ copyright.period }} John Doe
-          - A Custom Copyright Notice
-      period:
-        title: Year period to use in the copyright notice.
-        description: |
-          If not provided, it will be automatically set
-          using the value of [`start_year`](#cc.copyright.start_year), as follows:
-          - If `start_year` is the same as the current year, 
-            the period is set to the current year, e.g., `2024`.
-          - If `start_year` is before the current year,
-            the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
-          - If `start_year` is after the current year, an error is raised.
-        type: string
-      start_year:
-        title: Start year of the project.
-        description: |
-          This can be used to dynamically set the [`period`](#cc.copyright.period).
-        default_auto: repository creation year
-        type: integer
-        minimum: 1980
-        maximum: 2040
   maintainer:
     title: Maintainers of the project.
     description: |
@@ -455,22 +418,34 @@ properties:
   citation:
     title: Project citation information.
     description: |
-      Among others, this is used to automatically maintain a
+      :::{admonition} Usage
+      :class: dropdown note
+      This is primarily used to automatically maintain a
       [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
       ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
+      However, information that are only defined here, such as [`authors`](#cc.citation.authors),
+      [`contacts`](#cc.citation.contacts), and [`preferred_citation`](#cc.citation.preferred_citation),
+      are also used in other places, such as the project's website, README, and package metadata.
+      :::
+      
+      :::{admonition} Citation File Format (CFF)
+      :class: dropdown seealso
       This object closely follows the
       [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
-      (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)),
-      with some modifications, e.g.:
+      (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)).
+      However, it is simplified (e.g., `entity` and `person` are merged into [`entity`](#cc-def.entity)),
+      and many fields are automatically filled, e.g.:
       - `doi` (given you have [activated your Zenodo account](#man.activate_zenodo)),
         `version` and `date-released`are automatically filled for each new release.
       - `cff-version` is automatically added to the file.
+      :::
     type: object
     additionalProperties: false
     required: [ title, authors, message ]
     properties:
       title:
         title: The name of the project.
+        default: '${{ name }}: ${{ title }}'
         examples:
           - '${{ name }}: ${{ title }}'
           - ${{ name }}
@@ -480,12 +455,15 @@ properties:
       authors:
         title: Core author(s) of the project, ordered by contribution (highest first).
         description: |
-          These are automatically displayed on the Credits section of the project's website,
+          :::{admonition} Usage
+          :class: dropdown note
+          These are automatically displayed on the project's website,
           the front page of the project's PDF documentation,
           and the project's PyPI and TestPyPI pages
           (by being added to package metadata, i.e.,
           the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
           key of the `pyproject.toml` file).
+          :::
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
@@ -506,6 +484,7 @@ properties:
         description: |
           It is recommended to define the persons in 
           [`team`](#cc.team) and reference them here using templating.
+        default: [ '${{ team.owner }}' ]
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
@@ -585,7 +564,7 @@ properties:
         title: Keywords that describe the work.
         type: array
         uniqueItems: true
-        default: ${{ keywords.display }}
+        default: ${{ keywords }}
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
         items:
@@ -619,22 +598,25 @@ properties:
   funding:
     title: Available funding options of the project.
     description: |
-      These settings are used to automatically maintain the GitHub `FUNDING` configuration file,
-      which is used to [display a sponsor button in your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
-      Clicking on the *Sponsor* button opens the *Sponsor this project* section,
-      where a list of links to your specified funding platforms is displayed to the user.
-      
       You can specify up to four
       [sponsored GitHub accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors),
       up to four custom URLs,
       and one account per supported external funding platform.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      These settings are used to automatically maintain the GitHub `FUNDING` configuration file,
+      which is used to
+      [display a sponsor button in your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
+      Clicking on the *Sponsor* button opens the *Sponsor this project* section,
+      where a list of links to your specified funding platforms is displayed to the user.
+      :::
     examples:
       - github: [ '${{ owner.username }}', EXAMPLE-GITHUB-USERNAME ]
         custom: [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME' ]
         tideleft: pypi/${{ package.name }}
     type: object
     additionalProperties: false
-    required: [ platform, path ]
     properties:
       community_bridge:
         title: |
@@ -732,6 +714,14 @@ properties:
         items:
           type: string
 definitions:
+  entities:
+    title: A list of natural or legal persons.
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      title: An entity.
+      $ref: '#/definitions/entity'
   entity:
     title: Entity
     description: |
@@ -766,7 +756,7 @@ definitions:
           [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
         type: object
         additionalProperties: false
-        required: [ username ]
+        required: [ user ]
         properties:
           user:
             title: GitHub Username
@@ -886,8 +876,8 @@ definitions:
           Define all roles in the project in [`role`](#cc.role),
           and use them here with templating.
         examples:
-          - [ ${{ role.concept}} ]
-          - [ ${{ role.concept}}, ${{ role.dev }} ]
+          - [ '${{ role.concept}}' ]
+          - [ '${{ role.concept}}', '${{ role.dev }}' ]
         type: array
         uniqueItems: true
         items:
@@ -1294,6 +1284,37 @@ definitions:
 
           This is only used when the entity is a legal person,
           i.e., when `name.legal` is set.
+  role_definition:
+    title: Definition of a role in the project.
+    examples:
+      - title: Conceptualization
+        description: Formulation and evolution of overarching project goals and aims.
+        abbreviation: CNP
+    type: object
+    additionalProperties: false
+    required: [ title, description, abbreviation ]
+    properties:
+      title:
+        title: Name of the role.
+        type: string
+        examples:
+          - Conceptualization
+          - Software Development
+          - Management
+      description:
+        title: A short description of the role.
+        type: string
+        examples:
+          - Formulation and evolution of overarching project goals and aims.
+          - Implementation of the software.
+          - Project administration and coordination.
+      abbreviation:
+        title: Abbreviation of the role title.
+        type: string
+        examples:
+          - CNP
+          - DEV
+          - MAN
   reference:
     title: Reference
     description: A bibliographic reference.
@@ -2244,42 +2265,5 @@ definitions:
       - ZPL-1.1
       - ZPL-2.0
       - ZPL-2.1
-  role_definition:
-    title: Definition of a role in the project.
-    examples:
-      - title: Conceptualization
-        description: Formulation and evolution of overarching project goals and aims.
-        abbreviation: CNP
-    type: object
-    additionalProperties: false
-    required: [ title, description, abbreviation ]
-    properties:
-      title:
-        title: Name of the role.
-        type: string
-        examples:
-          - Conceptualization
-          - Software Development
-          - Management
-      description:
-        title: A short description of the role.
-        type: string
-        examples:
-          - Formulation and evolution of overarching project goals and aims.
-          - Implementation of the software.
-          - Project administration and coordination.
-      abbreviation:
-        title: Abbreviation of the role title.
-        type: string
-        examples:
-          - CNP
-          - DEV
-          - MAN
-  entities:
-    title: A list of natural or legal persons.
-    type: array
-    uniqueItems: true
-    minItems: 1
-    items:
-      title: An entity.
-      $ref: '#/definitions/entity'
+
+
