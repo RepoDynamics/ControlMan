@@ -1,0 +1,20 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Badge Logo
+type: object
+additionalProperties: false
+required: [ type, value ]
+properties:
+  type:
+    title: Type of data.
+    type: string
+    enum: [ path, url, data, name ]
+  src:
+    title: Source of data.
+    type: string
+  ext:
+    title: Data type, i.e., file extension.
+    type: string
+    enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
+  color:
+    title: Logo color.
+    $ref: color/hex/single

@@ -1,0 +1,10 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Badge Button
+description: A badge button.
+allOf:
+  - $ref: html/attrs
+  - $ref: badge/attrs
+  - required: [ message, href ]
+    properties:
+      message:
+        required: [ text ]

@@ -1,0 +1,5 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: HTML Height
+description: Height of an HTML element.
+type: string
+pattern: ^\d+(px|em|rem|%)$

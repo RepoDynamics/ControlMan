@@ -1,0 +1,6 @@
+title: GitHub Label Prefix
+description: Prefix for the names of a group of GitHub labels.
+type: string
+examples:
+  - 'Version: '
+  - 'Branch-'

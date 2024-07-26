@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ResearchGate ID
+description: |
+  A ResearchGate ID.
+type: string
+examples:
+  - RepoDynamics

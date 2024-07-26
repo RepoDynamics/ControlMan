@@ -1,0 +1,10 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ORCID ID.
+description: |
+  An ORCID iD is a unique identifier for researchers and contributors.
+  It is used to distinguish individuals with similar names and to ensure
+  that their work is correctly attributed.a
+type: string
+pattern: '[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]{1}'
+examples:
+  - 0000-0002-1825-0097

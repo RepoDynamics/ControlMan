@@ -1,0 +1,59 @@
+type: object
+default: { }
+additionalProperties: false
+properties:
+  style:
+    type: string
+    enum: [ horizontal, vertical ]
+    default: vertical
+  logo:
+    allOf:
+      - $ref: '#/definitions/html/attrs'
+      - required: [ src ]
+        properties:
+          src:
+            type: object
+            additionalProperties: false
+            required: [ light ]
+            properties:
+              light:
+                $ref: url
+              dark:
+                $ref: url
+  menu:
+    type: object
+    additionalProperties: false
+    required: [ space ]
+    properties:
+      style:
+        $ref: '#/definitions/badge_style'
+        default: for-the-badge
+      height:
+        title: Height of the buttons in the menu.
+        $ref: '#/definitions/html_height'
+        default: 35px
+      space:
+        title: Number of spaces between buttons.
+        $ref: non_negative_integer
+        default: 2
+      align:
+        $ref: '#/definitions/html_align'
+        default: center
+      color:
+        type: object
+        additionalProperties: false
+        properties:
+          light:
+            default: [ '${{ theme.color.primary.light }}', '${{ theme.color.secondary.light }}' ]
+            oneOf:
+              - $ref: '#/definitions/hex_color'
+              - $ref: '#/definitions/hex_color_grad'
+          dark:
+            default: [ '${{ theme.color.primary.dark }}', '${{ theme.color.secondary.dark }}' ]
+            oneOf:
+              - $ref: '#/definitions/hex_color'
+              - $ref: '#/definitions/hex_color_grad'
+      top:
+        $ref: '#/definitions/readme_theme/pypackit/header/menu'
+      bottom:
+        $ref: '#/definitions/readme_theme/pypackit/header/menu'

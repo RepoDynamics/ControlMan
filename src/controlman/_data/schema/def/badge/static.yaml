@@ -1,0 +1,9 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Static Badge
+allOf:
+  - $ref: badge/normal
+  - additionalProperties: false
+    required: [ message ]
+    properties:
+      message:
+        required: [ text ]

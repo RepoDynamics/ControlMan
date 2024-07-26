@@ -1,0 +1,25 @@
+title: Operating System Configuration
+type: object
+additionalProperties: false
+required: [ name, runner ]
+properties:
+  name:
+    type: string
+    examples:
+      - Linux
+      - MacOS
+      - Windows
+  runner:
+    type: string
+    examples:
+      - ubuntu-latest
+      - ubuntu-22.04
+      - ubuntu-20.04
+  ci_build:
+    description: |
+      See https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
+    type: array
+    minItems: 1
+    uniqueItems: true
+    items:
+      type: string

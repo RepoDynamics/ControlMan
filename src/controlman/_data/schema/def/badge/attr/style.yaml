@@ -1,0 +1,5 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Badge Style
+description: Style of a badge.
+type: string
+enum: [ "flat", "flat-square", "plastic", "for-the-badge", "social" ]

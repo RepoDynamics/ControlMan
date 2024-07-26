@@ -1,0 +1,8 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Twitter account URL
+description: A URL to a LinkedIn account.
+type: string
+format: uri
+pattern: ^https://(twitter.com|x.com)/[A-Za-z0-9_]{1,15}/?$
+examples:
+  - 'https://twitter.com/RepoDynamics'

@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: URL
+description: |
+  A URL, e.g., `https://example.com`.
+type: string
+format: uri
+pattern: ^(https|http|ftp|sftp)://.+
+examples:
+  - 'https://example.com'
+  - 'http://example.com'
+  - 'ftp://example.com'
+  - 'sftp://example.com'
+  - 'https://example.com/path/to/resource'
+  - 'https://example.com/path/to/resource?query=string'
+  - 'https://example.com/path/to/resource#fragment'

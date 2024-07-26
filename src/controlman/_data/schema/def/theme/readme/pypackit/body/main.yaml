@@ -1,0 +1,56 @@
+type: object
+default: { }
+additionalProperties: false
+properties:
+  heading:
+    title: Configurations for headings.
+    type: object
+    properties:
+      h2:
+        title: Configurations for level-2 headings.
+        $ref: '#/definitions/readme_theme/pypackit/body/heading'
+      h3:
+        title: Configurations for level-3 headings.
+        $ref: '#/definitions/readme_theme/pypackit/body/heading'
+      h4:
+        title: Configurations for level-4 headings.
+        $ref: '#/definitions/readme_theme/pypackit/body/heading'
+      h5:
+        title: Configurations for level-5 headings.
+        $ref: '#/definitions/readme_theme/pypackit/body/heading'
+      h6:
+        title: Configurations for level-6 headings.
+        $ref: '#/definitions/readme_theme/pypackit/body/heading'
+  sections:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [ type, config ]
+      properties:
+        heading:
+          allOf:
+            - $ref: '#/definitions/readme_theme/pypackit/body/heading'
+            - required: [ level ]
+              properties:
+                level:
+                  type: integer
+                  minimum: 2
+                  maximum: 6
+                text:
+                  type: string
+        type:
+          type: string
+          enum: [ manual, highlights ]
+          default: manual
+        config:
+          title: Configuration for the section.
+      allOf:
+        - if:
+            properties:
+              type:
+                const: manual
+          then:
+            properties:
+              config:
+                type: string

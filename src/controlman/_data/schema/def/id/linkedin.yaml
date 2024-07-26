@@ -1,0 +1,5 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: LinkedIn ID
+description: |
+  A LinkedIn ID.
+type: string

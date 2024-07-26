@@ -1,0 +1,11 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Mailto URI
+description: |
+    Email address URI to produce hyperlinks on websites that allow users to send an email
+    to a specific address directly from an HTML document,
+    without having to copy it and entering it into an email client.
+type: string
+format: uri
+pattern: ^mailto:[\S]+@[\S]+\.[\S]{2,}
+examples:
+    - 'mailto:info@repodynamics.com'

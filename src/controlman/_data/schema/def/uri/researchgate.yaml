@@ -1,0 +1,8 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ResearchGate URL
+description: A URL to a ResearchGate account.
+type: string
+format: uri
+pattern: ^https://researchgate.net/.*$
+examples:
+  - 'https://researchgate.net/profile/A-Username'

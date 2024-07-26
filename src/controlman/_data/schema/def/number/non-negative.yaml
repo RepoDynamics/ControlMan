@@ -1,0 +1,11 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Non Negative Number
+description: |
+  A number that is greater than or equal to zero.
+type: number
+minimum: 0
+examples:
+  - 0
+  - 0.25
+  - 1
+  - 2.5

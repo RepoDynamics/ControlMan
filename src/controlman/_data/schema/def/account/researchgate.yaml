@@ -1,0 +1,14 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: A ResearchGate account information.
+type: object
+additionalProperties: false
+required: [ id ]
+properties:
+  id:
+    title: ResearchGate ID
+    $ref: id/researchgate
+  url:
+    title: ResearchGate account URL
+    default: 'https://researchgate.net/profile/${{ .id }}'
+    $ref: uri/researchgate
+

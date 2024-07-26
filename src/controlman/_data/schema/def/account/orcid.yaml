@@ -1,0 +1,28 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ORCID account information.
+type: object
+additionalProperties: false
+required: [ id ]
+properties:
+  id:
+    title: ORCID ID
+    $ref: id/orcid
+  url:
+    title: ORCID account URL
+    description: |
+      This is automatically set to `https://orcid.org/{user}`.
+    default: 'https://orcid.org/${{ .user }}'
+    $ref: uri/orcid
+  get_pubs:
+    title: Get publications.
+    description: |
+      If `true`, all publications will be fetched from the ORCID API.
+    type: boolean
+    default: false
+  pubs:
+    title: Publications.
+    description: |
+        If `get_pub` is `true`, this will be automatically set to the publications fetched from the ORCID API.
+    type: array
+    items:
+      type: object

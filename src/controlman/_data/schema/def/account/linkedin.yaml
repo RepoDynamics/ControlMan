@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: LinkedIn Account
+description: A LinkedIn account with a LinkedIn ID and a URL.
+type: object
+additionalProperties: false
+required: [ id ]
+properties:
+  id:
+    title: LinkedIn ID
+    type: string
+    $ref: id/linkedin
+  url:
+    title: LinkedIn URL
+    default: 'https://linkedin.com/in/${{ .id }}'
+    $ref: uri/linkedin
+

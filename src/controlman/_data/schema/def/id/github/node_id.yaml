@@ -1,0 +1,9 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: GitHub Account Node ID
+description: |
+  A GitHub account node ID.
+  This is a unique identifier for a GitHub user/organization account,
+  different from the username and ID.
+type: string
+examples:
+  - O_kgDOCFDOjA

@@ -1,0 +1,16 @@
+title: Branch Configurations
+description: Configurations for a branch (group).
+type: object
+additionalProperties: false
+required: [ name ]
+properties:
+  name:
+    title: Branch Name
+    description: Name (for main branch) or prefix (for branch groups) of the branch (group).
+    type: string
+    examples:
+      - main
+      - release/v
+      - prerelease/v
+      - dev/
+      - auto-update/
