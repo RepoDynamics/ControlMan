@@ -83,7 +83,7 @@ class MainDataGenerator:
             {k: repo_info[k] for k in ("id", "node_id", "name", "full_name", "created_at", "default_branch")}
         )
         ccm_repo.setdefault("url", {})["home"] = repo_info["html_url"]
-        self._data["team.owner.github.user"] = repo_info["owner"]["login"]
+        self._data["team.owner.github.id"] = repo_info["owner"]["login"]
         return
 
     @_logger.sectioner("Project People")
@@ -211,10 +211,10 @@ class MainDataGenerator:
             cname = self._data.fill("web.url.cname")
             if cname:
                 base_url = f"https://{cname}"
-            elif self._data["repo.name"] == f"{self._data['team.owner.github.user']}.github.io":
+            elif self._data["repo.name"] == f"{self._data['team.owner.github.id']}.github.io":
                 base_url = f"https://{self._data['team.owner.github.user']}.github.io"
             else:
-                base_url = f"https://{self._data['team.owner.github.user']}.github.io/{self._data['repo.name']}"
+                base_url = f"https://{self._data['team.owner.github.id']}.github.io/{self._data['repo.name']}"
             self._data["web.url.base"] = base_url
         if not self._data["web.url.home"]:
             self._data["web.url.home"] = base_url
@@ -241,11 +241,11 @@ class MainDataGenerator:
                 return {"legal": user_info["name"]}
             return {"first": name_parts[0], "last": name_parts[1]}
 
-        gh_username = data.get("github", {}).get("user")
+        gh_username = data.get("github", {}).get("id")
         if gh_username:
             user_info = self._get_github_user(gh_username)
             for key_self, key_gh in (
-                ("id", "id"),
+                ("rest_id", "id"),
                 ("node_id", "node_id"),
                 ("url", "html_url"),
             ):
@@ -261,17 +261,17 @@ class MainDataGenerator:
             ):
                 if not data.get(key_self) and user_info.get(key_gh):
                     data[key_self] = user_info[key_gh]
-            if not data.get("email", {}).get("user") and user_info.get("email"):
+            if not data.get("email", {}).get("id") and user_info.get("email"):
                 email = data.setdefault("email", {})
-                email["user"] = user_info["email"]
+                email["id"] = user_info["email"]
             for social_name, social_data in user_info["socials"].items():
                 if social_name in ("orcid", "researchgate", "linkedin", "twitter") and social_name not in data:
                     data[social_name] = social_data
-        for social_name, social_base_url in self._SOCIAL_URL.items():
-            if social_name in data and not data[social_name].get("url"):
-                data[social_name]["url"] = f"https://{social_base_url}{data[social_name]['user']}"
-        if "email" in data and not data["email"].get("url"):
-            data["email"]["url"] = f"mailto:{data['email']['user']}"
+        # for social_name, social_base_url in self._SOCIAL_URL.items():
+        #     if social_name in data and not data[social_name].get("url"):
+        #         data[social_name]["url"] = f"https://{social_base_url}{data[social_name]['user']}"
+        # if "email" in data and not data["email"].get("url"):
+        #     data["email"]["url"] = f"mailto:{data['email']['user']}"
         if "legal" in data["name"]:
             data["name"]["full"] = data["name"]["legal"]
         else:
@@ -290,7 +290,7 @@ class MainDataGenerator:
     def _get_github_user(self, username: str) -> dict:
 
         def add_social(name, user, url):
-            socials[name] = {"user": user, "url": url}
+            socials[name] = {"id": user, "url": url}
             return
 
         user_info = self._cache.get("user", username)

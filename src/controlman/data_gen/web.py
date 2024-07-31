@@ -11,9 +11,9 @@ from controlman.nested_dict import NestedDict as _NestedDict
 
 class WebDataGenerator:
 
-    def __init__(self, data: _NestedDict, website_dir_path: _Path):
+    def __init__(self, data: _NestedDict, source_path: _Path):
         self._data = data
-        self._path = website_dir_path
+        self._path = source_path
         return
 
     def generate(self):
@@ -24,17 +24,17 @@ class WebDataGenerator:
     def _process_website_toctrees(self) -> None:
         pages = {}
         blog_pages = {}
-        path_docs = self._path / "source"
-        for md_filepath in path_docs.rglob("*.md", case_sensitive=False):
+        for md_filepath in self._path.rglob("*.md", case_sensitive=False):
             if not md_filepath.is_file():
                 continue
-            rel_path = str(md_filepath.relative_to(path_docs).with_suffix(""))
+            rel_path = str(md_filepath.relative_to(self._path).with_suffix(""))
             text = md_filepath.read_text()
             frontmatter = self._extract_frontmatter(text)
             if "ccid" in frontmatter:
-                pages[frontmatter["ccid"]] = {
+                pages[_miu.txt.slug(frontmatter["ccid"])] = {
                     "title": self._extract_main_heading(text),
                     "path": rel_path,
+                    "url": f"{self._data['web.url.home']}/{rel_path}",
                 }
             for key in ["category", "tags"]:
                 key_val = frontmatter.get(key)
@@ -48,6 +48,7 @@ class WebDataGenerator:
             return
         blog_path = _Path(pages["blog"]["path"]).parent
         blog_path_str = str(blog_path)
+        blog_pages_final = {}
         for potential_post_page_path, keywords_and_tags in blog_pages.items():
             try:
                 _Path(potential_post_page_path).relative_to(blog_path)
@@ -65,13 +66,18 @@ class WebDataGenerator:
                             "Please do not use `ccid` values that start with 'blog_'."
                         )
                     blog_path_prefix = f"{blog_path_str}/" if blog_path_str != "." else ""
-                    pages[final_key] = {"title": value, "path": f"{blog_path_prefix}{key_singular}/{value_slug}"}
-        self._data["web.page"] = pages
+                    blog_group_path = f"{blog_path_prefix}{key_singular}/{value_slug}"
+                    blog_pages_final[final_key] = {
+                        "title": value,
+                        "path": blog_group_path,
+                        "url": f"{self._data['web.url.home']}/{blog_group_path}",
+                    }
+        self._data["web.page"] = pages | blog_pages_final
         return
 
     @staticmethod
     def _extract_frontmatter(file_content: str) -> dict:
-        match = _re.match(r'^---+\s*\n(.*?)(?=\n---+\s*\n)', file_content, _re.DOTALL)
+        match = _re.match(r'^---+\s*\n(.*?)(?=\n---+\s*(\n|$))', file_content, _re.DOTALL)
         if not match:
             return {}
         frontmatter_text = match.group(1).strip()
@@ -81,7 +87,7 @@ class WebDataGenerator:
     @staticmethod
     def _extract_main_heading(file_content: str) -> str | None:
         match = _re.search(r"^# (.*)", file_content, _re.MULTILINE)
-        return match.group(1) if match else None
+        return match.group(1) if match else ""
 
     @staticmethod
     def _extract_toctree(file_content: str) -> tuple[str, ...] | None:

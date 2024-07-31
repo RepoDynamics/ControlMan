@@ -85,8 +85,11 @@ class RepoDataGenerator:
                 if branch == curr_branch:
                     branch_metadata.fill("pkg.entry")
                 version_info |= {
-                    "python_version_minors": branch_metadata["pkg.python.version.minors"],
-                    "os_names": [os["name"] for os in branch_metadata["pkg.os"].values()],
+                    "python_versions": branch_metadata["pkg.python.version.minors"],
+                    "os_names": [
+                        branch_metadata[f"pkg.os.{name}.name"] for name in ("linux", "macos", "windows")
+                        if name in branch_metadata["pkg.os"]
+                    ],
                     "package_managers": package_managers,
                     "cli_names": [
                         script["name"] for script in branch_metadata.get("pkg.entry.cli", {}).values()
@@ -101,8 +104,7 @@ class RepoDataGenerator:
             release_info[str(ver)] = version_info
         self._git.checkout(curr_branch)
         self._git.stash_pop()
-        self._data["version"] = release_info
-        out = {"versions": [], "branches": [], "interfaces": ["Python API"]}
+        out = {"version": release_info, "versions": [], "branches": [], "interfaces": ["Python API"]}
         for version, version_info in release_info.items():
             out["versions"].append(version)
             out["branches"].append(version_info["branch"])
@@ -123,7 +125,7 @@ class RepoDataGenerator:
             self._package_development_status(curr_branch_latest_version)
         return
 
-    def _package_development_status(self, ver: PEP440SemVer) -> dict:
+    def _package_development_status(self, ver: PEP440SemVer) -> None:
         phase = {
             1: "Planning",
             2: "Pre-Alpha",
@@ -187,7 +189,7 @@ class RepoDataGenerator:
                         "color": color,
                     }
                 )
-        for label_id, label_data in self._data.get("label.single.label", {}).items():
+        for label_id, label_data in self._data.get("label.custom.single", {}).items():
             out.append(
                 {
                     "type": "custom_single",

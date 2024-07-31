@@ -43,12 +43,12 @@ class PythonDataGenerator:
 
     @_logger.sectioner("Package Name")
     def _package_name(self) -> None:
-        for path in ("pkg.name", "testsuite.name"):
+        for path in ("pkg.name", "test.name"):
             name = self._data.fill(path)
             if name:
                 name_cleaned = _re.sub(r'[^a-zA-Z0-9._-]', '-', name)
                 self._data[path] = _re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', name_cleaned)
-        for path in ("pkg.import_name", "testsuite.import_name"):
+        for path in ("pkg.import_name", "test.import_name"):
             import_name = self._data.fill(path)
             if import_name:
                 import_name_cleaned = _re.sub(r'[^a-zA-Z0-9]', '_', import_name.lower())
@@ -56,7 +56,7 @@ class PythonDataGenerator:
         return
 
     @_logger.sectioner("Package Python Versions")
-    def _package_python_versions(self) -> dict:
+    def _package_python_versions(self) -> None:
 
         def get_python_releases():
             release_versions = self._cache.get("python", "releases")
@@ -71,7 +71,7 @@ class PythonDataGenerator:
                     continue
                 if version_tuple[0] == 2 and version_tuple[1] < 3:
                     continue
-                live_versions.append(version_tuple)
+                live_versions.append(version)
             live_versions = sorted(live_versions, key=lambda x: tuple(map(int, x.split("."))))
             self._cache.set("python", "releases", live_versions)
             return live_versions
@@ -123,7 +123,7 @@ class PythonDataGenerator:
         if self._data["test"]:
             self._data["test.python.version.spec"] = spec_str
         _logger.debug(f"Generated data: {str(output)}")
-        return output
+        return
 
     @_logger.sectioner("Package Operating Systems")
     def _package_operating_systems(self):
@@ -145,7 +145,7 @@ class PythonDataGenerator:
             classifiers = []
             has_2 = False
             has_3 = False
-            for version in self._data["pkg.py_version.minors"]:
+            for version in self._data["pkg.python.version.minors"]:
                 if version.startswith("2"):
                     has_2 = True
                 if version.startswith("3"):
@@ -165,10 +165,10 @@ class PythonDataGenerator:
                 "linux": "POSIX :: Linux",
             }
             data_os = self._data["pkg.os"]
-            has_build_info = any("ci_build" in os for os in data_os.values())
-            if not has_build_info and len(data_os) == 3:
+            has_build_info = any("ci_build" in data_os.get(name, {}) for name in postfix.keys())
+            if not has_build_info and all(name in data_os for name in postfix.keys()):
                 return [template.format("OS Independent")]
-            return [template.format(postfix[os_name]) for os_name in data_os]
+            return [template.format(postfix[os_name]) for os_name in postfix.keys() if os_name in data_os]
 
         common_classifiers = programming_language()
         common_classifiers.extend(operating_system())
