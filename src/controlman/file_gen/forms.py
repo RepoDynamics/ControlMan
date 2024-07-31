@@ -12,7 +12,6 @@ class FormGenerator:
     def __init__(
         self,
         data: _NestedDict,
-        data_before: _NestedDict,
         repo_path: _Path,
     ):
         self._data = data
@@ -51,7 +50,7 @@ class FormGenerator:
             status_label_suffix = self._data["label.status.label.triage.suffix"]
             labels.append(f"{status_label_prefix}{status_label_suffix}")
             if form["id"] in maintainers.keys():
-                form_output["assignees"] = [maintainer["github"]["user"] for maintainer in maintainers[form["id"]]]
+                form_output["assignees"] = [maintainer["github"]["id"] for maintainer in maintainers[form["id"]]]
             form_output["body"] = []
             for elem in form["body"]:
                 pre_process = elem.get("pre_process")

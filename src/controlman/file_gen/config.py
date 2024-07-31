@@ -28,13 +28,61 @@ class ConfigFileGenerator:
     def generate(self) -> tuple[list[GeneratedFile], dict | str | None, dict | str | None]:
         tools_out, pyproject_pkg, pyproject_test = self.tools()
         return (
-            self.web_requirements()
+            self._generate_license()
+            + self.generate_codeowners()
+            + self.citation()
+            + self.web_requirements()
             + self.funding()
             + tools_out
             + self.issue_template_chooser()
             + self.gitignore()
             + self.gitattributes()
         ), pyproject_pkg, pyproject_test
+
+    def _is_disabled(self, key: str) -> bool:
+        return not (self._data[key] or self._data_before[key])
+
+    def generate_codeowners(self) -> list[GeneratedFile]:
+        """
+
+        Returns
+        -------
+
+        References
+        ----------
+        https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+        """
+        key = "maintainer.code_owners"
+        if self._is_disabled(key):
+            return []
+        codeowners_files = {
+            "type": DynamicFile_.GITHUB_CODEOWNERS,
+            "path": self._data[f"{key}.path"],
+            "path_before": self._data_before[f"{key}.path"],
+        }
+        codeowners = self._data[key]["owners"]
+        if not codeowners:
+            return [GeneratedFile(**codeowners_files)]
+        # Get the maximum length of patterns to align the columns when writing the file
+        max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
+        text = ""
+        for entry in codeowners:
+            pattern = list(entry.keys())[0]
+            reviewers_list = entry[pattern]
+            reviewers = " ".join([f"@{reviewer["github"]["id"]}" for reviewer in reviewers_list])
+            text += f"{pattern: <{max_len}}   {reviewers}\n"
+        return [GeneratedFile(content=text, **codeowners_files)]
+
+    def _generate_license(self) -> list[GeneratedFile]:
+        if not (self._data["license"] or self._data_before["license"]):
+            return []
+        license_file = {
+            "type": DynamicFile_.LICENSE,
+            "content": self._data["license.text"],
+            "path": self._data["license.path"],
+            "path_before": self._data_before["license.path"],
+        }
+        return [GeneratedFile(**license_file)]
 
     def web_requirements(self) -> list[GeneratedFile]:
         if not (self._data["web"] or self._data_before["web"]):
@@ -88,7 +136,7 @@ class ConfigFileGenerator:
         if not self._data["funding"]:
             return [GeneratedFile(**funding_file)]
         output = {}
-        for funding_platform, users in self._data["funding.platform"].items():
+        for funding_platform, users in self._data["funding"].items():
             if isinstance(users, list):
                 output[funding_platform] = pyserials.format.to_yaml_array(data=users, inline=True)
             else:
@@ -134,8 +182,6 @@ class ConfigFileGenerator:
                         raise ValueError()
                 conf_entry["contents"].append(conf_file["content"])
                 conf_entry["tool_names"].append(tool_name)
-                if tool_name == "codecov":
-                    self.validate_codecov_config(config=conf_file["content"])
         out = []
         # Write conda environment files
         for conda_env_path, conda_env_data in env_conda.items():
@@ -171,8 +217,8 @@ class ConfigFileGenerator:
         # These are package and test-suite pyproject.toml files that are being used
         # regardless of whether other tools use it as their configuration file.
         for typ in ("pkg", "test"):
-            pkg_root = self._data[f"dir.{typ}.root"]
-            untouchable_paths.append(str(_Path(pkg_root / _const.FILENAME_PKG_PYPROJECT)) if pkg_root else None)
+            pkg_root = self._data[f"{typ}.path.root"]
+            untouchable_paths.append(str(_Path(pkg_root) / _const.FILENAME_PKG_PYPROJECT) if pkg_root else None)
         for conf_path, conf_data in conf.items():
             if conf_data["type"] == "txt":
                 content = "\n\n".join(conf_data["contents"])
@@ -196,6 +242,8 @@ class ConfigFileGenerator:
                     end_of_file_newline=True,
                     sort_keys=True,
                 )
+            if "codecov" in conf_data["tool_names"]:
+                self.validate_codecov_config(config=content)
             if conf_path not in untouchable_paths:
                 out.append(
                     GeneratedFile(
@@ -261,7 +309,7 @@ class ConfigFileGenerator:
 
     @logger.sectioner("Generate Gitignore File")
     def gitignore(self) -> list[GeneratedFile]:
-        local_dir = self._data["dir.local"]
+        local_dir = self._data["local.path"]
         file_content = "\n".join(
             self._data["repo"].get("gitignore", [])
             + [
@@ -305,20 +353,19 @@ class ConfigFileGenerator:
 
     def citation(self) -> list[GeneratedFile]:
 
-        def create_person(person_id):
-            person = self._data["people"][person_id]
-            pout = {}
-            if person["name"].get("legal"):
-                pout["name"] = person["name"]["legal"]
+        def create_person(entity):
+            _out = {}
+            if entity["name"].get("legal"):
+                _out["name"] = entity["name"]["legal"]
                 for in_key, out_key in (
                     ("location", "location"),
                     ("date_start", "date-start"),
                     ("date_end", "date-end"),
                 ):
-                    if person.get(in_key):
-                        pout[out_key] = person[in_key]
+                    if entity.get(in_key):
+                        _out[out_key] = entity[in_key]
             else:
-                name = person["name"]
+                name = entity["name"]
                 for in_key, out_key in (
                     ("last", "family-names"),
                     ("first", "given-names"),
@@ -327,10 +374,10 @@ class ConfigFileGenerator:
                     ("affiliation", "affiliation")
                 ):
                     if name.get(in_key):
-                        pout[out_key] = name[in_key]
-            for contact_type, contact_key in (("orcid", "url"), ("email", "user")):
-                if person.get(contact_type):
-                    pout[contact_type] = person[contact_type][contact_key]
+                        _out[out_key] = name[in_key]
+            for contact_type, contact_key in (("orcid", "url"), ("email", "id")):
+                if entity.get(contact_type):
+                    _out[contact_type] = entity[contact_type][contact_key]
             for key in (
                 "alias",
                 "website",
@@ -342,9 +389,9 @@ class ConfigFileGenerator:
                 "country",
                 "post-code",
             ):
-                if person.get(key):
-                    pout[key] = person[key]
-            return pout
+                if entity.get(key):
+                    _out[key] = entity[key]
+            return _out
 
         def create_reference(ref: dict):
             out = {}
@@ -354,9 +401,7 @@ class ConfigFileGenerator:
             ):
                 if ref.get(key):
                     out[key] = ref[key]
-            out["authors"] = [
-                create_person(person_id=author_map["id"]) for author_map in ref["authors"]
-            ]
+            out["authors"] = [create_person(entity=entity) for entity in ref["authors"]]
             return out
 
         def get_commit() -> str:
@@ -397,12 +442,8 @@ class ConfigFileGenerator:
             if cite.get(key):
                 out[key] = cite[key]
         if cite.get("contacts"):
-            out["contact"] = [
-                create_person(person_id=contact_id) for contact_id in cite["contacts"]
-            ]
-        out["authors"] = [
-            create_person(person_id=author_map["id"]) for author_map in cite["authors"]
-        ]
+            out["contact"] = [create_person(entity=entity) for entity in cite["contacts"]]
+        out["authors"] = [create_person(entity=entity) for entity in cite["authors"]]
         if cite.get("preferred_citation"):
             out["preferred-citation"] = create_reference(cite["preferred_citation"])
         if cite.get("references"):
@@ -416,9 +457,9 @@ class ConfigFileGenerator:
         doi: str,
         version: str,
     ):
-        cit_cur = pyserials.read.yaml_from_file(
-            path=self._path_manager.citation.path
-        ) if self._path_manager.citation.path.is_file() else self.citation()
+        # cit_cur = pyserials.read.yaml_from_file(
+        #     path=self._path_manager.citation.path
+        # ) if self._path_manager.citation.path.is_file() else self.citation()
         cit_cur["version"] = version
         cit_cur["doi"] = doi
         cit_cur["date-released"] = datetime.datetime.now().strftime('%Y-%m-%d')

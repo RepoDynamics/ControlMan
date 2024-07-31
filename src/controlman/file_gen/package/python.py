@@ -43,14 +43,14 @@ class PythonPackageFileGenerator:
 
     def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[GeneratedFile]:
         self._type = typ
-        self._pkg = self._data[typ]
-        self._pkg_before = self._data_before[typ]
-        self._path_root = _Path(self._data[f"dir.{typ}.root"])
-        self._path_src = self._path_root / self._data[f"dir.{typ}.source"]
+        self._pkg = _NestedDict(self._data[typ])
+        self._pkg_before = _NestedDict(self._data_before[typ] or {})
+        self._path_root = _Path(self._data[f"{typ}.path.root"])
+        self._path_src = self._path_root / self._data[f"{typ}.path.source"]
         self._path_import = self._path_src / self._pkg["import_name"]
-        if self._data_before[f"dir.{typ}"]:
-            self._path_root_before = _Path(self._data_before[f"dir.{typ}.root"])
-            self._path_src_before = self._path_root_before / self._data_before[f"dir.{typ}.source"]
+        if self._data_before[f"{typ}.path"]:
+            self._path_root_before = _Path(self._data_before[f"{typ}.path.root"])
+            self._path_src_before = self._path_root_before / self._data_before[f"{typ}.path.source"]
             self._path_import_before = self._path_src_before / self._pkg_before["import_name"]
         return (
             self.requirements()
@@ -73,8 +73,8 @@ class PythonPackageFileGenerator:
                 "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
                 if self._pkg["typed"] else ""
             ),
-            path=str(self._path_import / _const.FILENAME_PACKAGE_TYPING_MARKER),
-            path_before=str(self._path_import_before / _const.FILENAME_PACKAGE_TYPING_MARKER),
+            path=f"{self._pkg['path.import']}/{_const.FILENAME_PACKAGE_TYPING_MARKER}",
+            path_before=f"{self._pkg_before['path.import']}/{_const.FILENAME_PACKAGE_TYPING_MARKER}" if self._pkg_before['path.import'] else None,
         )
         return [file]
 
@@ -128,8 +128,8 @@ class PythonPackageFileGenerator:
         if "import_name" in self._pkg_before and self._pkg["import_name"] != self._pkg_before["import_name"]:
             mapping[self._pkg_before["import_name"]] = self._pkg["import_name"]
         if self._type == "test":
-            if "import_name" in self._data_before["pkg"] and self._data["pkg"]["import_name"] != self._data_before["pkg"]["import_name"]:
-                mapping[self._data_before["pkg"]["import_name"]] = self._data["pkg"]["import_name"]
+            if self._data_before["pkg.import_name"] and self._data["pkg.import_name"] != self._data_before["pkg.import_name"]:
+                mapping[self._data_before["pkg.import_name"]] = self._data["pkg.import_name"]
         # Get all file glob matches
         path_to_globs_map = {}
         abs_path = self._path_repo / (self._path_src_before or self._path_src)
@@ -229,7 +229,7 @@ class PythonPackageFileGenerator:
             type=DynamicFile_[f"{self._type.upper()}_MANIFEST"],
             content=file_content,
             path=str(self._path_root / _const.FILENAME_PACKAGE_MANIFEST),
-            path_before=str(self._path_root_before / _const.FILENAME_PACKAGE_MANIFEST),
+            path_before=str(self._path_root_before / _const.FILENAME_PACKAGE_MANIFEST) if self._path_root_before else None,
         )
         return [file]
 
@@ -259,7 +259,7 @@ class PythonPackageFileGenerator:
             type=DynamicFile_[f"{self._type.upper()}_PYPROJECT"],
             content=file_content,
             path=str(self._path_root / _const.FILENAME_PKG_PYPROJECT),
-            path_before=str(self._path_root_before / _const.FILENAME_PKG_PYPROJECT),
+            path_before=str(self._path_root_before / _const.FILENAME_PKG_PYPROJECT) if self._path_root_before else None,
         )
         return [file]
 
@@ -274,7 +274,7 @@ class PythonPackageFileGenerator:
         data = {
             "name": ("str", self._pkg["name"]),
             "description": ("str", self._data["title"]),
-            "keywords": ("array", self._data["keywords.display"]),
+            "keywords": ("array", self._data["keywords"]),
             "classifiers": ("array", self._pkg["classifiers"]),
             "license": (
                 "inline_table",
@@ -283,7 +283,7 @@ class PythonPackageFileGenerator:
             "urls": ("table", self._pkg["urls"]),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
-            "readme": ("str", self._data["readme.pypi.path"]),
+            "readme": ("str", self._pkg["readme.path"]),
             "requires-python": ("str", self._pkg["python.version.spec"]),
             "dependencies": ("array", self.pyproject_project_dependencies),
             "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),
@@ -305,26 +305,30 @@ class PythonPackageFileGenerator:
             return []
         authors_list = []
         for author in authors:
-            author_info = self._data["team"][author["id"]]
-            author_entry = {"name": author_info["name"]["full"]}
+            author_entry = {"name": author["name"]["full"]}
             if "email" in author:
-                author_entry["email"] = author["email"]["user"]
+                author_entry["email"] = author["email"]["id"]
             authors_list.append(author_entry)
         return authors_list
 
     @property
     def pyproject_project_maintainers(self) -> list[dict[str, str]]:
 
-        def update_dict(maintainer_id, weight: int):
-            if maintainer_id not in maintainers:
-                maintainers[maintainer_id] = weight
+        def update_dict(maintainer, weight: int):
+            for registered_maintainer in registered_maintainers:
+                if registered_maintainer[0] == maintainer:
+                    registered_maintainer[1] += weight
+                    break
             else:
-                maintainers[maintainer_id] += weight
+                registered_maintainers.append([maintainer, weight])
+            return
 
-        maintainers = {}
-        for code_owner_entry in self._data.get("maintainer.pull.code_owners", []):
-            for code_owner in code_owner_entry:
-                update_dict(code_owner, 4)
+        registered_maintainers = []
+
+        for code_owners_entry in self._data.get("maintainer.code_owners.owners", []):
+            for code_owners in code_owners_entry.values():
+                for code_owner in code_owners:
+                    update_dict(code_owner, 4)
         for maintainer_type, weight in (("issue", 3), ("discussion", 2)):
             for maintainers in self._data.get(f"maintainer.{maintainer_type}", {}).values():
                 for maintainer in maintainers:
@@ -334,11 +338,11 @@ class PythonPackageFileGenerator:
             if maintainer:
                 update_dict(maintainer, 1)
         maintainers_list = []
-        for maintainer in sorted(maintainers, key=lambda name: maintainers[name], reverse=True):
-            maintainer_info = self._data["team"][maintainer]
+        for maintainer in sorted(registered_maintainers, key=lambda x: x[1], reverse=True):
+            maintainer_info = maintainer[0]
             maintainer_entry = {"name": maintainer_info["name"]["full"]}
             if "email" in maintainer_info:
-                maintainer_entry["email"] = maintainer_info["email"]["user"]
+                maintainer_entry["email"] = maintainer_info["email"]["id"]
             maintainers_list.append(maintainer_entry)
         return maintainers_list
 

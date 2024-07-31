@@ -1,46 +1,116 @@
-from loggerman import logger as _logger
+from pathlib import Path as _Path
 
-from controlman.datatype import DynamicFile
-from controlman import ControlCenterContentManager
-from controlman._path_manager import PathManager
-from controlman.file_gen.readme.main import ReadmeFileGenerator
-from controlman.file_gen.readme.pypackit_default import PyPackITDefaultReadmeFileGenerator
-from controlman.center_man.hook import HookManager as _ControlCenterCustomContentGenerator
+from readme_renderer.markdown import render as _render
 
-
-_THEME_GENERATOR = {
-    "pypackit-default": PyPackITDefaultReadmeFileGenerator,
-}
+from controlman.datatype import GeneratedFile as _GeneratedFile, DynamicFile_ as _DynamicFile
+from controlman.file_gen.readme.pypackit import ReadmeFileGenerator
+from controlman.nested_dict import NestedDict as _NestedDict
+from controlman.file_gen.readme import pypackit as _pypackit_readme
 
 
-def generate(
-    content_manager: ControlCenterContentManager,
-    path_manager: PathManager,
-    custom_generator: _ControlCenterCustomContentGenerator
-) -> list[tuple[DynamicFile, str]]:
+def generate(data: _NestedDict, data_before: _NestedDict, root_path: _Path) -> list[_GeneratedFile]:
 
-    def gen_repo(name: str):
-        if content_manager["readme"][name]:
-            theme = content_manager["readme"][name]["type"]
-            if theme == "manual":
-                return [(path[name], content_manager["readme"][name]["config"])]
-            if theme == "custom":
-                file_content = custom_generator.generate(f"generate_{name}_readme", content_manager, path_manager)
-                if file_content is None:
-                    _logger.critical(f"Custom {name} README generator not found.")
-                return [(path[name], file_content)]
-            return _THEME_GENERATOR[theme](
-                content_manager=content_manager, path_manager=path_manager, custom_generator=custom_generator, target=name
-            ).generate()
+    generated_files = []
+    default_footer_themed = _generate_footer(
+        footer_data=data["theme.footer"],
+        default_badge=data["theme.badge"],
+        themed=True,
+        root_path=root_path,
+    )
+    for readme_key, readme_type in (
+        ("readme", _DynamicFile.GITHUB_README),
+        ("health", _DynamicFile.GITHUB_HEALTH)
+    ):
+        for readme_id, readme_file_data in data.get(readme_key, {}).items():
+            file = _generate_file(
+                filetype=readme_type,
+                path_before=data_before[f"{readme_key}.{readme_id}.path"],
+                file_data=readme_file_data,
+                default_footer=default_footer_themed,
+                default_badge=data["theme.badge"],
+                root_path=root_path,
+                themed=True,
+            )
+            generated_files.append(file)
 
-    path = {
-        "github": path_manager.readme_main,
-        "pypi": path_manager.readme_pypi,
-        "conda": path_manager.readme_conda,
+    default_footer_light = _generate_footer(
+        footer_data=data["theme.footer"],
+        default_badge=data["theme.badge"],
+        themed=False,
+        root_path=root_path,
+    )
+    for readme_key in ("pkg", "test"):
+        for path in ("readme", "conda.readme"):
+            readme_data = data[f"{readme_key}.{path}"]
+            if not readme_data:
+                continue
+            file = _generate_file(
+                filetype=_DynamicFile.PKG_README,
+                path_before=data_before[f"{readme_key}.{path}.path"],
+                file_data=readme_data,
+                default_footer=default_footer_light,
+                default_badge=data["theme.badge"],
+                root_path=root_path,
+                themed=False,
+            )
+            generated_files.append(file)
+    return generated_files
+
+
+def _generate_file(
+    filetype: _DynamicFile,
+    path_before: str,
+    file_data: dict,
+    default_footer: str,
+    default_badge: dict | None,
+    themed: bool,
+    root_path: _Path
+) -> _GeneratedFile:
+    file_info = {
+        "type": filetype,
+        "path": file_data["path"],
+        "path_before": path_before,
+        "content": "",
     }
-    out = ReadmeFileGenerator(
-        data=content_manager, path_manager=path_manager, custom_generator=custom_generator, target="github"
-    ).generate()
-    for repo_name in ["github", "pypi", "conda"]:
-        out.extend(gen_repo(repo_name))
-    return out
+    content = file_data["content"]
+    if not content:
+        return _GeneratedFile(**file_info)
+    content = _pypackit_readme.ReadmeFileGenerator(
+        default_badge=default_badge,
+        themed=themed,
+        root_path=root_path
+    ).generate(elements=content)
+    footer = file_data.get("footer")
+    if footer != "":
+        footer = default_footer if footer is None else _generate_footer(
+            footer_data=footer,
+            default_badge=default_badge,
+            themed=themed,
+            root_path=root_path
+        )
+    file_info["content"] = f"{content}\n\n{footer}".strip()
+    return _GeneratedFile(**file_info)
+
+
+def _generate_footer(
+    footer_data: list | None,
+    default_badge: dict | None,
+    themed: bool,
+    root_path: _Path
+):
+    if not footer_data:
+        return ""
+    return _pypackit_readme.ReadmeFileGenerator(
+        default_badge=default_badge,
+        themed=themed,
+        root_path=root_path
+    ).generate(elements=footer_data)
+
+
+
+def render_pypi_readme(markdown_str: str):
+    # https://github.com/pypa/readme_renderer/blob/main/readme_renderer/markdown.py
+    html_str = _render(markdown_str)
+    if not html_str:
+        raise ValueError("Renderer encountered an error.")
+    return html_str
