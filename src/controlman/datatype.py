@@ -63,10 +63,13 @@ class DynamicFileType(_Enum):
 class DynamicFile_(_Enum):
     GITHUB_FUNDING = (DynamicFileType.CONFIG, "GitHub funding options configurations")
     GITHUB_CITATION = (DynamicFileType.HEALTH, "GitHub citation configurations")
+    GITHUB_CODEOWNERS = (DynamicFileType.CONFIG, "GitHub codeowners configurations")
     GITHUB_ISSUES_CONFIG = (DynamicFileType.CONFIG, "GitHub Issues template chooser configurations")
     GITHUB_ISSUE_FORM = (DynamicFileType.FORM, "GitHub Issue forms")
     GITHUB_DISCUSSION_FORM = (DynamicFileType.FORM, "GitHub Discussion forms")
     GITHUB_PULL_TEMPLATE = (DynamicFileType.FORM, "GitHub Pull Request templates")
+    GITHUB_README = (DynamicFileType.README, "GitHub ReadMe files")
+    GITHUB_HEALTH = (DynamicFileType.HEALTH, "GitHub Health files")
     GIT_IGNORE = (DynamicFileType.CONFIG, "Git ignore file")
     GIT_ATTRIBUTES = (DynamicFileType.CONFIG, "Git attributes file")
     WEB_ENV_CONDA = (DynamicFileType.CONFIG, "Website build environment file (conda)")
@@ -79,13 +82,15 @@ class DynamicFile_(_Enum):
     PKG_ENV_PIP = (DynamicFileType.PACKAGE, "Package environment file (pip)")
     PKG_MANIFEST = (DynamicFileType.PACKAGE, "Package manifest file")
     PKG_PYPROJECT = (DynamicFileType.PACKAGE, "Package pyproject file")
-    PKG_SOURCE = (DynamicFileType.PACKAGE, "Package source file")
+    PKG_SOURCE = (DynamicFileType.PACKAGE, "Package source files")
+    PKG_README = (DynamicFileType.README, "Package ReadMe files")
     TEST_TYPING_MARKER = (DynamicFileType.PACKAGE, "Test suite typing marker file")
     TEST_ENV_CONDA = (DynamicFileType.PACKAGE, "Test suite environment file (conda)")
     TEST_ENV_PIP = (DynamicFileType.PACKAGE, "Test suite environment file (pip)")
     TEST_MANIFEST = (DynamicFileType.PACKAGE, "Test suite manifest file")
     TEST_PYPROJECT = (DynamicFileType.PACKAGE, "Test suite pyproject file")
     TEST_SOURCE = (DynamicFileType.PACKAGE, "Test suite source file")
+    LICENSE = (DynamicFileType.LICENSE, "License file")
 
 
 class GeneratedFile(_NamedTuple):
