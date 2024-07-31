@@ -17,6 +17,7 @@ from controlman.datatype import (
     Diff as _Diff,
     DynamicFileType as _DynamicFileType,
     DynamicFileChangeType as _DynamicFileChangeType,
+    GeneratedFile as _GeneratedFile,
 )
 from controlman.protocol import Git as _Git
 import controlman
@@ -25,6 +26,7 @@ from controlman import _util
 from controlman import exception as _exception
 from controlman.center_man.cache import CacheManager
 from controlman.nested_dict import NestedDict as _NestedDict
+from controlman import file_gen as _file_gen
 
 
 class CenterManager:
@@ -49,8 +51,8 @@ class CenterManager:
         self._cache_manager: CacheManager | None = None
         self._contents_raw: _NestedDict | None = None
         self._local_config: dict = {}
-        self._ccm: _DataManager | None = None
-        self._generated_files: list[tuple[_DynamicFile, str]] = []
+        self._data: _NestedDict | None = None
+        self._generated_files: list[_GeneratedFile] = []
         self._results: list[tuple[_DynamicFile, _Diff]] = []
         self._changes: dict[_DynamicFileType, dict[str, bool]] = {}
         self._summary: str = ""
@@ -61,7 +63,7 @@ class CenterManager:
             return self._contents_raw
         if not self._path_cc:
             self._data_before = controlman.data_man.from_json_file(repo_path=self._path_root).ndict
-            self._path_cc = self._path_root / self._data_before["dir.control"]
+            self._path_cc = self._path_root / self._data_before["control.path"]
             cache_retention_hours = self._data_before["control.cache.retention_hours"]
         else:
             self._data_before = _NestedDict(data={})
@@ -86,20 +88,24 @@ class CenterManager:
                 )
                 duplicate_keys = set(data.keys()) & set(full_data.keys())
                 if duplicate_keys:
-                    raise RuntimeError(f"Duplicate keys '{', '.join(duplicate_keys)}' in project config")
+                    raise RuntimeError(f"Duplicate keys '{", ".join(duplicate_keys)}' in project config")
                 full_data.update(data)
         if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_LOAD):
             full_data = self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_LOAD,
                 full_data,
             )
-        # TODO: Run an initial validation here
+        _util.jsonschema.validate_data(
+            data=full_data,
+            schema="full",
+            before_substitution=True,
+        )
         self._contents_raw = _NestedDict(full_data)
         return self._contents_raw
 
     def generate_data(self) -> _DataManager:
-        if self._ccm:
-            return self._ccm
+        if self._data:
+            return _DataManager(self._data)
         data = self.load()
         _data_gen.MainDataGenerator(
             data=data,
@@ -130,10 +136,10 @@ class CenterManager:
                 github_api=self._github_api,
             ).generate()
         if data.get("web"):
-            website_path = self._data_before["dir.web"] or data["dir.web"]
+            web_data_source = self._data_before if self._data_before["web.path.source"] else data
             _data_gen.WebDataGenerator(
                 data=data,
-                website_dir_path=self._path_root / website_path,
+                source_path=self._path_root / web_data_source["web.path.root"] / web_data_source["web.path.source"],
             ).generate()
         _data_gen.RepoDataGenerator(
             data=data,
@@ -146,29 +152,50 @@ class CenterManager:
                 const.FUNCNAME_CC_HOOK_POST_DATA,
                 data,
             )
-        data.fill()
         self._cache_manager.save()
+        data.fill()
         _DataValidator(data=data).validate()
-        self._ccm = _DataManager(data=data)
-        return self._ccm
+        self._data = data
+        return _DataManager(data)
 
-    def generate_files(self) -> list[tuple[_DynamicFile, str]]:
+    def generate_files(self) -> list[_GeneratedFile]:
         if self._generated_files:
             return self._generated_files
-        metadata = self.generate_data()
-        self._generated_files = _generator.generate(
-            content_manager=metadata,
-            path_manager=self.path_manager,
-            custom_generator=self._hook_manager,
+        self.generate_data()
+        generated_files = []
+        form_files = _file_gen.FormGenerator(
+            data=self._data,
+            repo_path=self._path_root,
+        ).generate()
+        generated_files.extend(form_files)
+        config_files, pyproject_pkg, pyproject_test = _file_gen.ConfigFileGenerator(
+            data=self._data,
+            data_before=self._data_before,
+            repo_path=self._path_root,
+        ).generate()
+        generated_files.extend(config_files)
+        if self._data["pkg"]:
+            package_files = _file_gen.PythonPackageFileGenerator(
+                data=self._data,
+                data_before=self._data_before,
+                repo_path=self._path_root,
+            ).generate(typ="pkg", pyproject_tool_config=pyproject_pkg)
+            generated_files.extend(package_files)
+        if self._data["test"]:
+            test_files = _file_gen.PythonPackageFileGenerator(
+                data=self._data,
+                data_before=self._data_before,
+                repo_path=self._path_root,
+            ).generate(typ="test", pyproject_tool_config=pyproject_test)
+            generated_files.extend(test_files)
+        readme_files = _file_gen.readme.generate(
+            data=self._data,
+            data_before=self._data_before,
+            root_path=self._path_root,
         )
+        generated_files.extend(readme_files)
+        self._generated_files = generated_files
         return self._generated_files
-
-    def generate(
-        content_manager: _DataManager,
-        custom_generator: _HookManager,
-    ) -> list[tuple[_DynamicFile, str]]:
-        return _generator.generate(content_manager=content_manager, path_manager=path_manager,
-                                   custom_generator=custom_generator)
 
     def compare_files(
         self,
