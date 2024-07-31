@@ -6,31 +6,34 @@ class NestedDict:
     def __init__(self, data: dict | None = None):
         self._data = data or {}
         self._templater = _ps.update.TemplateFiller(
-            template_start="${{",
-            template_end="}}",
-            path_prefix="$."
+            marker_start="${{",
+            marker_end="}}",
+            path_prefix="$.",
         )
         return
 
-    def fill(self, path: str | None = None):
+    def fill(self, path: str = ""):
         if not path:
             value = self._data
         else:
             value = self.__getitem__(path)
         if not value:
             return
-        filled_value = self.fill_data(value)
-        self.__setitem__(path, filled_value)
+        filled_value = self.fill_data(data=value, current_path=path)
+        if not path:
+            self._data = filled_value
+        else:
+            self.__setitem__(path, filled_value)
         return filled_value
 
-    def fill_data(self, data):
+    def fill_data(self, data, current_path: str = ""):
         return self._templater.fill(
             templated_data=data,
             source_data=self._data,
-            single_as_list=False,
+            current_path=current_path,
+            always_list=False,
             recursive=True,
         )
-
 
     def __call__(self):
         return self._data
