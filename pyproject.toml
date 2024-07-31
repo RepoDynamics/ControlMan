@@ -36,6 +36,7 @@ dependencies = [
     "FileEx",
     "PkgData",
     "PyShellMan",
+    "PySyntax",
     "referencing == 0.35.1",
     "jsonpath-ng == 1.6.1"
 ]
