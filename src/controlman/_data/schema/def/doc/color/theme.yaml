@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: HEX Color Theme
+description: A set of two hexadecimal colors for light and dark themes.
+type: object
+additionalProperties: false
+required: [ light ]
+properties:
+  light:
+    title: Light Color
+    description: Color of the element for light themes.
+    $ref: hex_color
+  dark:
+    title: Dark Color
+    description: Color of the element for dark themes.
+    $ref: hex_color

@@ -1,0 +1,12 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Array of Unique Strings
+description: |
+  A non-empty array of unique strings.
+type: array
+uniqueItems: true
+minItems: 0
+items:
+  type: string
+  minLength: 1
+examples:
+  - [ 'string1', 'string2', 'string3' ]

@@ -1,0 +1,63 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Module Dependency
+description: Definition of a module as a dependency.
+type: object
+properties:
+  name:
+    title: Name of the module.
+    $ref: oneline_string
+  import_name:
+    type: string
+    pattern: '^[a-zA-Z0-9_\.-]*$'
+  url:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          $ref: url
+      required: [ url ]
+    properties:
+      docs:
+        $ref: url
+      pip:
+        title: URL of the pip package.
+        $ref: url
+      conda:
+        type: string
+        $ref: url
+      source:
+        type: string
+        $ref: url
+  intersphinx_mapping:
+    type: object
+    additionalProperties: false
+    properties:
+      key:
+        type: string
+      target:
+        type: string
+        format: uri
+      inventory:
+        type: array
+        items:
+          type: string
+        minItems: 1
+    required: [ target ]
+  description:
+    type: string
+  notes:
+    type: string
+required: [ import_name ]
+examples:
+  - pip_spec: "numpy >= 1.21.2"
+    usage: Numerical computing.
+    url_source: ""
+    url_homepage: ""
+    url_docs: ""
+    conda_spec: ""
+    conda_channel: ""

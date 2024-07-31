@@ -63,7 +63,7 @@ properties:
     default_auto: |
       repository name (hyphens replaced with spaces)
     templating: load
-    type: nonempty_string
+    $ref: oneline_string
   title:
     title: A single-line description or slogan of the project.
     description: |
@@ -78,7 +78,7 @@ properties:
       key of the `pyproject.toml` file). It is also used in various other places,
       such as `title` HTML attributes of project logos and links.
       :::
-    $ref: one_line_string
+    $ref: oneline_string
   abstract:
     title: A short description of the project.
     description: |
@@ -97,7 +97,7 @@ properties:
       On online platforms, the first occurrence of the project's name in this text
       is automatically styled as bold/italic and linked to the project's website.
       :::
-    type: nonempty_string
+    $ref: nonempty_string
   keywords:
     title: Keywords categorizing the project.
     description: |
@@ -110,10 +110,7 @@ properties:
       [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords) metadata),
       helping to make the project easier to discover.      
       :::
-    type: array
-    uniqueItems: true
-    items:
-      type: nonempty_string
+    $ref: array_of_unique_strings
   highlights:
     title: Key features of the project.
     description: |
@@ -125,20 +122,7 @@ properties:
       and on the project's PyPI and TestPyPI pages
       (cf. [`readme.pypi`](#cc.readme.pypi)).
       :::
-    type: array
-    uniqueItems: true
-    items:
-      title: A key feature of the project.
-      type: object
-      additionalProperties: false
-      required: [ title, description ]
-      properties:
-        title:
-          title: Title of the feature.
-          type: nonempty_string
-        description:
-          title: Description of the feature.
-          type: nonempty_string
+    $ref: common-highlights
   license:
     title: License of the project.
     description: |
@@ -164,7 +148,7 @@ properties:
           the default MIT license's notice.
     type: object
     additionalProperties: false
-    required: [ id, path ]
+    required: [ id, path, url ]
     properties:
       id:
         title: |
@@ -185,10 +169,11 @@ properties:
           - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
           - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
           - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
-        $ref: '#/definitions/spdx_license_id'
+        default: AGPL-3.0-or-later
+        $ref: proj-spdx_license_id
       name:
         title: Full name of the license.
-        type: string
+        $ref: oneline_string
         examples:
           - GNU Affero General Public License v3.0 or later
           - MIT License
@@ -212,7 +197,7 @@ properties:
           - 'License :: OSI Approved :: BSD License'
       text:
         title: Full text of the license.
-        type: string
+        $ref: nonempty_string
       notice:
         title: Short text of the license.
         description: |
@@ -221,7 +206,7 @@ properties:
           This is automatically added to the main docstring of the package
           (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
           :::
-        type: string
+        $ref: nonempty_string
       path:
         title: |
           Path to the repository's
@@ -238,6 +223,14 @@ properties:
           - LICENSE.md
           - LICENSE.txt
           - LICENSE.rst
+      url:
+        title: |
+          URL of the repository's license file.
+          (cf. [`license`](#cc.license)).
+        default: ${{ repo.url.blob }}/${{ license.path }}
+        examples:
+          - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
+        $ref: url
   copyright:
     title: Copyright information of the project.
     description: |
@@ -257,16 +250,16 @@ properties:
       - notice: John Doe
         year_start: 2020
     type: object
+    default: { }
     additionalProperties: false
-    required: [ notice ]
     properties:
       notice:
         title: Copyright notice.
         description: |
           This is the final form of the notice that will be displayed.
-        type: string
+        default: ${{ copyright.period }} ${{ team.owner.name.full }}
+        $ref: oneline_string
         examples:
-          - ${{ copyright.period }} ${{ team.owner.name.full }}
           - ${{ copyright.period }} John Doe
           - A Custom Copyright Notice
       period:
@@ -279,7 +272,7 @@ properties:
           - If `start_year` is before the current year,
             the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
           - If `start_year` is after the current year, an error is raised.
-        type: string
+        $ref: oneline_string
       start_year:
         title: Start year of the project.
         description: |
@@ -288,6 +281,7 @@ properties:
         type: integer
         minimum: 1980
         maximum: 2040
+    required: [ notice ]
   role:
     title: Author role definitions.
     description: |
@@ -301,6 +295,9 @@ properties:
       which will then be displayed on the project's website and citation data.
       :::
     type: object
+    additionalProperties:
+      title: An author role definition.
+      $ref: proj-role
     examples:
       - concept:
           title: Conceptualization
@@ -318,9 +315,6 @@ properties:
           title: Maintenance
           description: Maintenance of the software and development workflows.
           abbreviation: MNT
-    additionalProperties:
-      title: An author role definition.
-      $ref: '#/definitions/role_definition'
   team:
     title: Natural and legal persons involved in the project.
     description: |
@@ -380,10 +374,10 @@ properties:
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
           in the GitHub API (cf. [`entity`](#cc.def.entity)).
-        $ref: '#/definitions/entity'
+        $ref: proj-entity
     additionalProperties:
       title: A natural person or entity involved in the project.
-      $ref: '#/definitions/entity'
+      $ref: proj-entity
   maintainer:
     title: Maintainers of the project.
     description: |
@@ -400,13 +394,17 @@ properties:
     type: object
     additionalProperties: false
     properties:
-      pull:
-        title: Pull request reviewers of the project.
+      code_owners:
+        title: Code owners of the project.
+        description: |
+          Pull request reviewers of the project.
         type: object
+        default: { }
         additionalProperties: false
+        required: [ owners, path ]
         properties:
-          code_owners:
-            title: Project code owners.
+          owners:
+            title: Code owners of the project.
             description: |
               This is used to automatically maintain the
               [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
@@ -432,7 +430,32 @@ properties:
               maxProperties: 1
               additionalProperties:
                 title: Code owners of the path or glob pattern.
-                $ref: '#/definitions/entities'
+                $ref: proj-entities
+          path:
+            title: |
+              Path to the
+              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+              file.
+
+              This file must be named `CODEOWNERS` (case-sensitive, without extension)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository.
+            type: string
+            default: .github/CODEOWNERS
+            pattern: ^(?:|.github/|docs/)CODEOWNERS$
+            examples:
+              - CODEOWNERS
+              - .github/CODEOWNERS
+              - docs/CODEOWNERS
+          url:
+            title: |
+              URL of the repository's code owners,
+              i.e., the `CODEOWNERS` file
+              (cf. [`readme.code_owners`](#cc.readme.code_owners)).
+            default: ${{ repo.url.blob }}/${{ maintainer.code_owners.path }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+            $ref: url
       issue:
         title: Assignees of project issues.
         description: |
@@ -445,7 +468,7 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the issue form.
-          $ref: '#/definitions/entities'
+          $ref: proj-entities
       discussion:
         title: Assignees of project discussions.
         description: |
@@ -459,25 +482,25 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the discussion category.
-          $ref: '#/definitions/entities'
+          $ref: proj-entities
       security:
         title: Project's security maintainer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: '#/definitions/entity'
+        $ref: proj-entity
       code_of_conduct:
         title: Project's code of conduct enforcer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: '#/definitions/entity'
+        $ref: proj-entity
       support:
         title: Project's support contact.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: '#/definitions/entity'
+        $ref: proj-entity
   citation:
     title: Project citation information.
     description: |
@@ -504,7 +527,6 @@ properties:
       :::
     type: object
     additionalProperties: false
-    required: [ title, authors, message ]
     properties:
       title:
         title: The name of the project.
@@ -527,6 +549,13 @@ properties:
           the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
           key of the `pyproject.toml` file).
           :::
+        default: [ '${{ team.owner }}' ]
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: An author of the project/package.
+          $ref: proj-entity
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
@@ -535,13 +564,6 @@ properties:
             - name:
                 first: John
                 last: Doe
-        default: [ '${{ team.owner }}' ]
-        type: array
-        uniqueItems: true
-        minItems: 1
-        items:
-          title: An author of the project/package.
-          $ref: '#/definitions/entity'
       contacts:
         title: Project's contact persons.
         description: |
@@ -559,7 +581,7 @@ properties:
                 first: John
                 last: Doe
               website: 'https://johndoe.com'
-        $ref: '#/definitions/entities'
+        $ref: proj-entities
       message:
         title: A message to the human reader of the file.
         examples:
@@ -573,7 +595,7 @@ properties:
         title: |
           A reference to another work that should be cited
           instead of the software itself.
-        $ref: '#/definitions/reference'
+        $ref: proj-reference
       grant_ids:
         title: List of OpenAIRE-supported grants funding the research for this project.
         description: |
@@ -594,14 +616,14 @@ properties:
         type: array
         uniqueItems: true
         items:
-          $ref: '#/definitions/reference'
+          $ref: proj-reference
       identifiers:
         title: The identifiers of the project.
         type: array
         uniqueItems: true
         minItems: 1
         items:
-          $ref: '#/definitions/identifier'
+          $ref: proj-identifier
       language:
         title: |
           [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
@@ -612,26 +634,23 @@ properties:
           - eng
       abstract:
         title: A description of the project.
-        type: string
+        $ref: nonempty_string
         default: ${{ abstract }}
         examples:
           - A custom description of the project that can span multiple lines.
       license:
         title: SPDX license ID of the project (cf. [`license.id`](#cc.license.id)).
-        type: string
         default: ${{ license.id }}
+        $ref: proj-spdx_license_id
       license_url:
         title: The URL of the project's license (only for non-SPDX licenses).
         $ref: url
       keywords:
         title: Keywords that describe the work.
-        type: array
-        uniqueItems: true
+        $ref: array_of_unique_strings
         default: ${{ keywords }}
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
-        items:
-          $ref: nonempty_array_of_unique_strings
       repository:
         title: Repository information.
         type: object
@@ -640,7 +659,6 @@ properties:
         properties:
           build:
             title: URL of the project in a build artifact/binary repository.
-            default: ${{ pkg.url.pypi.home }}
             $ref: url
           source:
             title: URL of the project in a source code repository.
@@ -658,6 +676,7 @@ properties:
         type: string
         enum: [ dataset, software ]
         default: software
+    required: [ title, authors, message ]
   funding:
     title: Available funding options of the project.
     description: |
@@ -737,7 +756,7 @@ properties:
         maxItems: 4
         uniqueItems: true
         items:
-          $ref: github_username
+          $ref: id-github-username
       custom:
         title: URLs of up to four custom funding platforms.
         type: array
@@ -745,398 +764,95 @@ properties:
         uniqueItems: true
         items:
           $ref: url
-  custom:
-    title: User-defined custom metadata and configurations.
-    description: |
-      Here you can store custom data that can be dynamically referenced 
-      anywhere else in the project.
-    type: object
-  slug:
-    title: Slugs of the project.
-    description: |
-      These are the automatically generated
-      slugified versions of the project's descriptors,
-      such as name, repository name, and keywords.
-      They can be used in places where only slugs are accepted.
-
-      Slugs are generated by removing non-ASCII characters from the input string,
-      converting it to lowercase,
-      replacing all non-alphanumeric characters with hyphens,
-      and removing leading and trailing hyphens.
-    type: object
-    properties:
-      name:
-        title: Slug of the project's name.
-        type: string
-      repo_name:
-        title: Slug of the project's repository name.
-        type: string
-      keywords:
-        title: Slugs of the project's keywords.
-        type: array
-        items:
-          type: string
-  # Package
-  pkg:
-    title: Package
-    description: |
-      Configurations of the project's Python package.
-    $ref: pkg/python/config
-  test:
-    title: Test Suite
-    description: |
-      Configurations of the project's test suite.
-    $ref: pkg/python/config
   # Documentation
   theme:
     title: Configurations defining the visual theme of the project.
     type: object
+    default: { }
     additionalProperties: false
-    required: [ color ]
+    required: [ path, color, logo]
     properties:
+      path:
+        title: Path to the media directory.
+        description: |
+          Due to an issue with the PyData Sphinx Theme, the logo files used in the navbar must be explicitly
+          added to the root of static path, since PyData always looks there, regardless of the set path.
+          Ref:
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1325 
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1328
+          - https://github.com/pydata/pydata-sphinx-theme/issues/1385
+        type: string
+        default: docs/media
       color:
         title: Colors of the project's theme.
         description: |
           All colors must be in hexadecimal format (without the leading `#` character).
         type: object
+        default: { }
         required: [ primary, secondary ]
         properties:
           primary:
             title: Primary colors of the project.
-            $ref: '#/definitions/color_config'
+            default:
+              light: 0F3460
+              dark: 3A98B9
+            $ref: doc-color-theme
           secondary:
             title: Secondary colors of the project.
-            $ref: '#/definitions/color_config'
+            default:
+              light: 562B08
+              dark: E3651D
+            $ref: doc-color-theme
       logo:
         title: Logo of the project.
         description: |
-          All values must be filenames of files in the [media](#cc.dir.media) directory.
+          All values must be filenames of files in the [media](#cc.theme.path) directory.
         type: object
+        additionalProperties: false
+        default: { }
+        required: [ icon, simple, full ]
         properties:
           icon:
             type: string
+            default: logo/favicon.svg
           simple:
             type: object
+            additionalProperties: false
+            required: [ light, dark ]
+            default: { }
             properties:
               light:
                 type: string
+                default: logo/simple_light.svg
               dark:
                 type: string
+                default: logo/simple_dark.svg
               raster:
                 type: string
+                default: logo/simple_light.png
           full:
             type: object
+            additionalProperties: false
+            required: [ light, dark ]
+            default: { }
             properties:
               light:
                 type: string
+                default: logo/full_light.svg
               dark:
                 type: string
+                default: logo/full_dark.svg
               raster:
                 type: string
+                default: logo/full_light.png
+      badge:
+        $ref: doc-badge-attrs
       footer:
         title: Configurations of project's footer.
         description: |
           The footer is automatically added to the project's [README](#cc.readme) and
           [community health files](#cc.health).
-        oneOf:
-          - type: string
-          - $ref: '#/definitions/readme_theme/pypackit/footer'
-  announcement:
-    title: Configurations of project announcements.
-    type: object
-    required: [ path, retention_days, url ]
-    properties:
-      path:
-        title: Path to the announcement banner file.
-        type: string
-        default: ${{ dir.web.root }}/announcement.html
-        examples:
-          - docs/announcement.html
-      retention_days:
-        title: Number of days to keep an announcement.
-        default: 30
-        $ref: non_negative_integer
-      url:
-        title: URL to the announcement page.
-        $ref: url
-        default: ${{ repo.url.raw }}/${{ announcement.path }}
-  health:
-    title: |
-      Configurations for 
-      [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      contributing:
-        title: Contributing guidelines of the project.
-        description: |
-          This corresponds to the [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users create an issue or open a pull request.
-
-          This file is used to communicate how people can contribute to the project,
-          and may include information on how to report bugs, suggest enhancements,
-          and submit code changes, as well as references to documentation, contact information,
-          and other resources. We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: |
-              Path to the
-              [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-              file.
-            description: |
-              This file must be named `CONTRIBUTING` (case-insensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
-            type: string
-            default: CONTRIBUTING.md
-            pattern: (?i)^(?:|.github/|docs/)CONTRIBUTING(?:.(txt|md|rst))?$
-            examples:
-              - CONTRIBUTING
-              - CONTRIBUTING.md
-              - contributing.rst
-              - docs/CONTRIBUTING.txt
-              - .github/contributing.md
-          content:
-            title: Content of the `CONTRIBUTING` file.
-            type: string
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      governance:
-        title: Governance model of the project.
-        description: |
-          This corresponds to the `GOVERNANCE`
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage.
-
-          This file is used to communicate how decisions are made in the project,
-          and may include information on how the project is managed, how decisions are made,
-          and how conflicts are resolved.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        type: object
-        additionalProperties: false
-        properties:
-          path:
-            title: Path to the `GOVERNANCE` file.
-            description: |
-              This file must be named `GOVERNANCE` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
-            default: GOVERNANCE.md
-            examples:
-              - GOVERNANCE
-              - GOVERNANCE.md
-              - docs/GOVERNANCE.txt
-              - .github/GOVERNANCE.md
-          content:
-            title: Content of the `GOVERNANCE` file.
-            type: string
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      security:
-        title: Security policy of the project.
-        description: |
-          This corresponds to the
-          [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users want to create a new issue or security advisory. 
-
-          This file is used to communicate how security vulnerabilities are handled in the project,
-          and may include information on how to report security vulnerabilities,
-          how they are triaged, and how they are resolved.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: |
-              Path to the
-              [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-              file.
-            description: |
-              This file must be named `SECURITY` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
-            default: SECURITY.md
-            examples:
-              - SECURITY
-              - SECURITY.md
-              - docs/SECURITY.txt
-              - .github/SECURITY.md
-          content:
-            title: Content of the `SECURITY` file.
-            type: string
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      support:
-        title: Support resources of the project.
-        description: |
-          This corresponds to the [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users are creating a new issue.
-
-          This file is used to communicate how users can get support for the project,
-          and may include information on how to ask questions, report issues, and request features.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: Support Policy
-            description: |
-              Path to the
-              [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-              file (cf. [`doc.support`](#cc.doc.support)).
-
-              This file must be named `SUPPORT` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
-            default: SUPPORT.md
-            examples:
-              - SUPPORT
-              - SUPPORT.md
-              - docs/SUPPORT.txt
-              - .github/SUPPORT.md
-          content:
-            title: Content of the `SUPPORT` file.
-            type: string
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      code_of_conduct:
-        title: Code of conduct of the project.
-        description: |
-          This corresponds to the
-          [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users are creating a new issue or opening a pull request.
-          However, for "Code of conduct" to be marked as complete in the repository's community profile,
-          GitHub only accepts the
-          [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
-          and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
-
-          This file is used to communicate the standards of behavior expected from contributors,
-          and may include information on how to report violations, how they are triaged,
-          and how they are resolved.
-        properties:
-          path:
-            title: |
-              Path to the
-              [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-              file.
-            description: |
-              This file must be named `CODE_OF_CONDUCT` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
-            default: CODE_OF_CONDUCT.md
-            examples:
-              - CODE_OF_CONDUCT
-              - CODE_OF_CONDUCT.md
-              - docs/CODE_OF_CONDUCT.txt
-              - .github/CODE_OF_CONDUCT.MD
-          content:
-            oneOf:
-              - type: string
-              - title: Configurations for the Contributor Covenant Code of Conduct.
-                type: object
-                additionalProperties: false
-                required: [ id, contact ]
-                properties:
-                  id:
-                    title: ID of the code of conduct.
-                    type: string
-                    enum: [ covenant ]
-                    default: covenant
-                    examples:
-                      - covenant
-                  contact:
-                    title: |
-                      Contact information of the maintainer for the code of conduct.
-                    type: object
-                    default: { }
-                    additionalProperties: false
-                    required: [ name, url ]
-                    examples:
-                      - display: ${{ maintainer.code_of_conduct.name.full }}
-                        url: ${{ maintainer.code_of_conduct.email.url }}
-                    properties:
-                      name:
-                        title: Display text of the link.
-                        type: string
-                        examples:
-                          - ${{ maintainer.code_of_conduct.name.full }}
-                      url:
-                        title: URL of the link.
-                        description: |
-                          For email addresses, use `mailto:`.
-                        type: string
-                        examples:
-                          - ${{ maintainer.code_of_conduct.email.url }}
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      code_owners:
-        title: Code owners of the project.
-        description: |
-        type: object
-        default: { }
-        additionalProperties: false
-        required: [ path ]
-        properties:
-          path:
-            title: |
-              Path to the
-              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file.
-
-              This file must be named `CODEOWNERS` (case-sensitive, without extension)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-            type: string
-            default: .github/CODEOWNERS
-            pattern: ^(?:|.github/|docs/)CODEOWNERS$
-            examples:
-              - CODEOWNERS
-              - .github/CODEOWNERS
-              - docs/CODEOWNERS
+        $ref: doc-document
   readme:
     title: README file configurations.
     description: |
@@ -1144,7 +860,10 @@ properties:
       project's repositories, such as GitHub, PyPI, and Anaconda, as well as
       README files in different directories of the repository providing
       technical information to contributors and reviewers.
-
+      
+      Configurations for README files in different directories of the repository.
+      For each readme file, add a key-value pair where the key is the path to the directory.
+      
       :::{admonition} Supported Syntax
       :class: dropdown info
 
@@ -1169,110 +888,230 @@ properties:
       must be provided for PyPI, to ensure that the contents are correctly rendered on the package index.
       :::
     type: object
-    additionalProperties: false
+    additionalProperties:
+      title: Configuration for a directory README file.
+      $ref: common-readme_file
     properties:
-      github:
-        title: |
+      main:
+        title: >-
           Main [`README`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
           file of the GitHub repository.
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: Filepath
-            description: |
-              Path to the README file.
+        allOf:
+          - properties:
+              path:
+                description: |
+                  It must be named `README` (case-sensitive) and placed either in the
+                  `.github` directory, the `docs` directory, or the root of the repository,
+                  and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  If more than one of such files are present, the order of precedence is
+                  `.github`, then root, and finally the `docs` directory.
+                pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
+                default: README.md
+                examples:
+                  - README
+                  - README.md
+                  - .github/README.txt
+                  - docs/README.rst
+          - $ref: common-readme_file
+  health:
+    title: |
+      Configurations for 
+      [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      contributing:
+        title: Contributing Guidelines
+        description: |
+          This corresponds to the [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+          file in the repository, which is automatically recognized by GitHub,
+          and displayed on the repository's homepage,
+          as well as when users create an issue or open a pull request.
 
-              It must be named `README` (case-sensitive) and placed either in the
-              `.github` directory, the `docs` directory, or the root of the repository,
-              and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-              If more than one of such files are present, the order of precedence is
-              `.github`, then root, and finally the `docs` directory.
-            type: string
-            pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
-            default: README.md
-            examples:
-              - README
-              - README.md
-              - .github/README.txt
-              - docs/README.rst
-          content:
-            oneOf:
-              - type: string
-              - $ref: '#/definitions/readme_theme/pypackit/main'
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      pypi:
-        title: README file of the PyPI/TestPyPI package.
+          This file is used to communicate how people can contribute to the project,
+          and may include information on how to report bugs, suggest enhancements,
+          and submit code changes, as well as references to documentation, contact information,
+          and other resources. We recommend to keep this file short,
+          and only include links to resources on the project's website,
+          as to avoid duplication of content.
+        allOf:
+          - $ref: common-readme_file
+          - properties:
+              path:
+                title: |
+                  Path to the
+                  [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+                  file.
+                description: |
+                  This file must be named `CONTRIBUTING` (case-insensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
+                pattern: (?i)^(?:|.github/|docs/)CONTRIBUTING(?:.(txt|md|rst))?$
+                default: CONTRIBUTING.md
+                examples:
+                  - CONTRIBUTING
+                  - CONTRIBUTING.md
+                  - contributing.rst
+                  - docs/CONTRIBUTING.txt
+                  - .github/contributing.md
+      governance:
+        title: Governance Model
         description: |
-          `readme` metadata of your package
-          (formerly known as `long_description`)
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: Path to the PyPI README file.
-            type: string
-            examples:
-              - ${{ dir.pkg.source }}/README_PYPI.md
-              - README_PYPI.md
-          content:
-            oneOf:
-              - type: string
-              - $ref: '#/definitions/readme_theme/pypackit/main'
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      conda:
-        title: README file of the Conda package.
-        type: object
-        additionalProperties: false
-        required: [ path, content, footer ]
-        properties:
-          path:
-            title: Path to the Conda README file.
-            type: string
-            examples:
-              - ${{ dir.pkg.source }}/README_CONDA.md
-              - README_CONDA.md
-          content:
-            oneOf:
-              - type: string
-              - $ref: '#/definitions/readme_theme/pypackit/main'
-          footer:
-            title: Whether to include a footer.
-            type: boolean
-            default: true
-      dir:
-        title: Directory READMEs
+          This corresponds to the `GOVERNANCE`
+          file in the repository, which is automatically recognized by GitHub,
+          and displayed on the repository's homepage.
+
+          This file is used to communicate how decisions are made in the project,
+          and may include information on how the project is managed, how decisions are made,
+          and how conflicts are resolved.
+          We recommend to keep this file short,
+          and only include links to resources on the project's website,
+          as to avoid duplication of content.
+        allOf:
+          - $ref: common-readme_file
+          - properties:
+              path:
+                title: Path to the `GOVERNANCE` file.
+                description: |
+                  This file must be named `GOVERNANCE` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                type: string
+                pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
+                default: GOVERNANCE.md
+                examples:
+                  - GOVERNANCE
+                  - GOVERNANCE.md
+                  - docs/GOVERNANCE.txt
+                  - .github/GOVERNANCE.md
+      security:
+        title: Security Policy
         description: |
-          Configurations for README files in different directories of the repository.
-          For each readme file, add a key-value pair where the key is the path to the directory.
-        type: object
-        additionalProperties:
-          title: Configuration for a directory README file.
-          type: object
-          additionalProperties: false
-          required: [ content, footer ]
-          properties:
-            content:
-              title: Content of the directory README file.
-              type: string
-            footer:
-              title: Whether to include a footer.
-              type: boolean
-              default: true
+          This corresponds to the
+          [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
+          file in the repository, which is automatically recognized by GitHub,
+          and displayed on the repository's homepage,
+          as well as when users want to create a new issue or security advisory. 
+
+          This file is used to communicate how security vulnerabilities are handled in the project,
+          and may include information on how to report security vulnerabilities,
+          how they are triaged, and how they are resolved.
+          We recommend to keep this file short,
+          and only include links to resources on the project's website,
+          as to avoid duplication of content.
+        allOf:
+          - $ref: common-readme_file
+          - properties:
+              path:
+                title: |
+                  Path to the
+                  [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
+                  file.
+                description: |
+                  This file must be named `SECURITY` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                type: string
+                pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
+                default: SECURITY.md
+                examples:
+                  - SECURITY
+                  - SECURITY.md
+                  - docs/SECURITY.txt
+                  - .github/SECURITY.md
+      support:
+        title: Support Resources
+        description: |
+          This corresponds to the [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
+          file in the repository, which is automatically recognized by GitHub,
+          and displayed on the repository's homepage,
+          as well as when users are creating a new issue.
+
+          This file is used to communicate how users can get support for the project,
+          and may include information on how to ask questions, report issues, and request features.
+          We recommend to keep this file short,
+          and only include links to resources on the project's website,
+          as to avoid duplication of content.
+        allOf:
+          - $ref: common-readme_file
+          - properties:
+              path:
+                title: Support Policy
+                description: |
+                  Path to the
+                  [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
+                  file (cf. [`doc.support`](#cc.doc.support)).
+
+                  This file must be named `SUPPORT` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                type: string
+                pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
+                default: SUPPORT.md
+                examples:
+                  - SUPPORT
+                  - SUPPORT.md
+                  - docs/SUPPORT.txt
+                  - .github/SUPPORT.md
+      code_of_conduct:
+        title: Code of Conduct
+        description: |
+          This corresponds to the
+          [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
+          file in the repository, which is automatically recognized by GitHub,
+          and displayed on the repository's homepage,
+          as well as when users are creating a new issue or opening a pull request.
+          However, for "Code of conduct" to be marked as complete in the repository's community profile,
+          GitHub only accepts the
+          [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
+          and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
+
+          This file is used to communicate the standards of behavior expected from contributors,
+          and may include information on how to report violations, how they are triaged,
+          and how they are resolved.
+        allOf:
+          - $ref: common-readme_file
+          - properties:
+              path:
+                title: |
+                  Path to the
+                  [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
+                  file.
+                description: |
+                  This file must be named `CODE_OF_CONDUCT` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository.
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                type: string
+                pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
+                default: CODE_OF_CONDUCT.md
+                examples:
+                  - CODE_OF_CONDUCT
+                  - CODE_OF_CONDUCT.md
+                  - docs/CODE_OF_CONDUCT.txt
+                  - .github/CODE_OF_CONDUCT.MD
   web:
     title: Configurations for the project's website.
     type: object
     additionalProperties: false
-    required: [ sphinx ]
     properties:
+      path:
+        title: Path to the website directory.
+        type: object
+        default: { }
+        additionalProperties: false
+        required: [ root, source ]
+        properties:
+          root:
+            type: string
+            default: docs/website
+          source:
+            type: string
+            default: source
       sphinx:
         title: Configurations for the Sphinx website generator.
         description: |
@@ -1286,13 +1125,23 @@ properties:
             and should not be set here.
         type: object
         additionalProperties: false
-        required: [ dependency ]
         properties:
           dependency:
-            $ref: dependency
+            default:
+              import_name: sphinx
+              pip:
+                spec: sphinx == 7.3.7
+              conda:
+                spec: sphinx == 7.3.7
+                channel: conda-forge
+              url:
+                docs: https://www.sphinx-doc.org/
+                source: https://github.com/sphinx-doc/sphinx
+            $ref: common-dep_pkg
           config:
             type: object
             additionalProperties: true
+            default: { }
             properties:
               project:
                 title: Name of the project.
@@ -1329,7 +1178,7 @@ properties:
                   where `major` and `minor` are integers.
                   This is automatically determined from the [`dependency`](#cc.web.sphinx.dependency) definition.
                 type: string
-                default_auto: determined from dependency definition
+                default: '7.3'
               today_fmt:
                 title: Format of the current date.
                 type: string
@@ -1337,7 +1186,7 @@ properties:
               numfig:
                 title: Numbering of figures.
                 type: boolean
-                default: false
+                default: true
               numfig_format:
                 title: |
                   Format of the figure numbering
@@ -1347,7 +1196,7 @@ properties:
                   code-block:
                     title: Format of code block numbering.
                     type: string
-                    default: 'Listing %s'
+                    default: 'Code %s'
                   figure:
                     title: Format of figure numbering.
                     type: string
@@ -1360,6 +1209,28 @@ properties:
                     title: Format of table numbering.
                     type: string
                     default: 'Table %s'
+              numfig_secnum_depth:
+                title: Depth of section numbering.
+                type: integer
+                default: 3
+              pygment_style:
+                title: Pygments style to use.
+                type: string
+                default: 'default'
+              show_authors:
+                title: Show authors in the output.
+                type: boolean
+                default: true
+              exclude_patterns:
+                title: Patterns to exclude from the build.
+                type: array
+                default:
+                  - "**Thumbs.db"
+                  - "**.DS_Store"
+                  - "**.ipynb_checkpoints"
+                  - "**README.md"
+                items:
+                  type: string
               html_static_path:
                 title: Paths to static files.
                 description: |
@@ -1400,7 +1271,7 @@ properties:
               latex_show_urls:
                 title: Show URLs in LaTeX output.
                 type: string
-                enum: [ no, inline, footnotes ]
+                enum: [ no, footnote, inline ]
                 default: 'footnote'
               latex_theme:
                 title: LaTeX theme to use.
@@ -1423,11 +1294,12 @@ properties:
                   description: |
                     The `import_name` must be the name of the extension as it is imported in Python,
                     i.e., what's added to the `extensions` list in the `conf.py` file.
-                  $ref: module_dependency
+                  $ref: common-dep_module
                 config:
                   title: Configuration to be added to the Sphinx configuration.
                   type: object
                   additionalProperties: true
+        required: [ dependency ]
       theme:
         title: Theme of the website.
         type: object
@@ -1436,9 +1308,19 @@ properties:
         properties:
           dependency:
             title: Name of the theme.
-            oneOf:
-              - $ref: dependency
-              - $ref: module_dependency
+            default:
+              import_name: pydata_sphinx_theme
+              pip:
+                spec: pydata-sphinx-theme == 0.15.4
+              conda:
+                spec: pydata-sphinx-theme == 0.15.4
+                channel: conda-forge
+              url:
+                docs: https://pydata-sphinx-theme.readthedocs.io/
+                source: https://github.com/pydata/pydata-sphinx-theme
+            anyOf:
+              - $ref: common-dep_pkg
+              - $ref: common-dep_module
           config:
             title: Configuration options for the theme.
             type: object
@@ -1457,7 +1339,7 @@ properties:
           properties:
             dependency:
               title: Dependency to be installed.
-              $ref: dependency
+              $ref: common-dep_pkg
             config:
               title: Configuration to be added to the Sphinx configuration.
               type: object
@@ -1468,89 +1350,34 @@ properties:
           All paths must be relative to the root of the website directory, without suffix.
         type: object
         default: { }
-        required: [ blog ]
         additionalProperties:
           title: Relative path to the page.
-          type: string
+          type: object
+          properties:
+            title:
+              title: Title of the page.
+              type: string
+              examples:
+                - Introduction
+                - User Manual
+                - Installation
+            path:
+              title: Path to the page.
+              type: string
+              examples:
+                - intro
+                - intro/index
+                - user-manual
+                - user-manual/installation/index
+            url:
+              title: URL of the page.
+              $ref: url
           examples:
             - about/license
             - help/contact
-
-        properties:
-          blog:
-            title: Path to the website's blog directory.
-            type: string
-            default: news
-          sections:
-            title: Paths to main sections of the website.
-            description: |
-              This is automatically generated from the `toctree` of the website's main `index` file.
-            type: array
-            uniqueItems: true
-            items:
-              title: A main section of the website.
-              $ref: "#/definitions/web_section"
-              web_section:
-                title: Section
-                description: A (sub)section of the website.
-                type: object
-                additionalProperties: false
-                properties:
-                  title:
-                    title: Section Title
-                    description: Title of the section.
-                    type: string
-                    examples:
-                      - Introduction
-                      - User Manual
-                      - Installation
-                  path:
-                    title: Section Path
-                    description: Relative path to the section.
-                    type: string
-                    examples:
-                      - intro
-                      - intro/index
-                      - user-manual
-                      - user-manual/installation/index
-          subsections:
-            title: Paths to subsections of the website, i.e., level-2 sections.
-            description: |
-              This is automatically generated from the `toctree` of the website's main `index` file,
-              and the `tocree`s of files listed there.
-            type: array
-            uniqueItems: true
-            items:
-              title: Subsections of a specific section of the website.
-              type: object
-              additionalProperties: false
-              properties:
-                section_title:
-                  title: Title of the main section.
-                  type: string
-                  examples:
-                    - User Manual
-                    - Installation
-                subsections:
-                  title: Paths to subsections of the main section.
-                  type: array
-                  uniqueItems: true
-                  items:
-                    title: A subsection of the main section.
-                    $ref: "#/definitions/web_section"
       env:
         title: Environment file configurations.
-        type: object
-        additionalProperties: false
-        required: [ file ]
-        properties:
-          dependency:
-            type: object
-            minProperties: 1
-            additionalProperties:
-              $ref: dependency
-          file:
-            $ref: env_file_config
+        $ref: common-env
       url:
         title: Website URLs.
         type: object
@@ -1580,8 +1407,7 @@ properties:
               [user page](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)
               (i.e., named `${{ team.owner.github.user }}.github.io`),
               in which case the base URL is set to `https://${{ team.owner.github.user }}.github.io`.
-            type: string
-            format: uri
+            $ref: url
             examples:
               - 'https://${{ repo.info.owner.login }}.github.io'
           home:
@@ -1589,12 +1415,41 @@ properties:
             description: |
               This should point to the main landing page (i.e., `index` file) of the website.
               If not set, this will be set to the base URL.
-            type: string
-            format: uri
             default: ${{ web.url.base }}
             examples:
               - ${{ web.url.base }}/some/path
-            $ref: '#/definitions/url'
+            $ref: url
+    required: [ path, sphinx ]
+  announcement:
+    title: Configurations of project announcements.
+    type: object
+    properties:
+      path:
+        title: Path to the announcement banner file.
+        type: string
+        default: ${{ web.path.root }}/announcement.html
+        examples:
+          - docs/announcement.html
+      retention_days:
+        title: Number of days to keep an announcement.
+        default: 30
+        $ref: non_negative_number
+      url:
+        title: URL to the announcement page.
+        $ref: url
+        default: ${{ repo.url.raw }}/${{ announcement.path }}
+    required: [ path, retention_days, url ]
+  # Package
+  pkg:
+    title: Package
+    description: |
+      Configurations of the project's Python package.
+    $ref: pkg-config
+  test:
+    title: Test Suite
+    description: |
+      Configurations of the project's test suite.
+    $ref: pkg-config
   # ITS
   changelog:
     title: Changelog Configurations
@@ -1693,6 +1548,7 @@ properties:
     type: object
     additionalProperties: false
     required: [ primary, secondary ]
+    default: { }
     properties:
       auto:
         title: Automatic Commits
@@ -1705,12 +1561,12 @@ properties:
             title: Maintain
             description: |
               Continuous maintenance and refactoring tasks.
-            $ref: '#/definitions/commit_auto'
+            $ref: its-commit-auto
           sync:
             title: Sync
             description: |
               Continuous configuration automation and synchronization of dynamic files.
-            $ref: '#/definitions/commit_auto'
+            $ref: its-commit-auto
       primary:
         title: Primary Commits
         description: Primary action commit types
@@ -1721,28 +1577,28 @@ properties:
             Configurations for a custom primary commit type.
             For each custom commit type, a key-value pair must be added,
             where the key is the ID of the commit type, to reference in other places.
-          $ref: '#/definitions/commit_primary'
+          $ref: its-commit-primary
         properties:
           major:
             title: Major Release
             description: Configurations for a major release commit type.
-            $ref: '#/definitions/commit_primary'
+            $ref: its-commit-primary
           minor:
             title: Minor Release
             description: Configurations for a minor release commit type.
-            $ref: '#/definitions/commit_primary'
+            $ref: its-commit-primary
           patch:
             title: Patch Release
             description: Configurations for a patch release commit type.
-            $ref: '#/definitions/commit_primary'
+            $ref: its-commit-primary
           post:
             title: Post-release
             description: Configurations for a post-release commit type.
-            $ref: '#/definitions/commit_primary'
+            $ref: its-commit-primary
           web:
             title: Website
             description: Configurations for a website commit type.
-            $ref: '#/definitions/commit_primary'
+            $ref: its-commit-primary
       secondary:
         title: Secondary Commits
         description: |
@@ -1754,14 +1610,28 @@ properties:
         additionalProperties:
           title: Custom Secondary Commit
           description: Configurations for a secondary commit type.
-          $ref: repo/commit/secondary
+          type: object
+          additionalProperties: false
+          properties:
+            description:
+              title: Description
+              description: Description of the commit type.
+              type: string
+            changelog_id:
+              title: Changelog ID
+              description: ID of the changelog to which the commit will be added.
+              type: string
+            changelog_section_id:
+              title: Changelog Section ID
+              description: ID of the section of the changelog to which the commit will be added.
+              type: string
   label:
     title: GitHub labels settings for the project
     description: |
       [GitHub docs](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels)
     type: object
     additionalProperties: false
-    required: [ version, branch, primary_type, status ]
+    required: [ type, status, branch, version ]
     properties:
       type:
         title: Primary Labels
@@ -1772,11 +1642,11 @@ properties:
           prefix:
             title: Prefix
             description: Prefix for label names.
-            $ref: '#/definitions/label_prefix'
+            $ref: its-label-attr-prefix
           color:
             title: Color
             description: Color of the labels.
-            $ref: '#/definitions/label_color'
+            $ref: hex_color
           label:
             title: Labels
             description: Primary labels.
@@ -1784,47 +1654,47 @@ properties:
             additionalProperties:
               title: Custom Primary Labels
               description: Custom primary labels.
-              $ref: '#/definitions/label_group_element'
+              $ref: its-label-group-element
             properties:
               major:
                 title: Major Release
                 description: Label for major release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               minor:
                 title: Minor Release
                 description: Label for minor release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               patch:
                 title: Patch Release
                 description: Label for patch release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               post:
                 title: Post Release
                 description: Label for post release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               web:
                 title: Website
                 description: Label for website deployment.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
       subtype:
         title: Secondary Type Labels
         description: Issue sub types
-        $ref: '#/definitions/label_group'
+        $ref: its-label-group
       status:
         title: Status
         description: Issue/pull status
         type: object
         additionalProperties: false
-        required: [ prefix, color, labels ]
+        required: [ prefix, color, label ]
         properties:
           prefix:
             title: Prefix
             description: Prefix for the label name
-            $ref: '#/definitions/label_prefix'
+            $ref: its-label-attr-prefix
           color:
             title: Color
             description: Color of the label.
-            $ref: '#/definitions/label_color'
+            $ref: hex_color
           label:
             title: Labels
             description: Labels for the issue sub-type
@@ -1848,63 +1718,63 @@ properties:
               triage:
                 title: Triage
                 description: The issue is being triaged.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               rejected:
                 title: Rejected
                 description: The issue/pull-request has been rejected.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               duplicate:
                 title: Duplicate
                 description: The issue/pull-request is a duplicate.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               invalid:
                 title: Invalid
                 description: The issue/pull-request is invalid.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               planning:
                 title: Planning
                 description: The issue is in the planning phase.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               requirement_analysis:
                 title: Requirement Analysis
                 description: The issue is in the requirement analysis phase.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               design:
                 title: Design
                 description: The issue is in the design phase.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               implementation:
                 title: Implementation
                 description: The issue is in the implementation phase.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               testing:
                 title: Testing
                 description: The issue is in the testing phase.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               deploy_alpha:
                 title: Alpha Release
                 description: The issue/pull-request is in alpha release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               deploy_beta:
                 title: Beta Release
                 description: The issue/pull-request is in beta release.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               deploy_rc:
                 title: Release Candidate
                 description: The issue/pull-request is published as a release candidate.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
               deploy_final:
                 title: Final Release
                 description: The issue/pull-request has been merged into a release branch.
-                $ref: '#/definitions/label_group_element'
+                $ref: its-label-group-element
       branch:
         title: Branch
         description: Branch labels. This is an automatic label group.
-        $ref: '#/definitions/label_group_auto'
+        $ref: its-label-auto_group
       version:
         title: Version
         description: Version labels. This is an automatic label group.
-        $ref: '#/definitions/label_group_auto'
+        $ref: its-label-auto_group
       custom:
         title: Custom Labels
         description: Custom labels.
@@ -1927,11 +1797,11 @@ properties:
                 color:
                   title: Color
                   description: Color of the label
-                  $ref: '#/definitions/label_color'
+                  $ref: hex_color
                 description:
                   title: Description
                   description: Description of the label.
-                  $ref: '#/definitions/label_description'
+                  $ref: its-label-attr-description
           group:
             title: Label Groups
             description: Custom label groups.
@@ -1939,7 +1809,7 @@ properties:
             additionalProperties:
               title: Label Group
               description: A group of labels.
-              $ref: '#/definitions/label_group'
+              $ref: its-label-group
       all:
         title: All labels
         type: array
@@ -1955,8 +1825,9 @@ properties:
       and settings for the project's [issue template chooser]()https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser),
       which is automatically maintained via the `.github/ISSUE_TEMPLATE/config.yaml` configuration file.
     type: object
+    default : { }
     additionalProperties: false
-    required: [ blank_enabled, contact_links, forms, dev_protocol ]
+    required: [ blank_enabled ]
     properties:
       blank_enabled:
         description: Whether to allow submission of free-form issues
@@ -1970,6 +1841,7 @@ properties:
         items:
           type: object
           additionalProperties: false
+          required: [ name, about, url ]
           properties:
             name:
               description: Title shown on the issue template chooser
@@ -1981,7 +1853,9 @@ properties:
               description: URL to the external link
               type: string
               format: uri
-          required: [ name, about, url ]
+      form_element:
+        type: object
+        additionalProperties: true
       forms:
         title: Issue form definitions and configurations.
         type: array
@@ -1990,6 +1864,7 @@ properties:
         items:
           type: object
           additionalProperties: false
+          required: [ id, type, name, description, body ]
           properties:
             id:
               title: Unique identifier of the issue form.
@@ -2030,7 +1905,6 @@ properties:
                 It also helps maintainers and users
                 differentiate between issues with the same primary type.
               type: string
-              default: ''
             pre_process:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
@@ -2059,7 +1933,7 @@ properties:
                 - if_any: [ "${‎{ package.releases.gui_scripts }}" ] # Display a form only if the package has a GUI interface
                 - if_any: [ "${‎{ package.releases.cli_scripts }}" ] # Display a form only if the package has a CLI interface
                 - if_any: [ "${‎{ package.releases.has_scripts }}" ] # Display an element within a form only if the package has scripts
-              $ref: '#/definitions/pre_process'
+              $ref: its-gh_form-preprocess
             post_process:
               description: |
                 {{ pp_meta.name }} allows you to define post-processing instructions for each form,
@@ -2236,61 +2110,7 @@ properties:
                 - "API Bug: "
               type: string
             body:
-              description: |
-                Each form must have a body, defined as an array of form elements for requesting user input.
-                Each form element itself is defined as a set of key-value pairs
-                that determine the type of the element, the properties of the element,
-                and the constraints you want to apply to the element.
-                The rules and syntax are identical to that of the
-                [GitHub's form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema),
-                with several additional options and constraints:
-
-                - Each form must have a `dropdown` element whose `id` is set to either `version` or `branch`,
-                  and whose `options` are an array of all the supported package versions (for version)
-                  or active release branches (for branch) in the repository.
-                  The `options` can be defined dynamically, by setting it equal to
-                  `${‎{ package.releases.package_versions }}` (for version) or
-                  `${‎{ package.releases.branch_names }}` (for branch).
-                  It makes sense to add version to forms that concern an issue with the package,
-                  and branch to forms for package-independent issues.
-                  When branch is set, {{ pp_meta.name }} parses the the user input
-                  and automatically adds the corresponding [branch labels](../label/index.md#branches)
-                  to each issue that is created using the form.
-                  Similarly, when version is set, {{ pp_meta.name }} determines the branch
-                  hosting each selected version, and automatically adds both
-                  [version labels](../label/index.md#versions) and branch labels to each issue.
-                  During the triage process, the maintainers can add or remove version/branch labels
-                  as needed; for example, the user may have selected only one version where they encountered the issue,
-                  but during the triage process, the maintainers may determine that the issue affects multiple versions.
-                  Subsequently, when the issue is labeled as [in development](../label/index.md#statuses),
-                  {{ pp_meta.name }} automatically creates a new development branch from each branch that is labeled.
-                - The value of the `label` key for each element that defines it (i.e., all but the `markdown` element)
-                  must be unique across all form elements.
-                  This is needed for the [post-processing](#post-processing) step,
-                  since the `label` is the only way to identify each element in the issue body after it has been created.
-                - You can specify an additional [`pre_process`](#pre-processing) key for each element.
-              type: array
-              minItems: 1
-              items:
-                type: object
-                additionalProperties: false
-                properties:
-                  type:
-                    type: string
-                    enum: [ checkboxes, dropdown, input, markdown, textarea ]
-                  id:
-                    type: string
-                    pattern: ^[A-Za-z][A-Za-z0-9_-]*$
-                  attributes:
-                    type: object
-                    additionalProperties: true
-                  validations:
-                    type: object
-                    additionalProperties: true
-                  pre_process:
-                    $ref: '#/definitions/pre_process'
-                required: [ type, attributes ]
-          required: [ id, primary_type, name, description, body ]
+              $ref: its-gh_form-body
   document:
     description: Development process protocol specifications
     type: object
@@ -2363,82 +2183,6 @@ properties:
     description: |
       [GitHub Discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions)
       configurations for the repository.
-    examples:
-      - form:
-          question_issues:
-            # A default title that will be pre-populated in the discussion submission form.
-            title: "[General] "
-
-            # Labels that will automatically be added to discussions created with this template.
-            labels: [ "General Introduction" ]
-
-            # Definition of the input types in the discussion form.
-            body:
-              - type: markdown
-                attributes:
-                  value: |
-                    This is text that will show up in the template!
-              - type: textarea
-                id: improvements
-                attributes:
-                  label: Top 3 improvements
-                  description: "What are the top 3 improvements we could make to this project?"
-                  value: |
-                    1.
-                    2.
-                    3.
-                    ...
-                  render: bash
-                validations:
-                  required: true
-              - type: markdown
-                attributes:
-                  value: |
-                    ## Markdown header
-                    And some more markdown
-              - type: input
-                id: has-id
-                attributes:
-                  label: Suggestions
-                  description: A description about suggestions to help you
-                validations:
-                  required: true
-              - type: dropdown
-                id: download
-                attributes:
-                  label: Which area of this project could be most improved?
-                  options:
-                    - Documentation
-                    - Pull request review time
-                    - Bug fix time
-                    - Release cadence
-                validations:
-                  required: true
-              - type: checkboxes
-                attributes:
-                  label: Check that box!
-                  options:
-                    - label: This one!
-                      required: true
-                    - label: I won't stop you if you check this one, too
-              - type: markdown
-                attributes:
-                  value: |
-                    ### The thrilling conclusion
-                    _to our template_
-
-          question_bug:
-            title: Is this a bug?
-            labels:
-              - bug
-            body:
-              - type: markdown
-                id: bug
-                attributes:
-                  value: |
-                    **Describe the bug**
-
-
     type: object
     additionalProperties: false
     properties:
@@ -2518,49 +2262,65 @@ properties:
                     description: Name of an available label to add.
                     type: string
                 body:
-                  title: Body
-                  description: |
-                    Definition of the elements in the discussion form, according to GitHub's
-                    [syntax for GitHub's form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema),
-                    which is shared between issue forms and discussion category forms.
-                  type: array
-                  items:
-                    title: Form Element
-                    description: Definition of a form element in the discussion form's body.
-                    type: object
-                    additionalProperties: false
-                    required: [ type, attributes ]
-                    properties:
-                      type:
-                        title: Type
-                        description: Type of the element.
-                        type: string
-                        enum: [ checkboxes, dropdown, input, markdown, textarea ]
-                      id:
-                        title: ID
-                        description: |
-                          The canonical identifier for the element in URL query parameter prefills.
-                          It can only use alpha-numeric characters, hyphens, and underscores,
-                          and must be unique in the form definition.
-                          Note that `markdown` elements cannot have an ID.
-                        type: string
-                        pattern: ^[A-Za-z][A-Za-z0-9_-]*$
+                  $ref: its-gh_form-body
+              examples:
+                - title: "[General] " # A default title that will be pre-populated in the discussion submission form.
+                  # Labels that will automatically be added to discussions created with this template.
+                  labels: [ "General Introduction" ]
+                  # Definition of the input types in the discussion form.
+                  body:
+                    - type: markdown
                       attributes:
-                        title: Attributes
-                        description: |
-                          A set of key-value pairs that define the attributes of the element.
-                          Depending on the `type` of the element, different keys are available,
-                          defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
-                        type: object
-                        additionalProperties: true
+                        value: |
+                          This is text that will show up in the template!
+                    - type: textarea
+                      id: improvements
+                      attributes:
+                        label: Top 3 improvements
+                        description: "What are the top 3 improvements we could make to this project?"
+                        value: |
+                          1.
+                          2.
+                          3.
+                          ...
+                        render: bash
                       validations:
-                        title: Validations
-                        description: |
-                          A set of key-value pairs that set constraints on the element.
-                          Depending on the `type` of the element, different keys are available,
-                          defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
-                        type: object
-                        additionalProperties: true
+                        required: true
+                    - type: markdown
+                      attributes:
+                        value: |
+                          ## Markdown header
+                          And some more markdown
+                    - type: input
+                      id: has-id
+                      attributes:
+                        label: Suggestions
+                        description: A description about suggestions to help you
+                      validations:
+                        required: true
+                    - type: dropdown
+                      id: download
+                      attributes:
+                        label: Which area of this project could be most improved?
+                        options:
+                          - Documentation
+                          - Pull request review time
+                          - Bug fix time
+                          - Release cadence
+                      validations:
+                        required: true
+                    - type: checkboxes
+                      attributes:
+                        label: Check that box!
+                        options:
+                          - label: This one!
+                            required: true
+                          - label: I won't stop you if you check this one, too
+                    - type: markdown
+                      attributes:
+                        value: |
+                          ### The thrilling conclusion
+                          _to our template_
   # VCS
   repo:
     title: GitHub/Git repository settings.
@@ -2617,7 +2377,7 @@ properties:
         description: |
           This is displayed on the GitHub repository's homepage,
           helping users to easily find your project's website.
-        $ref: 'defs#/definitions/url'
+        $ref: url
         default: ${{ web.url.home }}
       secret_scanning:
         title: Enable secret scanning.
@@ -2715,7 +2475,7 @@ properties:
           maxProperties: 1
           additionalProperties:
             title: List of attributes to set for the matched files.
-            $ref: "defs#/definitions/nonempty_array_of_unique_strings"
+            $ref: array_of_unique_strings
       gitignore:
         title: The contents of the [`.gitignore`](https://git-scm.com/docs/gitignore) file.
         description: |
@@ -2729,7 +2489,7 @@ properties:
 
           - [Default `gitignore` templates](https://github.com/github/gitignore)
           :::
-        $ref: "defs#/definitions/nonempty_array_of_unique_strings"
+        $ref: array_of_unique_strings
       id:
         title: Repository ID.
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
@@ -2775,11 +2535,30 @@ properties:
           You can use these to link to specific pages in your repository.
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
         type: object
+        default: { }
         properties:
           home:
             title: Repository homepage.
             auto_default: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
-            $ref: '#/definitions/url'
+            $ref: url
+          tree:
+            title: URL of the default branch's tree view.
+            default: ${{ repo.url.home }}/tree/${{ branch.main.name }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/tree/main"
+            $ref: url
+          blob:
+            title: URL of the default branch's blob view.
+            default: ${{ repo.url.home }}/blob/${{ branch.main.name }}
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main"
+            $ref: url
+          raw:
+            title: URL of the default branch's raw file view.
+            default: 'https://raw.githubusercontent.com/${{ repo.full_name }}/${{ branch.main.name }}'
+            examples:
+              - "https://raw.githubusercontent.com/RepoDynamics/PyPackIT/main"
+            $ref: url
           issues:
             title: GitHub Issues URLs.
             type: object
@@ -2791,13 +2570,13 @@ properties:
                 default: ${{ repo.url.home }}/issues
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues"
-                $ref: '#/definitions/url'
+                $ref: url
               chooser:
                 title: URL of repository's GitHub Issue template chooser.
                 default: ${{ repo.url.issues.home }}/new/choose
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues/new/choose"
-                $ref: '#/definitions/url'
+                $ref: url
               new:
                 title: URLs for opening a new issue.
                 description: |
@@ -2812,7 +2591,7 @@ properties:
                   description: URL for opening a new issue with a specific template.
                   examples:
                     - "https://github.com/RepoDynamics/PyPackIT/issues/new?template=bug_report.yaml"
-                  $ref: '#/definitions/url'
+                  $ref: url
           pulls:
             title: GitHub Pull Requests URLs.
             type: object
@@ -2821,7 +2600,7 @@ properties:
               home:
                 title: URL of the repository's GitHub Pull Requests homepage.
                 default: ${{ repo.url.home }}/pulls
-                $ref: '#/definitions/url'
+                $ref: url
           discussions:
             title: GitHub Discussions URLs.
             type: object
@@ -2832,7 +2611,7 @@ properties:
                 default: ${{ repo.url.home }}/discussions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/discussions"
-                $ref: '#/definitions/url'
+                $ref: url
               new:
                 title: URLs for opening a new discussion.
                 description: |
@@ -2846,7 +2625,7 @@ properties:
                   title: URL for opening a new discussion in a specific category.
                   examples:
                     - "https://github.com/RepoDynamics/PyPackIT/discussions/new?category=announcements"
-                  $ref: '#/definitions/url'
+                  $ref: url
           actions:
             title: GitHub Actions URLs.
             type: object
@@ -2857,7 +2636,7 @@ properties:
                 default: ${{ repo.url.home }}/actions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/actions"
-                $ref: '#/definitions/url'
+                $ref: url
           releases:
             title: GitHub Releases URLs.
             type: object
@@ -2868,7 +2647,7 @@ properties:
                 default: ${{ repo.url.home }}/releases
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/releases"
-                $ref: '#/definitions/url'
+                $ref: url
           security:
             title: GitHub Security URLs.
             type: object
@@ -2879,138 +2658,52 @@ properties:
                 default: ${{ repo.url.home }}/security
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security"
-                $ref: '#/definitions/url'
-              policy:
-                title: URL of the repository's security policy (cf. [`readme.security`](#cc.readme.security)).
-                default: ${{ repo.url.security.home }}/policy
-                examples:
-                  - "https://github.com/RepoDynamics/PyPackIT/security/policy"
-                $ref: '#/definitions/url'
+                $ref: url
+
               advisories:
                 title: URL of the repository's security advisories.
                 default: ${{ repo.url.security.home }}/advisories
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories"
-                $ref: '#/definitions/url'
+                $ref: url
               new_advisory:
                 title: URL for creating a new security advisory.
                 default: ${{ repo.url.security.advisories }}/new
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories/new"
-                $ref: '#/definitions/url'
-          tree:
-            title: URL of the default branch's tree view.
-            default: ${{ repo.url.home }}/tree/${{ branch.main.name }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/tree/main"
-            $ref: '#/definitions/url'
-          blob:
-            title: URL of the default branch's blob view.
-            default: ${{ repo.url.home }}/blob/${{ branch.main.name }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main"
-            $ref: '#/definitions/url'
-          raw:
-            title: URL of the default branch's raw file view.
-            default: 'https://raw.githubusercontent.com/${{ repo.full_name }}/${{ branch.main.name }}'
-            examples:
-              - "https://raw.githubusercontent.com/RepoDynamics/PyPackIT/main"
-            $ref: '#/definitions/url'
-          readme:
-            title: |
-              URL of the GitHub repository's main `README` file
-              (cf. [`doc.github`](#cc.doc.github)).
-            default: ${{ repo.url.blob }}/${{ readme.github.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"
-            $ref: '#/definitions/url'
-          code_of_conduct:
-            title: |
-              URL of the repository's code of conduct,
-              i.e., the `CODE_OF_CONDUCT` file
-              (cf. [`readme.code_of_conduct`](#cc.readme.code_of_conduct)).
-            default: ${{ repo.url.blob }}/${{ health.code_of_conduct.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODE_OF_CONDUCT.md"
-            $ref: '#/definitions/url'
-          code_owners:
-            title: |
-              URL of the repository's code owners,
-              i.e., the `CODEOWNERS` file
-              (cf. [`readme.code_owners`](#cc.readme.code_owners)).
-            default: ${{ repo.url.blob }}/${{ health.code_owners.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-            $ref: '#/definitions/url'
-          contributing:
-            title: |
-              URL of the repository's contributing guidelines,
-              i.e., the `CONTRIBUTING` file.
-              (cf. [`readme.contributing`](#cc.readme.contributing)).
-            default: ${{ repo.url.blob }}/${{ health.contributing.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CONTRIBUTING.md"
-            $ref: '#/definitions/url'
-          governance:
-            title: |
-              URL of the repository's governance model,
-              i.e., the `GOVERNANCE` file.
-              (cf. [`readme.governance`](#cc.readme.governance)).
-            default: ${{ repo.url.blob }}/${{ health.governance.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/GOVERNANCE.md"
-            $ref: '#/definitions/url'
-          support:
-            title: |
-              URL of the repository's support resources,
-              i.e., the `SUPPORT` file.
-              (cf. [`readme.support`](#cc.readme.support)).
-            default: ${{ repo.url.blob }}/${{ health.support.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/SUPPORT.md"
-            $ref: '#/definitions/url'
-          license:
-            title: |
-              URL of the repository's license file.
-              (cf. [`license`](#cc.license)).
-            default: ${{ repo.url.blob }}/${{ license.path }}
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
-            $ref: '#/definitions/url'
+                $ref: url
   branch:
     title: GitHub/Git branch settings.
     description:
       These include names/prefixes and protection rules for different branch types.
     type: object
     additionalProperties: false
-    required: [ main, release, pre, dev, auto ]
     properties:
       main:
         title: Configurations for the default (aka main, trunk) branch of the repository.
-        $ref: "#/definitions/branch_config"
+        $ref: vcs-branch
       release:
         title: Configurations for release branches.
-        $ref: "#/definitions/branch_config"
+        $ref: vcs-branch
       pre:
         title: Configurations for pre-release branches.
-        $ref: "#/definitions/branch_config"
+        $ref: vcs-branch
       dev:
         title: Configurations for development branches.
-        $ref: "#/definitions/branch_config"
+        $ref: vcs-branch
       auto:
         title: Configurations for auto-update branches.
-        $ref: "#/definitions/branch_config"
+        $ref: vcs-branch
+    required: [ main, release, pre, dev, auto ]
   tag:
     title: Configurations for the repository tags.
     type: object
     additionalProperties: false
-    required: [ version ]
     properties:
       version:
         title: Configurations for version tags.
         type: object
         additionalProperties: false
-        required: [ prefix ]
         properties:
           prefix:
             title: Prefix of version tags.
@@ -3024,7 +2717,275 @@ properties:
               - ver/
               - v/
               - v
-  dir:
+        required: [ prefix ]
+    required: [ version ]
+  # CI
+  control:
+    title: Configurations for the project's control center.
+    type: object
+    additionalProperties: false
+    required: [ path, cache ]
+    default: { }
+    properties:
+      path:
+        title: Path to the control center directory.
+        type: string
+        default: .control
+      cache:
+        title: Settings for cached data.
+        description: |
+          These include configuration extensions downloaded from external URLs
+          and data obtained through web-APIs.
+
+          :::{admonition} Not Extensible
+          :class: attention
+
+          These configurations are not extensible, 
+          as they are used to define extensions and their caching settings. 
+          :::
+
+          :::{admonition} Local Override
+          :class: tip dropdown
+
+          When working with a local clone of the repository on your computer,
+          you can override these configurations 
+          by creating a `.local_cc_config.yaml` file with the same syntax
+          in the root of the repository.
+          This file is automatically added to the `.gitignore` file
+          and thus will not be tracked by Git 
+          or pushed to the remote repository.
+          This allows you to maintain a local caching configuration 
+          without affecting the remote repository.
+          :::
+        type: object
+        additionalProperties: false
+        default: { }
+        required: [ retention_hours ]
+        properties:
+          retention_hours:
+            title: Number of hours to keep different cached data.
+            description: |
+              After the specified duration,
+              the cached data is considered stale
+              and will be automatically synced with the source.
+            type: object
+            additionalProperties: false
+            default: { }
+            required: [ extension, repo, user, orcid, doi, python ]
+            properties:
+              extension:
+                title: Configuration extensions retrieved from external URLs.
+                description: |
+                  These are extended data in control center configuration files
+                  defined with the `!ext` tag.
+                default: 0
+                $ref: non_negative_number
+              repo:
+                title: Repository data retrieved from GitHub API.
+                description: |
+                  This includes general repository settings,
+                  as well as details about discussion categories,
+                  which are used for the website's blog.
+                default: 1
+                $ref: non_negative_number
+              user:
+                title: Team member data retrieved from GitHub API.
+                description: |
+                  This includes GitHub user data such as
+                  name, email, avatar, bio, and other profile information.
+                default: 24
+                $ref: non_negative_number
+              orcid:
+                title: Publications data retrieved from ORCID API.
+                description: |
+                  This includes a list of all publication DOIs associated with an ORCID ID.
+                default: 240
+                $ref: non_negative_number
+              doi:
+                title: Publication data retrieved from DOI API.
+                description: |
+                  This corresponds to citation details associated with a specific DOI.
+                default: 1000
+                $ref: non_negative_number
+              python:
+                title: Python version data retrieved from the Python GitHub repository.
+                description: |
+                  This is a list of currently available Python versions,
+                  used to update workflow configurations such as CI/CD/CT pipelines.
+                default: 500
+                $ref: non_negative_number
+      url:
+        title: URL of the project's configuration file.
+        default: ${{ repo.url.raw }}/.github/.control/.metadata.json
+        $ref: url
+  schedule:
+    title: Configurations for scheduled workflow jobs.
+    description: |
+      These are the Continuous pipelines
+      triggered by GitHub Actions'
+      [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
+      event.
+    type: object
+    additionalProperties: false
+    properties:
+      update:
+        title: Updating jobs.
+        description: |
+          Configurations for scheduled jobs that may result in updates to repository files and settings.
+          These include Continuous Configuration Automation (CCA) to synchronize project configurations,
+          as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
+        $ref: ci-schedule
+      test:
+        title: Testing jobs.
+        description: |
+          Configurations for the Continuous Testing (CT) pipeline of the package.
+        $ref: ci-schedule
+  tool:
+    title: Configurations for tools used in the development workflow.
+    description: |
+      These include pre-integrated tools as well as any additional tools
+      that you can add to the project's workflow.
+    type: object
+    additionalProperties:
+      title: Additional tools
+      description: |
+        Configurations for additional tools that can be added to the project's workflow.
+      $ref: ci-tool
+    properties:
+      pre-commit:
+        title: Pre-commit hooks.
+        description: |
+          [Pre-commit](https://pre-commit.com/) is a framework for managing and maintaining
+          multi-language hooks.
+          These configurations define the pre-commit hooks to be used in the project.
+        $ref: ci-tool
+      codecov:
+        title: Codecov test coverage reporting.
+        description: |
+          [Codecov](https://about.codecov.io/) is an online platform
+          that provides code coverage metrics for your project.
+          After [signing up on Codecov](https://docs.codecov.com/docs/quick-start),
+          these configurations will automatically control the generation of coverage reports
+          and the submission of these reports to Codecov.
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            title: Configurations for CodeCov.
+            type: object
+            additionalProperties: false
+            properties:
+              file:
+                title: Configuration file.
+                description: |
+                  This will be used by CodeCov to generate coverage reports.
+                  Learn more about the [Codecov YAML configuration file](https://docs.codecov.com/docs/codecov-yaml),
+                type: object
+                additionalProperties: false
+                properties:
+                  type:
+                    title: Type of the configuration file.
+                    description: |
+                      CodeCov only supports YAML configuration files.
+                    const: yaml
+                    default: yaml
+                  path:
+                    title: Path to the configuration file.
+                    description: |
+                      CodeCov only looks for a `codecov.yml` or `.codecov.yml` file
+                      either in the root of the repository, or in `.github/` and `dev/` directories.
+                      (cf. [CodeCov documentation](https://docs.codecov.com/docs/codecov-yaml#can-i-name-the-file-codecovyml)).
+                    type: string
+                    pattern: ^(.github/|dev/)?.?codecov.yml$
+                    default: .github/.codecov.yml
+                  content:
+                    title: Configurations for CodeCov.
+                    description: |
+                      For a full reference, see the
+                      [Codecov YAML reference](https://docs.codecov.com/docs/codecovyml-reference).
+      readthedocs:
+        title: ReadTheDocs website hosting.
+        description: |
+          In addition to GitHub Pages, you can also host your project's documentation on ReadTheDocs.
+          This includes some manual steps to set up the website on ReadTheDocs,
+          but the rest of the process, including build configurations and preview links,
+          can be controlled through these configurations.
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            title: Configurations for the project's website on ReadTheDocs.
+            properties:
+              file:
+                title: Configuration file.
+                description: |
+                  This will be used by ReadTheDocs to build the website on readthedocs.io.
+                properties:
+                  type:
+                    title: Type of the configuration file.
+                    description: |
+                      ReadTheDocs only supports YAML configuration files.
+                    const: yaml
+                    default: yaml
+                  path:
+                    title: Path to the configuration file.
+                    description: |
+                      By default, [ReadtheDocs](https://docs.readthedocs.io/en/stable/config-file/index.html#where-to-put-your-configuration-file)
+                      only looks for a `.readthedocs.yaml` file in the root of the repository.
+                      However, you can [change this manually](https://docs.readthedocs.io/en/stable/guides/setup/monorepo.html#how-to-use-a-readthedocs-yaml-file-in-a-sub-folder)
+                      by setting another path on the ReadTheDocs website,
+                      and then specifying that path here.
+                    type: string
+                    default: .readthedocs.yaml
+                    examples:
+                      - .github/.readthedocs.yaml
+                  content:
+                    title: Config
+                    description: |
+                      Configuration settings for the ReadTheDocs website.
+                      See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
+                    $ref: ci-tool-readthedocs
+              workflow:
+                title: Workflow configurations for the ReadTheDocs website.
+                description: |
+                  These are used to create website preview links for pull requests.
+                type: object
+                additionalProperties: false
+                required: [ name, platform, version_scheme, language ]
+                properties:
+                  name:
+                    title: Name of the project on ReadTheDocs.
+                    description: |
+                      This is the slug name of the project.
+                    type: string
+                    default: ${{ repo.name }}
+                  platform:
+                    title: ReadTheDocs hosting platform type.
+                    type: string
+                    enum: [ community, business ]
+                    default: community
+                  version_scheme:
+                    title: Versioning scheme of the website.
+                    description: |
+                      See [ReadTheDocs documentation](https://docs.readthedocs.io/en/stable/versioning-schemes.html)
+                      for more information.
+                    type: object
+                    default: { }
+                    additionalProperties: false
+                    properties:
+                      single_version:
+                        title: Whether the website has a single version (vs. multiple versions).
+                        type: boolean
+                        default: false
+                      translation:
+                        title: Whether the website supports multiple languages.
+                        type: boolean
+                        default: false
+                  language:
+                    title: Language of the website.
+                    type: string
+                    default: en
+  local:
     title: Directory structure of the repository.
     description: |
       From the seven [main directories](/manual/fundamentals/structure/index.md) in your repository
@@ -3163,333 +3124,44 @@ properties:
       :::
     type: object
     additionalProperties: false
+    default: { }
     properties:
-      control:
-        title: Path to the control center directory.
-        type: string
-        default: .control
-      local:
+      path:
         title: Path to the local directory.
         type: string
         default: .local
-      pkg:
-        title: Path to the source code directory.
-        description: |
-          The parent directory will be the root of the package,
-          and the import package directory will be placed directly under this directory.
-        type: object
-        additionalProperties: false
-        required: [ root, source, import ]
-        properties:
-          root:
-            type: string
-            default: .
-          source:
-            type: string
-            default: src
-          import:
-            type: string
-            const: ${{ dir.pkg.root }}/${{ dir.pkg.source }}/${{ pkg.import_name }}
-            default: ${{ dir.pkg.root }}/${{ dir.pkg.source }}/${{ pkg.import_name }}
-      test:
-        title: Path to the source code directory.
-        description: |
-          The parent directory will be the root of the package,
-          and the import package directory will be placed directly under this directory.
-        type: object
-        additionalProperties: false
-        required: [ root, source, import ]
-        properties:
-          root:
-            type: string
-            default: tests
-          source:
-            type: string
-            default: src
-          import:
-            type: string
-            const: ${{ dir.test.root }}/${{ dir.test.source }}/${{ test.import_name }}
-            default: ${{ dir.test.root }}/${{ dir.test.source }}/${{ test.import_name }}
-      web:
-        title: Path to the website directory.
-        type: object
-        additionalProperties: false
-        required: [ root, source ]
-        properties:
-          root:
-            type: string
-            default: docs/website
-          source:
-            type: string
-            default: source
-      media:
-        title: Path to the media directory.
-        description: |
-          Due to an issue with the PyData Sphinx Theme, the logo files used in the navbar must be explicitly
-          added to the root of static path, since PyData always looks there, regardless of the set path.
-          Ref:
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1325 
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1328
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1385
+  # Custom
+  custom:
+    title: User-defined custom metadata and configurations.
+    description: |
+      Here you can store custom data that can be dynamically referenced 
+      anywhere else in the project.
+    type: object
+  # Auto
+  slug:
+    title: Slugs of the project.
+    description: |
+      These are the automatically generated
+      slugified versions of the project's descriptors,
+      such as name, repository name, and keywords.
+      They can be used in places where only slugs are accepted.
+
+      Slugs are generated by removing non-ASCII characters from the input string,
+      converting it to lowercase,
+      replacing all non-alphanumeric characters with hyphens,
+      and removing leading and trailing hyphens.
+    type: object
+    properties:
+      name:
+        title: Slug of the project's name.
         type: string
-        examples:
-          - docs/media
-  # CI
-  control:
-    title: Configurations for the project's control center.
+      repo_name:
+        title: Slug of the project's repository name.
+        type: string
+      keywords:
+        title: Slugs of the project's keywords.
+        type: array
+        items:
+          type: string
+  project:
     type: object
-    additionalProperties: false
-    required: [ cache ]
-    default: { }
-    properties:
-      cache:
-        title: Settings for cached data.
-        description: |
-          These include configuration extensions downloaded from external URLs
-          and data obtained through web-APIs.
-
-          :::{admonition} Not Extensible
-          :class: attention
-
-          These configurations are not extensible, 
-          as they are used to define extensions and their caching settings. 
-          :::
-
-          :::{admonition} Local Override
-          :class: tip dropdown
-
-          When working with a local clone of the repository on your computer,
-          you can override these configurations 
-          by creating a `.local_cc_config.yaml` file with the same syntax
-          in the root of the repository.
-          This file is automatically added to the `.gitignore` file
-          and thus will not be tracked by Git 
-          or pushed to the remote repository.
-          This allows you to maintain a local caching configuration 
-          without affecting the remote repository.
-          :::
-        type: object
-        additionalProperties: false
-        default: { }
-        required: [ retention_hours ]
-        properties:
-          retention_hours:
-            title: Number of hours to keep different cached data.
-            description: |
-              After the specified duration,
-              the cached data is considered stale
-              and will be automatically synced with the source.
-            type: object
-            additionalProperties: false
-            default: { }
-            required: [ extension, repo, user, orcid, doi, python ]
-            properties:
-              extension:
-                title: Configuration extensions retrieved from external URLs.
-                description: |
-                  These are extended data in control center configuration files
-                  defined with the `!ext` tag.
-                default: 0
-                $ref: non_negative_number
-              repo:
-                title: Repository data retrieved from GitHub API.
-                description: |
-                  This includes general repository settings,
-                  as well as details about discussion categories,
-                  which are used for the website's blog.
-                default: 1
-                $ref: non_negative_number
-              user:
-                title: Team member data retrieved from GitHub API.
-                description: |
-                  This includes GitHub user data such as
-                  name, email, avatar, bio, and other profile information.
-                default: 24
-                $ref: non_negative_number
-              orcid:
-                title: Publications data retrieved from ORCID API.
-                description: |
-                  This includes a list of all publication DOIs associated with an ORCID ID.
-                default: 240
-                $ref: non_negative_number
-              doi:
-                title: Publication data retrieved from DOI API.
-                description: |
-                  This corresponds to citation details associated with a specific DOI.
-                default: 1000
-                $ref: non_negative_number
-              python:
-                title: Python version data retrieved from the Python GitHub repository.
-                description: |
-                  This is a list of currently available Python versions,
-                  used to update workflow configurations such as CI/CD/CT pipelines.
-                default: 500
-                $ref: non_negative_number
-  schedule:
-    title: Configurations for scheduled workflow jobs.
-    description: |
-      These are the Continuous pipelines
-      triggered by GitHub Actions'
-      [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
-      event.
-    type: object
-    additionalProperties: false
-    properties:
-      update:
-        title: Updating jobs.
-        description: |
-          Configurations for scheduled jobs that may result in updates to repository files and settings.
-          These include Continuous Configuration Automation (CCA) to synchronize project configurations,
-          as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
-        $ref: '#/definitions/scheduled_job'
-      test:
-        title: Testing jobs.
-        description: |
-          Configurations for the Continuous Testing (CT) pipeline of the package.
-        $ref: '#/definitions/scheduled_job'
-  tool:
-    title: Configurations for tools used in the development workflow.
-    description: |
-      These include pre-integrated tools as well as any additional tools
-      that you can add to the project's workflow.
-    type: object
-    additionalProperties:
-      title: Additional tools
-      description: |
-        Configurations for additional tools that can be added to the project's workflow.
-      $ref: '#/definitions/tool_config'
-    properties:
-      pre-commit:
-        title: Pre-commit hooks.
-        description: |
-          [Pre-commit](https://pre-commit.com/) is a framework for managing and maintaining
-          multi-language hooks.
-          These configurations define the pre-commit hooks to be used in the project.
-        $ref: '#/definitions/tool_config'
-      codecov:
-        title: Codecov test coverage reporting.
-        description: |
-          [Codecov](https://about.codecov.io/) is an online platform
-          that provides code coverage metrics for your project.
-          After [signing up on Codecov](https://docs.codecov.com/docs/quick-start),
-          these configurations will automatically control the generation of coverage reports
-          and the submission of these reports to Codecov.
-        type: object
-        additionalProperties: false
-        properties:
-          config:
-            title: Configurations for CodeCov.
-            type: object
-            additionalProperties: false
-            properties:
-              file:
-                title: Configuration file.
-                description: |
-                  This will be used by CodeCov to generate coverage reports.
-                  Learn more about the [Codecov YAML configuration file](https://docs.codecov.com/docs/codecov-yaml),
-                type: object
-                additionalProperties: false
-                properties:
-                  type:
-                    title: Type of the configuration file.
-                    description: |
-                      CodeCov only supports YAML configuration files.
-                    const: yaml
-                    default: yaml
-                  path:
-                    title: Path to the configuration file.
-                    description: |
-                      CodeCov only looks for a `codecov.yml` or `.codecov.yml` file
-                      either in the root of the repository, or in `.github/` and `dev/` directories.
-                      (cf. [CodeCov documentation](https://docs.codecov.com/docs/codecov-yaml#can-i-name-the-file-codecovyml)).
-                    type: string
-                    pattern: ^(.github/|dev/)?.?codecov.yml$
-                    default: .github/.codecov.yml
-                  content:
-                    title: Configurations for CodeCov.
-                    description: |
-                      For a full reference, see the
-                      [Codecov YAML reference](https://docs.codecov.com/docs/codecovyml-reference).
-                    $ref: 'https://json.schemastore.org/codecov.json'
-      readthedocs:
-        title: ReadTheDocs website hosting.
-        description: |
-          In addition to GitHub Pages, you can also host your project's documentation on ReadTheDocs.
-          This includes some manual steps to set up the website on ReadTheDocs,
-          but the rest of the process, including build configurations and preview links,
-          can be controlled through these configurations.
-        type: object
-        additionalProperties: false
-        properties:
-          config:
-            title: Configurations for the project's website on ReadTheDocs.
-            properties:
-              file:
-                title: Configuration file.
-                description: |
-                  This will be used by ReadTheDocs to build the website on readthedocs.io.
-                properties:
-                  type:
-                    title: Type of the configuration file.
-                    description: |
-                      ReadTheDocs only supports YAML configuration files.
-                    const: yaml
-                    default: yaml
-                  path:
-                    title: Path to the configuration file.
-                    description: |
-                      By default, [ReadtheDocs](https://docs.readthedocs.io/en/stable/config-file/index.html#where-to-put-your-configuration-file)
-                      only looks for a `.readthedocs.yaml` file in the root of the repository.
-                      However, you can [change this manually](https://docs.readthedocs.io/en/stable/guides/setup/monorepo.html#how-to-use-a-readthedocs-yaml-file-in-a-sub-folder)
-                      by setting another path on the ReadTheDocs website,
-                      and then specifying that path here.
-                    type: string
-                    default: .readthedocs.yaml
-                    examples:
-                      - .github/.readthedocs.yaml
-                  content:
-                    title: Config
-                    description: |
-                      Configuration settings for the ReadTheDocs website.
-                      See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
-                    type: object
-              workflow:
-                title: Workflow configurations for the ReadTheDocs website.
-                description: |
-                  These are used to create website preview links for pull requests.
-                type: object
-                additionalProperties: false
-                required: [ name, platform, version_scheme, language ]
-                properties:
-                  name:
-                    title: Name of the project on ReadTheDocs.
-                    description: |
-                      This is the slug name of the project.
-                    type: string
-                    default: ${{ repo.name }}
-                  platform:
-                    title: ReadTheDocs hosting platform type.
-                    type: string
-                    enum: [ community, business ]
-                    default: community
-                  version_scheme:
-                    title: Versioning scheme of the website.
-                    description: |
-                      See [ReadTheDocs documentation](https://docs.readthedocs.io/en/stable/versioning-schemes.html)
-                      for more information.
-                    type: object
-                    default: { }
-                    additionalProperties: false
-                    properties:
-                      single_version:
-                        title: Whether the website has a single version (vs. multiple versions).
-                        type: boolean
-                        default: false
-                      translation:
-                        title: Whether the website supports multiple languages.
-                        type: boolean
-                        default: false
-                  language:
-                    title: Language of the website.
-                    type: string
-                    default: en

@@ -1,0 +1,16 @@
+title: Spacer
+type: object
+required: [ id ]
+properties:
+  id:
+    type: string
+    const: spacer
+  width:
+    title: Width of the line.
+    $ref: doc-html-attr-size
+  height:
+    title: Height of the spacer.
+    $ref: doc-html-attr-size
+  align:
+    title: Alignment of the spacer.
+    $ref: doc-html-attr-align

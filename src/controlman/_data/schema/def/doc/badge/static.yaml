@@ -1,0 +1,9 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Static Badge
+default: { }
+allOf:
+  - $ref: doc-badge-attrs
+  - required: [ message ]
+    properties:
+      message:
+        required: [ text ]

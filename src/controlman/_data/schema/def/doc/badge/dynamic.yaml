@@ -1,0 +1,25 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Dynamic Badge
+default: { }
+allOf:
+  - $ref: doc-badge-attrs
+  - required: [ url, query ]
+    properties:
+      url:
+        title: URL to a data source.
+        $ref: url
+      type:
+        title: The type of the data source.
+        type: string
+        enum: [ json, yaml, toml, xml ]
+      query:
+        title: A JSONPath expression (or XPath for XML data) to query the data source.
+        examples:
+          - '$.data'
+        type: string
+      prefix:
+        title: A prefix to prepend to the badge message.
+        type: string
+      suffix:
+        title: A suffix to append to the badge message.
+        type: string

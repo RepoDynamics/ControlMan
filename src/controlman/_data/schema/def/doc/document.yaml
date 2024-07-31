@@ -1,0 +1,19 @@
+description: Contents of a document.
+type: array
+items:
+  anyOf:
+    - type: string
+    - type: object
+      required: [ id ]
+      properties:
+        id:
+          type: string
+          const: custom
+    - $ref: doc-elements-badges
+    - $ref: doc-elements-coc_covenant
+    - $ref: doc-elements-heading
+    - $ref: doc-elements-highlights
+    - $ref: doc-elements-image
+    - $ref: doc-elements-line
+    - $ref: doc-elements-paragraph
+    - $ref: doc-elements-spacer

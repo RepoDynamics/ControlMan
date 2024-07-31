@@ -1,0 +1,22 @@
+title: GitHub Label Group
+description: A group of GitHub labels.
+type: object
+additionalProperties: false
+required: [ prefix, color, label ]
+properties:
+  prefix:
+    title: Prefix
+    description: Prefix for the label name.
+    $ref: its-label-attr-prefix
+  color:
+    title: Color
+    description: Color of the label.
+    $ref: hex_color
+  label:
+    title: Labels
+    description: Labels for the group.
+    type: object
+    additionalProperties:
+      title: Label
+      description: A label in the group.
+      $ref: its-label-group-element

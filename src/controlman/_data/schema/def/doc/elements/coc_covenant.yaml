@@ -1,0 +1,31 @@
+title: Configurations for the Contributor Covenant Code of Conduct.
+type: object
+additionalProperties: false
+required: [ id, contact ]
+properties:
+  id:
+    title: ID of the code of conduct.
+    type: string
+    const: covenant
+  contact:
+    title: |
+      Contact information of the maintainer for the code of conduct.
+    type: object
+    additionalProperties: false
+    required: [ name, url ]
+    examples:
+      - display: ${{ maintainer.code_of_conduct.name.full }}
+        url: ${{ maintainer.code_of_conduct.email.url }}
+    properties:
+      name:
+        title: Display text of the link.
+        type: string
+        examples:
+          - ${{ maintainer.code_of_conduct.name.full }}
+      url:
+        title: URL of the link.
+        description: |
+          For email addresses, use `mailto:`.
+        type: string
+        examples:
+          - ${{ maintainer.code_of_conduct.email.url }}

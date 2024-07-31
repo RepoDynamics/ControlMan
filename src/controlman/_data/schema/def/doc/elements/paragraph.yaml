@@ -1,0 +1,15 @@
+title: Paragraph
+type: object
+required: [ id, text ]
+properties:
+  id:
+    type: string
+    const: paragraph
+  align:
+    title: Justification of the paragraph.
+    $ref: doc-html-attr-align
+  text:
+    title: Text of the paragraph.
+    type: string
+  style:
+    $ref: doc-elements-paragraph_style

@@ -1,0 +1,16 @@
+type: object
+additionalProperties: false
+required: [ light ]
+properties:
+  light:
+    title: Light Color
+    description: Color of the element for light themes.
+    oneOf:
+      - $ref: hex_color
+      - $ref: doc-color-gradient
+  dark:
+    title: Dark Color
+    description: Color of the element for dark themes.
+    oneOf:
+      - $ref: hex_color
+      - $ref: doc-color-gradient

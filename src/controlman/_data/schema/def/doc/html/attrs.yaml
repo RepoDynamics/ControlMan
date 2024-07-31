@@ -1,0 +1,17 @@
+alt$schema: https://json-schema.org/draft/2020-12/schema
+title: HTML Attributes
+description: Attributes for HTML elements.
+type: object
+properties:
+  href:
+    type: string
+  alt:
+    type: string
+  title:
+    type: string
+  width:
+    $ref: doc-html-attr-size
+  height:
+    $ref: doc-html-attr-size
+  align:
+    $ref: doc-html-attr-align

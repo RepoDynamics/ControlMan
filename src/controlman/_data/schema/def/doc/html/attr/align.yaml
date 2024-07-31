@@ -1,0 +1,5 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: HTML Align
+description: Alignment of an HTML element.
+type: string
+enum: [ left, center, right, justify ]

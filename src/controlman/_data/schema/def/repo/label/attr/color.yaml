@@ -1,7 +1,0 @@
-title: GitHub Label Color
-description: Color of a GitHub label, in hexadecimal format.
-type: string
-pattern: ^[0-9a-fA-F]{6}$
-examples:
-  - '0366d6'
-  - 'f1e05a'

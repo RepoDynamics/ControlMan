@@ -1,0 +1,7 @@
+description: |
+  See https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
+type: array
+minItems: 1
+uniqueItems: true
+items:
+  type: string

@@ -1,0 +1,7 @@
+type: object
+additionalProperties: false
+properties:
+  text:
+    type: string
+  color:
+    $ref: doc-color-theme

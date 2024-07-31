@@ -1,0 +1,9 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Entities
+description: A list of natural or legal persons.
+type: array
+uniqueItems: true
+minItems: 1
+items:
+  title: An entity.
+  $ref: proj-entity

@@ -1,0 +1,28 @@
+type: array
+items:
+  type: object
+  required: [ word ]
+  properties:
+    word:
+      type: string
+    strong:
+      type: boolean
+      default: false
+    bold:
+      type: boolean
+      default: false
+    italic:
+      type: boolean
+      default: false
+    emphasis:
+      type: boolean
+      default: false
+    url:
+      $ref: url
+    count:
+      type: integer
+      minimum: 0
+      default: 0
+    case_sensitive:
+      type: boolean
+      default: false

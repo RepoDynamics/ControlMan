@@ -1,0 +1,20 @@
+title: Body headings configurations.
+type: object
+required: [ id, level, content ]
+properties:
+  id:
+    type: string
+    const: heading
+  level:
+    title: Level of the heading.
+    type: integer
+    minimum: 1
+    maximum: 6
+  div_align:
+    title: Alignment of the div element.
+    $ref: doc-html-attr-align
+  content:
+    oneOf:
+      - type: string
+      - $ref: doc-elements-badges
+      - $ref: doc-elements-image

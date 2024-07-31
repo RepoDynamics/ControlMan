@@ -1,7 +1,0 @@
-type: object
-additionalProperties: false
-properties:
-  buttons:
-    type: array
-    items:
-      $ref: '#/definitions/badge/button'

@@ -1,7 +1,7 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: GitHub Username
 description: |
-  A GitHub username is a unique string that identifies a user or organization on GitHub.
+  This is a unique string that identifies a user or organization on GitHub.
   Usernames must start with an alphanumeric character and can contain alphanumeric characters and hyphens.
   Usernames cannot contain spaces or special characters.
 type: string

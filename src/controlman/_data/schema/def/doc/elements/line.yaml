@@ -1,0 +1,13 @@
+title: Horizontal Line
+type: object
+required: [ id ]
+properties:
+  id:
+    type: string
+    const: line
+  width:
+    title: Width of the line.
+    $ref: doc-html-attr-size
+  div_align:
+    title: Alignment of the line.
+    $ref: doc-html-attr-align
