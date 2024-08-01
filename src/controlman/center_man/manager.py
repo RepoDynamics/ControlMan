@@ -5,18 +5,15 @@ import shutil as _shutil
 from versionman import PEP440SemVer as _PEP440SemVer
 from loggerman import logger as _logger
 import pylinks as _pylinks
-
-from controlman.center_man.file_comparer import FileComparer as _FileComparer
+import markitup as _miu
 
 from controlman.data_man.manager import DataManager as _DataManager
 from controlman.data_man.validator import DataValidator as _DataValidator
 from controlman import data_gen as _data_gen
 from controlman.center_man.hook import HookManager as _HookManager
 from controlman.datatype import (
-    DynamicFile as _DynamicFile,
-    Diff as _Diff,
     DynamicFileType as _DynamicFileType,
-    DynamicFileChangeType as _DynamicFileChangeType,
+    DynamicFileChangeType,
     GeneratedFile as _GeneratedFile,
 )
 from controlman.protocol import Git as _Git
@@ -52,8 +49,10 @@ class CenterManager:
         self._contents_raw: _NestedDict | None = None
         self._local_config: dict = {}
         self._data: _NestedDict | None = None
-        self._generated_files: list[_GeneratedFile] = []
-        self._results: list[tuple[_DynamicFile, _Diff]] = []
+        self._generated_files: list[tuple[_GeneratedFile, DynamicFileChangeType]] = []
+        self._compared_dirs: list = []
+        self._dirs_to_apply: list[tuple[str, str, DynamicFileChangeType]] = []
+        self._dirs_to_apply_sub: list[tuple[str, str, DynamicFileChangeType]] = []
         self._changes: dict[_DynamicFileType, dict[str, bool]] = {}
         self._summary: str = ""
         return
@@ -158,7 +157,7 @@ class CenterManager:
         self._data = data
         return _DataManager(data)
 
-    def generate_files(self) -> list[_GeneratedFile]:
+    def generate_files(self) -> list[tuple[_GeneratedFile, DynamicFileChangeType]]:
         if self._generated_files:
             return self._generated_files
         self.generate_data()
@@ -194,50 +193,182 @@ class CenterManager:
             root_path=self._path_root,
         )
         generated_files.extend(readme_files)
-        self._generated_files = generated_files
+        self._generated_files = [
+            (generated_file, self._compare_file(generated_file)) for generated_file in generated_files
+        ]
         return self._generated_files
 
-    def compare_files(
-        self,
-    ) -> tuple[list[tuple[_DynamicFile, _Diff]], dict[_DynamicFileType, dict[str, bool]], str]:
-        """Compare generated dynamic repository files to the current state of repository."""
-        if self._results:
-            return self._results, self._changes, self._summary
-        updates = self.generate_files()
-        self._results, self._changes, self._summary = _FileComparer(
-            path_root=self._path_root
-        ).compare(generated_files=updates)
-        return self._results, self._changes, self._summary
+    def compare_dirs(self):
+        if self._compared_dirs:
+            return self._compared_dirs
+        compared_dirs = []
+        for_apply = []
+        for path_key in ("theme.path", "control.path", "local.path"):
+            path, path_before, status = self._compare_dir(path_key)
+            for_apply.append((path, path_before, status))
+        for path_key in ("web.path", "pkg.path", "test.path"):
+            root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.root")
+            for_apply.append((root_path, root_path_before, root_status))
+            source_name, source_name_before, source_status = self._compare_dir(f"{path_key}.source")
+            source_path = f"{root_path}/{source_name}" if root_path else None
+            source_path_before = f"{root_path}/{source_name_before}" if root_path else None
+            for_apply.append((source_path, source_path_before, source_status))
+        self._dirs_to_apply = for_apply
+        self._compared_dirs = compared_dirs
+        return self._compared_dirs
+
+    # def _summary(
+    #     self, results: list[tuple[DynamicFile, Diff]]
+    # ) -> tuple[dict[DynamicFileType, dict[str, bool]], str]:
+    #     details, changes = self._summary_section_details(results)
+    #     summary = html.ElementCollection([html.h(3, "Meta")])
+    #     any_changes = any(any(category.values()) for category in changes.values())
+    #     if not any_changes:
+    #         rest = [html.ul(["✅ All dynamic files were in sync with meta content."]), html.hr()]
+    #     else:
+    #         rest = [
+    #             html.ul(["❌ Some dynamic files were out of sync with meta content:"]),
+    #             details,
+    #             html.hr(),
+    #             self._color_legend(),
+    #         ]
+    #     summary.extend(rest)
+    #     return changes, str(summary)
 
     @_logger.sectioner("Apply Changes To Dynamic Repository File")
     def apply_changes(self) -> None:
         """Apply changes to dynamic repository files."""
 
-        def log():
-            path_message = (
-                f"{'from' if diff.status is _DynamicFileChangeType.REMOVED else 'at'} '{info.path}'"
-                if not diff.path_before else f"from '{diff.path_before}' to '{info.path}'"
-            )
-            _logger.info(
-                title=f"{info.category.value}: {info.id}",
-                msg=f"{diff.status.value.emoji} {diff.status.value.title} {path_message}"
-            )
-            return
-
-        if not self._results:
-            self.compare_files()
-        for info, diff in self._results:
-            log()
-            if diff.status is _DynamicFileChangeType.REMOVED:
-                _shutil.rmtree(info.path) if info.is_dir else info.path.unlink()
-            elif diff.status is _DynamicFileChangeType.MOVED:
-                diff.path_before.rename(info.path)
-            elif info.is_dir:
-                info.path.mkdir(parents=True, exist_ok=True)
-            elif diff.status not in [_DynamicFileChangeType.DISABLED, _DynamicFileChangeType.UNCHANGED]:
-                info.path.parent.mkdir(parents=True, exist_ok=True)
-                if diff.status is _DynamicFileChangeType.MOVED_MODIFIED:
-                    diff.path_before.unlink()
-                with open(info.path, "w") as f:
-                    f.write(f"{diff.after.strip()}\n")
+        generated_files = self.generate_files()
+        self.compare_dirs()
+        for dir_path, dir_path_before, status in self._dirs_to_apply:
+            dir_path_abs = self._path_root / dir_path if dir_path else None
+            dir_path_before_abs = self._path_root / dir_path_before if dir_path_before else None
+            if status is DynamicFileChangeType.REMOVED:
+                _shutil.rmtree(dir_path_before_abs)
+            elif status is DynamicFileChangeType.MOVED:
+                _shutil.move(dir_path_before_abs, dir_path_abs)
+            elif status is DynamicFileChangeType.CREATED:
+                dir_path_abs.mkdir(parents=True, exist_ok=True)
+        for generated_file, status in generated_files:
+            filepath_abs = self._path_root / generated_file.path if generated_file.path else None
+            filepath_before_abs = self._path_root / generated_file.path_before if generated_file.path_before else None
+            if status is DynamicFileChangeType.REMOVED:
+                filepath_before_abs.unlink()
+            elif status in (
+                DynamicFileChangeType.CREATED,
+                DynamicFileChangeType.MODIFIED,
+                DynamicFileChangeType.MOVED_MODIFIED,
+                DynamicFileChangeType.MOVED,
+            ):
+                filepath_abs.parent.mkdir(parents=True, exist_ok=True)
+                with open(filepath_abs, "w") as f:
+                    f.write(f"{generated_file.content.strip()}\n")
+                if status in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
+                    filepath_before_abs.unlink()
         return
+
+    def _compare_file(self, file: _GeneratedFile) -> DynamicFileChangeType:
+        if not file.content:
+            if not file.path_before:
+                return DynamicFileChangeType.DISABLED
+            filepath_before = self._path_root/file.path_before
+            if filepath_before.is_file():
+                return DynamicFileChangeType.REMOVED
+            return DynamicFileChangeType.DISABLED
+        if not file.path:
+            return DynamicFileChangeType.DISABLED
+        if not file.path_before:
+            return DynamicFileChangeType.CREATED
+        fullpath_before = self._path_root/file.path_before
+        if not fullpath_before.is_file():
+            return DynamicFileChangeType.CREATED
+        with open(self._path_root/file.path_before) as f:
+            content_before = f.read()
+        contents_identical = file.content.strip() == content_before.strip()
+        paths_identical = file.path == file.path_before
+        change_type = {
+            (True, True): DynamicFileChangeType.UNCHANGED,
+            (True, False): DynamicFileChangeType.MOVED,
+            (False, True): DynamicFileChangeType.MODIFIED,
+            (False, False): DynamicFileChangeType.MOVED_MODIFIED,
+        }
+        return change_type[(contents_identical, paths_identical)]
+
+    def _compare_dir(self, path_key: str) -> tuple[str, str, DynamicFileChangeType]:
+        path = self._data[path_key]
+        path_before = self._data_before[path_key]
+        if not path and not path_before:
+            status = DynamicFileChangeType.DISABLED
+        elif not path_before:
+            status = DynamicFileChangeType.CREATED
+        elif not path:
+            status = DynamicFileChangeType.REMOVED
+        elif path == path_before:
+            status = DynamicFileChangeType.UNCHANGED
+        else:
+            status = DynamicFileChangeType.MOVED
+        return path, path_before, status
+
+    # def _summary_section_details(
+    #     self, results: list[tuple[DynamicFile, Diff]]
+    # ) -> tuple[html.ElementCollection, dict[DynamicFileType, dict[str, bool]]]:
+    #     categories_sorted = [cat for cat in DynamicFileType]
+    #     results = sorted(
+    #         results, key=lambda elem: (categories_sorted.index(elem[0].category), elem[0].rel_path)
+    #     )
+    #     details = html.ElementCollection()
+    #     changes = {}
+    #     for info, diff in results:
+    #         if info.category not in changes:
+    #             changes[info.category] = {}
+    #             details.append(html.h(4, info.category.value))
+    #         changes[info.category][info.id] = diff.status not in [
+    #             DynamicFileChangeType.UNCHANGED,
+    #             DynamicFileChangeType.DISABLED,
+    #         ]
+    #         details.append(self._item_summary(info, diff))
+    #     return details, changes
+    #
+    # @staticmethod
+    # def _color_legend():
+    #     legend = [f"{status.value.emoji}  {status.value.title}" for status in DynamicFileChangeType]
+    #     color_legend = html.details(content=html.ul(legend), summary="Color Legend")
+    #     return color_legend
+    #
+    # @staticmethod
+    # def _item_summary(info: DynamicFile, diff: Diff) -> html.DETAILS:
+    #     details = html.ElementCollection()
+    #     output = html.details(content=details, summary=f"{diff.status.value.emoji}  {info.rel_path}")
+    #     typ = "Directory" if info.is_dir else "File"
+    #     status = (
+    #         f"{typ} {diff.status.value.title}{':' if diff.status != DynamicFileChangeType.DISABLED else ''}"
+    #     )
+    #     details.append(status)
+    #     if diff.status == DynamicFileChangeType.DISABLED:
+    #         return output
+    #     details_ = (
+    #         [f"Old Path: <code>{diff.path_before}</code>", f"New Path: <code>{info.path}</code>"]
+    #         if diff.status
+    #         in [
+    #             DynamicFileChangeType.MOVED,
+    #             DynamicFileChangeType.MOVED_MODIFIED,
+    #             DynamicFileChangeType.MOVED_REMOVED,
+    #         ]
+    #         else [f"Path: <code>{info.path}</code>"]
+    #     )
+    #     if not info.is_dir:
+    #         if info.id == "metadata":
+    #             before, after = [
+    #                 json.dumps(json.loads(state), indent=3) if state else ""
+    #                 for state in (diff.before, diff.after)
+    #             ]
+    #         else:
+    #             before, after = diff.before, diff.after
+    #         diff_lines = list(difflib.ndiff(before.splitlines(), after.splitlines()))
+    #         diff = "\n".join([line for line in diff_lines if line[:2] != "? "])
+    #         details_.append(html.details(content=md.code_block(diff, "diff"), summary="Content"))
+    #     details.append(html.ul(details_))
+    #     return output
+
+
