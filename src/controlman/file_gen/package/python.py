@@ -157,10 +157,8 @@ class PythonPackageFileGenerator:
                             )
             out.append(
                 GeneratedFile(
-                    type=(
-                        DynamicFile_[f"{self._type.upper()}_SOURCE"],
-                        str(filepath.relative_to(self._path_src)).replace("/", ".")
-                    ),
+                    type=DynamicFile_[f"{self._type.upper()}_SOURCE"],
+                    subtype=str(filepath.relative_to(self._path_src)).replace("/", "."),
                     content=file_content,
                     path=str(filepath.relative_to(self._path_repo)),
                     path_before=str(
