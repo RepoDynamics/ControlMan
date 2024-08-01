@@ -38,19 +38,15 @@ class ReadmeFileGenerator:
         return
 
     def generate(self, elements: list) -> str:
-        contents = [
-            html.Comment(f"Automatically Generated Document")
-        ]
+        contents = []
         for idx, element in enumerate(elements):
             if isinstance(element, str):
-                element_content = element
-                marker = str(idx)
+                contents.append(element)
             else:
                 element_id = element["id"]
                 element_gen = self._element_gen[element_id]
                 element_content = element_gen(element)
-                marker = f"{idx} - {element_id}"
-            contents.extend([self._marker(start=marker), "\n", element_content, "\n", self._marker(end=marker)])
+                contents.append(element_content)
         return str(html.ElementCollection(elements=contents))
 
     def _elem_badges(self, badges: dict) -> str:
