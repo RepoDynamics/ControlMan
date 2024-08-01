@@ -64,7 +64,8 @@ class FormGenerator:
             path = f"{_const.DIRPATH_ISSUES}/{filename}"
             out.append(
                 GeneratedFile(
-                    type=(DynamicFile_.GITHUB_ISSUE_FORM, filename.removesuffix(".yaml")),
+                    type=DynamicFile_.GITHUB_ISSUE_FORM,
+                    subtype=filename.removesuffix(".yaml"),
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -73,20 +74,15 @@ class FormGenerator:
             paths.append(path)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_issues = self._repo_path / _const.DIRPATH_ISSUES
-        if dir_issues.is_dir():
-            for file in dir_issues.glob("*.yaml"):
-                file_relpath = str(file.relative_to(self._repo_path))
-                if file_relpath not in paths and file_relpath != _const.FILEPATH_ISSUES_CONFIG:
-                    logger.info(f"Outdated Issue Form: {file.name}")
-                    out.append(
-                        GeneratedFile(
-                            type=(DynamicFile_.GITHUB_ISSUE_FORM, file.stem),
-                            content="",
-                            path=None,
-                            path_before=file_relpath,
-                        )
-                    )
+        # Check for outdated issue forms to be removed
+        paths.append(_const.FILEPATH_ISSUES_CONFIG)
+        outdated_files = self._remove_outdated(
+            dir_path=self._repo_path / _const.DIRPATH_ISSUES,
+            include_glob="*.yaml",
+            exclude_filepaths=paths,
+            filetype=DynamicFile_.GITHUB_ISSUE_FORM,
+        )
+        out.extend(outdated_files)
         return out
 
     @logger.sectioner("Generate Discussion Forms")
@@ -101,7 +97,8 @@ class FormGenerator:
             file_content = pyserials.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
             out.append(
                 GeneratedFile(
-                    type=(DynamicFile_.GITHUB_DISCUSSION_FORM, filename.removesuffix(".yaml")),
+                    type=DynamicFile_.GITHUB_DISCUSSION_FORM,
+                    subtype=filename.removesuffix(".yaml"),
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -110,21 +107,13 @@ class FormGenerator:
             paths.append(filename)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_discussions = self._repo_path / _const.DIRPATH_DISCUSSIONS
-        if dir_discussions.is_dir():
-            for file in dir_discussions.glob("*.yaml"):
-                file_relpath = str(file.relative_to(self._repo_path))
-                if file_relpath not in paths:
-                    logger.section(f"Outdated Discussion Form: {file.name}")
-                    out.append(
-                        GeneratedFile(
-                            type=(DynamicFile_.GITHUB_DISCUSSION_FORM, file.stem),
-                            content="",
-                            path=None,
-                            path_before=file_relpath,
-                        )
-                    )
-                    logger.section_end()
+        outdated_files = self._remove_outdated(
+            dir_path=self._repo_path / _const.DIRPATH_DISCUSSIONS,
+            include_glob="*.yaml",
+            exclude_filepaths=paths,
+            filetype=DynamicFile_.GITHUB_DISCUSSION_FORM,
+        )
+        out.extend(outdated_files)
         return out
 
     @logger.sectioner("Generate Pull Request Templates")
@@ -137,7 +126,8 @@ class FormGenerator:
             path = _const.FILEPATH_PULL_TEMPLATE_MAIN if name == "default" else f"{_const.DIRPATH_PULL_TEMPLATES}/{name}.md"
             out.append(
                 GeneratedFile(
-                    type=(DynamicFile_.GITHUB_PULL_TEMPLATE, name),
+                    type=DynamicFile_.GITHUB_PULL_TEMPLATE,
+                    subtype=name,
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -146,21 +136,35 @@ class FormGenerator:
             paths.append(path)
             logger.debug(code_title="File content", code=file_content)
             logger.section_end()
-        dir_templates = self._repo_path / _const.DIRPATH_PULL_TEMPLATES
-        if dir_templates.is_dir():
-            for file in dir_templates.glob("*.md"):
-                file_relpath = str(file.relative_to(self._repo_path))
-                if file_relpath not in paths and file.name != "README.md":
-                    logger.section(f"Outdated Template: {file.name}")
-                    out.append(
-                        GeneratedFile(
-                            type=(DynamicFile_.GITHUB_PULL_TEMPLATE, file.stem),
-                            content="",
-                            path=None,
-                            path_before=file_relpath,
-                        )
+        outdated_files = self._remove_outdated(
+            dir_path=self._repo_path / _const.DIRPATH_PULL_TEMPLATES,
+            include_glob="*.md",
+            exclude_filepaths=paths,
+            filetype=DynamicFile_.GITHUB_PULL_TEMPLATE,
+        )
+        out.extend(outdated_files)
+        return out
+
+    def _remove_outdated(
+        self, dir_path: _Path,
+        include_glob: str,
+        exclude_filepaths: list[str],
+        filetype: DynamicFile_,
+        subtype: str | bool = True,
+    ) -> list[GeneratedFile]:
+        out = []
+        if not dir_path.is_dir():
+            return out
+        for file in dir_path.glob(include_glob):
+            file_relpath = str(file.relative_to(self._repo_path))
+            if file_relpath not in exclude_filepaths:
+                out.append(
+                    GeneratedFile(
+                        type=filetype,
+                        subtype=subtype if isinstance(subtype, str) else (file.stem if subtype else None),
+                        path_before=file_relpath,
                     )
-                    logger.section_end()
+                )
         return out
 
 
