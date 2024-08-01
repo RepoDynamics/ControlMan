@@ -3,50 +3,7 @@ from pathlib import Path as _Path
 from enum import Enum as _Enum
 
 import conventional_commits as _conventional_commits
-
 from versionman import PEP440SemVer as _PEP440SemVer
-
-
-class EventType(_Enum):
-    PUSH_MAIN = "push_main"
-    PUSH_RELEASE = "push_release"
-    PUSH_DEV = "push_dev"
-    PUSH_CI_PULL = "push_ci_pull"
-    PUSH_OTHER = "push_other"
-    PULL_MAIN = "pull_main"
-    PULL_RELEASE = "pull_release"
-    PULL_DEV = "pull_dev"
-    PULL_OTHER = "pull_other"
-    SCHEDULE = "schedule"
-    DISPATCH = "dispatch"
-
-
-class BranchType(_Enum):
-    MAIN = "main"
-    RELEASE = "release"
-    PRERELEASE = "pre-release"
-    DEV = "development"
-    AUTOUPDATE = "auto-update"
-    OTHER = "other"
-
-
-class Branch(_NamedTuple):
-    type: BranchType
-    name: str
-    prefix: str | None = None
-    suffix: str | int | _PEP440SemVer | tuple[int, str] | tuple[int, str, int] | None = None
-
-
-class RepoFileType(_Enum):
-    SUPERMETA = "SuperMeta Content"
-    WORKFLOW = "Workflows"
-    META = "Meta Content"
-    DYNAMIC = "Dynamic Content"
-    PACKAGE = "Package Files"
-    TEST = "Test-Suite Files"
-    WEBSITE = "Website Files"
-    README = "README Files"
-    OTHER = "Other Files"
 
 
 class DynamicFileType(_Enum):
@@ -93,38 +50,24 @@ class DynamicFile_(_Enum):
     LICENSE = (DynamicFileType.LICENSE, "License file")
 
 
+class DynamicDirType(_Enum):
+    CONTROL = "Control Center"
+    LOCAL = "Local"
+    MEDIA = "Media"
+    WEB_ROOT = "Website Root"
+    WEB_SRC = "Website Source"
+    PKG_ROOT = "Package Root"
+    PKG_SRC = "Package Source"
+    TEST_ROOT = "Test Suite Root"
+    TEST_SRC = "Test Suite Source"
+
+
 class GeneratedFile(_NamedTuple):
-    type: DynamicFile_ | tuple[DynamicFile_, str]
+    type: DynamicFile_
+    subtype: str | None = None
     content: str | None = None
     path: str | None = None
     path_before: str | None = None
-
-
-class DynamicFile(_NamedTuple):
-    id: str
-    category: DynamicFileType
-    rel_path: _Path | str
-    path: _Path | None = None
-    alt_paths: list[_Path] | None = None
-    is_dir: bool = False
-
-    @property
-    def filename(self) -> str:
-        return self.path.name
-
-
-class _FileStatus(_NamedTuple):
-    title: str
-    emoji: str
-
-
-class FileChangeType(_Enum):
-    REMOVED = _FileStatus("Removed", "🔴")
-    MODIFIED = _FileStatus("Modified", "🟣")
-    BROKEN = _FileStatus("Broken", "🟠")
-    CREATED = _FileStatus("Created", "🟢")
-    UNMERGED = _FileStatus("Unmerged", "⚪️")
-    UNKNOWN = _FileStatus("Unknown", "⚫")
 
 
 class DynamicFileChangeTypeContent(_NamedTuple):
@@ -136,18 +79,54 @@ class DynamicFileChangeType(_Enum):
     REMOVED = DynamicFileChangeTypeContent("Removed", "🔴")
     MODIFIED = DynamicFileChangeTypeContent("Modified", "🟣")
     MOVED_MODIFIED = DynamicFileChangeTypeContent("Moved & Modified", "🟠")
-    MOVED_REMOVED = DynamicFileChangeTypeContent("Moved & Removed", "🟠")
     MOVED = DynamicFileChangeTypeContent("Moved", "🟡")
     CREATED = DynamicFileChangeTypeContent("Created", "🟢")
     UNCHANGED = DynamicFileChangeTypeContent("Unchanged", "⚪️")
     DISABLED = DynamicFileChangeTypeContent("Disabled", "⚫")
 
 
-class Diff(_NamedTuple):
-    status: DynamicFileChangeType
-    after: str
-    before: str = ""
-    path_before: _Path | None = None
+class DynamicDir(_NamedTuple):
+    type: DynamicDirType
+    path: str | None = None
+    path_before: str | None = None
+    change: DynamicFileChangeType | None = None
+
+
+
+
+
+
+
+
+
+class EventType(_Enum):
+    PUSH_MAIN = "push_main"
+    PUSH_RELEASE = "push_release"
+    PUSH_DEV = "push_dev"
+    PUSH_CI_PULL = "push_ci_pull"
+    PUSH_OTHER = "push_other"
+    PULL_MAIN = "pull_main"
+    PULL_RELEASE = "pull_release"
+    PULL_DEV = "pull_dev"
+    PULL_OTHER = "pull_other"
+    SCHEDULE = "schedule"
+    DISPATCH = "dispatch"
+
+
+class BranchType(_Enum):
+    MAIN = "main"
+    RELEASE = "release"
+    PRERELEASE = "pre-release"
+    DEV = "development"
+    AUTOUPDATE = "auto-update"
+    OTHER = "other"
+
+
+class Branch(_NamedTuple):
+    type: BranchType
+    name: str
+    prefix: str | None = None
+    suffix: str | int | _PEP440SemVer | tuple[int, str] | tuple[int, str, int] | None = None
 
 
 class CommitGroup(_Enum):
