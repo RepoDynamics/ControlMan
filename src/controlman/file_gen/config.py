@@ -74,7 +74,7 @@ class ConfigFileGenerator:
         return [GeneratedFile(content=text, **codeowners_files)]
 
     def _generate_license(self) -> list[GeneratedFile]:
-        if not (self._data["license"] or self._data_before["license"]):
+        if self._is_disabled("license"):
             return []
         license_file = {
             "type": DynamicFile_.LICENSE,
@@ -85,7 +85,7 @@ class ConfigFileGenerator:
         return [GeneratedFile(**license_file)]
 
     def web_requirements(self) -> list[GeneratedFile]:
-        if not (self._data["web"] or self._data_before["web"]):
+        if self._is_disabled("web"):
             return []
         conda_env_file = {
             "type": DynamicFile_.WEB_ENV_CONDA,
@@ -126,7 +126,7 @@ class ConfigFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
         """
-        if not (self._data["funding"] or self._data_before["funding"]):
+        if self._is_disabled("funding"):
             return []
         funding_file = {
             "type": DynamicFile_.GITHUB_FUNDING,
@@ -191,7 +191,8 @@ class ConfigFileGenerator:
             )[0]
             out.append(
                 GeneratedFile(
-                    type=(DynamicFile_.TOOL_ENV_CONDA, ", ".join(conda_env_data["tool_names"])),
+                    type=DynamicFile_.TOOL_ENV_CONDA,
+                    subtype=", ".join(conda_env_data["tool_names"]),
                     content=conda_env,
                     path=conda_env_path,
                     path_before=conda_env_path
@@ -204,7 +205,8 @@ class ConfigFileGenerator:
                 logger.warning(f"Tool environment file '{pip_env_path}' does not contain all dependencies.")
             out.append(
                 GeneratedFile(
-                    type=(DynamicFile_.TOOL_ENV_PIP, ", ".join(pip_env_data["tool_names"])),
+                    type=DynamicFile_.TOOL_ENV_PIP,
+                    subtype=", ".join(pip_env_data["tool_names"]),
                     content=pip_env,
                     path=pip_env_path,
                     path_before=pip_env_path
@@ -247,7 +249,8 @@ class ConfigFileGenerator:
             if conf_path not in untouchable_paths:
                 out.append(
                     GeneratedFile(
-                        type=(DynamicFile_.TOOL_CONFIG, ", ".join(conf_data["tool_names"])),
+                        type=DynamicFile_.TOOL_CONFIG,
+                        subtype=", ".join(conf_data["tool_names"]),
                         content=content,
                         path=conf_path,
                         path_before=conf_path
@@ -280,7 +283,8 @@ class ConfigFileGenerator:
                 if path not in dic_new and path not in untouchable_paths:
                     out.append(
                         GeneratedFile(
-                            type=(typ, ", ".join(tool_names)),
+                            type=typ,
+                            subtype=", ".join(tool_names),
                             path_before=path
                         )
                     )
@@ -288,7 +292,7 @@ class ConfigFileGenerator:
 
     @logger.sectioner("Generate Issue Template Chooser Configuration File")
     def issue_template_chooser(self) -> list[GeneratedFile]:
-        if not (self._data["issue"] or self._data_before["issue"]):
+        if self._is_disabled("issue"):
             return []
         generate_file = {
             "type": DynamicFile_.GITHUB_ISSUES_CONFIG,
@@ -311,7 +315,7 @@ class ConfigFileGenerator:
     def gitignore(self) -> list[GeneratedFile]:
         local_dir = self._data["local.path"]
         file_content = "\n".join(
-            self._data["repo"].get("gitignore", [])
+            self._data.get("repo.gitignore", [])
             + [
                 f"{local_dir}/**",
                 f"!{local_dir}/**/",
@@ -331,13 +335,13 @@ class ConfigFileGenerator:
     def gitattributes(self) -> list[GeneratedFile]:
         if not (self._data["repo.gitattributes"] or self._data_before["repo.gitattributes"]):
             return []
-        file_info = dict(
-            type=DynamicFile_.GIT_ATTRIBUTES,
-            path=_const.FILEPATH_GIT_ATTRIBUTES,
-            path_before=_const.FILEPATH_GIT_ATTRIBUTES,
-        )
+        file_info = {
+            "type": DynamicFile_.GIT_ATTRIBUTES,
+            "path": _const.FILEPATH_GIT_ATTRIBUTES,
+            "path_before": _const.FILEPATH_GIT_ATTRIBUTES,
+        }
         file_content = ""
-        attributes = self._data["repo"].get("gitattributes", [])
+        attributes = self._data.get("repo.gitattributes", [])
         max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
         max_len_attr = max(
             [max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes]
