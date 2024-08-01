@@ -6,7 +6,7 @@ properties:
   path:
     title: Filepath
     description: Path to the README file.
-    type: string
+    $ref: path
     examples:
       - README
       - README.md

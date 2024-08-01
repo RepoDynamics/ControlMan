@@ -781,8 +781,8 @@ properties:
           - https://github.com/pydata/pydata-sphinx-theme/issues/1325 
           - https://github.com/pydata/pydata-sphinx-theme/issues/1328
           - https://github.com/pydata/pydata-sphinx-theme/issues/1385
-        type: string
         default: docs/media
+        $ref: path
       color:
         title: Colors of the project's theme.
         description: |
@@ -1107,10 +1107,10 @@ properties:
         required: [ root, source ]
         properties:
           root:
-            type: string
+            $ref: path
             default: docs/website
           source:
-            type: string
+            $ref: dir_name
             default: source
       sphinx:
         title: Configurations for the Sphinx website generator.
@@ -1426,7 +1426,7 @@ properties:
     properties:
       path:
         title: Path to the announcement banner file.
-        type: string
+        $ref: path
         default: ${{ web.path.root }}/announcement.html
         examples:
           - docs/announcement.html
@@ -1477,7 +1477,7 @@ properties:
         path:
           title: Path
           description: Path to the changelog file, relative to the root of the repository.
-          $ref: nonempty_string
+          $ref: path
           examples:
             - CHANGELOG.md
         title:
@@ -2729,7 +2729,7 @@ properties:
     properties:
       path:
         title: Path to the control center directory.
-        type: string
+        $ref: path
         default: .control
       cache:
         title: Settings for cached data.
@@ -3128,7 +3128,7 @@ properties:
     properties:
       path:
         title: Path to the local directory.
-        type: string
+        $ref: path
         default: .local
   # Custom
   custom:

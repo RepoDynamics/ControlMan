@@ -32,7 +32,7 @@ properties:
             enum: [ yaml, json, toml, txt ]
           path:
             title: Path to the configuration file to write.
-            type: string
+            $ref: path
             examples:
               - .github/.pre-commit-config.yaml
           content:

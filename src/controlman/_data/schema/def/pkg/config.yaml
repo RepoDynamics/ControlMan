@@ -16,7 +16,7 @@ description: |
   :::
 type: object
 additionalProperties: false
-
+required: [ path, name, import_name, os, python, build ]
 properties:
   path:
     title: Path to the source code directory.
@@ -26,16 +26,16 @@ properties:
     type: object
     default: { }
     additionalProperties: false
+    required: [ root, source, import ]
     properties:
       root:
-        type: string
+        $ref: path
       source:
-        type: string
+        $ref: dir_name
         default: src
       import:
         type: string
         default: ${{ .root }}/${{ .source }}/${{ ..import_name }}
-    required: [ root, source, import ]
   name:
     title: Name of the Python distribution package.
     description: |
@@ -656,4 +656,3 @@ properties:
           recipe-maintainers:
             - jakirkham
           feedstock-name: scipy
-required: [ path, name, import_name, os, python, build ]
