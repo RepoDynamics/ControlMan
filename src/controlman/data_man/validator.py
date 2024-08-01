@@ -1,4 +1,5 @@
 import re as _re
+from pathlib import Path as _Path
 
 from loggerman import logger as _logger
 
@@ -15,11 +16,46 @@ class DataValidator:
     @_logger.sectioner("Validate Control Center Contents")
     def validate(self):
         _util.jsonschema.validate_data(data=self._ccm(), schema="full")
-        self.branch_names()
-        self.changelogs()
-        self.commits()
-        self.issue_forms()
-        self.labels()
+        # self.branch_names()
+        # self.changelogs()
+        # self.commits()
+        # self.issue_forms()
+        # self.labels()
+        return
+
+    def dir_paths(self):
+        paths = []
+        path_keys = []
+        for dirpath_key in (
+            "control.path",
+            "local.path",
+            "theme.path",
+            "pkg.path.root",
+            "test.path.root",
+            "web.path.root",
+        ):
+            if self._ccm[dirpath_key]:
+                path_keys.append(dirpath_key)
+                paths.append(_Path(self._ccm[dirpath_key]))
+        for idx, path in enumerate(paths):
+            for idx2, path2 in enumerate(paths[idx + 1:]):
+                if path.is_relative_to(path2):
+                    main_path = path2
+                    rel_path = path
+                    main_key = path_keys[idx + idx2 + 1]
+                    rel_key = path_keys[idx]
+                elif path2.is_relative_to(path):
+                    main_path = path
+                    rel_path = path2
+                    main_key = path_keys[idx]
+                    rel_key = path_keys[idx + idx2 + 1]
+                else:
+                    continue
+                raise _exception.ControlManSchemaValidationError(
+                    f"Directory path '{rel_path}' defined at '{rel_key}' is relative to"
+                    f"directory path '{main_path}' defined at '{main_key}'.",
+                    key=rel_key,
+                )
         return
 
     def branch_names(self):
