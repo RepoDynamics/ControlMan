@@ -4,34 +4,29 @@ import re as _re
 # Non-standard libraries
 from packaging import specifiers as _specifiers
 
-from versionman import PEP440SemVer as _PEP440SemVer
+from gittidy import Git as _Git
 import pylinks
 import trove_classifiers as _trove_classifiers
 from loggerman import logger as _logger
+import pyserials as _ps
 
 from controlman import exception as _exception
-from controlman.nested_dict import NestedDict as _NestedDict
-from controlman.center_man.cache import CacheManager
-from controlman.protocol import Git as _Git
+from controlman.cache_manager import CacheManager
 
 
 class PythonDataGenerator:
 
     def __init__(
         self,
-        data: _NestedDict,
+        data: _ps.NestedDict,
         git_manager: _Git,
         cache: CacheManager,
         github_api: pylinks.api.GitHub,
-        data_main: _NestedDict | None = None,
-        future_versions: dict[str, str | _PEP440SemVer] | None = None,
     ):
         self._data = data
         self._git = git_manager
         self._cache = cache
         self._github_api = github_api
-        self._data_main = data_main
-        self._future_vers = future_versions or {}
         return
 
     def generate(self):

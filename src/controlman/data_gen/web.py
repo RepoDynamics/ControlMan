@@ -1,17 +1,16 @@
 from pathlib import Path as _Path
-import re as _re
 
+import docman as _dm
 from loggerman import logger as _logger
 import pyserials as _ps
 import markitup as _miu
 
 from controlman import exception as _exception
-from controlman.nested_dict import NestedDict as _NestedDict
 
 
 class WebDataGenerator:
 
-    def __init__(self, data: _NestedDict, source_path: _Path):
+    def __init__(self, data: _ps.NestedDict, source_path: _Path):
         self._data = data
         self._path = source_path
         return
@@ -29,10 +28,10 @@ class WebDataGenerator:
                 continue
             rel_path = str(md_filepath.relative_to(self._path).with_suffix(""))
             text = md_filepath.read_text()
-            frontmatter = self._extract_frontmatter(text)
+            frontmatter = _dm.read.frontmatter(text)
             if "ccid" in frontmatter:
                 pages[_miu.txt.slug(frontmatter["ccid"])] = {
-                    "title": self._extract_main_heading(text),
+                    "title": _dm.read.title(text),
                     "path": rel_path,
                     "url": f"{self._data['web.url.home']}/{rel_path}",
                 }
@@ -74,30 +73,3 @@ class WebDataGenerator:
                     }
         self._data["web.page"] = pages | blog_pages_final
         return
-
-    @staticmethod
-    def _extract_frontmatter(file_content: str) -> dict:
-        match = _re.match(r'^---+\s*\n(.*?)(?=\n---+\s*(\n|$))', file_content, _re.DOTALL)
-        if not match:
-            return {}
-        frontmatter_text = match.group(1).strip()
-        frontmatter = _ps.read.yaml_from_string(frontmatter_text)
-        return frontmatter
-
-    @staticmethod
-    def _extract_main_heading(file_content: str) -> str | None:
-        match = _re.search(r"^# (.*)", file_content, _re.MULTILINE)
-        return match.group(1) if match else ""
-
-    @staticmethod
-    def _extract_toctree(file_content: str) -> tuple[str, ...] | None:
-        matches = _re.findall(r"(:{3,}){toctree}\s((.|\s)*?)\s\1", file_content, _re.DOTALL)
-        if not matches:
-            return
-        toctree_str = matches[0][1]
-        toctree_entries = []
-        for line in toctree_str.splitlines():
-            entry = line.strip()
-            if entry and not entry.startswith(":"):
-                toctree_entries.append(entry)
-        return tuple(toctree_entries)

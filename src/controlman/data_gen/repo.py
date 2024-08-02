@@ -1,11 +1,11 @@
 import re as _re
 
+from gittidy import Git as _Git
 from versionman import PEP440SemVer
 from loggerman import logger as _logger
+import pyserials as _ps
 
-from controlman.nested_dict import NestedDict as _NestedDict
-from controlman.protocol import Git as _Git
-from controlman import data_man as _data_man
+import controlman as _controlman
 from controlman import exception as _exception
 from controlman import version as _version
 
@@ -14,9 +14,9 @@ class RepoDataGenerator:
 
     def __init__(
         self,
-        data: _NestedDict,
+        data: _ps.NestedDict,
         git_manager: _Git,
-        data_main: _NestedDict | None = None,
+        data_main: _ps.NestedDict | None = None,
         future_versions: dict[str, str | PEP440SemVer] | None = None,
     ):
         self._data = data
@@ -61,7 +61,7 @@ class RepoDataGenerator:
                 branch_metadata = self._data_main
             else:
                 try:
-                    branch_metadata = _data_man.from_json_file(repo_path=self._git.repo_path)
+                    branch_metadata = _controlman.from_json_file(repo_path=self._git.repo_path)
                 except _exception.ControlManException as e:
                     _logger.warning(f"Failed to read metadata from branch '{branch}'; skipping branch.")
                     _logger.debug("Error Details", e)

@@ -7,14 +7,12 @@ import textwrap
 from pathlib import Path as _Path
 
 # Non-standard libraries
-import pyserials
+import pyserials as _ps
 import pysyntax as _pysyntax
 from loggerman import logger
 import markitup as _miu
 
 from controlman.datatype import DynamicFile_, GeneratedFile
-from controlman import _util
-from controlman.nested_dict import NestedDict as _NestedDict
 from controlman import const as _const
 from controlman.file_gen import unit as _unit
 
@@ -22,8 +20,8 @@ from controlman.file_gen import unit as _unit
 class PythonPackageFileGenerator:
     def __init__(
         self,
-        data: _NestedDict,
-        data_before: _NestedDict,
+        data: _ps.NestedDict,
+        data_before: _ps.NestedDict,
         repo_path: _Path,
     ):
         self._data = data
@@ -43,8 +41,8 @@ class PythonPackageFileGenerator:
 
     def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[GeneratedFile]:
         self._type = typ
-        self._pkg = _NestedDict(self._data[typ])
-        self._pkg_before = _NestedDict(self._data_before[typ] or {})
+        self._pkg = _ps.NestedDict(self._data[typ])
+        self._pkg_before = _ps.NestedDict(self._data_before[typ] or {})
         self._path_root = _Path(self._data[f"{typ}.path.root"])
         self._path_src = self._path_root / self._data[f"{typ}.path.source"]
         self._path_import = self._path_src / self._pkg["import_name"]
@@ -166,21 +164,6 @@ class PythonPackageFileGenerator:
                     ) if self._path_src_before else None,
                 )
             )
-        # if not test_package_dir.alt_paths:
-        #     # test-suite package must be created
-        #     for testsuite_filename in ["__init__.txt", "__main__.txt", "general_tests.txt"]:
-        #         logger.section(f"Test-Suite File '{testsuite_filename}'")
-        #         file_info = self._pathman.python_file(
-        #             (test_package_dir.path / testsuite_filename).with_suffix(".py")
-        #         )
-        #         file_content = pyserials.update.templated_data_from_source(
-        #             templated_data=_util.file.get_package_datafile(f"template/testsuite/{testsuite_filename}"),
-        #             source_data=self._data.content.as_dict
-        #         )
-        #         out.append((file_info, file_content))
-        #         logger.info(code_title="File info", code=str(file_info))
-        #         logger.debug(code_title="File content", code=file_content)
-        #         logger.section_end()
         return out
 
     @logger.sectioner("Generate Package __init__.py File")
@@ -209,14 +192,6 @@ class PythonPackageFileGenerator:
             within = within.replace(docstring_text_before, docstring_text)
         return re.sub(pattern, f'{before}\n\n"""{within}\n"""  {after}'.strip(), file_content)
 
-#         file_content = """__version_details__ = {"version": "0.0.0"}
-# __version__ = __version_details__["version"]"""
-#
-#         file_content =
-#         logger.info(code_title="File info", code=str(file_info))
-#         logger.debug(code_title="File content", code=file_content)
-#         return [(file_info, file_content)]
-
     @logger.sectioner("Generate Package Manifest File")
     def manifest(self) -> list[GeneratedFile]:
         if self.is_disabled("manifest"):
@@ -235,7 +210,7 @@ class PythonPackageFileGenerator:
     def pyproject(self, tool_config: dict | str | None) -> list[GeneratedFile]:
         if tool_config:
             if isinstance(tool_config, str):
-                tool_config = pyserials.read.toml_from_string(data=tool_config, as_dict=False)
+                tool_config = _ps.read.toml_from_string(data=tool_config, as_dict=False)
             if not isinstance(tool_config, dict) or list(tool_config.keys()) != ["tool"]:
                 raise ValueError("Invalid pyproject.toml tool configuration")
             tool_config["project"] = self.pyproject_project()
@@ -251,7 +226,7 @@ class PythonPackageFileGenerator:
             tool_config = self._pkg["build"].get("tool", {})
             if tool_config:
                 pyproject["tool"] = tool_config
-        file_content = pyserials.write.to_toml_string(data=pyproject, sort_keys=False)
+        file_content = _ps.write.to_toml_string(data=pyproject, sort_keys=False)
         logger.debug(code_title="File content", code=file_content)
         file = GeneratedFile(
             type=DynamicFile_[f"{self._type.upper()}_PYPROJECT"],
@@ -293,7 +268,7 @@ class PythonPackageFileGenerator:
         project = {}
         for key, (dtype, val) in data.items():
             if val:
-                project[key] = pyserials.format.to_toml_object(data=val, toml_type=dtype)
+                project[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
         return project
 
     @property

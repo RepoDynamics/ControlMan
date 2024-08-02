@@ -3,14 +3,14 @@ import datetime as _datetime
 import re as _re
 
 # Non-standard libraries
+from gittidy import Git as _Git
 import pylinks
 import markitup as _miu
 from loggerman import logger as _logger
+import pyserials as _ps
 
-from controlman import _util
-from controlman.nested_dict import NestedDict as _NestedDict
-from controlman.center_man.cache import CacheManager
-from controlman.protocol import Git as _Git
+from controlman import _file_util
+from controlman.cache_manager import CacheManager
 from controlman import exception as _exception
 
 
@@ -25,7 +25,7 @@ class MainDataGenerator:
 
     def __init__(
         self,
-        data: _NestedDict,
+        data: _ps.NestedDict,
         cache_manager: CacheManager,
         git_manager: _Git,
         github_api: pylinks.api.GitHub,
@@ -122,7 +122,7 @@ class MainDataGenerator:
             _logger.info("No license specified.")
             return
         license_id = self._data.fill("license.id")
-        license_db = _util.file.get_package_datafile("db/license/info.yaml")
+        license_db = _file_util.get_package_datafile("db/license/info.yaml")
         license_info = license_db.get(license_id)
         if not license_info:
             for key in ("name", "text", "notice"):
@@ -139,10 +139,10 @@ class MainDataGenerator:
             data["trove"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
         if "text" not in data:
             filename = license_id.removesuffix("-or-later")
-            data["text"] = _util.file.get_package_datafile(f"db/license/text/{filename}.txt")
+            data["text"] = _file_util.get_package_datafile(f"db/license/text/{filename}.txt")
         if "notice" not in data:
             filename = license_id.removesuffix("-or-later")
-            data["notice"] = _util.file.get_package_datafile(f"db/license/notice/{filename}.txt")
+            data["notice"] = _file_util.get_package_datafile(f"db/license/notice/{filename}.txt")
         _logger.info(f"License data set for license ID '{license_id}'.")
         _logger.debug("License data:", code=str(license_info))
         return

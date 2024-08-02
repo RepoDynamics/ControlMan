@@ -1,12 +1,17 @@
 from pathlib import Path as _Path
+import datetime as _datetime
+
 
 from loggerman import logger as _logger
 import pyserials as _pyserials
 
-from controlman import _util, exception as _exception, const as _const
+from controlman import exception as _exception, const as _const, _file_util
+from controlman import data_validator as _data_validator
 
 
 class CacheManager:
+
+    _TIME_FORMAT = "%Y_%m_%d_%H_%M_%S"
 
     @_logger.sectioner("Initialize Cache Manager")
     def __init__(
@@ -21,7 +26,7 @@ class CacheManager:
             self._cache = {}
         else:
             try:
-                self._cache = _util.file.read_data_from_file(
+                self._cache = _file_util.read_data_from_file(
                     path=self._path,
                     base_path=path_repo,
                     extension="yaml",
@@ -34,7 +39,7 @@ class CacheManager:
                 )
                 _logger.debug(code_title="Cache Corruption Details", code=e)
             try:
-                _util.jsonschema.validate_data(
+                _data_validator.validate(
                     data=self._cache,
                     schema="cache",
                     raise_invalid_data=True,
@@ -49,7 +54,7 @@ class CacheManager:
 
     def get(self, typ: str, key: str):
         if typ not in self._retention_hours:
-            raise RuntimeError(f"Retention hours not defined for type '{typ}'")
+            return
         log_title = f"Retrieve '{typ}.{key}' from API cache"
         item = self._cache.get(typ, {}).get(key)
         if not item:
@@ -68,7 +73,7 @@ class CacheManager:
 
     def set(self, typ: str, key: str, value: dict | list | str | int | float | bool):
         new_item = {
-            "timestamp": _util.time.now(),
+            "timestamp": _datetime.datetime.now(tz=_datetime.timezone.utc).strftime(self._TIME_FORMAT),
             "data": value,
         }
         self._cache.setdefault(typ, {})[key] = new_item
@@ -86,6 +91,6 @@ class CacheManager:
         return
 
     def _is_expired(self, typ: str, timestamp: str) -> bool:
-        return _util.time.is_expired(
-            timestamp=timestamp, expiry_hours=self._retention_hours[typ]
-        )
+        time_delta = _datetime.timedelta(hours=self._retention_hours[typ])
+        exp_date = _datetime.datetime.strptime(timestamp, self._TIME_FORMAT) + time_delta
+        return exp_date <= _datetime.datetime.now()

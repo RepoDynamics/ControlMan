@@ -1,6 +1,0 @@
-"""Run all tests for the package."""
-
-
-import ${{package.testsuite_import_name}} as testsuite
-
-testsuite.run()

@@ -2,13 +2,12 @@ import datetime
 from pathlib import Path as _Path
 
 from loggerman import logger
-import pyserials
+import pyserials as _ps
 import pylinks
 from pylinks.exceptions import WebAPIError
 import markitup as _miu
 
 from controlman.datatype import DynamicFile_, GeneratedFile
-from controlman.nested_dict import NestedDict as _NestedDict
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
 
@@ -16,8 +15,8 @@ from controlman import const as _const
 class ConfigFileGenerator:
     def __init__(
         self,
-        data: _NestedDict,
-        data_before: _NestedDict,
+        data: _ps.NestedDict,
+        data_before: _ps.NestedDict,
         repo_path: _Path,
     ):
         self._data = data
@@ -138,10 +137,10 @@ class ConfigFileGenerator:
         output = {}
         for funding_platform, users in self._data["funding"].items():
             if isinstance(users, list):
-                output[funding_platform] = pyserials.format.to_yaml_array(data=users, inline=True)
+                output[funding_platform] = _ps.format.to_yaml_array(data=users, inline=True)
             else:
                 output[funding_platform] = users
-        file_content = pyserials.write.to_yaml_string(data=output, end_of_file_newline=True)
+        file_content = _ps.write.to_yaml_string(data=output, end_of_file_newline=True)
         logger.debug(code_title="File content", code=file_content)
         return [GeneratedFile(content=file_content, **funding_file)]
 
@@ -230,7 +229,7 @@ class ConfigFileGenerator:
                     full = [elem for content in conf_data["contents"] for elem in content]
                 else:
                     for dic in conf_data["contents"][1:]:
-                        pyserials.update.dict_from_addon(
+                        _ps.update.dict_from_addon(
                             data=conf_data["contents"][0],
                             addon=dic,
                             append_list=True,
@@ -238,7 +237,7 @@ class ConfigFileGenerator:
                             raise_duplicates=True,
                         )
                     full = conf_data["contents"][0]
-                content = pyserials.write.to_string(
+                content = _ps.write.to_string(
                     data=full,
                     data_type=conf_data["type"],
                     end_of_file_newline=True,
@@ -307,7 +306,7 @@ class ConfigFileGenerator:
             config["blank_issues_enabled"] = issues["blank_enabled"]
         if issues.get("contact_links"):
             config["contact_links"] = self._data["issue"]["contact_links"]
-        file_content = pyserials.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
+        file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
         logger.debug(code_title="File content", code=file_content)
         return [GeneratedFile(content=file_content, **generate_file)]
 
@@ -422,7 +421,7 @@ class ConfigFileGenerator:
         if not cite:
             return [GeneratedFile(**generated_file)]
         filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
-        cite_old = pyserials.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
+        cite_old = _ps.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
         out = {
             "message": cite["message"],
             "title": cite["title"],
@@ -453,21 +452,8 @@ class ConfigFileGenerator:
         if cite.get("references"):
             out["references"] = [create_reference(ref) for ref in cite["references"]]
         out["cff-version"] = "1.2.0"
-        file_content = pyserials.write.to_yaml_string(data=out, end_of_file_newline=True)
+        file_content = _ps.write.to_yaml_string(data=out, end_of_file_newline=True)
         return [GeneratedFile(content=file_content, **generated_file)]
-
-    def prepare_citation_for_release(
-        self,
-        doi: str,
-        version: str,
-    ):
-        # cit_cur = pyserials.read.yaml_from_file(
-        #     path=self._path_manager.citation.path
-        # ) if self._path_manager.citation.path.is_file() else self.citation()
-        cit_cur["version"] = version
-        cit_cur["doi"] = doi
-        cit_cur["date-released"] = datetime.datetime.now().strftime('%Y-%m-%d')
-        cit_cur.pop("commit", None)
 
     @logger.sectioner("Generate Codecov Configuration File")
     def validate_codecov_config(self, config: str) -> None:

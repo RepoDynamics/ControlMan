@@ -1,14 +1,39 @@
+from pathlib import Path as _Path
+
 import jsonpath_ng as _jsonpath
 import ruamel.yaml as _yaml
 
-import pyserials as _pyserials
-import pylinks as _pylinks
+import pyserials as _ps
+import pylinks as _pl
 
 from controlman import exception as _exception
-from controlman.center_man.cache import CacheManager as _CacheManager
+from controlman.cache_manager import CacheManager as _CacheManager
+from controlman import const as _const
 
 
-def create_external_tag_constructor(tag_name: str = u"!ext", cache_manager: _CacheManager | None = None):
+def load(control_center_path: _Path, cache_manager: _CacheManager | None = None) -> dict:
+    full_data = {}
+    for filepath in control_center_path.glob('*'):
+        if filepath.is_file() and filepath.suffix.lower() in ['.yaml', '.yml']:
+            filename = filepath.relative_to(control_center_path)
+            data = _ps.read.yaml_from_file(
+                path=filepath,
+                safe=True,
+                constructors={
+                    _const.CC_EXTENSION_TAG: _create_external_tag_constructor(
+                        tag_name=_const.CC_EXTENSION_TAG,
+                        cache_manager=cache_manager
+                    )
+                },
+            )
+            duplicate_keys = set(data.keys()) & set(full_data.keys())
+            if duplicate_keys:
+                raise RuntimeError(f"Duplicate keys '{", ".join(duplicate_keys)}' in project config")
+            full_data.update(data)
+    return full_data
+
+
+def _create_external_tag_constructor(tag_name: str = u"!ext", cache_manager: _CacheManager | None = None):
 
     def load_external_data(loader: _yaml.SafeConstructor, node: _yaml.ScalarNode):
         tag_value = loader.construct_scalar(node)
@@ -20,17 +45,17 @@ def create_external_tag_constructor(tag_name: str = u"!ext", cache_manager: _Cac
                 return cached_data
         url, jsonpath_expr = tag_value.split(' ', 1)
         try:
-            data_raw_whole = _pylinks.http.request(
+            data_raw_whole = _pl.http.request(
                 url=url,
                 verb="GET",
                 response_type="str",
             )
-        except _pylinks.exceptions.WebAPIError as e:
+        except _pl.exceptions.WebAPIError as e:
             raise _exception.ControlManFileReadError(
                 path=url,
                 msg=f"Failed to download external data from URL '{url}'"
             ) from e
-        data_whole = _pyserials.read.yaml_from_string(
+        data_whole = _ps.read.yaml_from_string(
             data=data_raw_whole,
             safe=True,
             constructors={tag_name: load_external_data},

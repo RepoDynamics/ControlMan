@@ -1,14 +1,13 @@
 from pathlib import Path as _Path
 
+import docman as _dm
 from readme_renderer.markdown import render as _render
+import pyserials as _ps
 
 from controlman.datatype import GeneratedFile as _GeneratedFile, DynamicFile_ as _DynamicFile
-from controlman.file_gen.readme.pypackit import ReadmeFileGenerator
-from controlman.nested_dict import NestedDict as _NestedDict
-from controlman.file_gen.readme import pypackit as _pypackit_readme
 
 
-def generate(data: _NestedDict, data_before: _NestedDict, root_path: _Path) -> list[_GeneratedFile]:
+def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, root_path: _Path) -> list[_GeneratedFile]:
 
     generated_files = []
     default_footer_themed = _generate_footer(
@@ -75,7 +74,7 @@ def _generate_file(
     content = file_data["content"]
     if not content:
         return _GeneratedFile(**file_info)
-    content = _pypackit_readme.ReadmeFileGenerator(
+    content = _dm.write.ReadmeFileWriter(
         default_badge=default_badge,
         themed=themed,
         root_path=root_path
@@ -100,12 +99,11 @@ def _generate_footer(
 ):
     if not footer_data:
         return ""
-    return _pypackit_readme.ReadmeFileGenerator(
+    return _dm.write.ReadmeFileWriter(
         default_badge=default_badge,
         themed=themed,
         root_path=root_path
     ).generate(elements=footer_data)
-
 
 
 def render_pypi_readme(markdown_str: str):

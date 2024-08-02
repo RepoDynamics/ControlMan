@@ -2,8 +2,8 @@ from pathlib import Path as _Path
 
 from loggerman import logger as _logger
 import pyshellman
+import pkgdata as _pkgdata
 
-from controlman import _util
 from controlman import const as _const
 
 
@@ -43,7 +43,7 @@ class HookManager:
         if not module_path.is_file():
             _logger.warning(f"No custom generator found at {module_path}.")
             return
-        return _util.file.import_module_from_path(path=module_path)
+        return _pkgdata.import_module_from_path(path=module_path)
 
     @_logger.sectioner("Install Requirements")
     def _install_requirements(self):

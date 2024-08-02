@@ -1,17 +1,16 @@
 from pathlib import Path as _Path
 
-import pyserials
+import pyserials as _ps
 from loggerman import logger
 
 from controlman.datatype import DynamicFile_, GeneratedFile
-from controlman.nested_dict import NestedDict as _NestedDict
 from controlman import const as _const
 
 
 class FormGenerator:
     def __init__(
         self,
-        data: _NestedDict,
+        data: _ps.NestedDict,
         repo_path: _Path,
     ):
         self._data = data
@@ -59,7 +58,7 @@ class FormGenerator:
                 form_output["body"].append(
                     {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
                 )
-            file_content = pyserials.write.to_yaml_string(data=form_output, end_of_file_newline=True)
+            file_content = _ps.write.to_yaml_string(data=form_output, end_of_file_newline=True)
             filename = f"{form_idx + 1:02}_{form['id']}.yaml"
             path = f"{_const.DIRPATH_ISSUES}/{filename}"
             out.append(
@@ -94,7 +93,7 @@ class FormGenerator:
             logger.section(f"Discussion Form '{slug}'")
             filename = f"{slug}.yaml"
             path = f"{_const.DIRPATH_DISCUSSIONS}/{filename}"
-            file_content = pyserials.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
+            file_content = _ps.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
             out.append(
                 GeneratedFile(
                     type=DynamicFile_.GITHUB_DISCUSSION_FORM,

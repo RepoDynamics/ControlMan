@@ -1,29 +1,25 @@
-import copy as _copy
 from pathlib import Path as _Path
 import shutil as _shutil
 
 from versionman import PEP440SemVer as _PEP440SemVer
 from loggerman import logger as _logger
 import pylinks as _pylinks
-import markitup as _miu
+import pyserials as _ps
+from gittidy import Git as _Git
 
-from controlman.data_man.manager import DataManager as _DataManager
-from controlman.data_man.validator import DataValidator as _DataValidator
+from controlman.data_validator import DataValidator as _DataValidator
 from controlman import data_gen as _data_gen
-from controlman.center_man.hook import HookManager as _HookManager
+from controlman.hook_manager import HookManager as _HookManager
 from controlman.datatype import (
     DynamicFileType as _DynamicFileType,
     DynamicFileChangeType,
     GeneratedFile as _GeneratedFile,
 )
-from controlman.protocol import Git as _Git
-import controlman
 from controlman import const
-from controlman import _util
-from controlman import exception as _exception
-from controlman.center_man.cache import CacheManager
-from controlman.nested_dict import NestedDict as _NestedDict
+from controlman.cache_manager import CacheManager
 from controlman import file_gen as _file_gen
+from controlman import data_loader as _data_loader
+from controlman import data_validator as _data_validator
 
 
 class CenterManager:
@@ -31,25 +27,29 @@ class CenterManager:
     def __init__(
         self,
         git_manager: _Git,
+        cc_path: _Path,
+        data_before: _ps.NestedDict,
+        data_main: _ps.NestedDict,
         github_token: str | None = None,
-        data_main: _DataManager | dict | None = None,
         future_versions: dict[str, str | _PEP440SemVer] | None = None,
-        control_center_path: _Path | str | None = None,
     ):
-        self._git = git_manager
+        self._git: _Git = git_manager
+        self._path_cc = cc_path
+        self._data_before: _ps.NestedDict = data_before
+        self._data_main: _ps.NestedDict = data_main
         self._github_api = _pylinks.api.github(token=github_token)
-        self._data_main = data_main
         self._future_vers = future_versions or {}
-        self._path_cc = control_center_path
-        self._path_root = self._git.repo_path
 
-        self._data_before: _NestedDict | None = None
-        self._hook_manager: _HookManager | None = None
-        self._cache_manager: CacheManager | None = None
-        self._contents_raw: _NestedDict | None = None
-        self._local_config: dict = {}
-        self._data: _NestedDict | None = None
-        self._generated_files: list[tuple[_GeneratedFile, DynamicFileChangeType]] = []
+        self._path_root = self._git.repo_path
+        self._hook_manager = _HookManager(dir_path=self._path_cc / const.DIRNAME_CC_HOOK)
+        self._cache_manager: CacheManager = CacheManager(
+            path_repo=self._path_root,
+            retention_hours=self._data_before.get("control.cache.retention_hours", {}),
+        )
+
+        self._data_raw: _ps.NestedDict | None = None
+        self._data: _ps.NestedDict | None = None
+        self._files: list[tuple[_GeneratedFile, DynamicFileChangeType]] = []
         self._compared_dirs: list = []
         self._dirs_to_apply: list[tuple[str, str, DynamicFileChangeType]] = []
         self._dirs_to_apply_sub: list[tuple[str, str, DynamicFileChangeType]] = []
@@ -57,95 +57,35 @@ class CenterManager:
         self._summary: str = ""
         return
 
-    def load(self) -> _NestedDict:
-        if self._contents_raw:
-            return self._contents_raw
-        if not self._path_cc:
-            self._data_before = controlman.data_man.from_json_file(repo_path=self._path_root).ndict
-            self._path_cc = self._path_root / self._data_before["control.path"]
-            cache_retention_hours = self._data_before["control.cache.retention_hours"]
-        else:
-            self._data_before = _NestedDict(data={})
-            self._path_cc = self._path_root / self._path_cc
-            cache_retention_hours = {k: 0 for k in ("extension", "repo", "user", "orcid", "doi", "python")}
-        self._hook_manager = _HookManager(
-            dir_path=self._path_root / self._path_cc / const.DIRNAME_CC_HOOK
+    def load(self) -> dict:
+        if self._data_raw:
+            return self._data_raw()
+        full_data = _data_loader.load(
+            control_center_path=self._path_cc,
+            cache_manager=self._cache_manager,
         )
-        self._cache_manager = CacheManager(
-            path_repo=self._path_root,
-            retention_hours=cache_retention_hours,
-        )
-        full_data = {}
-        for filepath in self._path_cc.glob('*'):
-            if filepath.is_file() and filepath.suffix.lower() in ['.yaml', '.yml']:
-                filename = filepath.relative_to(self._path_cc)
-                _logger.section(f"Load Control Center File '{filename}'")
-                data = _util.file.read_control_center_file(
-                    path=filepath,
-                    cache_manager=self._cache_manager,
-                    tag_name=const.CC_EXTENSION_TAG,
-                )
-                duplicate_keys = set(data.keys()) & set(full_data.keys())
-                if duplicate_keys:
-                    raise RuntimeError(f"Duplicate keys '{", ".join(duplicate_keys)}' in project config")
-                full_data.update(data)
         if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_LOAD):
             full_data = self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_LOAD,
                 full_data,
             )
-        _util.jsonschema.validate_data(
-            data=full_data,
-            schema="full",
-            before_substitution=True,
-        )
-        self._contents_raw = _NestedDict(full_data)
-        return self._contents_raw
+        _data_validator.validate(data=full_data, before_substitution=True)
+        self._data_raw = _ps.NestedDict(full_data)
+        return full_data
 
-    def generate_data(self) -> _DataManager:
+    def generate_data(self) -> dict:
         if self._data:
-            return _DataManager(self._data)
-        data = self.load()
-        _data_gen.MainDataGenerator(
-            data=data,
+            return self._data()
+        self.load()
+        data = _data_gen.generate(
+            git_manager=self._git,
             cache_manager=self._cache_manager,
-            git_manager=self._git,
             github_api=self._github_api,
-        ).generate()
-        if not self._data_main:
-            curr_branch, other_branches = self._git.get_all_branch_names()
-            main_branch = data["repo.default_branch"]
-            if curr_branch == main_branch:
-                self._data_main = self._data_before or data
-            else:
-                self._git.fetch_remote_branches_by_name(main_branch)
-                self._git.stash()
-                self._git.checkout(main_branch)
-                if (self._git.repo_path / const.FILEPATH_METADATA).is_file():
-                    self._data_main = controlman.data_man.from_json_file(repo_path=self._git.repo_path)
-                else:
-                    self._data_main = data
-                self._git.checkout(curr_branch)
-                self._git.stash_pop()
-        if data.get("pkg"):
-            _data_gen.PythonDataGenerator(
-                data=data,
-                git_manager=self._git,
-                cache=self._cache_manager,
-                github_api=self._github_api,
-            ).generate()
-        if data.get("web"):
-            web_data_source = self._data_before if self._data_before["web.path.source"] else data
-            _data_gen.WebDataGenerator(
-                data=data,
-                source_path=self._path_root / web_data_source["web.path.root"] / web_data_source["web.path.source"],
-            ).generate()
-        _data_gen.RepoDataGenerator(
-            data=data,
-            git_manager=self._git,
+            data=self._data_raw,
+            data_before=self._data_before,
             data_main=self._data_main,
             future_versions=self._future_vers,
-        ).generate()
+        )
         if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_DATA):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_DATA,
@@ -153,66 +93,52 @@ class CenterManager:
             )
         self._cache_manager.save()
         data.fill()
-        _DataValidator(data=data).validate()
+        _data_validator.validate(data=data())
         self._data = data
-        return _DataManager(data)
+        return data()
 
     def generate_files(self) -> list[tuple[_GeneratedFile, DynamicFileChangeType]]:
-        if self._generated_files:
-            return self._generated_files
+        if self._files:
+            return self._files
         self.generate_data()
-        generated_files = []
-        form_files = _file_gen.FormGenerator(
-            data=self._data,
-            repo_path=self._path_root,
-        ).generate()
-        generated_files.extend(form_files)
-        config_files, pyproject_pkg, pyproject_test = _file_gen.ConfigFileGenerator(
+        self._files = _file_gen.generate(
             data=self._data,
             data_before=self._data_before,
             repo_path=self._path_root,
-        ).generate()
-        generated_files.extend(config_files)
-        if self._data["pkg"]:
-            package_files = _file_gen.PythonPackageFileGenerator(
-                data=self._data,
-                data_before=self._data_before,
-                repo_path=self._path_root,
-            ).generate(typ="pkg", pyproject_tool_config=pyproject_pkg)
-            generated_files.extend(package_files)
-        if self._data["test"]:
-            test_files = _file_gen.PythonPackageFileGenerator(
-                data=self._data,
-                data_before=self._data_before,
-                repo_path=self._path_root,
-            ).generate(typ="test", pyproject_tool_config=pyproject_test)
-            generated_files.extend(test_files)
-        readme_files = _file_gen.readme.generate(
-            data=self._data,
-            data_before=self._data_before,
-            root_path=self._path_root,
         )
-        generated_files.extend(readme_files)
-        self._generated_files = [
-            (generated_file, self._compare_file(generated_file)) for generated_file in generated_files
-        ]
-        return self._generated_files
+        return self._files
 
     def compare_dirs(self):
+
+        def compare_source(main_key: str, root_path: str):
+            source_name, source_name_before, source_status = self._compare_dir(f"{main_key}.path.source")
+            source_path = f"{root_path}/{source_name}" if root_path else None
+            source_path_before = f"{root_path}/{source_name_before}" if root_path else None
+            return source_path, source_path_before, source_status
+
+        def compare_import(main_key: str, source_path: str):
+            import_name, import_name_before, import_status = self._compare_dir(f"{main_key}.import_name")
+            import_path = f"{source_path}/{import_name}" if source_path else None
+            import_path_before = f"{source_path}/{import_name_before}" if root_path else None
+            return import_path, import_path_before, import_status
+
+
         if self._compared_dirs:
             return self._compared_dirs
         compared_dirs = []
         for_apply = []
-        for path_key in ("theme.path", "control.path", "local.path"):
-            path, path_before, status = self._compare_dir(path_key)
+        for path_key in ("theme", "control", "local"):
+            path, path_before, status = self._compare_dir(f"{path_key}.path")
             for_apply.append((path, path_before, status))
-        for path_key in ("web.path", "pkg.path", "test.path"):
-            root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.root")
+        for path_key in ("web", "pkg", "test"):
+            root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.path.root")
             for_apply.append((root_path, root_path_before, root_status))
-            source_name, source_name_before, source_status = self._compare_dir(f"{path_key}.source")
-            source_path = f"{root_path}/{source_name}" if root_path else None
-            source_path_before = f"{root_path}/{source_name_before}" if root_path else None
-            for_apply.append((source_path, source_path_before, source_status))
+            source_data = compare_source(main_key=path_key, root_path=root_path)
+            for_apply.append(source_data)
+            if path_key == "web":
+                continue
+            import_data = compare_import(main_key=path_key, source_path=source_data[0])
+            for_apply.append(import_data)
         self._dirs_to_apply = for_apply
         self._compared_dirs = compared_dirs
         return self._compared_dirs
@@ -254,7 +180,7 @@ class CenterManager:
             filepath_abs = self._path_root / generated_file.path if generated_file.path else None
             filepath_before_abs = self._path_root / generated_file.path_before if generated_file.path_before else None
             if status is DynamicFileChangeType.REMOVED:
-                filepath_before_abs.unlink()
+                filepath_before_abs.unlink(missing_ok=True)
             elif status in (
                 DynamicFileChangeType.CREATED,
                 DynamicFileChangeType.MODIFIED,
@@ -265,35 +191,8 @@ class CenterManager:
                 with open(filepath_abs, "w") as f:
                     f.write(f"{generated_file.content.strip()}\n")
                 if status in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
-                    filepath_before_abs.unlink()
+                    filepath_before_abs.unlink(missing_ok=True)
         return
-
-    def _compare_file(self, file: _GeneratedFile) -> DynamicFileChangeType:
-        if not file.content:
-            if not file.path_before:
-                return DynamicFileChangeType.DISABLED
-            filepath_before = self._path_root/file.path_before
-            if filepath_before.is_file():
-                return DynamicFileChangeType.REMOVED
-            return DynamicFileChangeType.DISABLED
-        if not file.path:
-            return DynamicFileChangeType.DISABLED
-        if not file.path_before:
-            return DynamicFileChangeType.CREATED
-        fullpath_before = self._path_root/file.path_before
-        if not fullpath_before.is_file():
-            return DynamicFileChangeType.CREATED
-        with open(self._path_root/file.path_before) as f:
-            content_before = f.read()
-        contents_identical = file.content.strip() == content_before.strip()
-        paths_identical = file.path == file.path_before
-        change_type = {
-            (True, True): DynamicFileChangeType.UNCHANGED,
-            (True, False): DynamicFileChangeType.MOVED,
-            (False, True): DynamicFileChangeType.MODIFIED,
-            (False, False): DynamicFileChangeType.MOVED_MODIFIED,
-        }
-        return change_type[(contents_identical, paths_identical)]
 
     def _compare_dir(self, path_key: str) -> tuple[str, str, DynamicFileChangeType]:
         path = self._data[path_key]
