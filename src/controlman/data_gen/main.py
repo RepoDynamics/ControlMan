@@ -5,7 +5,7 @@ import re as _re
 # Non-standard libraries
 from gittidy import Git as _Git
 import pylinks
-import markitup as _miu
+from markitup import txt as _txt
 from loggerman import logger as _logger
 import pyserials as _ps
 
@@ -100,8 +100,8 @@ class MainDataGenerator:
         if not name:
             name = self._data["name"] = repo_name.replace("-", " ")
             _logger.info(f"Set `name`", f"Set to '{name}' from repository name")
-        self._data["slug.name"] = _miu.txt.slug(name)
-        self._data["slug.repo_name"] = _miu.txt.slug(repo_name)
+        self._data["slug.name"] = _txt.slug(name)
+        self._data["slug.repo_name"] = _txt.slug(repo_name)
         return
 
     @_logger.sectioner("Keyword slugs")
@@ -109,7 +109,7 @@ class MainDataGenerator:
         keywords = self._data.fill("keywords")
         if not keywords:
             _logger.info("No keywords specified.")
-        slugs = [_miu.txt.slug(keyword) for keyword in keywords if len(keyword) <= 50]
+        slugs = [_txt.slug(keyword) for keyword in keywords if len(keyword) <= 50]
         self._data["slug.keywords"] = slugs
         _logger.info("Set `slug.keywords`", f"Set from `keywords`")
         _logger.debug(f"Keyword slugs: {str(slugs)}")
@@ -208,9 +208,11 @@ class MainDataGenerator:
     def _urls_website(self) -> None:
         base_url = self._data.get("web.url.base")
         if not base_url:
-            cname = self._data.fill("web.url.cname")
-            if cname:
-                base_url = f"https://{cname}"
+            custom = self._data.fill("web.url.custom")
+            if custom:
+                protocol = "https" if custom["enforce_https"] else "http"
+                domain = custom["name"]
+                base_url = f"{protocol}://{domain}"
             elif self._data["repo.name"] == f"{self._data['team.owner.github.id']}.github.io":
                 base_url = f"https://{self._data['team.owner.github.user']}.github.io"
             else:

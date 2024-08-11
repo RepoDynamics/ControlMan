@@ -3,7 +3,7 @@ from pathlib import Path as _Path
 import pyserials as _ps
 from loggerman import logger
 
-from controlman.datatype import DynamicFile_, GeneratedFile
+from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
 
 
@@ -17,11 +17,11 @@ class FormGenerator:
         self._repo_path = repo_path
         return
 
-    def generate(self) -> list[GeneratedFile]:
+    def generate(self) -> list[DynamicFile]:
         return self.issue_forms() + self.discussion_forms() + self.pull_request_templates()
 
     @logger.sectioner("Generate Issue Forms")
-    def issue_forms(self) -> list[GeneratedFile]:
+    def issue_forms(self) -> list[DynamicFile]:
         out = []
         forms = self._data.get("issue.forms", [])
         maintainers = self._data.get("maintainer.issue", {})
@@ -62,9 +62,9 @@ class FormGenerator:
             filename = f"{form_idx + 1:02}_{form['id']}.yaml"
             path = f"{_const.DIRPATH_ISSUES}/{filename}"
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_.GITHUB_ISSUE_FORM,
-                    subtype=filename.removesuffix(".yaml"),
+                DynamicFile(
+                    type=DynamicFileType.ISSUE_FORM,
+                    subtype=(filename.removesuffix(".yaml"), form["name"]),
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -79,13 +79,13 @@ class FormGenerator:
             dir_path=self._repo_path / _const.DIRPATH_ISSUES,
             include_glob="*.yaml",
             exclude_filepaths=paths,
-            filetype=DynamicFile_.GITHUB_ISSUE_FORM,
+            filetype=DynamicFileType.ISSUE_FORM,
         )
         out.extend(outdated_files)
         return out
 
     @logger.sectioner("Generate Discussion Forms")
-    def discussion_forms(self) -> list[GeneratedFile]:
+    def discussion_forms(self) -> list[DynamicFile]:
         out = []
         paths = []
         forms = self._data.get("discussion.category", [])
@@ -95,9 +95,9 @@ class FormGenerator:
             path = f"{_const.DIRPATH_DISCUSSIONS}/{filename}"
             file_content = _ps.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_.GITHUB_DISCUSSION_FORM,
-                    subtype=filename.removesuffix(".yaml"),
+                DynamicFile(
+                    type=DynamicFileType.DISCUSSION_FORM,
+                    subtype=(slug, slug),
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -110,13 +110,13 @@ class FormGenerator:
             dir_path=self._repo_path / _const.DIRPATH_DISCUSSIONS,
             include_glob="*.yaml",
             exclude_filepaths=paths,
-            filetype=DynamicFile_.GITHUB_DISCUSSION_FORM,
+            filetype=DynamicFileType.DISCUSSION_FORM,
         )
         out.extend(outdated_files)
         return out
 
     @logger.sectioner("Generate Pull Request Templates")
-    def pull_request_templates(self) -> list[GeneratedFile]:
+    def pull_request_templates(self) -> list[DynamicFile]:
         out = []
         paths = []
         templates = self._data.get("pull.template", {})
@@ -124,9 +124,9 @@ class FormGenerator:
             logger.section(f"Template '{name}'")
             path = _const.FILEPATH_PULL_TEMPLATE_MAIN if name == "default" else f"{_const.DIRPATH_PULL_TEMPLATES}/{name}.md"
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_.GITHUB_PULL_TEMPLATE,
-                    subtype=name,
+                DynamicFile(
+                    type=DynamicFileType.PULL_TEMPLATE,
+                    subtype=(name, name),
                     content=file_content,
                     path=path,
                     path_before=path,
@@ -139,7 +139,7 @@ class FormGenerator:
             dir_path=self._repo_path / _const.DIRPATH_PULL_TEMPLATES,
             include_glob="*.md",
             exclude_filepaths=paths,
-            filetype=DynamicFile_.GITHUB_PULL_TEMPLATE,
+            filetype=DynamicFileType.PULL_TEMPLATE,
         )
         out.extend(outdated_files)
         return out
@@ -148,19 +148,20 @@ class FormGenerator:
         self, dir_path: _Path,
         include_glob: str,
         exclude_filepaths: list[str],
-        filetype: DynamicFile_,
+        filetype: DynamicFileType,
         subtype: str | bool = True,
-    ) -> list[GeneratedFile]:
+    ) -> list[DynamicFile]:
         out = []
         if not dir_path.is_dir():
             return out
         for file in dir_path.glob(include_glob):
             file_relpath = str(file.relative_to(self._repo_path))
             if file_relpath not in exclude_filepaths:
+                subtype = subtype if isinstance(subtype, str) else (file.stem if subtype else None)
                 out.append(
-                    GeneratedFile(
+                    DynamicFile(
                         type=filetype,
-                        subtype=subtype if isinstance(subtype, str) else (file.stem if subtype else None),
+                        subtype=(subtype, subtype),
                         path_before=file_relpath,
                     )
                 )

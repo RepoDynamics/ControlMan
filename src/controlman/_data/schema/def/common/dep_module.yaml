@@ -5,7 +5,7 @@ type: object
 properties:
   name:
     title: Name of the module.
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   import_name:
     type: string
     pattern: '^[a-zA-Z0-9_\.-]*$'
@@ -19,20 +19,20 @@ properties:
         description:
           type: string
         url:
-          $ref: url
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       required: [ url ]
     properties:
       docs:
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       pip:
         title: URL of the pip package.
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       conda:
         type: string
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       source:
         type: string
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   intersphinx_mapping:
     type: object
     additionalProperties: false

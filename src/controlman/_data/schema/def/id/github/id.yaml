@@ -1,9 +1,0 @@
-$schema: https://json-schema.org/draft/2020-12/schema
-title: GitHub Account ID
-description: |
-  This is a unique identifier for a GitHub user/organization account,
-  different from the username.
-type: integer
-minimum: 1
-examples:
-  - 139513484

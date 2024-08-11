@@ -12,9 +12,9 @@ allOf:
         required: [ light ]
         properties:
           light:
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           dark:
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       div_align:
         title: Alignment of the div element.
         $ref: doc-html-attr-align

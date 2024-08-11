@@ -19,7 +19,7 @@ properties:
             type: string
           plausible_analytics_url:
             title: URL for Plausible Analytics
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
         anyOf:
           - required: [ google_analytics_id ]
           - required: [ plausible_analytics_domain, plausible_analytics_url ]
@@ -62,7 +62,7 @@ properties:
               description: |
                 This is the URL that the icon will link to.
               type: string
-              $ref: url
+              $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
             type:
               title: Type of the icon.
               type: string

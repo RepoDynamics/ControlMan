@@ -1,6 +1,0 @@
-title: GitHub Label Description
-description: Description of a GitHub label.
-type: string
-maxLength: 100
-examples:
-  - The issue is being triaged.

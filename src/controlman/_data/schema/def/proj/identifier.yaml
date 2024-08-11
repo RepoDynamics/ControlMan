@@ -43,7 +43,7 @@ allOf:
     then:
       properties:
         value:
-          $ref: id-doi
+          $ref: https://jsonschemata.repodynamics.com/id/doi
   - if:
       properties:
         type:
@@ -51,7 +51,7 @@ allOf:
     then:
       properties:
         value:
-          $ref: url
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   - if:
       properties:
         type:

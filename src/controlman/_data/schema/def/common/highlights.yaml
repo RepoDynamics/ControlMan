@@ -8,7 +8,7 @@ items:
   properties:
     title:
       title: Title of the feature.
-      $ref: oneline_string
+      $ref: https://jsonschemata.repodynamics.com/string/oneline
     description:
       title: Description of the feature.
       $ref: nonempty_string

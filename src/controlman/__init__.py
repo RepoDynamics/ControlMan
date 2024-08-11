@@ -19,31 +19,32 @@ from controlman.center_manager import CenterManager
 __release__ = "1.0"
 
 
-def get_manager(
+def manager(
     repo: _Git | _Path | str,
-    metadata: dict | _Path | str | None = None,
-    data_main: dict | None = None,
+    data_before: _ps.NestedDict | None = None,
+    data_main: _ps.NestedDict | None = None,
     github_token: str | None = None,
     future_versions: dict[str, str] | None = None,
+    control_center_path: str | None = None,
 ):
     if isinstance(repo, (str, _Path)):
         repo = _Git(path=repo)
-    if not metadata:
-        metadata = _ps.NestedDict(from_json_file(repo_path=repo.repo_path))
-        cc_path = repo.repo_path / metadata["control.path"]
-    elif isinstance(metadata, dict):
-        metadata = _ps.NestedDict(metadata)
-        cc_path = repo.repo_path / metadata["control.path"]
+    if not data_before:
+        if control_center_path:
+            cc_path = repo.repo_path / control_center_path
+            if not cc_path.is_dir():
+                raise ValueError(f"Invalid control center path '{cc_path}'")
+            data_before = _ps.NestedDict({})
+        else:
+            data_before = from_json_file(repo_path=repo.repo_path)
+            cc_path = repo.repo_path / data_before["control.path"]
     else:
-        cc_path = _Path(metadata).resolve()
-        metadata = _ps.NestedDict({})
-        if not cc_path.is_dir() or not cc_path.is_relative_to(repo.repo_path):
-            raise ValueError(f"Invalid control center path '{cc_path}'")
-    data_main = _ps.NestedDict(data_main or {})
+        cc_path = repo.repo_path / data_before["control.path"]
+    data_main = data_main or _ps.NestedDict({})
     return CenterManager(
         git_manager=repo,
         cc_path=cc_path,
-        data_before=metadata,
+        data_before=data_before,
         data_main=data_main,
         github_token=github_token,
         future_versions=future_versions,
@@ -54,7 +55,7 @@ def from_json_file(
     repo_path: str | _Path,
     filepath: str = const.FILEPATH_METADATA,
     validate: bool = True,
-) -> dict:
+) -> _ps.NestedDict:
     """Load control center data from the full JSON file.
 
     Parameters
@@ -79,7 +80,7 @@ def from_json_file(
     )
     if validate:
         _data_validator.validate(data=data_dict)
-    return data_dict
+    return _ps.NestedDict(data_dict)
 
 
 def from_json_file_at_commit(
@@ -87,7 +88,7 @@ def from_json_file_at_commit(
     commit_hash: str,
     filepath: str = const.FILEPATH_METADATA,
     validate: bool = True,
-) -> dict | None:
+) -> _ps.NestedDict:
     data_str = git_manager.file_at_hash(
         commit_hash=commit_hash,
         path=filepath,
@@ -98,7 +99,7 @@ def from_json_file_at_commit(
 def from_json_string(
     data: str,
     validate: bool = True,
-) -> dict:
+) -> _ps.NestedDict:
     """Load control center data from the full JSON string.
 
     Parameters
@@ -120,4 +121,4 @@ def from_json_string(
     )
     if validate:
         _data_validator.validate(data=data_dict)
-    return data_dict
+    return _ps.NestedDict(data_dict)

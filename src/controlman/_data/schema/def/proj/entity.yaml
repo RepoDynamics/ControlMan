@@ -11,16 +11,16 @@ properties:
     properties:
       id:
         title: GitHub Username
-        $ref: id-github-username
+        $ref: https://jsonschemata.repodynamics.com/id/github/user
       rest_id:
         title: GitHub User ID
-        $ref: id-github-id
+        $ref: https://jsonschemata.repodynamics.com/id/github/rest
       node_id:
         title: GitHub User Node ID
-        $ref: id-github-node_id
+        $ref: https://jsonschemata.repodynamics.com/id/github/node
       url:
         title: GitHub Account URL
-        $ref: uri-github-user
+        $ref: https://jsonschemata.repodynamics.com/url/github/user
     required: [ id ]
   name:
     title: Name
@@ -57,21 +57,21 @@ properties:
       legal:
         title: Legal Name
         description: The entity's name, when it is not a natural person.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       first:
         title: First Name
         description: The person's first name.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       last:
         title: Last Name
         description: The person's last name.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       particle:
         title: Name Particle
         description: |
           The person's name particle, e.g., a nobiliary particle or a preposition
           meaning 'of' or 'from' (for example 'von' in 'Alexander von Humboldt').
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - von
       suffix:
@@ -79,7 +79,7 @@ properties:
         description: |
           The person's name-suffix, e.g. 'Jr.' for Sammy Davis Jr. or 'III'
           for Frank Edwin Wright III.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - Jr.
           - III
@@ -92,7 +92,7 @@ properties:
           `first particle last, suffix`
           (`particle ` and `, suffix` are only added when provided)
           for natural persons, and to `legal` for legal persons.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
     oneOf:
       - required: [ first, last ]
       - required: [ legal ]
@@ -117,7 +117,7 @@ properties:
       If not provided while `github` is provided,
       it is automatically set to the value of `company` in the
       [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   bio:
     title: Bio
     description: |
@@ -139,7 +139,7 @@ properties:
       If not provided while `github` is provided,
       it is automatically set to the value of `avatar_html` in the
       [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   email:
     title: Email Account
     description: |
@@ -154,12 +154,12 @@ properties:
     properties:
       id:
         title: Email Address
-        $ref: id-email
+        $ref: https://jsonschemata.repodynamics.com/id/email
       url:
         title: Email URI
         description: A `mailto` URI for the email address.
         default: 'mailto:${{ .id }}'
-        $ref: uri-mailto
+        $ref: https://jsonschemata.repodynamics.com/uri/mailto
     examples:
       - id: info@repodynamic.com
       - id: info@repodynamics.com
@@ -172,7 +172,7 @@ properties:
       If not provided while `github` is provided,
       it is automatically set to the value of `blog` in the
       [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   orcid:
     title: ORCID account information.
     description: |
@@ -189,13 +189,13 @@ properties:
     properties:
       id:
         title: ORCID ID
-        $ref: id-orcid
+        $ref: https://jsonschemata.repodynamics.com/id/orcid
       url:
         title: ORCID account URL
         description: |
           This is automatically set to `https://orcid.org/{user}`.
         default: 'https://orcid.org/${{ .id }}'
-        $ref: uri-orcid
+        $ref: https://jsonschemata.repodynamics.com/url/orcid/user
       get_pubs:
         title: Get publications.
         description: |
@@ -225,11 +225,11 @@ properties:
     properties:
       id:
         title: ResearchGate ID
-        $ref: id-researchgate
+        $ref: https://jsonschemata.repodynamics.com/id/researchgate
       url:
         title: ResearchGate account URL
         default: 'https://researchgate.net/profile/${{ .id }}'
-        $ref: uri-researchgate
+        $ref: https://jsonschemata.repodynamics.com/url/researchgate/user
   linkedin:
     title: LinkedIn Account
     description: |
@@ -247,11 +247,11 @@ properties:
       id:
         title: LinkedIn ID
         type: string
-        $ref: id-linkedin
+        $ref: https://jsonschemata.repodynamics.com/id/linkedin
       url:
         title: LinkedIn URL
         default: 'https://linkedin.com/in/${{ .id }}'
-        $ref: uri-linkedin
+        $ref: https://jsonschemata.repodynamics.com/url/linkedin/user
   twitter:
     title: Twitter account
     description: |
@@ -267,11 +267,11 @@ properties:
     properties:
       id:
         title: Twitter ID
-        $ref: id-twitter
+        $ref: https://jsonschemata.repodynamics.com/id/twitter
       url:
         title: Twitter account URL
         default: 'https://twitter.com/${{ .id }}'
-        $ref: uri-twitter
+        $ref: https://jsonschemata.repodynamics.com/url/twitter/user
     required: [ id ]
   address:
     title: Address
@@ -285,7 +285,7 @@ properties:
       If not provided while `github` is provided,
       it is automatically set to the value of `location` in the
       [GitHub API response](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   region:
     title: Region
     description: The entity's region.
@@ -564,7 +564,7 @@ properties:
 
       This is only used when the entity is a legal person,
       i.e., when `name.legal` is set.
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   date_start:
     title: Start Date
     description: |
@@ -572,10 +572,10 @@ properties:
 
       This is only used when the entity is a legal person,
       i.e., when `name.legal` is set.
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
   date_end:
     title: End Date
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     description: |
       The entity's ending date, e.g., when the entity is a conference.
 

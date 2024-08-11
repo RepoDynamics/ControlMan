@@ -5,9 +5,7 @@ additionalProperties: false
 required: [ type, src ]
 properties:
   type:
-    title: Type of data.
-    type: string
-    enum: [ path, url, data, name ]
+
   src:
     title: Source of data.
     description: |
@@ -19,11 +17,8 @@ properties:
       "gscholar": {"label": "Google Scholar", "color": "4285F4", "logo": "googlescholar"},
       "orcid": {"label": "ORCID", "color": "A6CE39", "logo": "orcid"},
     type: string
-  ext:
-    title: Data type, i.e., file extension.
-    type: string
-    enum: [ apng, avif, bmp, gif, ico, jpg, jpeg, png, svg, tif, tiff, webp ]
+
   color:
     title: Logo color.
-    $ref: hex_color
+    $ref: https://jsonschemata.repodynamics.com/color/hex-string
 

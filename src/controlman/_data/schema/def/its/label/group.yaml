@@ -11,7 +11,7 @@ properties:
   color:
     title: Color
     description: Color of the label.
-    $ref: hex_color
+    $ref: https://jsonschemata.repodynamics.com/color/hex-string
   label:
     title: Labels
     description: Labels for the group.

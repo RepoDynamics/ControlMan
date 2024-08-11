@@ -1,9 +1,9 @@
 from pathlib import Path as _Path
 
-import docman as _dm
+import docsman as _dm
 from loggerman import logger as _logger
 import pyserials as _ps
-import markitup as _miu
+from markitup import txt as _txt
 
 from controlman import exception as _exception
 
@@ -30,7 +30,7 @@ class WebDataGenerator:
             text = md_filepath.read_text()
             frontmatter = _dm.read.frontmatter(text)
             if "ccid" in frontmatter:
-                pages[_miu.txt.slug(frontmatter["ccid"])] = {
+                pages[_txt.slug(frontmatter["ccid"])] = {
                     "title": _dm.read.title(text),
                     "path": rel_path,
                     "url": f"{self._data['web.url.home']}/{rel_path}",
@@ -55,7 +55,7 @@ class WebDataGenerator:
                 continue
             for key in ["category", "tags"]:
                 for value in keywords_and_tags.get(key, []):
-                    value_slug = _miu.txt.slug(value)
+                    value_slug = _txt.slug(value)
                     key_singular = key.removesuffix('s')
                     final_key = f"blog_{key_singular}_{value_slug}"
                     if final_key in pages:

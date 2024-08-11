@@ -3,68 +3,34 @@ from enum import Enum as _Enum
 
 
 class DynamicFileType(_Enum):
-    METADATA = "Metadata Files"
-    LICENSE = "License Files"
-    PACKAGE = "Package Files"
-    CONFIG = "Configuration Files"
-    WEBSITE = "Website Files"
-    README = "ReadMe Files"
-    HEALTH = "Health Files"
-    FORM = "Forms"
-
-
-class DynamicFile_(_Enum):
-    METADATA = (DynamicFileType.METADATA, "Metadata files")
-    GITHUB_FUNDING = (DynamicFileType.CONFIG, "GitHub funding options configurations")
-    GITHUB_CITATION = (DynamicFileType.HEALTH, "GitHub citation configurations")
-    GITHUB_CODEOWNERS = (DynamicFileType.CONFIG, "GitHub codeowners configurations")
-    GITHUB_ISSUES_CONFIG = (DynamicFileType.CONFIG, "GitHub Issues template chooser configurations")
-    GITHUB_ISSUE_FORM = (DynamicFileType.FORM, "GitHub Issue forms")
-    GITHUB_DISCUSSION_FORM = (DynamicFileType.FORM, "GitHub Discussion forms")
-    GITHUB_PULL_TEMPLATE = (DynamicFileType.FORM, "GitHub Pull Request templates")
-    GITHUB_README = (DynamicFileType.README, "GitHub ReadMe files")
-    GITHUB_HEALTH = (DynamicFileType.HEALTH, "GitHub Health files")
-    GIT_IGNORE = (DynamicFileType.CONFIG, "Git ignore file")
-    GIT_ATTRIBUTES = (DynamicFileType.CONFIG, "Git attributes file")
-    WEB_ENV_CONDA = (DynamicFileType.CONFIG, "Website build environment file (conda)")
-    WEB_ENV_PIP = (DynamicFileType.CONFIG, "Website build environment file (pip)")
-    TOOL_ENV_CONDA = (DynamicFileType.CONFIG, "Tool build environment file (conda)")
-    TOOL_ENV_PIP = (DynamicFileType.CONFIG, "Tool build environment file (pip)")
-    TOOL_CONFIG = (DynamicFileType.CONFIG, "Tool configuration file")
-    PKG_TYPING_MARKER = (DynamicFileType.PACKAGE, "Package typing marker file")
-    PKG_ENV_CONDA = (DynamicFileType.PACKAGE, "Package environment file (conda)")
-    PKG_ENV_PIP = (DynamicFileType.PACKAGE, "Package environment file (pip)")
-    PKG_MANIFEST = (DynamicFileType.PACKAGE, "Package manifest file")
-    PKG_PYPROJECT = (DynamicFileType.PACKAGE, "Package pyproject file")
-    PKG_SOURCE = (DynamicFileType.PACKAGE, "Package source files")
-    PKG_README = (DynamicFileType.README, "Package ReadMe files")
-    TEST_TYPING_MARKER = (DynamicFileType.PACKAGE, "Test suite typing marker file")
-    TEST_ENV_CONDA = (DynamicFileType.PACKAGE, "Test suite environment file (conda)")
-    TEST_ENV_PIP = (DynamicFileType.PACKAGE, "Test suite environment file (pip)")
-    TEST_MANIFEST = (DynamicFileType.PACKAGE, "Test suite manifest file")
-    TEST_PYPROJECT = (DynamicFileType.PACKAGE, "Test suite pyproject file")
-    TEST_SOURCE = (DynamicFileType.PACKAGE, "Test suite source file")
-    LICENSE = (DynamicFileType.LICENSE, "License file")
+    CONFIG = ("config", "Configuration")
+    TOOL_ENV_CONDA = ("tool_env_conda", "Tool Conda Environment")
+    TOOL_ENV_PIP = ("tool_env_pip", "Tool Pip Environment")
+    TOOL_CONFIG = ("tool_config", "Tool Configuration")
+    WEB_CONFIG = ("web_config", "Website Configuration")
+    DISCUSSION_FORM = ("discussion_form", "Discussion Category Form")
+    ISSUE_FORM = ("issue_form", "Issue Form")
+    PULL_TEMPLATE = ("pull_template", "Pull Request Template")
+    PKG_CONFIG = ("pkg_config", "Package Configuration")
+    TEST_CONFIG = ("test_config", "Test Suite Configuration")
+    PKG_SOURCE = ("pkg_source", "Package Source")
+    TEST_SOURCE = ("test_source", "Test Suite Source")
+    README = ("readme", "ReadMe")
+    HEALTH = ("health", "Community Health")
 
 
 class DynamicDirType(_Enum):
     CONTROL = "Control Center"
     LOCAL = "Local"
-    MEDIA = "Media"
+    THEME = "Media"
     WEB_ROOT = "Website Root"
     WEB_SRC = "Website Source"
     PKG_ROOT = "Package Root"
     PKG_SRC = "Package Source"
+    PKG_IMPORT = "Package Import"
     TEST_ROOT = "Test Suite Root"
     TEST_SRC = "Test Suite Source"
-
-
-class GeneratedFile(_NamedTuple):
-    type: DynamicFile_
-    subtype: str | None = None
-    content: str | None = None
-    path: str | None = None
-    path_before: str | None = None
+    TEST_IMPORT = "Test Suite Import"
 
 
 class DynamicFileChangeTypeContent(_NamedTuple):
@@ -77,9 +43,18 @@ class DynamicFileChangeType(_Enum):
     MODIFIED = DynamicFileChangeTypeContent("Modified", "🟣")
     MOVED_MODIFIED = DynamicFileChangeTypeContent("Moved & Modified", "🟠")
     MOVED = DynamicFileChangeTypeContent("Moved", "🟡")
-    CREATED = DynamicFileChangeTypeContent("Created", "🟢")
+    ADDED = DynamicFileChangeTypeContent("Added", "🟢")
     UNCHANGED = DynamicFileChangeTypeContent("Unchanged", "⚪️")
     DISABLED = DynamicFileChangeTypeContent("Disabled", "⚫")
+
+
+class DynamicFile(_NamedTuple):
+    type: DynamicFileType
+    subtype: tuple[str, str]
+    content: str | None = None
+    path: str | None = None
+    path_before: str | None = None
+    change: DynamicFileChangeType | None = None
 
 
 class DynamicDir(_NamedTuple):

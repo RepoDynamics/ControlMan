@@ -6,14 +6,15 @@ from loggerman import logger as _logger
 import pylinks as _pylinks
 import pyserials as _ps
 from gittidy import Git as _Git
+from markitup.html import element as _html
 
-from controlman.data_validator import DataValidator as _DataValidator
 from controlman import data_gen as _data_gen
 from controlman.hook_manager import HookManager as _HookManager
 from controlman.datatype import (
-    DynamicFileType as _DynamicFileType,
     DynamicFileChangeType,
-    GeneratedFile as _GeneratedFile,
+    DynamicDirType,
+    DynamicFile as _GeneratedFile,
+    DynamicDir as _DynamicDir,
 )
 from controlman import const
 from controlman.cache_manager import CacheManager
@@ -49,17 +50,15 @@ class CenterManager:
 
         self._data_raw: _ps.NestedDict | None = None
         self._data: _ps.NestedDict | None = None
-        self._files: list[tuple[_GeneratedFile, DynamicFileChangeType]] = []
-        self._compared_dirs: list = []
+        self._files: list[_GeneratedFile] = []
+        self._dirs: list[_DynamicDir] = []
         self._dirs_to_apply: list[tuple[str, str, DynamicFileChangeType]] = []
-        self._dirs_to_apply_sub: list[tuple[str, str, DynamicFileChangeType]] = []
-        self._changes: dict[_DynamicFileType, dict[str, bool]] = {}
-        self._summary: str = ""
+        self._changes: list[tuple[str, DynamicFileChangeType]] = []
         return
 
-    def load(self) -> dict:
+    def load(self) -> _ps.NestedDict:
         if self._data_raw:
-            return self._data_raw()
+            return self._data_raw
         full_data = _data_loader.load(
             control_center_path=self._path_cc,
             cache_manager=self._cache_manager,
@@ -71,11 +70,11 @@ class CenterManager:
             )
         _data_validator.validate(data=full_data, before_substitution=True)
         self._data_raw = _ps.NestedDict(full_data)
-        return full_data
+        return self._data_raw
 
-    def generate_data(self) -> dict:
+    def generate_data(self) -> _ps.NestedDict:
         if self._data:
-            return self._data()
+            return self._data
         self.load()
         data = _data_gen.generate(
             git_manager=self._git,
@@ -95,9 +94,9 @@ class CenterManager:
         data.fill()
         _data_validator.validate(data=data())
         self._data = data
-        return data()
+        return self._data
 
-    def generate_files(self) -> list[tuple[_GeneratedFile, DynamicFileChangeType]]:
+    def generate_files(self) -> list[_GeneratedFile]:
         if self._files:
             return self._files
         self.generate_data()
@@ -108,65 +107,50 @@ class CenterManager:
         )
         return self._files
 
-    def compare_dirs(self):
+    def compare(self):
+        if self._changes and self._files and self._dirs:
+            return self._changes, self._files, self._dirs
+        files = self.generate_files()
+        metadata_changes = _ps.compare.items(source=self._data(), target=self._data_before(), path="")
+        all_paths = []
+        for change_type in ("removed", "added", "modified"):
+            for changed_key in metadata_changes[change_type]:
+                all_paths.append((changed_key.removeprefix("$."), DynamicFileChangeType[change_type.upper()]))
+        self._changes = all_paths
+        dirs = self._compare_dirs()
+        return self._changes, files, dirs
 
-        def compare_source(main_key: str, root_path: str):
-            source_name, source_name_before, source_status = self._compare_dir(f"{main_key}.path.source")
-            source_path = f"{root_path}/{source_name}" if root_path else None
-            source_path_before = f"{root_path}/{source_name_before}" if root_path else None
-            return source_path, source_path_before, source_status
+    def report(self) -> tuple[bool, _html.Figure, _html.Figure, _html.Figure, _html.Figure, _html.ElementCollection]:
+        self.compare()
+        table_data = self._report_metadata()
+        table_files = self._report_files()
+        table_dirs = self._report_dirs()
+        rows = []
+        sections = []
+        has_changes = False
+        for table, name in ((table_data, "Metadata"), (table_files, "Files"), (table_dirs, "Directories")):
+            change_title = "Sync" if table else "No Changes"
+            change_emoji = "🔄" if table else "✅"
+            rows.append([name, (change_emoji, {"title": change_title})])
+            if table:
+                sections.append(_html.details([_html.summary(name), _html.br(), table]))
+                has_changes = True
+        summary_figure = _html.table_from_rows(
+            body_rows=rows,
+            head_rows=["Type", "Status"],
+            as_figure=True,
+            caption=f"Changes in the project's metadata and dynamic content.",
+        )
 
-        def compare_import(main_key: str, source_path: str):
-            import_name, import_name_before, import_status = self._compare_dir(f"{main_key}.import_name")
-            import_path = f"{source_path}/{import_name}" if source_path else None
-            import_path_before = f"{source_path}/{import_name_before}" if root_path else None
-            return import_path, import_path_before, import_status
-
-
-        if self._compared_dirs:
-            return self._compared_dirs
-        compared_dirs = []
-        for_apply = []
-        for path_key in ("theme", "control", "local"):
-            path, path_before, status = self._compare_dir(f"{path_key}.path")
-            for_apply.append((path, path_before, status))
-        for path_key in ("web", "pkg", "test"):
-            root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.path.root")
-            for_apply.append((root_path, root_path_before, root_status))
-            source_data = compare_source(main_key=path_key, root_path=root_path)
-            for_apply.append(source_data)
-            if path_key == "web":
-                continue
-            import_data = compare_import(main_key=path_key, source_path=source_data[0])
-            for_apply.append(import_data)
-        self._dirs_to_apply = for_apply
-        self._compared_dirs = compared_dirs
-        return self._compared_dirs
-
-    # def _summary(
-    #     self, results: list[tuple[DynamicFile, Diff]]
-    # ) -> tuple[dict[DynamicFileType, dict[str, bool]], str]:
-    #     details, changes = self._summary_section_details(results)
-    #     summary = html.ElementCollection([html.h(3, "Meta")])
-    #     any_changes = any(any(category.values()) for category in changes.values())
-    #     if not any_changes:
-    #         rest = [html.ul(["✅ All dynamic files were in sync with meta content."]), html.hr()]
-    #     else:
-    #         rest = [
-    #             html.ul(["❌ Some dynamic files were out of sync with meta content:"]),
-    #             details,
-    #             html.hr(),
-    #             self._color_legend(),
-    #         ]
-    #     summary.extend(rest)
-    #     return changes, str(summary)
+        report = [_miu.html.h(1, "Control Center Report"), summary_table] + sections
+        return has_changes, summary_table, table_data, table_files, table_dirs, _miu.html.ElementCollection(report)
 
     @_logger.sectioner("Apply Changes To Dynamic Repository File")
     def apply_changes(self) -> None:
         """Apply changes to dynamic repository files."""
 
         generated_files = self.generate_files()
-        self.compare_dirs()
+        self._compare_dirs()
         for dir_path, dir_path_before, status in self._dirs_to_apply:
             dir_path_abs = self._path_root / dir_path if dir_path else None
             dir_path_before_abs = self._path_root / dir_path_before if dir_path_before else None
@@ -174,15 +158,15 @@ class CenterManager:
                 _shutil.rmtree(dir_path_before_abs)
             elif status is DynamicFileChangeType.MOVED:
                 _shutil.move(dir_path_before_abs, dir_path_abs)
-            elif status is DynamicFileChangeType.CREATED:
+            elif status is DynamicFileChangeType.ADDED:
                 dir_path_abs.mkdir(parents=True, exist_ok=True)
-        for generated_file, status in generated_files:
+        for generated_file in generated_files:
             filepath_abs = self._path_root / generated_file.path if generated_file.path else None
             filepath_before_abs = self._path_root / generated_file.path_before if generated_file.path_before else None
-            if status is DynamicFileChangeType.REMOVED:
+            if generated_file.change is DynamicFileChangeType.REMOVED:
                 filepath_before_abs.unlink(missing_ok=True)
-            elif status in (
-                DynamicFileChangeType.CREATED,
+            elif generated_file.change in (
+                DynamicFileChangeType.ADDED,
                 DynamicFileChangeType.MODIFIED,
                 DynamicFileChangeType.MOVED_MODIFIED,
                 DynamicFileChangeType.MOVED,
@@ -190,84 +174,169 @@ class CenterManager:
                 filepath_abs.parent.mkdir(parents=True, exist_ok=True)
                 with open(filepath_abs, "w") as f:
                     f.write(f"{generated_file.content.strip()}\n")
-                if status in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
+                if generated_file.change in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
                     filepath_before_abs.unlink(missing_ok=True)
         return
 
+    def _compare_dirs(self):
+
+        def compare_source(main_key: str, root_path: str, root_path_before: str):
+            source_name, source_name_before = self._get_dirpath(f"{main_key}.path.source")
+            source_path = f"{root_path}/{source_name}" if root_path else None
+            source_path_before_real = f"{root_path_before}/{source_name_before}" if root_path_before and source_name_before else None
+            change = self._compare_dir_paths(source_path, source_path_before_real)
+            source_path_before = f"{root_path}/{source_name_before}" if root_path and source_name_before else None
+            return source_path, source_path_before, source_path_before_real, change
+
+        def compare_import(main_key: str, source_path: str, source_path_before: str, source_path_before_real: str):
+            import_name, import_name_before = self._get_dirpath(f"{main_key}.import_name")
+            import_path = f"{source_path}/{import_name}" if source_path and import_name else None
+            import_path_before_real = f"{source_path_before_real}/{import_name_before}" if source_path_before_real and import_name_before else None
+            change = self._compare_dir_paths(import_path, import_path_before_real)
+            import_path_before = f"{source_path}/{import_name_before}" if source_path and import_name_before else None
+            return import_path, import_path_before, import_path_before_real, change
+
+        if self._dirs:
+            return self._dirs
+        dirs = []
+        to_apply = []
+        for path_key in ("theme", "control", "local"):
+            path, path_before, status = self._compare_dir(f"{path_key}.path")
+            dirs.append(
+                _DynamicDir(
+                    type=DynamicDirType[path_key.upper()],
+                    path=path,
+                    path_before=path_before,
+                    change=status
+                )
+            )
+            to_apply.append((path, path_before, status))
+        for path_key in ("web", "pkg", "test"):
+            root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.path.root")
+            dirs.append(
+                _DynamicDir(
+                    type=DynamicDirType[f"{path_key.upper()}_ROOT"],
+                    path=root_path,
+                    path_before=root_path_before,
+                    change=root_status
+                )
+            )
+            to_apply.append((root_path, root_path_before, root_status))
+            source_path, source_path_before, source_path_before_real, source_change = compare_source(
+                main_key=path_key, root_path=root_path, root_path_before=root_path_before
+            )
+            dirs.append(
+                _DynamicDir(
+                    type=DynamicDirType[f"{path_key.upper()}_SRC"],
+                    path=source_path,
+                    path_before=source_path_before_real,
+                    change=source_change
+                )
+            )
+            to_apply.append((source_path, source_path_before, source_change))
+            if path_key == "web":
+                continue
+            import_path, import_path_before, import_path_before_real, import_change = compare_import(
+                main_key=path_key, source_path=source_path, source_path_before=source_path_before, source_path_before_real=source_path_before_real
+            )
+            dirs.append(
+                _DynamicDir(
+                    type=DynamicDirType[f"{path_key.upper()}_IMPORT"],
+                    path=import_path,
+                    path_before=import_path_before_real,
+                    change=import_change
+                )
+            )
+            to_apply.append((import_path, import_path_before, import_change))
+        self._dirs = dirs
+        self._dirs_to_apply = to_apply
+        return self._dirs
+
     def _compare_dir(self, path_key: str) -> tuple[str, str, DynamicFileChangeType]:
+        path, path_before = self._get_dirpath(path_key)
+        return path, path_before, self._compare_dir_paths(path, path_before)
+
+    def _get_dirpath(self, path_key: str) -> tuple[str, str]:
         path = self._data[path_key]
         path_before = self._data_before[path_key]
-        if not path and not path_before:
+        return path, path_before
+
+    def _compare_dir_paths(self, path, path_before) -> DynamicFileChangeType:
+        path_before_exists = (self._path_root / path_before).is_dir() if path_before else False
+        if path and path_before_exists:
+            status = DynamicFileChangeType.UNCHANGED if path == path_before else DynamicFileChangeType.MOVED
+        elif not path and not path_before_exists:
             status = DynamicFileChangeType.DISABLED
-        elif not path_before:
-            status = DynamicFileChangeType.CREATED
-        elif not path:
+        elif path_before_exists:
             status = DynamicFileChangeType.REMOVED
-        elif path == path_before:
-            status = DynamicFileChangeType.UNCHANGED
         else:
-            status = DynamicFileChangeType.MOVED
-        return path, path_before, status
+            path_exists = (self._path_root / path).is_dir()
+            status = DynamicFileChangeType.UNCHANGED if path_exists else DynamicFileChangeType.ADDED
+        return status
 
-    # def _summary_section_details(
-    #     self, results: list[tuple[DynamicFile, Diff]]
-    # ) -> tuple[html.ElementCollection, dict[DynamicFileType, dict[str, bool]]]:
-    #     categories_sorted = [cat for cat in DynamicFileType]
-    #     results = sorted(
-    #         results, key=lambda elem: (categories_sorted.index(elem[0].category), elem[0].rel_path)
-    #     )
-    #     details = html.ElementCollection()
-    #     changes = {}
-    #     for info, diff in results:
-    #         if info.category not in changes:
-    #             changes[info.category] = {}
-    #             details.append(html.h(4, info.category.value))
-    #         changes[info.category][info.id] = diff.status not in [
-    #             DynamicFileChangeType.UNCHANGED,
-    #             DynamicFileChangeType.DISABLED,
-    #         ]
-    #         details.append(self._item_summary(info, diff))
-    #     return details, changes
-    #
-    # @staticmethod
-    # def _color_legend():
-    #     legend = [f"{status.value.emoji}  {status.value.title}" for status in DynamicFileChangeType]
-    #     color_legend = html.details(content=html.ul(legend), summary="Color Legend")
-    #     return color_legend
-    #
-    # @staticmethod
-    # def _item_summary(info: DynamicFile, diff: Diff) -> html.DETAILS:
-    #     details = html.ElementCollection()
-    #     output = html.details(content=details, summary=f"{diff.status.value.emoji}  {info.rel_path}")
-    #     typ = "Directory" if info.is_dir else "File"
-    #     status = (
-    #         f"{typ} {diff.status.value.title}{':' if diff.status != DynamicFileChangeType.DISABLED else ''}"
-    #     )
-    #     details.append(status)
-    #     if diff.status == DynamicFileChangeType.DISABLED:
-    #         return output
-    #     details_ = (
-    #         [f"Old Path: <code>{diff.path_before}</code>", f"New Path: <code>{info.path}</code>"]
-    #         if diff.status
-    #         in [
-    #             DynamicFileChangeType.MOVED,
-    #             DynamicFileChangeType.MOVED_MODIFIED,
-    #             DynamicFileChangeType.MOVED_REMOVED,
-    #         ]
-    #         else [f"Path: <code>{info.path}</code>"]
-    #     )
-    #     if not info.is_dir:
-    #         if info.id == "metadata":
-    #             before, after = [
-    #                 json.dumps(json.loads(state), indent=3) if state else ""
-    #                 for state in (diff.before, diff.after)
-    #             ]
-    #         else:
-    #             before, after = diff.before, diff.after
-    #         diff_lines = list(difflib.ndiff(before.splitlines(), after.splitlines()))
-    #         diff = "\n".join([line for line in diff_lines if line[:2] != "? "])
-    #         details_.append(html.details(content=md.code_block(diff, "diff"), summary="Content"))
-    #     details.append(html.ul(details_))
-    #     return output
+    def _report_metadata(self):
+        if not self._changes:
+            return
+        rows = []
+        for changed_key, change_type in sorted(self._changes, key=lambda elem: elem[0]):
+            change = change_type.value
+            rows.append([_html.code(changed_key), (change.emoji, {"title": change.title})])
+        figure = _html.table_from_rows(
+            body_rows=rows,
+            head_rows=["Path", "Change"],
+            as_figure=True,
+            caption=f"Changes in the project's metadata.",
+        )
+        return figure
 
+    def _report_files(self):
+        rows = []
+        for file in sorted(
+            self.generate_files(),
+            key=lambda elem: (elem.type.value[1], elem.subtype[1]),
+        ):
+            if file.change in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED):
+                continue
+            change = file.change.value
+            rows.append(
+                [
+                    file.type.value[1],
+                    file.subtype[1],
+                    (change.emoji, {"title": change.title}),
+                    _html.code(file.path),
+                    _html.code(file.path_before) if file.path_before else "—"
+                ]
+            )
+        if not rows:
+            return
+        figure = _html.table_from_rows(
+            body_rows=rows,
+            head_rows=["Type", "Subtype", "Change", "Path", "Old Path"],
+            as_figure=True,
+            caption=f"Changes in the project's dynamic files.",
+        )
+        return figure
 
+    def _report_dirs(self):
+        rows = []
+        for dir_ in sorted(self._dirs, key=lambda elem: elem.type.value):
+            if dir_.change in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED):
+                continue
+            change = dir_.change.value
+            rows.append(
+                [
+                    dir_.type.value,
+                    (change.emoji, {"title": change.title}),
+                    _html.code(dir_.path),
+                    _html.code(dir_.path_before or "—"),
+                ]
+            )
+        if not rows:
+            return
+        figure = _html.table_from_rows(
+            body_rows=rows,
+            head_rows=["Type", "Change", "Path", "Old Path"],
+            as_figure=True,
+            caption=f"Changes in the project's dynamic directories.",
+        )
+        return figure

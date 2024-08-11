@@ -36,44 +36,9 @@ description: |
     This is needed for the [post-processing](#post-processing) step,
     since the `label` is the only way to identify each element in the issue body after it has been created.
   - You can specify an additional [`pre_process`](#pre-processing) key for each element.
-type: array
-minItems: 1
-items:
-  title: Form Element
-  description: Definition of a form element in the body.
-  type: object
-  additionalProperties: false
-  required: [ type, attributes ]
-  properties:
-    type:
-      title: Type
-      description: Type of the element.
-      type: string
-      enum: [ checkboxes, dropdown, input, markdown, textarea ]
-    id:
-      title: ID
-      description: |
-        The canonical identifier for the element in URL query parameter prefills.
-        It can only use alpha-numeric characters, hyphens, and underscores,
-        and must be unique in the form definition.
-        Note that `markdown` elements cannot have an ID.
-      type: string
-      pattern: ^[A-Za-z][A-Za-z0-9_-]*$
-    attributes:
-      title: Attributes
-      description: |
-        A set of key-value pairs that define the attributes of the element.
-        Depending on the `type` of the element, different keys are available,
-        defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
-      type: object
-      additionalProperties: true
-    validations:
-      title: Validations
-      description: |
-        A set of key-value pairs that set constraints on the element.
-        Depending on the `type` of the element, different keys are available,
-        defined in GitHub's [form schema syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
-      type: object
-      additionalProperties: true
-    pre_process:
-      $ref: its-gh_form-preprocess
+allOf:
+  - $ref: https://jsonschemata.repodynamics.com/config/github/form/body
+  - items:
+      properties:
+        pre_process:
+          $ref: its-gh_form-preprocess

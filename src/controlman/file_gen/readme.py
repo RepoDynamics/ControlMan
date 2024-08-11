@@ -1,10 +1,10 @@
 from pathlib import Path as _Path
 
-import docman as _dm
+import docsman as _dm
 from readme_renderer.markdown import render as _render
 import pyserials as _ps
 
-from controlman.datatype import GeneratedFile as _GeneratedFile, DynamicFile_ as _DynamicFile
+from controlman.datatype import DynamicFile as _GeneratedFile, DynamicFileType
 
 
 def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, root_path: _Path) -> list[_GeneratedFile]:
@@ -17,12 +17,13 @@ def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, root_path: _Path
         root_path=root_path,
     )
     for readme_key, readme_type in (
-        ("readme", _DynamicFile.GITHUB_README),
-        ("health", _DynamicFile.GITHUB_HEALTH)
+        ("readme", DynamicFileType.README),
+        ("health", DynamicFileType.HEALTH)
     ):
         for readme_id, readme_file_data in data.get(readme_key, {}).items():
             file = _generate_file(
                 filetype=readme_type,
+                subtype=(readme_id, readme_id),
                 path_before=data_before[f"{readme_key}.{readme_id}.path"],
                 file_data=readme_file_data,
                 default_footer=default_footer_themed,
@@ -39,12 +40,16 @@ def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, root_path: _Path
         root_path=root_path,
     )
     for readme_key in ("pkg", "test"):
-        for path in ("readme", "conda.readme"):
+        for path, subtype in (
+            ("readme", ("readme_pypi", "PyPI README")),
+            ("conda.readme", ("readme_conda", "Conda README"))
+        ):
             readme_data = data[f"{readme_key}.{path}"]
             if not readme_data:
                 continue
             file = _generate_file(
-                filetype=_DynamicFile.PKG_README,
+                filetype=DynamicFileType[f"{readme_key.upper()}_CONFIG"],
+                subtype=subtype,
                 path_before=data_before[f"{readme_key}.{path}.path"],
                 file_data=readme_data,
                 default_footer=default_footer_light,
@@ -57,7 +62,8 @@ def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, root_path: _Path
 
 
 def _generate_file(
-    filetype: _DynamicFile,
+    filetype: DynamicFileType,
+    subtype: tuple[str, str],
     path_before: str,
     file_data: dict,
     default_footer: str,
@@ -67,6 +73,7 @@ def _generate_file(
 ) -> _GeneratedFile:
     file_info = {
         "type": filetype,
+        "subtype": subtype,
         "path": file_data["path"],
         "path_before": path_before,
         "content": "",
@@ -87,7 +94,7 @@ def _generate_file(
             themed=themed,
             root_path=root_path
         )
-    file_info["content"] = f"{content}\n\n{footer}".strip()
+    file_info["content"] = f"{content}\n{footer}".strip()
     return _GeneratedFile(**file_info)
 
 

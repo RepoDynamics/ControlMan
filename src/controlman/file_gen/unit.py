@@ -25,22 +25,27 @@ def create_environment_files(
         Whether the pip requirements file contains all dependencies.
     """
     pip_dependencies = []
+    pip_only_dependencies = []
     conda_dependencies = ["python"]
     channel_frequency = {}
     pip_full = True
     for dependency in dependencies:
-        if "conda" in dependency:
+        has_conda = "conda" in dependency
+        has_pip = "pip" in dependency
+        if has_conda:
             conda_dependencies.append(dependency["conda"]["spec"])
             channel = dependency["conda"].get("channel")
             if channel:
                 channel_frequency[channel] = channel_frequency.get(channel, 0) + 1
-        if "pip" in dependency:
+        else:
+            pip_only_dependencies.append(dependency["pip"]["spec"])
+        if has_pip:
             pip_dependencies.append(dependency["pip"]["spec"])
         else:
             pip_full = False
-    if pip_dependencies:
+    if pip_only_dependencies:
         conda_dependencies.insert(1, "pip")
-        conda_dependencies.append({"pip": pip_dependencies})
+        conda_dependencies.append({"pip": pip_only_dependencies})
     env = {
         "name": env_name,
         "channels": sorted(channel_frequency, key=channel_frequency.get, reverse=True) + ["defaults"],

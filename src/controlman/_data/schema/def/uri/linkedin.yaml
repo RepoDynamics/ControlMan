@@ -1,9 +1,0 @@
-$schema: https://json-schema.org/draft/2020-12/schema
-title: LinkedIn URL
-description: A URL to a LinkedIn account.
-type: string
-format: uri
-pattern: ^https://linkedin.com/(company|in)/[a-zA-Z0-9-]{3,100}/?$
-examples:
-  - 'https://linkedin.com/company/a-company-name'
-  - 'https://linkedin.com/in/a-username'

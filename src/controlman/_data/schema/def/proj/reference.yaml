@@ -29,7 +29,7 @@ properties:
             suffix: Jr.
       $ref: proj-entity
   collection-doi:
-    $ref: id-doi
+    $ref: https://jsonschemata.repodynamics.com/id/doi
     description: The DOI of a collection containing the work.
   collection-title:
     description: The title of a collection or proceedings.
@@ -68,23 +68,23 @@ properties:
     $ref: proj-entity
     description: The provider of the database where a work was accessed/is stored.
   date-accessed:
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     description: The date the work was accessed.
   date-downloaded:
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     description: The date the work has been downloaded.
   date-published:
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     description: The date the work has been published.
   date-released:
-    $ref: date
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     description: The date the work has been released.
   department:
     description: The department where a work has been produced.
     minLength: 1
     type: string
   doi:
-    $ref: id-doi
+    $ref: https://jsonschemata.repodynamics.com/id/doi
     description: The DOI of the work.
   edition:
     description: The edition of the work.
@@ -180,9 +180,9 @@ properties:
     type: array
     uniqueItems: true
   license:
-    $ref: proj-spdx_license_id
+    $ref: https://jsonschemata.repodynamics.com/id/spdx-license
   license-url:
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     description: The URL of the license text under which the work is licensed
       (only for non-standard licenses not included in the SPDX License List).
   loc-end:
@@ -259,14 +259,14 @@ properties:
     items:
       $ref: proj-entity
   repository:
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     description: The URL of the work in a repository (when the repository is neither
       a source code repository nor a build artifact repository).
   repository-artifact:
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     description: The URL of the work in a build artifact/binary repository.
   repository-code:
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     description: The URL of the work in a source code repository.
   scope:
     description: The scope of the reference, e.g., the section of the work it
@@ -373,7 +373,7 @@ properties:
       - website
     type: string
   url:
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     description: The URL of the work.
   version:
     title: The version of the work.

@@ -8,8 +8,8 @@ properties:
   light:
     title: Light Color
     description: Color of the element for light themes.
-    $ref: hex_color
+    $ref: https://jsonschemata.repodynamics.com/color/hex-string
   dark:
     title: Dark Color
     description: Color of the element for dark themes.
-    $ref: hex_color
+    $ref: https://jsonschemata.repodynamics.com/color/hex-string

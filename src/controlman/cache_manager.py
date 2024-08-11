@@ -42,7 +42,6 @@ class CacheManager:
                 _data_validator.validate(
                     data=self._cache,
                     schema="cache",
-                    raise_invalid_data=True,
                 )
             except _exception.ControlManException as e:
                 self._cache = {}

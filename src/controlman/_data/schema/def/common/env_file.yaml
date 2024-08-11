@@ -20,7 +20,7 @@ properties:
           - my-custom-env
       path:
         title: Path to the environment file.
-        $ref: path
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         examples:
           - ${{ dir.pkg.root }}/environment.yaml
           - ${{ dir.web.root }}/env.yml

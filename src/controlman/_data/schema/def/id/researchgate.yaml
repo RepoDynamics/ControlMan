@@ -1,8 +1,0 @@
-$schema: https://json-schema.org/draft/2020-12/schema
-title: ResearchGate ID
-description: |
-  Username of a ResearchGate account.
-type: string
-pattern: ^[a-zA-Z0-9-]{3,100}$
-examples:
-  - RepoDynamics

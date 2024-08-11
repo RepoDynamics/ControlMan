@@ -50,9 +50,9 @@ anyOf:
                         }}
                     properties:
                       light:
-                        $ref: url
+                        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
                       dark:
-                        $ref: url
+                        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
                     required:
                     - light
                 required:
@@ -82,7 +82,7 @@ anyOf:
                   anyOf:
                   - title: Number of spaces between buttons.
                     default: 2
-                    $ref: non_negative_integer
+                    $ref: https://jsonschemata.repodynamics.com/integer/non-negative
                   - type: string
                     minLength: 6
                 align:
@@ -103,7 +103,7 @@ anyOf:
                           - ${{ theme.color.primary.light }}
                           - ${{ theme.color.secondary.light }}
                           oneOf:
-                          - $ref: hex_color
+                          - $ref: https://jsonschemata.repodynamics.com/color/hex-string
                           - $ref: doc-color-gradient
                         - type: string
                           minLength: 6
@@ -113,7 +113,7 @@ anyOf:
                           - ${{ theme.color.primary.dark }}
                           - ${{ theme.color.secondary.dark }}
                           oneOf:
-                          - $ref: hex_color
+                          - $ref: https://jsonschemata.repodynamics.com/color/hex-string
                           - $ref: doc-color-gradient
                         - type: string
                           minLength: 6

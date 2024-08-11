@@ -1,13 +1,12 @@
-import datetime
 from pathlib import Path as _Path
 
 from loggerman import logger
 import pyserials as _ps
 import pylinks
 from pylinks.exceptions import WebAPIError
-import markitup as _miu
+from markitup import txt as _txt
 
-from controlman.datatype import DynamicFile_, GeneratedFile
+from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
 
@@ -24,7 +23,7 @@ class ConfigFileGenerator:
         self._path_repo = repo_path
         return
 
-    def generate(self) -> tuple[list[GeneratedFile], dict | str | None, dict | str | None]:
+    def generate(self) -> tuple[list[DynamicFile], dict | str | None, dict | str | None]:
         tools_out, pyproject_pkg, pyproject_test = self.tools()
         return (
             self._generate_license()
@@ -41,7 +40,7 @@ class ConfigFileGenerator:
     def _is_disabled(self, key: str) -> bool:
         return not (self._data[key] or self._data_before[key])
 
-    def generate_codeowners(self) -> list[GeneratedFile]:
+    def generate_codeowners(self) -> list[DynamicFile]:
         """
 
         Returns
@@ -55,13 +54,14 @@ class ConfigFileGenerator:
         if self._is_disabled(key):
             return []
         codeowners_files = {
-            "type": DynamicFile_.GITHUB_CODEOWNERS,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("codeowners", "Code Owners"),
             "path": self._data[f"{key}.path"],
             "path_before": self._data_before[f"{key}.path"],
         }
         codeowners = self._data[key]["owners"]
         if not codeowners:
-            return [GeneratedFile(**codeowners_files)]
+            return [DynamicFile(**codeowners_files)]
         # Get the maximum length of patterns to align the columns when writing the file
         max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
         text = ""
@@ -70,34 +70,37 @@ class ConfigFileGenerator:
             reviewers_list = entry[pattern]
             reviewers = " ".join([f"@{reviewer["github"]["id"]}" for reviewer in reviewers_list])
             text += f"{pattern: <{max_len}}   {reviewers}\n"
-        return [GeneratedFile(content=text, **codeowners_files)]
+        return [DynamicFile(content=text, **codeowners_files)]
 
-    def _generate_license(self) -> list[GeneratedFile]:
+    def _generate_license(self) -> list[DynamicFile]:
         if self._is_disabled("license"):
             return []
         license_file = {
-            "type": DynamicFile_.LICENSE,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("license", "License"),
             "content": self._data["license.text"],
             "path": self._data["license.path"],
             "path_before": self._data_before["license.path"],
         }
-        return [GeneratedFile(**license_file)]
+        return [DynamicFile(**license_file)]
 
-    def web_requirements(self) -> list[GeneratedFile]:
+    def web_requirements(self) -> list[DynamicFile]:
         if self._is_disabled("web"):
             return []
         conda_env_file = {
-            "type": DynamicFile_.WEB_ENV_CONDA,
+            "type": DynamicFileType.WEB_CONFIG,
+            "subtype": ("env_conda", "Conda Environment"),
             "path": self._data["web.env.file.conda.path"],
             "path_before": self._data_before["web.env.file.conda.path"],
         }
         pip_env_file = {
-            "type": DynamicFile_.WEB_ENV_PIP,
+            "type": DynamicFileType.WEB_CONFIG,
+            "subtype": ("env_pip", "Pip Environment"),
             "path": self._data["web.env.file.pip.path"],
             "path_before": self._data_before["web.env.file.pip.path"],
         }
         if not self._data["web"]:
-            return [GeneratedFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
+            return [DynamicFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
         dependencies = []
         for path in ("web.sphinx.dependency", "web.theme.dependency"):
             dependency = self._data.get(path)
@@ -111,15 +114,15 @@ class ConfigFileGenerator:
             dependencies.append(add_dep)
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
-            env_name=_miu.txt.slug(self._data["web.env.file.conda.name"]),
+            env_name=_txt.slug(self._data["web.env.file.conda.name"]),
         )
         return [
-            GeneratedFile(content=conda_env, **conda_env_file),
-            GeneratedFile(content=pip_env if pip_full else "", **pip_env_file)
+            DynamicFile(content=conda_env, **conda_env_file),
+            DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
         ]
 
     @logger.sectioner("Generate GitHub Funding Configuration File")
-    def funding(self) -> list[GeneratedFile]:
+    def funding(self) -> list[DynamicFile]:
         """
         References
         ----------
@@ -128,12 +131,13 @@ class ConfigFileGenerator:
         if self._is_disabled("funding"):
             return []
         funding_file = {
-            "type": DynamicFile_.GITHUB_FUNDING,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("funding", "Funding"),
             "path": _const.FILEPATH_FUNDING_CONFIG,
             "path_before": _const.FILEPATH_FUNDING_CONFIG,
         }
         if not self._data["funding"]:
-            return [GeneratedFile(**funding_file)]
+            return [DynamicFile(**funding_file)]
         output = {}
         for funding_platform, users in self._data["funding"].items():
             if isinstance(users, list):
@@ -142,10 +146,10 @@ class ConfigFileGenerator:
                 output[funding_platform] = users
         file_content = _ps.write.to_yaml_string(data=output, end_of_file_newline=True)
         logger.debug(code_title="File content", code=file_content)
-        return [GeneratedFile(content=file_content, **funding_file)]
+        return [DynamicFile(content=file_content, **funding_file)]
 
     @logger.sectioner("Generate Workflow Requirements Files")
-    def tools(self) -> tuple[list[GeneratedFile], dict | str | None, dict | str | None]:
+    def tools(self) -> tuple[list[DynamicFile], dict | str | None, dict | str | None]:
         # Collect all environment and config data per env/config file
         env_conda = {}
         env_pip = {}
@@ -189,9 +193,9 @@ class ConfigFileGenerator:
                 env_name=conda_env_data["name"],
             )[0]
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_.TOOL_ENV_CONDA,
-                    subtype=", ".join(conda_env_data["tool_names"]),
+                DynamicFile(
+                    type=DynamicFileType.TOOL_ENV_CONDA,
+                    subtype=("_".join(conda_env_data["tool_names"]), ", ".join(conda_env_data["tool_names"])),
                     content=conda_env,
                     path=conda_env_path,
                     path_before=conda_env_path
@@ -199,13 +203,13 @@ class ConfigFileGenerator:
             )
         # Write pip environment files
         for pip_env_path, pip_env_data in env_pip.items():
-            _, pip_env, pip_full = _unit.create_environment_files(dependencies=pip_env_data)
+            _, pip_env, pip_full = _unit.create_environment_files(dependencies=pip_env_data["deps"])
             if not pip_full:
                 logger.warning(f"Tool environment file '{pip_env_path}' does not contain all dependencies.")
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_.TOOL_ENV_PIP,
-                    subtype=", ".join(pip_env_data["tool_names"]),
+                DynamicFile(
+                    type=DynamicFileType.TOOL_ENV_PIP,
+                    subtype=("_".join(pip_env_data["tool_names"]), ", ".join(pip_env_data["tool_names"])),
                     content=pip_env,
                     path=pip_env_path,
                     path_before=pip_env_path
@@ -247,9 +251,9 @@ class ConfigFileGenerator:
                 self.validate_codecov_config(config=content)
             if conf_path not in untouchable_paths:
                 out.append(
-                    GeneratedFile(
-                        type=DynamicFile_.TOOL_CONFIG,
-                        subtype=", ".join(conf_data["tool_names"]),
+                    DynamicFile(
+                        type=DynamicFileType.TOOL_CONFIG,
+                        subtype=("_".join(conf_data["tool_names"]), ", ".join(conf_data["tool_names"])),
                         content=content,
                         path=conf_path,
                         path_before=conf_path
@@ -274,33 +278,34 @@ class ConfigFileGenerator:
             if conf_file:
                 conf_old.setdefault(conf_file["path"], []).append(tool_name)
         for dic_old, dic_new, typ in (
-            (env_conda_old, env_conda, DynamicFile_.TOOL_ENV_CONDA),
-            (env_pip_old, env_pip, DynamicFile_.TOOL_ENV_PIP),
-            (conf_old, conf, DynamicFile_.TOOL_CONFIG),
+            (env_conda_old, env_conda, DynamicFileType.TOOL_ENV_CONDA),
+            (env_pip_old, env_pip, DynamicFileType.TOOL_ENV_PIP),
+            (conf_old, conf, DynamicFileType.TOOL_CONFIG),
         ):
             for path, tool_names in dic_old.items():
                 if path not in dic_new and path not in untouchable_paths:
                     out.append(
-                        GeneratedFile(
+                        DynamicFile(
                             type=typ,
-                            subtype=", ".join(tool_names),
+                            subtype=("_".join(tool_names), ", ".join(tool_names)),
                             path_before=path
                         )
                     )
         return out, pyproject_pkg, pyproject_test
 
     @logger.sectioner("Generate Issue Template Chooser Configuration File")
-    def issue_template_chooser(self) -> list[GeneratedFile]:
+    def issue_template_chooser(self) -> list[DynamicFile]:
         if self._is_disabled("issue"):
             return []
         generate_file = {
-            "type": DynamicFile_.GITHUB_ISSUES_CONFIG,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("issue_chooser", "Issue Template Chooser"),
             "path": _const.FILEPATH_ISSUES_CONFIG,
             "path_before": _const.FILEPATH_ISSUES_CONFIG,
         }
         issues = self._data["issue"]
         if not issues:
-            return [GeneratedFile(**generate_file)]
+            return [DynamicFile(**generate_file)]
         config = {}
         if issues.get("blank_enabled"):
             config["blank_issues_enabled"] = issues["blank_enabled"]
@@ -308,10 +313,10 @@ class ConfigFileGenerator:
             config["contact_links"] = self._data["issue"]["contact_links"]
         file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
         logger.debug(code_title="File content", code=file_content)
-        return [GeneratedFile(content=file_content, **generate_file)]
+        return [DynamicFile(content=file_content, **generate_file)]
 
     @logger.sectioner("Generate Gitignore File")
-    def gitignore(self) -> list[GeneratedFile]:
+    def gitignore(self) -> list[DynamicFile]:
         local_dir = self._data["local.path"]
         file_content = "\n".join(
             self._data.get("repo.gitignore", [])
@@ -322,8 +327,9 @@ class ConfigFileGenerator:
             ]
         )
         logger.debug(code_title="File content", code=file_content)
-        generated_file = GeneratedFile(
-            type=DynamicFile_.GIT_IGNORE,
+        generated_file = DynamicFile(
+            type=DynamicFileType.CONFIG,
+            subtype=("gitignore", "Git Ignore"),
             content=file_content,
             path=_const.FILEPATH_GITIGNORE,
             path_before=_const.FILEPATH_GITIGNORE
@@ -331,11 +337,12 @@ class ConfigFileGenerator:
         return [generated_file]
 
     @logger.sectioner("Generate Gitattributes File")
-    def gitattributes(self) -> list[GeneratedFile]:
+    def gitattributes(self) -> list[DynamicFile]:
         if not (self._data["repo.gitattributes"] or self._data_before["repo.gitattributes"]):
             return []
         file_info = {
-            "type": DynamicFile_.GIT_ATTRIBUTES,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("gitattributes", "Git Attributes"),
             "path": _const.FILEPATH_GIT_ATTRIBUTES,
             "path_before": _const.FILEPATH_GIT_ATTRIBUTES,
         }
@@ -352,9 +359,9 @@ class ConfigFileGenerator:
             file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
         logger.info(code_title="File info", code=str(file_info))
         logger.debug(code_title="File content", code=file_content)
-        return [GeneratedFile(content=file_content, **file_info)]
+        return [DynamicFile(content=file_content, **file_info)]
 
-    def citation(self) -> list[GeneratedFile]:
+    def citation(self) -> list[DynamicFile]:
 
         def create_person(entity):
             _out = {}
@@ -413,13 +420,14 @@ class ConfigFileGenerator:
         if not (self._data.get("citation") or self._data_before.get("citation")):
             return []
         generated_file = {
-            "type": DynamicFile_.GITHUB_CITATION,
+            "type": DynamicFileType.CONFIG,
+            "subtype": ("citation", "Citation"),
             "path": _const.FILEPATH_CITATION_CONFIG,
             "path_before": _const.FILEPATH_CITATION_CONFIG,
         }
         cite = self._data["citation"]
         if not cite:
-            return [GeneratedFile(**generated_file)]
+            return [DynamicFile(**generated_file)]
         filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
         cite_old = _ps.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
         out = {
@@ -453,7 +461,7 @@ class ConfigFileGenerator:
             out["references"] = [create_reference(ref) for ref in cite["references"]]
         out["cff-version"] = "1.2.0"
         file_content = _ps.write.to_yaml_string(data=out, end_of_file_newline=True)
-        return [GeneratedFile(content=file_content, **generated_file)]
+        return [DynamicFile(content=file_content, **generated_file)]
 
     @logger.sectioner("Generate Codecov Configuration File")
     def validate_codecov_config(self, config: str) -> None:

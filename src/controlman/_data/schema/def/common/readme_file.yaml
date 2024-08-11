@@ -6,7 +6,7 @@ properties:
   path:
     title: Filepath
     description: Path to the README file.
-    $ref: path
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
     examples:
       - README
       - README.md
@@ -24,4 +24,4 @@ properties:
     default: ${{ repo.url.blob }}/${{ .path }}
     examples:
       - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"
-    $ref: url
+    $ref: https://jsonschemata.repodynamics.com/url/https

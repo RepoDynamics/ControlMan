@@ -1,8 +1,0 @@
-$schema: https://json-schema.org/draft/2020-12/schema
-title: ORCID URL
-description: A URL to an ORCID account.
-type: string
-format: uri
-pattern: ^https://orcid.org/[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]{1}$
-examples:
-  - 'https://orcid.org/0000-0002-1825-0097'

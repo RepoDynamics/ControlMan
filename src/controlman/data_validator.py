@@ -6,6 +6,7 @@ import re as _re
 import jsonschema as _jsonschema
 import referencing as _referencing
 from referencing import jsonschema as _referencing_jsonschema
+import jsonschemata as _js
 import pkgdata as _pkgdata
 from loggerman import logger as _logger
 import pyserials as _ps
@@ -21,7 +22,6 @@ def validate(
     data: dict,
     schema: _Literal["full", "local", "cache"] = "full",
     before_substitution: bool = False,
-    raise_invalid_data: bool = True,
 ) -> None:
     """Validate data against a schema."""
     schema_dict = _file_util.read_data_from_file(
@@ -29,7 +29,7 @@ def validate(
         extension="yaml",
         raise_errors=True,
     )
-    schema_dict = put_required_at_bottom(schema_dict)
+    schema_dict = _js.edit.required_last(schema_dict)
     if before_substitution:
         schema_dict = modify_schema(schema_dict)["anyOf"][0]
     try:
@@ -39,20 +39,21 @@ def validate(
             validator=_jsonschema.Draft202012Validator,
             registry=_registry_before if before_substitution else _registry_after,
             fill_defaults=True,
+            iter_errors=True,
             raise_invalid_data=raise_invalid_data,
         )
     except _ps.exception.validate.PySerialsSchemaValidationError as e:
         raise _exception.ControlManSchemaValidationError(
             msg="Validation against schema failed."
         ) from e
-    if not before_substitution:
+    if schema == "full" and not before_substitution:
         DataValidator(data).validate()
     return
 
 
 class DataValidator:
     def __init__(self, data: dict):
-        self._ccm = data
+        self._data = data
         return
 
     @_logger.sectioner("Validate Control Center Contents")
@@ -65,6 +66,7 @@ class DataValidator:
         return
 
     def dir_paths(self):
+        """Verify that main directory paths are not relative to each other."""
         paths = []
         path_keys = []
         for dirpath_key in (
@@ -75,9 +77,9 @@ class DataValidator:
             "test.path.root",
             "web.path.root",
         ):
-            if self._ccm[dirpath_key]:
+            if self._data[dirpath_key]:
                 path_keys.append(dirpath_key)
-                paths.append(_Path(self._ccm[dirpath_key]))
+                paths.append(_Path(self._data[dirpath_key]))
         for idx, path in enumerate(paths):
             for idx2, path2 in enumerate(paths[idx + 1:]):
                 if path.is_relative_to(path2):
@@ -100,27 +102,27 @@ class DataValidator:
         return
 
     def branch_names(self):
-        """Verify that branch names and prefixes are unique."""
-        checked_branch_names = []
-        for branch_key, branch_data in self._ccm["branch"].items():
-            branch_name = branch_data["name"]
-            for checked_branch_name in checked_branch_names:
-                if checked_branch_name.startswith(branch_name):
+        """Verify that branch names/prefixes do not overlap."""
+        branch_keys = []
+        branch_names = []
+        for branch_key, branch_data in self._data["branch"].items():
+            branch_keys.append(branch_key)
+            branch_names.append(branch_data["name"])
+        for idx, branch_name in enumerate(branch_names):
+            for idx2, branch_name2 in enumerate(branch_names[idx + 1:]):
+                if branch_name.startswith(branch_name2) or branch_name2.startswith(branch_name):
                     raise _exception.ControlManSchemaValidationError(
-                        msg=(
-                            f"Branch prefix '{branch_name}' for branch type '{branch_key}' "
-                            f"conflicts with another branch name/prefix: '{checked_branch_name}'"
-                        ),
-                        key=f"branch.{branch_key}"
+                        f"Branch name '{branch_name}' defined at 'branch.{branch_keys[idx]}' "
+                        f"overlaps with branch name '{branch_name2}' defined at 'branch.{branch_keys[idx + idx2 + 1]}'.",
+                        key=branch_keys[idx],
                     )
-            checked_branch_names.append(branch_data)
         return
 
     def changelogs(self):
         """Verify that changelog paths, names and sections are unique."""
         changelog_paths = []
         changelog_names = []
-        for changelog_id, changelog_data in self._ccm["changelog"].items():
+        for changelog_id, changelog_data in self._data["changelog"].items():
             if changelog_data["path"] in changelog_paths:
                 raise _exception.ControlManSchemaValidationError(
                     f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
@@ -152,7 +154,7 @@ class DataValidator:
         """Verify that commit types are unique, and that subtypes are defined."""
         commit_types = []
         for main_type in ("primary", "primary_custom"):
-            for commit_id, commit_data in self._ccm["commit"][main_type].items():
+            for commit_id, commit_data in self._data["commit"][main_type].items():
                 if commit_data["type"] in commit_types:
                     raise _exception.ControlManSchemaValidationError(
                         f"The commit type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
@@ -162,13 +164,13 @@ class DataValidator:
                 commit_types.append(commit_data["type"])
                 for subtype_type, subtypes in commit_data["subtypes"]:
                     for subtype in subtypes:
-                        if subtype not in self._ccm["commit"]["secondary_custom"]:
+                        if subtype not in self._data["commit"]["secondary_custom"]:
                             _logger.critical(
                                 title=f"Invalid commit subtype: {subtype}",
                                 msg=f"The subtype '{subtype}' set for commit '{main_type}.{commit_id}' "
                                 f"in 'subtypes.{subtype_type}' is not defined in 'commit.secondary_custom'.",
                             )
-        for commit_id, commit_data in self._ccm["commit"]["secondary_action"].items():
+        for commit_id, commit_data in self._data["commit"]["secondary_action"].items():
             if commit_data["type"] in commit_types:
                 _logger.critical(
                     title=f"Duplicate commit type: {commit_data['type']}",
@@ -177,7 +179,7 @@ class DataValidator:
                 )
             commit_types.append(commit_data["type"])
         changelog_sections = {}
-        for commit_type, commit_data in self._ccm["commit"]["secondary_custom"].items():
+        for commit_type, commit_data in self._data["commit"]["secondary_custom"].items():
             if commit_type in commit_types:
                 _logger.critical(
                     title=f"Duplicate commit type: {commit_type}",
@@ -187,7 +189,7 @@ class DataValidator:
             commit_types.append(commit_type)
             # Verify that linked changelogs are defined
             changelog_id = commit_data["changelog_id"]
-            if changelog_id not in self._ccm["changelog"]:
+            if changelog_id not in self._data["changelog"]:
                 _logger.critical(
                     title=f"Invalid commit changelog ID: {changelog_id}",
                     msg=f"The changelog ID '{changelog_id}' set for commit "
@@ -195,7 +197,7 @@ class DataValidator:
                 )
             if changelog_id not in changelog_sections:
                 changelog_sections[changelog_id] = [
-                    section["id"] for section in self._ccm["changelog"][changelog_id]["sections"]
+                    section["id"] for section in self._data["changelog"][changelog_id]["sections"]
                 ]
             if commit_data["changelog_section_id"] not in changelog_sections[changelog_id]:
                 _logger.critical(
@@ -208,7 +210,7 @@ class DataValidator:
     def issue_forms(self):
         form_ids = []
         form_identifying_labels = []
-        for form_idx, form in enumerate(self._ccm["issue"]["forms"]):
+        for form_idx, form in enumerate(self._data["issue"]["forms"]):
             if form["id"] in form_ids:
                 _logger.critical(
                     title=f"Duplicate issue-form ID: {form['id']}",
@@ -286,12 +288,12 @@ class DataValidator:
                                 break
         # Verify that identifying labels are defined in 'label.group' metadata
         for primary_type_id, subtype_id in form_identifying_labels:
-            if primary_type_id not in self._ccm["label"]["group"]["primary_type"]["labels"]:
+            if primary_type_id not in self._data["label"]["group"]["primary_type"]["labels"]:
                 _logger.critical(
                     title=f"Unknown issue-form `primary_type`: {primary_type_id}",
                     msg=f"The ID '{primary_type_id}' does not exist in 'label.group.primary_type.labels'.",
                 )
-            if subtype_id and subtype_id not in self._ccm["label"]["group"]["subtype"]["labels"]:
+            if subtype_id and subtype_id not in self._data["label"]["group"]["subtype"]["labels"]:
                 _logger.critical(
                     title=f"Unknown issue-form subtype: {subtype_id}",
                     msg=f"The ID '{subtype_id}' does not exist in 'label.group.subtype.labels'.",
@@ -302,7 +304,7 @@ class DataValidator:
         """Verify that label names and prefixes are unique."""
         labels = []
         for main_type in ("auto_group", "group", "single"):
-            for label_id, label_data in self._ccm["label"].get(main_type, {}).items():
+            for label_id, label_data in self._data["label"].get(main_type, {}).items():
                 label = label_data["name"] if main_type == "single" else label_data["prefix"]
                 label_type = "name" if main_type == "single" else "prefix"
                 for set_label in labels:
@@ -318,7 +320,7 @@ class DataValidator:
                 title=f"Too many labels: {len(labels)}",
                 msg=f"The maximum number of labels allowed by GitHub is 1000.",
             )
-        for label_id, label_data in self._ccm["label"]["group"].items():
+        for label_id, label_data in self._data["label"]["group"].items():
             suffixes = []
             for label_type, suffix_data in label_data["labels"].items():
                 suffix = suffix_data["suffix"]
@@ -332,8 +334,8 @@ class DataValidator:
         return
 
     def maintainers(self):
-        issue_ids = [issue["id"] for issue in self._ccm.issue__forms]
-        for issue_id in self._ccm.maintainer__issue.keys():
+        issue_ids = [issue["id"] for issue in self._data.issue__forms]
+        for issue_id in self._data.maintainer__issue.keys():
             if issue_id not in issue_ids:
                 _logger.critical(
                     f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
@@ -347,6 +349,8 @@ def modify_schema(schema: dict) -> dict:
             schema["properties"][key] = modify_schema(subschema)
     if "additionalProperties" in schema and isinstance(schema["additionalProperties"], dict):
         schema["additionalProperties"] = modify_schema(schema["additionalProperties"])
+    if "prefixItems" in schema:
+        schema["prefixItems"] = [modify_schema(subschema) for subschema in schema["prefixItems"]]
     if "items" in schema and isinstance(schema["items"], dict):
         schema["items"] = modify_schema(schema["items"])
     alt_schema = {
@@ -361,60 +365,32 @@ def modify_schema(schema: dict) -> dict:
     return new_schema
 
 
-def put_required_at_bottom(schema: dict) -> dict:
-    """Modify JSON schema to recursively put all 'required' fields at the end.
-
-    This is done because otherwise the 'required' fields
-    are checked by jsonschema before filling the defaults,
-    which can cause the validation to fail.
-
-    Returns
-    -------
-    dict
-        Modified schema.
-        Note that the input schema is modified in-place,
-        so the return value is a reference to the (now modified) input schema.
-    """
-    if "required" in schema:
-        schema["required"] = schema.pop("required")
-    for key in ["anyOf", "allOf", "oneOf"]:
-        if key in schema:
-            for subschema in schema[key]:
-                put_required_at_bottom(subschema)
-    for key in ["if", "then", "else", "not", "items", "additionalProperties"]:
-        if key in schema and isinstance(schema[key], dict):
-            put_required_at_bottom(schema[key])
-    if "properties" in schema and isinstance(schema["properties"], dict):
-        for subschema in schema["properties"].values():
-            put_required_at_bottom(subschema)
-    return schema
-
-
 def _make_registry():
-    ref_resources_after = []
-    ref_resources_before = []
+
+    def make_resource(
+        schema: dict, spec: _referencing.Specification = _referencing_jsonschema.DRAFT202012
+    ) -> _referencing.Resource:
+        return _referencing.Resource.from_contents(schema, default_specification=spec)
+
+    resources = []
     def_schemas_path = _schema_dir_path / "def"
-    for def_schema_filepath in def_schemas_path.glob("**/*.yaml"):
-        def_schema_key = def_schema_filepath.relative_to(
-            def_schemas_path
-        ).with_suffix("").as_posix().replace("/", "-")
-        def_schema_dict = _file_util.read_data_from_file(
-            path=def_schema_filepath,
+    for schema_filepath in def_schemas_path.glob("**/*.yaml"):
+        schema_dict = _file_util.read_data_from_file(
+            path=schema_filepath,
             extension="yaml",
             raise_errors=True,
         )
-        def_schema_dict_after = put_required_at_bottom(def_schema_dict)
-        def_schema_dict_before = modify_schema(copy.deepcopy(def_schema_dict_after))
-        def_schema_before_parsed = _referencing.Resource.from_contents(
-            def_schema_dict_before, default_specification=_referencing_jsonschema.DRAFT202012
-        )
-        def_schema_after_parsed = _referencing.Resource.from_contents(
-            def_schema_dict, default_specification=_referencing_jsonschema.DRAFT202012
-        )
-        ref_resources_before.append((def_schema_key, def_schema_before_parsed))
-        ref_resources_after.append((def_schema_key, def_schema_after_parsed))
-    registry_before = _referencing.Registry().with_resources(ref_resources_before)
-    registry_after = _referencing.Registry().with_resources(ref_resources_after)
+        _js.edit.required_last(schema_dict)
+        resources.append(make_resource(schema_dict))
+    registry_after = _js.registry.make(online=False, crawl=True, add_resource=resources)
+    resources_before = []
+    for registry_schema_id in registry_after:
+        registry_schema_dict = registry_after[registry_schema_id].contents
+        registry_schema_spec = registry_after[registry_schema_id]._specification
+        registry_schema_dict_before = modify_schema(copy.deepcopy(registry_schema_dict))
+        resources_before.append(make_resource(registry_schema_dict_before, spec=registry_schema_spec))
+
+    registry_before = resources_before @ _referencing.Registry()
     return registry_before, registry_after
 
 

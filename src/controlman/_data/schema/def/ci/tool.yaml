@@ -32,7 +32,7 @@ properties:
             enum: [ yaml, json, toml, txt ]
           path:
             title: Path to the configuration file to write.
-            $ref: path
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             examples:
               - .github/.pre-commit-config.yaml
           content:

@@ -1,0 +1,11 @@
+title: Newline
+type: object
+required: [ id ]
+properties:
+  id:
+    type: string
+    const: newline
+  count:
+    title: Number of newlines.
+    type: integer
+    minimum: 1

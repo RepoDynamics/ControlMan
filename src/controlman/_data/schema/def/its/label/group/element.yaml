@@ -14,4 +14,4 @@ properties:
   description:
     title: Description
     description: Description of the label.
-    $ref: its-label-attr-description
+    $ref: https://jsonschemata.repodynamics.com/config/github/label/description

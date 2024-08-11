@@ -10,9 +10,9 @@ from pathlib import Path as _Path
 import pyserials as _ps
 import pysyntax as _pysyntax
 from loggerman import logger
-import markitup as _miu
+from markitup import txt as _txt
 
-from controlman.datatype import DynamicFile_, GeneratedFile
+from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
 from controlman.file_gen import unit as _unit
 
@@ -39,7 +39,7 @@ class PythonPackageFileGenerator:
         self._path_import_before: _Path | None = None
         return
 
-    def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[GeneratedFile]:
+    def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[DynamicFile]:
         self._type = typ
         self._pkg = _ps.NestedDict(self._data[typ])
         self._pkg_before = _ps.NestedDict(self._data_before[typ] or {})
@@ -62,11 +62,12 @@ class PythonPackageFileGenerator:
         return not any(key in source for source in [self._pkg, self._pkg_before])
 
     @logger.sectioner("Generate Package PEP 561 Typing Marker")
-    def typing_marker(self) -> list[GeneratedFile]:
+    def typing_marker(self) -> list[DynamicFile]:
         if self.is_disabled("typed"):
             return []
-        file = GeneratedFile(
-            type=DynamicFile_[f"{self._type.upper()}_TYPING_MARKER"],
+        file = DynamicFile(
+            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
+            subtype=("typed", "Typing Marker"),
             content=(
                 "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
                 if self._pkg["typed"] else ""
@@ -77,35 +78,37 @@ class PythonPackageFileGenerator:
         return [file]
 
     @logger.sectioner("Generate Package Requirements File")
-    def requirements(self) -> list[GeneratedFile]:
+    def requirements(self) -> list[DynamicFile]:
         if self.is_disabled("dependency"):
             return []
         conda_env_file = {
-            "type": DynamicFile_[f"{self._type.upper()}_ENV_CONDA"],
+            "type": DynamicFileType[f"{self._type.upper()}_CONFIG"],
+            "subtype": ("env_conda", "Conda Environment"),
             "path": self._data[f"{self._type}.dependency.env.conda.path"],
             "path_before": self._data_before[f"{self._type}.dependency.env.conda.path"],
         }
         pip_env_file = {
-            "type": DynamicFile_[f"{self._type.upper()}_ENV_PIP"],
+            "type": DynamicFileType[f"{self._type.upper()}_CONFIG"],
+            "subtype": ("env_pip", "Pip Environment"),
             "path": self._data[f"{self._type}.dependency.env.pip.path"],
             "path_before": self._data_before[f"{self._type}.dependency.env.pip.path"],
         }
         if not self._data[f"{self._type}.dependency"]:
-            return [GeneratedFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
+            return [DynamicFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
         dependencies = list(self._data.get(f"{self._type}.dependency.core", {}).values())
         for optional_dep_group in self._data.get(f"{self._type}.dependency.optional", {}).values():
             dependencies.extend(list(optional_dep_group["package"].values()))
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
-            env_name=_miu.txt.slug(self._data[f"{self._type}.dependency.env.conda.name"]),
+            env_name=_txt.slug(self._data[f"{self._type}.dependency.env.conda.name"]),
         )
         return [
-            GeneratedFile(content=conda_env, **conda_env_file),
-            GeneratedFile(content=pip_env if pip_full else "", **pip_env_file)
+            DynamicFile(content=conda_env, **conda_env_file),
+            DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
         ]
 
     @logger.sectioner("Generate Package and Test-Suite Source Files")
-    def python_files(self) -> list[GeneratedFile]:
+    def python_files(self) -> list[DynamicFile]:
         # Generate import name mapping
         mapping = {}
         core_dep_before = self._pkg_before.get("dependency", {}).get("core", {})
@@ -130,10 +133,10 @@ class PythonPackageFileGenerator:
                 mapping[self._data_before["pkg.import_name"]] = self._data["pkg.import_name"]
         # Get all file glob matches
         path_to_globs_map = {}
-        abs_path = self._path_repo / (self._path_src_before or self._path_src)
+        abs_path = self._path_repo / (self._path_import_before or self._path_import)
         for file_glob, file_config in self._pkg.get("file", {}).items():
             for filepath_match in abs_path.glob(file_glob):
-                path_to_globs_map.setdefault(filepath_match, []).append(file_config)
+                path_to_globs_map.setdefault(filepath_match, []).append((file_glob, file_config))
         if not (mapping or path_to_globs_map):
             return []
         # Process each file
@@ -143,8 +146,7 @@ class PythonPackageFileGenerator:
             if mapping:
                 file_content = _pysyntax.modify.rename_imports(module_content=file_content, mapping=mapping)
             if filepath in path_to_globs_map:
-                for matched_glob in path_to_globs_map[filepath]:
-                    file_config = self._pkg["file"][matched_glob]
+                for matched_glob, file_config in path_to_globs_map[filepath]:
                     if "docstring" in file_config:
                         docstring_before = self._pkg_before.get("file", {}).get(matched_glob, {}).get("docstring")
                         if docstring_before != file_config["docstring"]:
@@ -153,15 +155,16 @@ class PythonPackageFileGenerator:
                                 file_config["docstring"],
                                 docstring_before,
                             )
+            subtype = filepath.relative_to(self._path_repo / self._path_src)
+            subtype_display = str(subtype.with_suffix("")).replace("/", ".")
+            path_src = self._path_src_before or self._path_src
             out.append(
-                GeneratedFile(
-                    type=DynamicFile_[f"{self._type.upper()}_SOURCE"],
-                    subtype=str(filepath.relative_to(self._path_src)).replace("/", "."),
+                DynamicFile(
+                    type=DynamicFileType[f"{self._type.upper()}_SOURCE"],
+                    subtype=(str(subtype), subtype_display),
                     content=file_content,
                     path=str(filepath.relative_to(self._path_repo)),
-                    path_before=str(
-                        self._path_src_before / filepath.relative_to(self._path_src_before)
-                    ) if self._path_src_before else None,
+                    path_before=str(path_src / filepath.relative_to(self._path_repo / path_src)),
                 )
             )
         return out
@@ -193,13 +196,14 @@ class PythonPackageFileGenerator:
         return re.sub(pattern, f'{before}\n\n"""{within}\n"""  {after}'.strip(), file_content)
 
     @logger.sectioner("Generate Package Manifest File")
-    def manifest(self) -> list[GeneratedFile]:
+    def manifest(self) -> list[DynamicFile]:
         if self.is_disabled("manifest"):
             return []
         file_content = "\n".join(self._pkg.get("manifest", []))
         logger.debug(code_title="File content", code=file_content)
-        file = GeneratedFile(
-            type=DynamicFile_[f"{self._type.upper()}_MANIFEST"],
+        file = DynamicFile(
+            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
+            subtype=("manifest", "Manifest"),
             content=file_content,
             path=str(self._path_root / _const.FILENAME_PACKAGE_MANIFEST),
             path_before=str(self._path_root_before / _const.FILENAME_PACKAGE_MANIFEST) if self._path_root_before else None,
@@ -207,7 +211,7 @@ class PythonPackageFileGenerator:
         return [file]
 
     @logger.sectioner("Generate Package pyproject.toml File")
-    def pyproject(self, tool_config: dict | str | None) -> list[GeneratedFile]:
+    def pyproject(self, tool_config: dict | str | None) -> list[DynamicFile]:
         if tool_config:
             if isinstance(tool_config, str):
                 tool_config = _ps.read.toml_from_string(data=tool_config, as_dict=False)
@@ -228,8 +232,9 @@ class PythonPackageFileGenerator:
                 pyproject["tool"] = tool_config
         file_content = _ps.write.to_toml_string(data=pyproject, sort_keys=False)
         logger.debug(code_title="File content", code=file_content)
-        file = GeneratedFile(
-            type=DynamicFile_[f"{self._type.upper()}_PYPROJECT"],
+        file = DynamicFile(
+            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
+            subtype=("pyproject", "PyProject"),
             content=file_content,
             path=str(self._path_root / _const.FILENAME_PKG_PYPROJECT),
             path_before=str(self._path_root_before / _const.FILENAME_PKG_PYPROJECT) if self._path_root_before else None,

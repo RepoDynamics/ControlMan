@@ -7,7 +7,7 @@ allOf:
     properties:
       url:
         title: URL to a data source.
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       type:
         title: The type of the data source.
         type: string

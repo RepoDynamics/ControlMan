@@ -63,7 +63,7 @@ properties:
     default_auto: |
       repository name (hyphens replaced with spaces)
     templating: load
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
     title: A single-line description or slogan of the project.
     description: |
@@ -78,7 +78,7 @@ properties:
       key of the `pyproject.toml` file). It is also used in various other places,
       such as `title` HTML attributes of project logos and links.
       :::
-    $ref: oneline_string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
   abstract:
     title: A short description of the project.
     description: |
@@ -110,7 +110,7 @@ properties:
       [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords) metadata),
       helping to make the project easier to discover.      
       :::
-    $ref: array_of_unique_strings
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   highlights:
     title: Key features of the project.
     description: |
@@ -170,10 +170,10 @@ properties:
           - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
           - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
         default: AGPL-3.0-or-later
-        $ref: proj-spdx_license_id
+        $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       name:
         title: Full name of the license.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - GNU Affero General Public License v3.0 or later
           - MIT License
@@ -230,7 +230,7 @@ properties:
         default: ${{ repo.url.blob }}/${{ license.path }}
         examples:
           - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/https
   copyright:
     title: Copyright information of the project.
     description: |
@@ -258,7 +258,7 @@ properties:
         description: |
           This is the final form of the notice that will be displayed.
         default: ${{ copyright.period }} ${{ team.owner.name.full }}
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - ${{ copyright.period }} John Doe
           - A Custom Copyright Notice
@@ -272,7 +272,7 @@ properties:
           - If `start_year` is before the current year,
             the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
           - If `start_year` is after the current year, an error is raised.
-        $ref: oneline_string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       start_year:
         title: Start year of the project.
         description: |
@@ -455,7 +455,7 @@ properties:
             default: ${{ repo.url.blob }}/${{ maintainer.code_owners.path }}
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/https
       issue:
         title: Assignees of project issues.
         description: |
@@ -602,7 +602,7 @@ properties:
           These can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
         examples:
           - [ '10.13039/501100000780::283595', 283595 ]
-        $ref: array_of_unique_strings
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       zenodo_communities:
         title: ID list of Zenodo communities you wish the project to appear in.
         description: |
@@ -610,7 +610,7 @@ properties:
           and can either accept or reject your request.
         examples:
           - [ ecfunded ]
-        $ref: array_of_unique_strings
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       references:
         title: Reference(s) to other creative works.
         type: array
@@ -641,13 +641,13 @@ properties:
       license:
         title: SPDX license ID of the project (cf. [`license.id`](#cc.license.id)).
         default: ${{ license.id }}
-        $ref: proj-spdx_license_id
+        $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       license_url:
         title: The URL of the project's license (only for non-SPDX licenses).
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       keywords:
         title: Keywords that describe the work.
-        $ref: array_of_unique_strings
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
         default: ${{ keywords }}
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
@@ -659,18 +659,18 @@ properties:
         properties:
           build:
             title: URL of the project in a build artifact/binary repository.
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           source:
             title: URL of the project in a source code repository.
             default: ${{ repo.url.home }}
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           other:
             title: URL of the project in another type of repository.
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       url:
         title: URL of a landing page for the project.
         default: ${{ web.url.home }}
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       type:
         title: Type of the project.
         type: string
@@ -756,14 +756,14 @@ properties:
         maxItems: 4
         uniqueItems: true
         items:
-          $ref: id-github-username
+          $ref: https://jsonschemata.repodynamics.com/id/github/user
       custom:
         title: URLs of up to four custom funding platforms.
         type: array
         maxItems: 4
         uniqueItems: true
         items:
-          $ref: url
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   # Documentation
   theme:
     title: Configurations defining the visual theme of the project.
@@ -782,7 +782,7 @@ properties:
           - https://github.com/pydata/pydata-sphinx-theme/issues/1328
           - https://github.com/pydata/pydata-sphinx-theme/issues/1385
         default: docs/media
-        $ref: path
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
       color:
         title: Colors of the project's theme.
         description: |
@@ -947,7 +947,7 @@ properties:
                   This file must be named `CONTRIBUTING` (case-insensitive)
                   and placed either in the `.github` directory, the `docs` directory,
                   or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
-                pattern: (?i)^(?:|.github/|docs/)CONTRIBUTING(?:.(txt|md|rst))?$
+                pattern: ^(?:|.github/|docs/)(?i:CONTRIBUTING(?:.(txt|md|rst))?)$
                 default: CONTRIBUTING.md
                 examples:
                   - CONTRIBUTING
@@ -1107,10 +1107,10 @@ properties:
         required: [ root, source ]
         properties:
           root:
-            $ref: path
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: docs/website
           source:
-            $ref: dir_name
+            $ref: https://jsonschemata.repodynamics.com/path/dir-name
             default: source
       sphinx:
         title: Configurations for the Sphinx website generator.
@@ -1299,6 +1299,9 @@ properties:
                   title: Configuration to be added to the Sphinx configuration.
                   type: object
                   additionalProperties: true
+          needs_package:
+            type: boolean
+            default: false
         required: [ dependency ]
       theme:
         title: Theme of the website.
@@ -1371,7 +1374,7 @@ properties:
                 - user-manual/installation/index
             url:
               title: URL of the page.
-              $ref: url
+              $ref: https://jsonschemata.repodynamics.com/url/http-explicit
           examples:
             - about/license
             - help/contact
@@ -1383,7 +1386,7 @@ properties:
         type: object
         default: { }
         properties:
-          cname:
+          custom:
             title: Custom domain (cname) for the website.
             description: |
               Custom domain of the website, if available.
@@ -1391,12 +1394,21 @@ properties:
               instead of the default GitHub Pages domain.
               To learn more about configuring a custom domain with your DNS provider,
               see [GitHub's documentation](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
-            type: string
-            format: uri
-            examples:
-              - example.com
-              - www.example.com
-              - subdomain.example.com
+            type: object
+            additionalProperties: false
+            required: [ name, enforce_https ]
+            properties:
+              name:
+                type: string
+                format: uri
+                examples:
+                  - example.com
+                  - www.example.com
+                  - subdomain.example.com
+              enforce_https:
+                title: Enforce HTTPS for the custom domain.
+                type: boolean
+                default: true
           base:
             title: Base URL of the website.
             description: |
@@ -1407,7 +1419,7 @@ properties:
               [user page](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)
               (i.e., named `${{ team.owner.github.user }}.github.io`),
               in which case the base URL is set to `https://${{ team.owner.github.user }}.github.io`.
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-explicit
             examples:
               - 'https://${{ repo.info.owner.login }}.github.io'
           home:
@@ -1418,27 +1430,27 @@ properties:
             default: ${{ web.url.base }}
             examples:
               - ${{ web.url.base }}/some/path
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/http-explicit
     required: [ path, sphinx ]
   announcement:
     title: Configurations of project announcements.
     type: object
+    required: [ path, retention_days, url ]
     properties:
       path:
         title: Path to the announcement banner file.
-        $ref: path
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: ${{ web.path.root }}/announcement.html
         examples:
           - docs/announcement.html
       retention_days:
         title: Number of days to keep an announcement.
         default: 30
-        $ref: non_negative_number
+        $ref: https://jsonschemata.repodynamics.com/number/non-negative
       url:
-        title: URL to the announcement page.
-        $ref: url
+        title: URL to the announcement banner file.
+        $ref: https://jsonschemata.repodynamics.com/url/http-explicit
         default: ${{ repo.url.raw }}/${{ announcement.path }}
-    required: [ path, retention_days, url ]
   # Package
   pkg:
     title: Package
@@ -1477,7 +1489,7 @@ properties:
         path:
           title: Path
           description: Path to the changelog file, relative to the root of the repository.
-          $ref: path
+          $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
           examples:
             - CHANGELOG.md
         title:
@@ -1646,7 +1658,7 @@ properties:
           color:
             title: Color
             description: Color of the labels.
-            $ref: hex_color
+            $ref: https://jsonschemata.repodynamics.com/color/hex-string
           label:
             title: Labels
             description: Primary labels.
@@ -1694,7 +1706,7 @@ properties:
           color:
             title: Color
             description: Color of the label.
-            $ref: hex_color
+            $ref: https://jsonschemata.repodynamics.com/color/hex-string
           label:
             title: Labels
             description: Labels for the issue sub-type
@@ -1797,11 +1809,11 @@ properties:
                 color:
                   title: Color
                   description: Color of the label
-                  $ref: hex_color
+                  $ref: https://jsonschemata.repodynamics.com/color/hex-string
                 description:
                   title: Description
                   description: Description of the label.
-                  $ref: its-label-attr-description
+                  $ref: https://jsonschemata.repodynamics.com/config/github/label/description
           group:
             title: Label Groups
             description: Custom label groups.
@@ -2377,7 +2389,7 @@ properties:
         description: |
           This is displayed on the GitHub repository's homepage,
           helping users to easily find your project's website.
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/http-explicit
         default: ${{ web.url.home }}
       secret_scanning:
         title: Enable secret scanning.
@@ -2401,6 +2413,10 @@ properties:
           https://docs.github.com/en/code-security/security-advisories/repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository#enabling-or-disabling-private-vulnerability-reporting-for-a-repository
         type: boolean
         default: true
+      has_issues:
+        title: Enable issues.
+        type: boolean
+        default: true
       has_discussions:
         title: Enable discussions.
         type: boolean
@@ -2413,6 +2429,10 @@ properties:
         title: Enable wiki pages.
         type: boolean
         default: false
+      allow_squash_merge:
+        title: Allow squash merges.
+        type: boolean
+        default: true
       allow_merge_commit:
         title: Allow merge commits.
         type: boolean
@@ -2435,6 +2455,14 @@ properties:
         title: Allow head branch updates from base branch.
         type: boolean
         default: true
+      squash_merge_commit_title:
+        title: Default title of squash merge commit messages.
+        enum: [ PR_TITLE, COMMIT_OR_PR_TITLE ]
+        default: PR_TITLE
+      squash_merge_commit_message:
+        title: Default body of squash merge commit messages.
+        enum: [ PR_BODY, COMMIT_MESSAGES, BLANK ]
+        default: PR_BODY
       merge_commit_title:
         title: Default title of merge commit messages.
         enum: [ PR_TITLE, MERGE_MESSAGE ]
@@ -2475,7 +2503,7 @@ properties:
           maxProperties: 1
           additionalProperties:
             title: List of attributes to set for the matched files.
-            $ref: array_of_unique_strings
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       gitignore:
         title: The contents of the [`.gitignore`](https://git-scm.com/docs/gitignore) file.
         description: |
@@ -2489,7 +2517,7 @@ properties:
 
           - [Default `gitignore` templates](https://github.com/github/gitignore)
           :::
-        $ref: array_of_unique_strings
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       id:
         title: Repository ID.
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
@@ -2520,7 +2548,7 @@ properties:
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
         examples:
           - 2024-12-31
-        $ref: date
+        $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
       default_branch:
         title: Default branch name.
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
@@ -2540,25 +2568,25 @@ properties:
           home:
             title: Repository homepage.
             auto_default: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/https
           tree:
             title: URL of the default branch's tree view.
             default: ${{ repo.url.home }}/tree/${{ branch.main.name }}
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/tree/main"
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/https
           blob:
             title: URL of the default branch's blob view.
             default: ${{ repo.url.home }}/blob/${{ branch.main.name }}
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main"
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/https
           raw:
             title: URL of the default branch's raw file view.
             default: 'https://raw.githubusercontent.com/${{ repo.full_name }}/${{ branch.main.name }}'
             examples:
               - "https://raw.githubusercontent.com/RepoDynamics/PyPackIT/main"
-            $ref: url
+            $ref: https://jsonschemata.repodynamics.com/url/https
           issues:
             title: GitHub Issues URLs.
             type: object
@@ -2570,13 +2598,13 @@ properties:
                 default: ${{ repo.url.home }}/issues
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
               chooser:
                 title: URL of repository's GitHub Issue template chooser.
                 default: ${{ repo.url.issues.home }}/new/choose
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues/new/choose"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
               new:
                 title: URLs for opening a new issue.
                 description: |
@@ -2591,7 +2619,7 @@ properties:
                   description: URL for opening a new issue with a specific template.
                   examples:
                     - "https://github.com/RepoDynamics/PyPackIT/issues/new?template=bug_report.yaml"
-                  $ref: url
+                  $ref: https://jsonschemata.repodynamics.com/url/https
           pulls:
             title: GitHub Pull Requests URLs.
             type: object
@@ -2600,7 +2628,7 @@ properties:
               home:
                 title: URL of the repository's GitHub Pull Requests homepage.
                 default: ${{ repo.url.home }}/pulls
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
           discussions:
             title: GitHub Discussions URLs.
             type: object
@@ -2611,7 +2639,7 @@ properties:
                 default: ${{ repo.url.home }}/discussions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/discussions"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
               new:
                 title: URLs for opening a new discussion.
                 description: |
@@ -2625,7 +2653,7 @@ properties:
                   title: URL for opening a new discussion in a specific category.
                   examples:
                     - "https://github.com/RepoDynamics/PyPackIT/discussions/new?category=announcements"
-                  $ref: url
+                  $ref: https://jsonschemata.repodynamics.com/url/https
           actions:
             title: GitHub Actions URLs.
             type: object
@@ -2636,7 +2664,7 @@ properties:
                 default: ${{ repo.url.home }}/actions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/actions"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
           releases:
             title: GitHub Releases URLs.
             type: object
@@ -2647,7 +2675,7 @@ properties:
                 default: ${{ repo.url.home }}/releases
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/releases"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
           security:
             title: GitHub Security URLs.
             type: object
@@ -2658,26 +2686,28 @@ properties:
                 default: ${{ repo.url.home }}/security
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
 
               advisories:
                 title: URL of the repository's security advisories.
                 default: ${{ repo.url.security.home }}/advisories
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
               new_advisory:
                 title: URL for creating a new security advisory.
                 default: ${{ repo.url.security.advisories }}/new
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories/new"
-                $ref: url
+                $ref: https://jsonschemata.repodynamics.com/url/https
   branch:
     title: GitHub/Git branch settings.
     description:
       These include names/prefixes and protection rules for different branch types.
     type: object
+    default: { }
     additionalProperties: false
+    required: [ main, release, pre, dev, auto ]
     properties:
       main:
         title: Configurations for the default (aka main, trunk) branch of the repository.
@@ -2694,7 +2724,6 @@ properties:
       auto:
         title: Configurations for auto-update branches.
         $ref: vcs-branch
-    required: [ main, release, pre, dev, auto ]
   tag:
     title: Configurations for the repository tags.
     type: object
@@ -2729,7 +2758,7 @@ properties:
     properties:
       path:
         title: Path to the control center directory.
-        $ref: path
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: .control
       cache:
         title: Settings for cached data.
@@ -2779,7 +2808,7 @@ properties:
                   These are extended data in control center configuration files
                   defined with the `!ext` tag.
                 default: 0
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
               repo:
                 title: Repository data retrieved from GitHub API.
                 description: |
@@ -2787,37 +2816,37 @@ properties:
                   as well as details about discussion categories,
                   which are used for the website's blog.
                 default: 1
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
               user:
                 title: Team member data retrieved from GitHub API.
                 description: |
                   This includes GitHub user data such as
                   name, email, avatar, bio, and other profile information.
                 default: 24
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
               orcid:
                 title: Publications data retrieved from ORCID API.
                 description: |
                   This includes a list of all publication DOIs associated with an ORCID ID.
                 default: 240
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
               doi:
                 title: Publication data retrieved from DOI API.
                 description: |
                   This corresponds to citation details associated with a specific DOI.
                 default: 1000
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
               python:
                 title: Python version data retrieved from the Python GitHub repository.
                 description: |
                   This is a list of currently available Python versions,
                   used to update workflow configurations such as CI/CD/CT pipelines.
                 default: 500
-                $ref: non_negative_number
+                $ref: https://jsonschemata.repodynamics.com/number/non-negative
       url:
         title: URL of the project's configuration file.
         default: ${{ repo.url.raw }}/.github/.control/.metadata.json
-        $ref: url
+        $ref: https://jsonschemata.repodynamics.com/url/https
   schedule:
     title: Configurations for scheduled workflow jobs.
     description: |
@@ -2912,9 +2941,13 @@ properties:
           can be controlled through these configurations.
         type: object
         additionalProperties: false
+        required: [ config ]
         properties:
           config:
             title: Configurations for the project's website on ReadTheDocs.
+            type: object
+            additionalProperties: false
+            required: [ file, workflow ]
             properties:
               file:
                 title: Configuration file.
@@ -2972,6 +3005,7 @@ properties:
                     type: object
                     default: { }
                     additionalProperties: false
+                    required: [ single_version, translation ]
                     properties:
                       single_version:
                         title: Whether the website has a single version (vs. multiple versions).
@@ -3128,7 +3162,7 @@ properties:
     properties:
       path:
         title: Path to the local directory.
-        $ref: path
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: .local
   # Custom
   custom:
@@ -3165,3 +3199,98 @@ properties:
           type: string
   project:
     type: object
+    additionalProperties: true
+    properties:
+      file:
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            type: object
+            properties:
+              meta:
+                type: string
+              license:
+                type: string
+              citation:
+                type: string
+              funding:
+                type: string
+              codeowners:
+                type: string
+              gitattributes:
+                type: string
+              gitignore:
+                type: string
+              issue_chooser:
+                type: string
+          web_config:
+            type: object
+            properties:
+              env_conda:
+                title: Website build environment file for conda.
+                type: string
+              env_pip:
+                title: Website build environment file for pip.
+                type: string
+          tool_config:
+            type: object
+            additionalProperties:
+              type: string
+          tool_env_conda:
+            type: object
+            additionalProperties:
+              type: string
+          tool_env_pip:
+            type: object
+            additionalProperties:
+              type: string
+          discussion_form:
+            type: object
+            additionalProperties:
+              type: string
+          issue_form:
+            type: object
+            additionalProperties:
+              type: string
+          pull_template:
+            type: object
+            additionalProperties:
+              type: string
+          pkg_config:
+            type: object
+            properties:
+              manifest:
+                type: string
+              pyproject:
+                type: string
+              env_conda:
+                type: string
+              env_pip:
+                type: string
+              typed:
+                type: string
+              readme_conda:
+                type: string
+              readme_pypi:
+                type: string
+          test_config:
+            $ref: ??
+          pkg_source:
+            type: object
+            additionalProperties:
+              type: string
+          test_source:
+            type: object
+            additionalProperties:
+              type: string
+          readme:
+            type: object
+            additionalProperties:
+              type: string
+          health:
+            type: object
+            additionalProperties:
+              type: string
+
+
