@@ -6,4 +6,3 @@ minItems: 2
 maxItems: 2
 items:
   $ref: https://jsonschemata.repodynamics.com/color/hex-string
-

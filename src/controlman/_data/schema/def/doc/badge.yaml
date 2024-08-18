@@ -1,7 +1,0 @@
-$schema: https://json-schema.org/draft/2020-12/schema
-title: Badge
-default: { }
-oneOf:
-  - $ref: doc-badge-auto
-  - $ref: doc-badge-dynamic
-  - $ref: doc-badge-static

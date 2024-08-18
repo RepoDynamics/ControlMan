@@ -1,3 +1,4 @@
+$id: https://controlman.repodynamics.com/schema/proj/role
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Definition of a role in the project.
 examples:

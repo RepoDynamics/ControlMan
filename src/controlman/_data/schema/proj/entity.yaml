@@ -1,3 +1,5 @@
+$id: https://controlman.repodynamics.com/schema/proj/entity
+$schema: https://json-schema.org/draft/2020-12/schema
 title: Entity
 description: Information about a natural or legal person.
 type: object

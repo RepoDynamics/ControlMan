@@ -1,3 +1,5 @@
+$id: https://controlman.repodynamics.com/schema/proj/reference
+$schema: https://json-schema.org/draft/2020-12/schema
 title: Reference
 description: A bibliographic reference.
 type: object

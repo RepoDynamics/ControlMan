@@ -1,7 +1,0 @@
-title: Entity
-description: Information about a natural or legal person.
-type: object
-additionalProperties: false
-properties:
-  name:
-    type: string

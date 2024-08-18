@@ -1,3 +1,4 @@
+$id: https://controlman.repodynamics.com/schema
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Options
 description: |
@@ -97,7 +98,7 @@ properties:
       On online platforms, the first occurrence of the project's name in this text
       is automatically styled as bold/italic and linked to the project's website.
       :::
-    $ref: nonempty_string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   keywords:
     title: Keywords categorizing the project.
     description: |
@@ -122,7 +123,20 @@ properties:
       and on the project's PyPI and TestPyPI pages
       (cf. [`readme.pypi`](#cc.readme.pypi)).
       :::
-    $ref: common-highlights
+    type: array
+    uniqueItems: true
+    items:
+      title: Highlight
+      type: object
+      additionalProperties: false
+      required: [ title, description ]
+      properties:
+        title:
+          title: Title of the feature.
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        description:
+          title: Description of the feature.
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
   license:
     title: License of the project.
     description: |
@@ -206,7 +220,7 @@ properties:
           This is automatically added to the main docstring of the package
           (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
           :::
-        $ref: nonempty_string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       path:
         title: |
           Path to the repository's
@@ -252,6 +266,7 @@ properties:
     type: object
     default: { }
     additionalProperties: false
+    required: [ notice ]
     properties:
       notice:
         title: Copyright notice.
@@ -281,7 +296,6 @@ properties:
         type: integer
         minimum: 1980
         maximum: 2040
-    required: [ notice ]
   role:
     title: Author role definitions.
     description: |
@@ -297,7 +311,7 @@ properties:
     type: object
     additionalProperties:
       title: An author role definition.
-      $ref: proj-role
+      $ref: https://controlman.repodynamics.com/schema/proj/role
     examples:
       - concept:
           title: Conceptualization
@@ -374,10 +388,10 @@ properties:
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
           in the GitHub API (cf. [`entity`](#cc.def.entity)).
-        $ref: proj-entity
+        $ref: https://controlman.repodynamics.com/schema/proj/entity
     additionalProperties:
       title: A natural person or entity involved in the project.
-      $ref: proj-entity
+      $ref: https://controlman.repodynamics.com/schema/proj/entity
   maintainer:
     title: Maintainers of the project.
     description: |
@@ -430,7 +444,7 @@ properties:
               maxProperties: 1
               additionalProperties:
                 title: Code owners of the path or glob pattern.
-                $ref: proj-entities
+                $ref: https://controlman.repodynamics.com/schema/proj/entity
           path:
             title: |
               Path to the
@@ -468,7 +482,7 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the issue form.
-          $ref: proj-entities
+          $ref: https://controlman.repodynamics.com/schema/proj/entities
       discussion:
         title: Assignees of project discussions.
         description: |
@@ -482,25 +496,25 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the discussion category.
-          $ref: proj-entities
+          $ref: https://controlman.repodynamics.com/schema/proj/entities
       security:
         title: Project's security maintainer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: proj-entity
+        $ref: https://controlman.repodynamics.com/schema/proj/entity
       code_of_conduct:
         title: Project's code of conduct enforcer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: proj-entity
+        $ref: https://controlman.repodynamics.com/schema/proj/entity
       support:
         title: Project's support contact.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: proj-entity
+        $ref: https://controlman.repodynamics.com/schema/proj/entity
   citation:
     title: Project citation information.
     description: |
@@ -527,6 +541,7 @@ properties:
       :::
     type: object
     additionalProperties: false
+    required: [ title, authors, message ]
     properties:
       title:
         title: The name of the project.
@@ -536,7 +551,7 @@ properties:
           - ${{ name }}
           - ${{ pkg.name }}
           - A Custom Title
-        $ref: nonempty_string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       authors:
         title: Core author(s) of the project, ordered by contribution (highest first).
         description: |
@@ -555,7 +570,7 @@ properties:
         minItems: 1
         items:
           title: An author of the project/package.
-          $ref: proj-entity
+          $ref: https://controlman.repodynamics.com/schema/proj/entity
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
@@ -581,7 +596,7 @@ properties:
                 first: John
                 last: Doe
               website: 'https://johndoe.com'
-        $ref: proj-entities
+        $ref: https://controlman.repodynamics.com/schema/proj/entities
       message:
         title: A message to the human reader of the file.
         examples:
@@ -590,12 +605,12 @@ properties:
           - Please cite this software using these metadata.
           - Please cite this software using the metadata from 'preferred-citation'.
         default: If you use ${{ name }}, please cite it using the metadata from this file.
-        $ref: nonempty_string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       preferred_citation:
         title: |
           A reference to another work that should be cited
           instead of the software itself.
-        $ref: proj-reference
+        $ref: https://controlman.repodynamics.com/schema/proj/reference
       grant_ids:
         title: List of OpenAIRE-supported grants funding the research for this project.
         description: |
@@ -616,14 +631,14 @@ properties:
         type: array
         uniqueItems: true
         items:
-          $ref: proj-reference
+          $ref: https://controlman.repodynamics.com/schema/proj/reference
       identifiers:
         title: The identifiers of the project.
         type: array
         uniqueItems: true
         minItems: 1
         items:
-          $ref: proj-identifier
+          $ref: https://controlman.repodynamics.com/schema/proj/identifier
       language:
         title: |
           [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
@@ -634,7 +649,7 @@ properties:
           - eng
       abstract:
         title: A description of the project.
-        $ref: nonempty_string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
         default: ${{ abstract }}
         examples:
           - A custom description of the project that can span multiple lines.
@@ -676,7 +691,6 @@ properties:
         type: string
         enum: [ dataset, software ]
         default: software
-    required: [ title, authors, message ]
   funding:
     title: Available funding options of the project.
     description: |
@@ -703,27 +717,27 @@ properties:
       community_bridge:
         title: |
           [LFX Mentorship (CommunityBridge)](https://lfx.linuxfoundation.org/tools/mentorship) project name.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       issuehunt:
         title: |
           [IssueHunt](https://issuehunt.io/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       ko_fi:
         title: |
           [Ko-fi](https://ko-fi.com/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       liberapay:
         title: |
           [Liberapay](https://liberapay.com/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       open_collective:
         title: |
           [Open Collective](https://opencollective.com/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       patreon:
         title: |
           [Patreon](https://www.patreon.com/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       tidelift:
         title: |
           [Tidelift](https://tidelift.com/) package address.
@@ -740,11 +754,11 @@ properties:
       polar:
         title: |
           [Polar](https://www.polar.sh/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       buy_me_a_coffee:
         title: |
           [Buy Me a Coffee](https://www.buymeacoffee.com/) username.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
       github:
         title: Usernames of up to four [GitHub Sponsors](https://docs.github.com/en/sponsors/) accounts.
         description: |
@@ -796,13 +810,13 @@ properties:
             default:
               light: 0F3460
               dark: 3A98B9
-            $ref: doc-color-theme
+            $ref: https://controlman.repodynamics.com/schema/doc/themed-color
           secondary:
             title: Secondary colors of the project.
             default:
               light: 562B08
               dark: E3651D
-            $ref: doc-color-theme
+            $ref: https://controlman.repodynamics.com/schema/doc/themed-color
       logo:
         title: Logo of the project.
         description: |
@@ -813,7 +827,7 @@ properties:
         required: [ icon, simple, full ]
         properties:
           icon:
-            type: string
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: logo/favicon.svg
           simple:
             type: object
@@ -822,13 +836,13 @@ properties:
             default: { }
             properties:
               light:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_light.svg
               dark:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_dark.svg
               raster:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_light.png
           full:
             type: object
@@ -837,13 +851,13 @@ properties:
             default: { }
             properties:
               light:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.svg
               dark:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_dark.svg
               raster:
-                type: string
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.png
       badge:
         $ref: doc-badge-attrs

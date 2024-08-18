@@ -1,3 +1,5 @@
+$id: https://controlman.repodynamics.com/schema/proj/identifier
+$schema: https://json-schema.org/draft/2020-12/schema
 title: Identifier
 description: An identifier for the work.
 type: object
