@@ -1,0 +1,107 @@
+$id: https://controlman.repodynamics.com/schema/sphinx-theme-pydata
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+properties:
+  html_theme_options:
+    type: object
+    properties:
+      analytics:
+        title: |
+          [Configurations](https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/analytics.html)
+          of web analytics services.
+        type: object
+        additionalProperties: false
+        properties:
+          google_analytics_id:
+            title: Google Analytics ID
+            type: string
+          plausible_analytics_domain:
+            title: Domain for Plausible Analytics
+            type: string
+          plausible_analytics_url:
+            title: URL for Plausible Analytics
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+        anyOf:
+          - required: [ google_analytics_id ]
+          - required: [ plausible_analytics_domain, plausible_analytics_url ]
+      icon_links:
+        title: Icons to be shown in the navigation bar of the website.
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [ name, icon, url, type ]
+          examples:
+            - name: Conda Distribution
+              icon: fa-custom fa-conda
+              url: ${{ pkg.conda.url.home }}
+            - name: Email
+              icon: fa-regular fa-envelope
+              url: ${{ team.owner.email.url }}
+            - name: Twitter
+              icon: fa-brands fa-twitter
+              url: ${{ team.owner.twitter.url }}
+            - name: LinkedIn
+              icon: fa-brands fa-linkedin
+              url: ${{ team.owner.linkedin.url }}
+            - name: ResearchGate
+              icon: fa-brands fa-researchgate
+              url: ${{ team.owner.researchgate.url }}
+            - name: ORCiD
+              icon: fa-brands fa-orcid
+              url: ${{ team.owner.orcid.url }}
+          properties:
+            name:
+              title: Label for the icon.
+              description: |
+                This is the HTML `title` attribute,
+                i.e., the text that appears when hovering over the icon.
+              type: string
+            url:
+              title: Link of the icon.
+              description: |
+                This is the URL that the icon will link to.
+              type: string
+              $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+            type:
+              title: Type of the icon.
+              type: string
+              enum: [ fontawesome, url, local ]
+              default: fontawesome
+            icon:
+              title: Icon definition.
+              description: |
+                Depending on `type`, this must be either
+                a Font Awesome icon class (e.g., `fa-brands fa-twitter`),
+                a URL to an image file (e.g., `https://example.com/icon.png`),
+                or a path to a local image file (e.g., `img/icon.png`).
+              type: string
+            attributes:
+              type: object
+      quicklinks:
+        title: Quicklinks for the navbar.
+        type: array
+        uniqueItems: true
+        default: ${{ path.web.subsections }}
+        items:
+          type: object
+          additionalProperties: false
+          required: [ title, entries ]
+          properties:
+            section_title:
+              type: string
+            subsections:
+              type: array
+              uniqueItems: true
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                required: [ title, path ]
+                properties:
+                  title:
+                    type: string
+                  path:
+                    type: string

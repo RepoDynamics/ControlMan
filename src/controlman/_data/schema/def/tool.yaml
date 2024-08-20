@@ -1,0 +1,51 @@
+$id: https://controlman.repodynamics.com/schema/tool
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Configurations for a tool used in the development workflow.
+type: object
+additionalProperties: false
+minProperties: 1
+properties:
+  env:
+    title: Environment file configurations.
+    $ref: https://controlman.repodynamics.com/schema/env
+  config:
+    tile: Configurations for the tool.
+    description: |
+      Here you can define the tool configurations
+      to be written to a configuration file
+      or be used directly in the workflow.
+    type: object
+    additionalProperties: false
+    properties:
+      file:
+        title: The configuration file for the tool.
+        description: |
+          Here you can define configurations to be written to a specific file.
+        type: object
+        additionalProperties: false
+        required: [ type, path, content ]
+        properties:
+          type:
+            title: Type of the configuration file.
+            description: |
+              If `txt` is selected, the content will be written to the given file as is.
+              For other types, the content will be written in the specified format.
+            type: string
+            enum: [ yaml, json, toml, txt ]
+          path:
+            title: Path to the configuration file to write.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            examples:
+              - .github/.pre-commit-config.yaml
+          content:
+            title: Configurations for the tool.
+            description: |
+              The content will be written to the given filepath in the format specified by `type`.
+            type: [ string, array, object ]
+      workflow:
+        title: Workflow configurations for the tool.
+        description: |
+          These are not meant to be written to any file,
+          but to be used directly in the workflow.
+        type: object
+        additionalProperties: true

@@ -1,3 +1,4 @@
+$id: https://controlman.repodynamics.com/schema/local-config
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Local Configurations
 description: |
@@ -17,14 +18,12 @@ description: |
   This allows you to easily maintain your own local configurations 
   without affecting the remote repository.
   :::
-
 examples:
   - control:
       cache:
         retention_hours:
           api: 1
           extensions: 1
-
 type: object
 additionalProperties: false
 properties:

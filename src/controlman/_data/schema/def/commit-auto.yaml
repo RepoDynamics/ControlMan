@@ -1,0 +1,14 @@
+$id: https://controlman.repodynamics.com/schema/commit-auto
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Automatic Commit
+description: Automatic commit type
+type: object
+additionalProperties: false
+required: [ type ]
+properties:
+  type:
+    type: string
+  changelog_id:
+    type: string
+  changelog_section_id:
+    type: string

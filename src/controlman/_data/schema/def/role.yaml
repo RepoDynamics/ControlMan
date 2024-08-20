@@ -1,0 +1,32 @@
+$id: https://controlman.repodynamics.com/schema/role
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Definition of a role in the project.
+examples:
+  - title: Conceptualization
+    description: Formulation and evolution of overarching project goals and aims.
+    abbreviation: CNP
+type: object
+additionalProperties: false
+required: [ title, description, abbreviation ]
+properties:
+  title:
+    title: Name of the role.
+    type: string
+    examples:
+      - Conceptualization
+      - Software Development
+      - Management
+  description:
+    title: A short description of the role.
+    type: string
+    examples:
+      - Formulation and evolution of overarching project goals and aims.
+      - Implementation of the software.
+      - Project administration and coordination.
+  abbreviation:
+    title: Abbreviation of the role title.
+    type: string
+    examples:
+      - CNP
+      - DEV
+      - MAN

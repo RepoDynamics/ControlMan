@@ -1,0 +1,34 @@
+$id: https://controlman.repodynamics.com/schema/gh-form-preprocess
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+properties:
+  if_any:
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      type: string
+  if_all:
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      type: string
+  if_none:
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      type: string
+  if_equal:
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      type: string
+oneOf:
+  - required: [ if_any ]
+  - required: [ if_all ]
+  - required: [ if_none ]
+  - required: [ if_equal ]

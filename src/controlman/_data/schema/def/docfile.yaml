@@ -1,0 +1,29 @@
+$id: https://controlman.repodynamics.com/schema/docfile
+$schema: https://json-schema.org/draft/2020-12/schema
+title: README File
+type: object
+additionalProperties: false
+required: [ path, content ]
+properties:
+  path:
+    title: Filepath
+    description: Path to the README file.
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+    examples:
+      - README
+      - README.md
+      - .github/README.txt
+      - docs/README.rst
+  content:
+    $ref: https://docsman.repodynamics.com/schema
+  footer:
+    title: Footer configurations.
+    $ref: https://docsman.repodynamics.com/schema
+  url:
+    title: |
+      URL of the GitHub repository's main `README` file
+      (cf. [`doc.github`](#cc.doc.github)).
+    default: ${{ repo.url.blob }}/${{ .path }}
+    examples:
+      - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"
+    $ref: https://jsonschemata.repodynamics.com/url/https

@@ -1,0 +1,19 @@
+$id: https://controlman.repodynamics.com/schema/label-auto
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Automatic GitHub Label Group
+description: An automatic group of GitHub labels.
+type: object
+required: [ prefix, color, description ]
+properties:
+  prefix:
+    title: Prefix
+    description: Prefix of the label names in the group.
+    $ref: https://controlman.repodynamics.com/schema/label-prefix
+  color:
+    title: Color
+    description: Color of the label.
+    $ref: https://jsonschemata.repodynamics.com/color/hex-string
+  description:
+    title: Description
+    description: Description of the label.
+    $ref: https://jsonschemata.repodynamics.com/config/github/label/description

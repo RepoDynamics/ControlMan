@@ -1,0 +1,9 @@
+$id: https://controlman.repodynamics.com/schema/pkg-os-cibuild
+$schema: https://json-schema.org/draft/2020-12/schema
+description: |
+  See https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
+type: array
+minItems: 1
+uniqueItems: true
+items:
+  type: string

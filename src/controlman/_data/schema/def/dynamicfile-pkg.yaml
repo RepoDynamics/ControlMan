@@ -1,0 +1,18 @@
+$id: https://controlman.repodynamics.com/schema/dynamicfile-pkg
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+properties:
+  manifest:
+    type: string
+  pyproject:
+    type: string
+  env_conda:
+    type: string
+  env_pip:
+    type: string
+  typed:
+    type: string
+  readme_conda:
+    type: string
+  readme_pypi:
+    type: string

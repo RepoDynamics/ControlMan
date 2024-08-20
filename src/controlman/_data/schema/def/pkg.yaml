@@ -1,0 +1,660 @@
+$id: https://controlman.repodynamics.com/schema/pkg
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Configurations for a Python package.
+description: |
+  This corresponds to data for both the project's Python package and test suite.
+  However, some fields (e.g., OS and Python version requirements)
+  are only relevant for the package,
+  and are automatically reused for the test suite,
+  as they must be identical.
+  
+  :::{admonition} Usage
+  :class: dropdown note
+  Among others, these settings are used to automatically generate
+  [PEP 621](https://peps.python.org/pep-0621/) compliant
+  [`pyproject.toml`](https://packaging.python.org/en/latest/specifications/pyproject-toml)
+  files for the package and test suite, which contain all metadata and specifications
+  required for building, packaging, and distributing them.
+  :::
+type: object
+additionalProperties: false
+required: [ path, name, import_name, os, python, build ]
+properties:
+  path:
+    title: Path to the source code directory.
+    description: |
+      The parent directory will be the root of the package,
+      and the import package directory will be placed directly under this directory.
+    type: object
+    default: { }
+    additionalProperties: false
+    required: [ root, source, import ]
+    properties:
+      root:
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+      source:
+        $ref: https://jsonschemata.repodynamics.com/path/dir-name
+        default: src
+      import:
+        type: string
+        default: ${{ .root }}/${{ .source }}/${{ ..import_name }}
+  name:
+    title: Name of the Python distribution package.
+    description: |
+      Any name provided here will be converted to a valid non-normalized package name
+      according to PyPA rules. This is done by replacing all characters that are not
+      ASCII alphanumeric, hyphens, underscores, or periods with a hyphen,
+      and removing all leading and trailing hyphens.
+      
+      :::{code-block} python
+      :class: dropdown
+      :caption: Package Name Conversion Function
+
+      import re
+
+      def convert_package_name(name: str) -> str:
+          """Convert an input name to a valid Python distribution package name
+          by replacing all restricted characters with hyphens
+          and removing leading and trailing non-alphanumeric characters.
+          """
+          name_cleaned = re.sub(r'[^a-zA-Z0-9._-]', '-', name)
+          return re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', name_cleaned)
+      :::
+
+      For consistency, it is strongly recommended to
+      **choose a project name that is most similar to a valid package name**,
+      and to directly use the project name here. For example, you can name
+      your project `My Project`, and the package name will be `My-Project`.
+      
+      ::::{admonition} PyPA Naming Rules
+      :class: dropdown attention
+      
+      According to [Python Packaging Authority (PyPA)](https://packaging.python.org/en/latest/specifications/name-normalization/),
+      the package name must consist only of ASCII alphanumeric characters,
+      hyphens, underscores, and periods.
+      Additionally, it must start and end with an alphanumeric character.
+      PyPA then normalizes the package name by lowercasing the non-normalized name,
+      and replacing all runs of consecutive hyphens, underscores, and periods with a single hyphen.
+
+      :::{code-block} python
+      :class: dropdown
+      :caption: Name Normalization Function
+
+      import re
+
+      def normalize_package_name(non_normalized_package_name: str) -> str:
+          """Normalize a package name according to PyPA specifications."""
+          normalized_package_name = re.sub(
+             r'[._-]+', '-', non_normalized_package_name.lower()
+          )
+          return normalized_package_name
+      :::
+
+      This means that, for example, all following names are equivalent and can be used interchangeably
+      (although they are displayed as-is on PyPI):
+      - `my-project` (normalized form)
+      - `my_project`
+      - `my.project`
+      - `My--Project`
+      - `mY-._.-ProjEcT`
+      ::::
+    type: string
+    pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9])$
+  import_name:
+    title: Name of the top-level Python import package.
+    description: |
+      Any name provided here will be converted to a valid Python identifier
+      according to [Python rules](https://docs.python.org/3/reference/lexical_analysis.html#identifiers). 
+      This is done by lowercasing the name,
+      replacing all characters that are not ASCII alphanumeric or underscore with an underscore,
+      and removing all leading digits.
+      
+      :::{code-block} python
+      :class: dropdown
+      :caption: Import Name Conversion Function
+
+      import re
+
+      def convert_import_name(name: str) -> str:
+          """Convert an input name to a valid Python identifier by lowercasing,
+          replacing all non-alphanumeric characters with underscores,
+          and removing leading digits.
+          """
+          name_cleaned = re.sub(r'[^a-zA-Z0-9]', '_', name.lower())
+          return re.sub(r'^[0-9]+', '', name_cleaned)
+      :::
+      
+      For consistency, it is strongly recommended to
+      **choose a package name that is most similar to a valid import name**,
+      and to directly use the package name here. For example, you can name
+      your package `My-Package`, and the import name will be `my_package`.
+    type: string
+    pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
+  classifiers:
+    title: |
+      Project's [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers).
+    description: |
+      The main classifiers are automatically generated based on the project's metadata.
+      These are:
+      - `Development Status`: Based on the latest version tag on the branch. 
+      - `License`: Based on [`license.id`](#cc.license.id), for supported licenses. 
+      - `Operating System`: Based on the provided [`os`](#cc-def.pkg_config.os) configurations.
+      - `Programming Language`: Based on the provided [`python.version`](#cc-def.pkg_config.python.version.spec) configurations.
+      - `Typed`: Based on [`typed`](#cc-def.pkg_config.typed).
+      Here you can add additional classifiers, such as `Topic` or `Intended Audience`.
+      For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/),
+      or the [trove-classifiers](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
+      package from PyPA.
+    type: array
+    uniqueItems: true
+    items:
+      title: Trove classifier
+      type: string
+      pattern: '^.+( :: [^::]+)+$'
+      default: [ 'Natural Language :: English' ]
+      examples:
+        - 'Intended Audience :: Science/Research'
+        - 'Topic :: Scientific/Engineering :: Artificial Intelligence'
+  urls:
+    title: Project URLs
+    description: |
+      URLs of project resources according to
+      [PyPA specifications](https://packaging.python.org/en/latest/specifications/pyproject-toml/#urls).
+      For each entry, the key defines the resource name displayed on PyPI,
+      and the value defines the URL.
+      Following keys (case-insensitive) are automatically recognized by PyPI (cf.
+      [PyPI Warehouse source code](https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62))
+      and displayed with an icon:
+      - `home`, `homepage`, `home page`
+      - `download`
+      - `changelog`, `change log`, `changes`, `release notes`, `news`, `what's new`, `history`
+      - `documentation`, `docs`
+      - Keys starting with:
+        - `issue`, `bug`, `tracker`, `report`
+        - `sponsor`, `funding`, `donate`, `donation`
+    default:
+      Homepage: ${{ web.url.home }}
+      Source: ${{ repo.url.home }}
+      Download: ${{ repo.url.releases.home }}
+      Issue-Tracker: ${{ repo.url.issues.home }}
+    type: object
+    additionalProperties:
+      title: URL
+      description: URL of a project resource
+      $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  readme:
+    title: README file of the PyPI/TestPyPI package.
+    description: |
+      `readme` metadata of your package
+      (formerly known as `long_description`)
+    $ref: https://controlman.repodynamics.com/schema/docfile
+  typed:
+    description: Whether the package is typed
+    type: boolean
+    default: true
+  os:
+    description: Operating systems for the project
+    examples:
+      - linux:
+          runner: ubuntu-latest
+        macos:
+        windows:
+    type: object
+    additionalProperties: false
+    minProperties: 1
+    default:
+      linux: {}
+      macos: {}
+      windows: {}
+    properties:
+      linux:
+        title: Linux configurations.
+        type: object
+        additionalProperties: false
+        properties:
+          name:
+            title: Display name of the OS.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: Linux
+          runner:
+            title: GitHub Actions runner for the OS.
+            type: string
+            default: ubuntu-latest
+            enum: [ ubuntu-latest, ubuntu-22.04, ubuntu-20.04 ]
+          cibuild:
+            title: Cibuild configurations.
+            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
+        required: [ name, runner ]
+      macos:
+        title: MacOS configurations.
+        type: object
+        additionalProperties: false
+        properties:
+          name:
+            title: Display name of the OS.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: MacOS
+          runner:
+            title: GitHub Actions runner for the OS.
+            type: string
+            default: macos-latest
+            enum:
+              - macos-latest
+              - macos-latest-xl
+              - macos-13
+              - macos-13-xl
+              - macos-12
+              - macos-12-xl
+              - macos-11
+          cibuild:
+            title: Cibuild configurations.
+            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
+        required: [ name, runner ]
+      windows:
+        title: Windows configurations.
+        properties:
+          name:
+            title: Display name of the OS.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: Windows
+          runner:
+            title: GitHub Actions runner for the OS.
+            type: string
+            default: windows-latest
+            enum:
+              - windows-latest
+              - windows-2022
+              - windows-2019
+          cibuild:
+            title: Cibuild configurations.
+            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
+        required: [ name, runner ]
+      independent:
+        type: boolean
+  python:
+    title: Python configurations for the package.
+    description: |
+      This is only required for the package, and is automatically reused for the test suite.
+    type: object
+    default: { }
+    properties:
+      version:
+        title: Python version requirements.
+        description: |
+          You only need to provide `spec`, which is the version specifier.
+          All other fields are automatically generated by retrieving all
+          release Python versions from the Python repository through GitHub API,
+          and filtering them based on the provided version specifier.
+        type: object
+        default: { }
+        properties:
+          spec:
+            title: Python version specifier.
+            description: |
+              This corresponds to the [`requires-python`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#requires-python)
+              field in the `pyproject.toml` file, and must be a valid
+              [version specifier](https://packaging.python.org/en/latest/specifications/version-specifiers/#id5),
+              describing the Python version requirements for the project.
+              It is only required for the package, and is automatically reused for the test suite.
+              
+              :::{admonition} Best Practices
+              :class: dropdown tip
+              
+              It is [highly recommended](https://github.com/pypa/packaging.python.org/pull/1274)
+              to only define a lower bound for the Python version,
+              and to [avoid upper-capping](https://discuss.python.org/t/requires-python-upper-limits/12663/76?page=2).
+              We recommend following the
+              [NumPy Enhancement Proposal (NEP) 29](https://numpy.org/neps/nep-0029-deprecation_policy.html)
+              and always supporting three previous minor versions.
+              :::
+            type: string
+            default: '>= 3.10'
+            examples:
+              - '>= 3.9'
+              - '>= 3.10'
+          micros:
+            title: Currently supported micro versions.
+            description: |
+              This is an automatically generated array
+              containing all currently supported version of Python
+              in the format `major.minor.micro`.
+            type: array
+            uniqueItems: true
+            items:
+              title: Micro version string.
+              type: string
+              pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
+          minors:
+            title: Currently supported minor versions.
+            description: |
+              This is an automatically generated array
+              containing all currently supported version of Python
+              in the format `major.minor`.
+            type: array
+            uniqueItems: true
+            items:
+              title: Minor version string.
+              type: string
+              pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)$
+          pyxy:
+            title: Currently supported minor versions.
+            description: |
+              This is an automatically generated array
+              containing all currently supported version of Python
+              in the format `py{major}{minor}`, e.g., `py39`.
+            type: array
+            uniqueItems: true
+            items:
+              title: Minor version string.
+              type: string
+              pattern: ^py(0|[1-9]\d*)(0|[1-9]\d*)$
+        required: [ spec ]
+      pure:
+        type: boolean
+      implementation:
+        type: string
+        enum:
+          - cpython
+          - pypy
+          - ironpython
+          - jython
+          - micropython
+          - stackless
+        default: cpython
+    required: [ version ]
+  entry:
+    type: object
+    properties:
+      cli:
+        description: Scripts for the project
+        $ref: https://controlman.repodynamics.com/schema/pkg-entry
+      gui:
+        description: GUI Scripts for the project
+        $ref: https://controlman.repodynamics.com/schema/pkg-entry
+      api:
+        examples:
+          - - group_1:
+                description: ""
+                entry_points:
+                  entry_point_1:
+                    ref: "my_package:main"
+                    description: ""
+                  entry_point_2:
+                    ref: "my_package:main"
+                    description: ""
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required:
+            - name
+            - description
+            - entry
+          properties:
+            name:
+              title: Group name
+              type: string
+            description:
+              type: string
+            entry:
+              $ref: https://controlman.repodynamics.com/schema/pkg-entry
+  dependency:
+    type: object
+    properties:
+      core:
+        title: Package core dependencies.
+        type: object
+        additionalProperties:
+          $ref: https://controlman.repodynamics.com/schema/dep-pkg
+      optional:
+        title: Optional Dependencies
+        description: Optional dependencies for the project
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            package:
+              type: object
+              additionalProperties:
+                $ref: https://controlman.repodynamics.com/schema/dep-pkg
+      env:
+        $ref: https://controlman.repodynamics.com/schema/env-file
+        default:
+          conda:
+            name: ${{ ....import_name }}
+            path: ${{ ....path.root }}/conda_env.yaml
+          pip:
+            path: ${{ ....path.root }}/requirements.txt
+  file:
+    title: Package documentation settings
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        docstring:
+          type: string
+  manifest:
+    title: MANIFEST.in configurations.
+    description: |
+      The `MANIFEST.in` file is used to [control files and directories](https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html#controlling-files-in-the-distribution)
+      when creating a source distribution of the package.
+      It is used by the `sdist` command of `setuptools` to determine which files
+      to include in the source distribution.
+    type: array
+    examples:
+      - - graft ${{ dir.pkg.import }}
+        - global-exclude *.py[cod] __pycache__ *.so
+    uniqueItems: true
+    items:
+      type: string
+  build:
+    title: Build system definitions.
+    description: |
+      References:
+      - [Python Packaging User Guide](https://packaging.python.org) by the Python Packaging Authority (PyPA)
+      - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
+      - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
+    type: object
+    default: { }
+    properties:
+      requires:
+        description: Build system requirements
+        type: array
+        default: [ setuptools >= 72.1.0, versioningit >= 3.1.2 ]
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: string
+      backend:
+        description: Build backend
+        type: string
+        default: setuptools.build_meta
+      tool:
+        title: Build system definitions
+        description: |
+          Configurations for the build backend, e.g.,
+          [Setuptools]([SetupTools](https://setuptools.pypa.io/).
+        type: object
+        default: { }
+        additionalProperties:
+          type: object
+        properties:
+          setuptools:
+            title: Setuptools configurations
+            type: object
+            properties:
+              include-package-data:
+                title: Include package data
+                type: boolean
+                default: true
+              zip-safe:
+                title: Zip-safe
+                type: boolean
+                default: false
+              packages:
+                title: Package definitions
+                type: object
+                default: { }
+                properties:
+                  find:
+                    title: Find packages
+                    type: object
+                    default: { }
+                    properties:
+                      where:
+                        title: Where to find packages
+                        type: array
+                        default: [ '${{ .......path.source }}' ]
+                        items:
+                          type: string
+                      namespaces:
+                        title: Include namespaces
+                        type: boolean
+                        default: true
+          versioningit:
+            title: Versioningit
+            type: object
+            properties:
+              vcs:
+                type: object
+                default: { }
+                properties:
+                  method:
+                    type: string
+                    enum: [ git, hg, svn ]
+                    default: git
+                  match:
+                    type: array
+                    default: [ '${{tag.version.prefix}}[0-9]*.[0-9]*.[0-9]*']
+                    items:
+                      type: string
+                  default-tag:
+                    type: string
+                    default: ${{ tag.version.prefix }}0.0.0
+              tag2version:
+                type: object
+                default: { }
+                properties:
+                  rmprefix:
+                    type: string
+                    default: ${{ tag.version.prefix }}
+              format:
+                type: object
+                default: {}
+                properties:
+                  distance:
+                    type: string
+                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}'
+                  dirty:
+                    type: string
+                    default: '{base_version}+0.{committer_date:%Y.%m.%d}.{revision}.dirty'
+                  distance-dirty:
+                    type: string
+                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}.dirty'
+              onbuild:
+                type: object
+                default: { }
+                properties:
+                  method:
+                    type: string
+                    enum: [ replace-version ]
+                    default: replace-version
+                  regex:
+                    type: string
+                    default: '^\\s*__version_details__\\s*=\\s*(?P<version>.*)'
+                  require-match:
+                    type: boolean
+                    default: true
+                  source-file:
+                    type: string
+                    default: '${{ .....path.import }}/__init__.py'
+                  build-file:
+                    type: string
+                    default: '${{ .....import_name }}/__init__.py'
+                  replacement:
+                    type: string
+                    default: |
+                      dict(
+                        version: "{version}",
+                        version_tuple: {version_tuple},
+                        author_date: "{author_date:%Y.%m.%d}",
+                        build_date: "{build_date:%Y.%m.%d}",
+                        branch: "{branch}",
+                        distance: "{distance}",
+                        head_commit_hash: "{revision}",
+                      )
+    required: [ requires ]
+  pypi:
+    title: URLs of the project's PyPI package.
+    type: object
+    default: { }
+    properties:
+      url:
+        title: URLs of the package on PyPI.
+        type: object
+        default: { }
+        properties:
+          home:
+            title: Homepage URL of the PyPI package.
+            default: https://pypi.org/project/${{ ...name }}
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  conda:
+    title: Conda Recipe
+    description: |
+      Conda recipe settings.
+      See [Conda-Build documentation](# https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+      
+      Conda packages are built with [conda-build](https://docs.conda.io/projects/conda-build/),
+      using instructions that are mostly defined in a single YAML file named
+      [meta.yaml](https://conda.io/projects/conda-build/en/stable/resources/define-metadata.html).
+      The YAML file can be created [from scratch](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs.html)
+      , or with help of other utilities, such as [conda skeleton](https://docs.conda.io/projects/conda-build/en/stable/user-guide/tutorials/build-pkgs-skeleton.html)
+      . After build, the package distribution can be
+      [uploaded](https://docs.anaconda.com/free/anacondaorg/user-guide/tasks/work-with-packages/#uploading-packages)
+      on an Anaconda channel. While this may be done on a [personal channel](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/create-custom-channels.html)
+      , this complicates the installation process for users as they now have to specify the channel as well.
+      A more convenient alternative is to publish the package on the [conda-forge](https://conda-forge.org/) channel.
+      This requires following the [instructions](https://conda-forge.org/docs/maintainer/adding_pkgs.html).
+    type: object
+    properties:
+      readme:
+        title: README file of the Conda package.
+        default:
+          path: ${{ ...path.root }}/${{ ...path.source }}/README_conda.md
+          content:
+            id: pypackit
+        $ref: https://controlman.repodynamics.com/schema/docfile
+      url:
+        title: URLs of the package on Conda.
+        type: object
+        default: { }
+        properties:
+          home:
+            title: Homepage URL of the Conda package.
+            default: https://anaconda.org/conda-forge/${{ ...name }}
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    examples:
+      - about:
+          summary: binary diff and patch using the BSDIFF4-format
+          # Long description in Markdown format.
+          description: |
+            A Python library for structural cheminformatics
+          home: https://github.com/ilanschnell/bsdiff4
+          doc_url: https://numpy.org/doc/stable/
+          dev_url: https://github.com/numpy/numpy
+          license: MIT
+          license_family: MIT
+          license_file:
+            - LICENSE
+          prelink_message:
+            - prelink_message_file.txt
+            - folder-with-all-prelink-messages/
+        extra:
+          recipe-maintainers:
+            - jakirkham
+          feedstock-name: scipy

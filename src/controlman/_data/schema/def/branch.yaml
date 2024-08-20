@@ -1,0 +1,194 @@
+$id: https://controlman.repodynamics.com/schema/branch
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Branch Configurations
+description: Configurations for a branch (group).
+type: object
+additionalProperties: false
+required: [ name ]
+properties:
+  name:
+    title: Branch Name
+    description: Name (for main branch) or prefix (for branch groups) of the branch (group).
+    type: string
+    examples:
+      - main
+      - release/v
+      - prerelease/v
+      - dev/
+      - auto-update/
+  ruleset:
+    title: Ruleset
+    description: Branch protection rules for the branch (group).
+    type: object
+    additionalProperties: false
+    required: [ enforcement, bypass_actors ]
+    properties:
+      enforcement:
+        title: Enforcement
+        description: |
+          The enforcement level of the ruleset; one of:
+          - 'active': Enforce rules.
+          - 'disabled': Do not enforce rules.
+          - 'evaluate': Allows admins to test rules before enforcing them.
+            Admins can view insights on the Rule Insights page.
+            This is only available with GitHub Enterprise.
+        type: string
+        enum: [ disabled, evaluate, active ]
+        default: active
+      bypass_actors:
+        title: Bypass Actors
+        description: List of roles, teams, or apps allowed to bypass the rules.
+        type: array
+        default:
+          - role: organization_admin
+            mode: always
+          - role: repository_admin
+            mode: always
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            role:
+              title: Role
+              type: string
+              enum: [ organization_admin, repository_admin, repository_maintainer, repository_writer ]
+            id:
+              title: ID
+              description: |
+                The account ID of the actor.
+                If `type` is organization_admin, this should be 1.
+              type: integer
+            type:
+              title: Type
+              description: The type of actor.
+              type: string
+              enum: [ organization_admin, repository_role, team, integration ]
+            mode:
+              title: Mode
+              description: |
+                When the specified actor can bypass the ruleset.
+                'pull_request' means that an actor can only bypass rules on pull requests.
+              type: string
+              enum: [ always, pull_request ]
+              default: always
+          oneOf:
+            - required: [ role, mode ]
+            - required: [ id, type, mode ]
+      protect_creation:
+        description: |
+          Prevent users from creating matching refs.
+        type: boolean
+        default: true
+      protect_modification:
+        description: |
+          Prevent users from updating matching refs.
+          Omitting this key will disable the protection rule.
+        type: object
+        additionalProperties: false
+        required: [ allow_fetch_and_merge ]
+        properties:
+          allow_fetch_and_merge:
+            description: Still allow the branch to pull changes from its upstream repository.
+            type: boolean
+            default: true
+      protect_deletion:
+        description: |
+          Prevent users from deleting matching refs.
+          Omitting this key is equivalent to setting it to `false`.
+        type: boolean
+        default: true
+      protect_force_push:
+        description: Prevent users from force-pushing to matching refs.
+        type: boolean
+        default: true
+      require_linear_history:
+        description: Prevent merge commits from being pushed to matching refs.
+        type: boolean
+        default: true
+      require_signatures:
+        description: Require commits on matching refs to have verified signatures.
+        type: boolean
+        default: true
+      require_pull_request:
+        description: |
+          Require all commits be made to a non-target branch
+          and submitted via a pull request before they can be merged.
+          Omitting this key will disable the protection rule.
+        type: object
+        additionalProperties: false
+        properties:
+          dismiss_stale_reviews_on_push:
+            description: |
+              Automatically dismiss previous approving pull-request reviews
+              when new reviewable commits are pushed.
+            type: boolean
+            default: true
+          require_code_owner_review:
+            description: |
+              Require an approving review in pull requests including files
+              with a designated code owner.
+            type: boolean
+            default: true
+          require_last_push_approval:
+            description: |
+              Require an approving review on the most recent reviewable push
+              by someone other than the actor performing the push.
+            type: boolean
+            default: true
+          require_review_thread_resolution:
+            description: |
+              Require all conversations on code to be resolved before a pull request
+              can be merged into matching refs.
+            type: boolean
+            default: true
+          required_approving_review_count:
+            description: |
+              The number of approving reviews that are required
+              before a pull request can be merged into matching refs.
+            type: integer
+            default: 1
+        required:
+          - dismiss_stale_reviews_on_push
+          - require_code_owner_review
+          - require_last_push_approval
+          - require_review_thread_resolution
+          - required_approving_review_count
+      require_status_checks:
+        description: |
+          Require status checks to pass before a pull request can be merged into matching refs.
+          Omitting this key will disable the protection rule.
+        type: object
+        additionalProperties: false
+        properties:
+          contexts:
+            description: The list of required status checks.
+            type: array
+            uniqueItems: true
+            minItems: 1
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  description: The name of the status check context.
+                  type: string
+                integration_id:
+                  description: The optional integration ID that this status check must originate from.
+                  type: integer
+              required: [ context ]
+          strict:
+            description: Require status checks to pass on the latest commit.
+            type: boolean
+            default: true
+        required: [ contexts, strict ]
+      required_deployment_environments:
+        description: |
+          A list of environments that must be successfully deployed into
+          before merging into matching refs is allowed.
+          Omitting this key will disable the protection rule.
+        type: array
+        uniqueItems: true
+        items:
+          type: string
+

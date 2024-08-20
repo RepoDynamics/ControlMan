@@ -1,0 +1,44 @@
+$id: https://controlman.repodynamics.com/schema/job-scheduled
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Configurations for a scheduled job.
+type: object
+additionalProperties: false
+properties:
+  cron:
+    title: Crontab job
+    description: |
+      The [POSIX cron expression](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07)
+      of the task's scheduled time.
+      This must match one of the `cron` entries of the project's main workflow,
+      as defined in the `.github/workflows/main.yaml` file under the
+      [`on.schedule`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule) key.
+    type: string
+  branch:
+    title: Behavior for each branch.
+    description: |
+      For each branch, you can choose to either
+      - `disable` the job,
+      - only `report` the results,
+      - report the results, apply changes (if any) in a new branch, and submit a `pull` request,
+      - report the results, and directly `commit` the changes (if any) to the target branch.
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      main:
+        title: Main branch
+        type: string
+        enum: [ disable, report, pull, commit ]
+        default: pull
+      release:
+        title: Release branches
+        type: string
+        enum: [ disable, report, pull, commit ]
+        default: pull
+      pre:
+        title: Pre-release branches
+        type: string
+        enum: [ disable, report, pull, commit ]
+        default: pull
+    required: [ main, release, pre ]
+required: [ cron, branch ]

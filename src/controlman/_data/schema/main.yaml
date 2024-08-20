@@ -211,7 +211,7 @@ properties:
           - 'License :: OSI Approved :: BSD License'
       text:
         title: Full text of the license.
-        $ref: nonempty_string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       notice:
         title: Short text of the license.
         description: |
@@ -311,7 +311,7 @@ properties:
     type: object
     additionalProperties:
       title: An author role definition.
-      $ref: https://controlman.repodynamics.com/schema/proj/role
+      $ref: https://controlman.repodynamics.com/schema/role
     examples:
       - concept:
           title: Conceptualization
@@ -388,10 +388,10 @@ properties:
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
           in the GitHub API (cf. [`entity`](#cc.def.entity)).
-        $ref: https://controlman.repodynamics.com/schema/proj/entity
+        $ref: https://controlman.repodynamics.com/schema/entity
     additionalProperties:
       title: A natural person or entity involved in the project.
-      $ref: https://controlman.repodynamics.com/schema/proj/entity
+      $ref: https://controlman.repodynamics.com/schema/entity
   maintainer:
     title: Maintainers of the project.
     description: |
@@ -444,7 +444,7 @@ properties:
               maxProperties: 1
               additionalProperties:
                 title: Code owners of the path or glob pattern.
-                $ref: https://controlman.repodynamics.com/schema/proj/entity
+                $ref: https://controlman.repodynamics.com/schema/entity
           path:
             title: |
               Path to the
@@ -482,7 +482,7 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the issue form.
-          $ref: https://controlman.repodynamics.com/schema/proj/entities
+          $ref: https://controlman.repodynamics.com/schema/entities
       discussion:
         title: Assignees of project discussions.
         description: |
@@ -496,25 +496,25 @@ properties:
         type: object
         additionalProperties:
           title: Assignees of the discussion category.
-          $ref: https://controlman.repodynamics.com/schema/proj/entities
+          $ref: https://controlman.repodynamics.com/schema/entities
       security:
         title: Project's security maintainer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/proj/entity
+        $ref: https://controlman.repodynamics.com/schema/entity
       code_of_conduct:
         title: Project's code of conduct enforcer.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/proj/entity
+        $ref: https://controlman.repodynamics.com/schema/entity
       support:
         title: Project's support contact.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/proj/entity
+        $ref: https://controlman.repodynamics.com/schema/entity
   citation:
     title: Project citation information.
     description: |
@@ -570,7 +570,7 @@ properties:
         minItems: 1
         items:
           title: An author of the project/package.
-          $ref: https://controlman.repodynamics.com/schema/proj/entity
+          $ref: https://controlman.repodynamics.com/schema/entity
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
@@ -596,7 +596,7 @@ properties:
                 first: John
                 last: Doe
               website: 'https://johndoe.com'
-        $ref: https://controlman.repodynamics.com/schema/proj/entities
+        $ref: https://controlman.repodynamics.com/schema/entities
       message:
         title: A message to the human reader of the file.
         examples:
@@ -610,7 +610,7 @@ properties:
         title: |
           A reference to another work that should be cited
           instead of the software itself.
-        $ref: https://controlman.repodynamics.com/schema/proj/reference
+        $ref: https://controlman.repodynamics.com/schema/reference
       grant_ids:
         title: List of OpenAIRE-supported grants funding the research for this project.
         description: |
@@ -631,14 +631,14 @@ properties:
         type: array
         uniqueItems: true
         items:
-          $ref: https://controlman.repodynamics.com/schema/proj/reference
+          $ref: https://controlman.repodynamics.com/schema/reference
       identifiers:
         title: The identifiers of the project.
         type: array
         uniqueItems: true
         minItems: 1
         items:
-          $ref: https://controlman.repodynamics.com/schema/proj/identifier
+          $ref: https://controlman.repodynamics.com/schema/identifier
       language:
         title: |
           [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
@@ -807,16 +807,16 @@ properties:
         properties:
           primary:
             title: Primary colors of the project.
+            $ref: https://controlman.repodynamics.com/schema/themed-color
             default:
               light: 0F3460
               dark: 3A98B9
-            $ref: https://controlman.repodynamics.com/schema/doc/themed-color
           secondary:
             title: Secondary colors of the project.
+            $ref: https://controlman.repodynamics.com/schema/themed-color
             default:
               light: 562B08
               dark: E3651D
-            $ref: https://controlman.repodynamics.com/schema/doc/themed-color
       logo:
         title: Logo of the project.
         description: |
@@ -860,13 +860,13 @@ properties:
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.png
       badge:
-        $ref: doc-badge-attrs
+        $ref: https://docsman.repodynamics.com/schema/element/badge
       footer:
         title: Configurations of project's footer.
         description: |
           The footer is automatically added to the project's [README](#cc.readme) and
           [community health files](#cc.health).
-        $ref: doc-document
+        $ref: https://docsman.repodynamics.com/schema
   readme:
     title: README file configurations.
     description: |
@@ -904,7 +904,7 @@ properties:
     type: object
     additionalProperties:
       title: Configuration for a directory README file.
-      $ref: common-readme_file
+      $ref: https://controlman.repodynamics.com/schema/docfile
     properties:
       main:
         title: >-
@@ -926,7 +926,7 @@ properties:
                   - README.md
                   - .github/README.txt
                   - docs/README.rst
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
   health:
     title: |
       Configurations for 
@@ -950,7 +950,7 @@ properties:
           and only include links to resources on the project's website,
           as to avoid duplication of content.
         allOf:
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
               path:
                 title: |
@@ -983,7 +983,7 @@ properties:
           and only include links to resources on the project's website,
           as to avoid duplication of content.
         allOf:
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
               path:
                 title: Path to the `GOVERNANCE` file.
@@ -1016,7 +1016,7 @@ properties:
           and only include links to resources on the project's website,
           as to avoid duplication of content.
         allOf:
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
               path:
                 title: |
@@ -1050,7 +1050,7 @@ properties:
           and only include links to resources on the project's website,
           as to avoid duplication of content.
         allOf:
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
               path:
                 title: Support Policy
@@ -1088,7 +1088,7 @@ properties:
           and may include information on how to report violations, how they are triaged,
           and how they are resolved.
         allOf:
-          - $ref: common-readme_file
+          - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
               path:
                 title: |
@@ -1151,7 +1151,7 @@ properties:
               url:
                 docs: https://www.sphinx-doc.org/
                 source: https://github.com/sphinx-doc/sphinx
-            $ref: common-dep_pkg
+            $ref: https://controlman.repodynamics.com/schema/dep-pkg
           config:
             type: object
             additionalProperties: true
@@ -1308,7 +1308,7 @@ properties:
                   description: |
                     The `import_name` must be the name of the extension as it is imported in Python,
                     i.e., what's added to the `extensions` list in the `conf.py` file.
-                  $ref: common-dep_module
+                  $ref: https://controlman.repodynamics.com/schema/dep-module
                 config:
                   title: Configuration to be added to the Sphinx configuration.
                   type: object
@@ -1336,8 +1336,8 @@ properties:
                 docs: https://pydata-sphinx-theme.readthedocs.io/
                 source: https://github.com/pydata/pydata-sphinx-theme
             anyOf:
-              - $ref: common-dep_pkg
-              - $ref: common-dep_module
+              - $ref: https://controlman.repodynamics.com/schema/dep-pkg
+              - $ref: https://controlman.repodynamics.com/schema/dep-module
           config:
             title: Configuration options for the theme.
             type: object
@@ -1356,7 +1356,7 @@ properties:
           properties:
             dependency:
               title: Dependency to be installed.
-              $ref: common-dep_pkg
+              $ref: https://controlman.repodynamics.com/schema/dep-pkg
             config:
               title: Configuration to be added to the Sphinx configuration.
               type: object
@@ -1394,7 +1394,7 @@ properties:
             - help/contact
       env:
         title: Environment file configurations.
-        $ref: common-env
+        $ref: https://controlman.repodynamics.com/schema/env
       url:
         title: Website URLs.
         type: object
@@ -1470,12 +1470,12 @@ properties:
     title: Package
     description: |
       Configurations of the project's Python package.
-    $ref: pkg-config
+    $ref: https://controlman.repodynamics.com/schema/pkg
   test:
     title: Test Suite
     description: |
       Configurations of the project's test suite.
-    $ref: pkg-config
+    $ref: https://controlman.repodynamics.com/schema/pkg
   # ITS
   changelog:
     title: Changelog Configurations
@@ -1497,7 +1497,7 @@ properties:
         name:
           title: Name
           description: Name of the changelog.
-          $ref: nonempty_string
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples:
             - Public API
         path:
@@ -1509,13 +1509,13 @@ properties:
         title:
           title: Title
           description: Title of the changelog document.
-          $ref: nonempty_string
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples:
             - ${{ name }} Changelog (Public API)
         intro:
           title: Introduction
           description: Introduction text of the changelog.
-          $ref: nonempty_string
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples: |
             All notable changes to this project will be documented in this file.
 
@@ -1587,12 +1587,12 @@ properties:
             title: Maintain
             description: |
               Continuous maintenance and refactoring tasks.
-            $ref: its-commit-auto
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
           sync:
             title: Sync
             description: |
               Continuous configuration automation and synchronization of dynamic files.
-            $ref: its-commit-auto
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
       primary:
         title: Primary Commits
         description: Primary action commit types
@@ -1603,28 +1603,28 @@ properties:
             Configurations for a custom primary commit type.
             For each custom commit type, a key-value pair must be added,
             where the key is the ID of the commit type, to reference in other places.
-          $ref: its-commit-primary
+          $ref: https://controlman.repodynamics.com/schema/commit-primary
         properties:
           major:
             title: Major Release
             description: Configurations for a major release commit type.
-            $ref: its-commit-primary
+            $ref: https://controlman.repodynamics.com/schema/commit-primary
           minor:
             title: Minor Release
             description: Configurations for a minor release commit type.
-            $ref: its-commit-primary
+            $ref: https://controlman.repodynamics.com/schema/commit-primary
           patch:
             title: Patch Release
             description: Configurations for a patch release commit type.
-            $ref: its-commit-primary
+            $ref: https://controlman.repodynamics.com/schema/commit-primary
           post:
             title: Post-release
             description: Configurations for a post-release commit type.
-            $ref: its-commit-primary
+            $ref: https://controlman.repodynamics.com/schema/commit-primary
           web:
             title: Website
             description: Configurations for a website commit type.
-            $ref: its-commit-primary
+            $ref: https://controlman.repodynamics.com/schema/commit-primary
       secondary:
         title: Secondary Commits
         description: |
@@ -1668,7 +1668,7 @@ properties:
           prefix:
             title: Prefix
             description: Prefix for label names.
-            $ref: its-label-attr-prefix
+            $ref: https://controlman.repodynamics.com/schema/label-prefix
           color:
             title: Color
             description: Color of the labels.
@@ -1680,32 +1680,32 @@ properties:
             additionalProperties:
               title: Custom Primary Labels
               description: Custom primary labels.
-              $ref: its-label-group-element
+              $ref: https://controlman.repodynamics.com/schema/label-group-element
             properties:
               major:
                 title: Major Release
                 description: Label for major release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               minor:
                 title: Minor Release
                 description: Label for minor release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               patch:
                 title: Patch Release
                 description: Label for patch release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               post:
                 title: Post Release
                 description: Label for post release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               web:
                 title: Website
                 description: Label for website deployment.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
       subtype:
         title: Secondary Type Labels
         description: Issue sub types
-        $ref: its-label-group
+        $ref: https://controlman.repodynamics.com/schema/label-group
       status:
         title: Status
         description: Issue/pull status
@@ -1716,7 +1716,7 @@ properties:
           prefix:
             title: Prefix
             description: Prefix for the label name
-            $ref: its-label-attr-prefix
+            $ref: https://controlman.repodynamics.com/schema/label-prefix
           color:
             title: Color
             description: Color of the label.
@@ -1744,63 +1744,63 @@ properties:
               triage:
                 title: Triage
                 description: The issue is being triaged.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               rejected:
                 title: Rejected
                 description: The issue/pull-request has been rejected.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               duplicate:
                 title: Duplicate
                 description: The issue/pull-request is a duplicate.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               invalid:
                 title: Invalid
                 description: The issue/pull-request is invalid.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               planning:
                 title: Planning
                 description: The issue is in the planning phase.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               requirement_analysis:
                 title: Requirement Analysis
                 description: The issue is in the requirement analysis phase.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               design:
                 title: Design
                 description: The issue is in the design phase.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               implementation:
                 title: Implementation
                 description: The issue is in the implementation phase.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               testing:
                 title: Testing
                 description: The issue is in the testing phase.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_alpha:
                 title: Alpha Release
                 description: The issue/pull-request is in alpha release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_beta:
                 title: Beta Release
                 description: The issue/pull-request is in beta release.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_rc:
                 title: Release Candidate
                 description: The issue/pull-request is published as a release candidate.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_final:
                 title: Final Release
                 description: The issue/pull-request has been merged into a release branch.
-                $ref: its-label-group-element
+                $ref: https://controlman.repodynamics.com/schema/label-group-element
       branch:
         title: Branch
         description: Branch labels. This is an automatic label group.
-        $ref: its-label-auto_group
+        $ref: https://controlman.repodynamics.com/schema/label-auto
       version:
         title: Version
         description: Version labels. This is an automatic label group.
-        $ref: its-label-auto_group
+        $ref: https://controlman.repodynamics.com/schema/label-auto
       custom:
         title: Custom Labels
         description: Custom labels.
@@ -1835,7 +1835,7 @@ properties:
             additionalProperties:
               title: Label Group
               description: A group of labels.
-              $ref: its-label-group
+              $ref: https://controlman.repodynamics.com/schema/label-group
       all:
         title: All labels
         type: array
@@ -1959,7 +1959,7 @@ properties:
                 - if_any: [ "${‎{ package.releases.gui_scripts }}" ] # Display a form only if the package has a GUI interface
                 - if_any: [ "${‎{ package.releases.cli_scripts }}" ] # Display a form only if the package has a CLI interface
                 - if_any: [ "${‎{ package.releases.has_scripts }}" ] # Display an element within a form only if the package has scripts
-              $ref: its-gh_form-preprocess
+              $ref: https://controlman.repodynamics.com/schema/gh_form-preprocess
             post_process:
               description: |
                 {{ pp_meta.name }} allows you to define post-processing instructions for each form,
@@ -2136,7 +2136,7 @@ properties:
                 - "API Bug: "
               type: string
             body:
-              $ref: its-gh_form-body
+              $ref: https://controlman.repodynamics.com/schema/gh-form-body
   document:
     description: Development process protocol specifications
     type: object
@@ -2288,7 +2288,7 @@ properties:
                     description: Name of an available label to add.
                     type: string
                 body:
-                  $ref: its-gh_form-body
+                  $ref: https://controlman.repodynamics.com/schema/gh-form-body
               examples:
                 - title: "[General] " # A default title that will be pre-populated in the discussion submission form.
                   # Labels that will automatically be added to discussions created with this template.
@@ -2725,19 +2725,19 @@ properties:
     properties:
       main:
         title: Configurations for the default (aka main, trunk) branch of the repository.
-        $ref: vcs-branch
+        $ref: https://controlman.repodynamics.com/schema/branch
       release:
         title: Configurations for release branches.
-        $ref: vcs-branch
+        $ref: https://controlman.repodynamics.com/schema/branch
       pre:
         title: Configurations for pre-release branches.
-        $ref: vcs-branch
+        $ref: https://controlman.repodynamics.com/schema/branch
       dev:
         title: Configurations for development branches.
-        $ref: vcs-branch
+        $ref: https://controlman.repodynamics.com/schema/branch
       auto:
         title: Configurations for auto-update branches.
-        $ref: vcs-branch
+        $ref: https://controlman.repodynamics.com/schema/branch
   tag:
     title: Configurations for the repository tags.
     type: object
@@ -2877,12 +2877,12 @@ properties:
           Configurations for scheduled jobs that may result in updates to repository files and settings.
           These include Continuous Configuration Automation (CCA) to synchronize project configurations,
           as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
-        $ref: ci-schedule
+        $ref: https://controlman.repodynamics.com/schema/job-scheduled
       test:
         title: Testing jobs.
         description: |
           Configurations for the Continuous Testing (CT) pipeline of the package.
-        $ref: ci-schedule
+        $ref: https://controlman.repodynamics.com/schema/job-scheduled
   tool:
     title: Configurations for tools used in the development workflow.
     description: |
@@ -2893,7 +2893,7 @@ properties:
       title: Additional tools
       description: |
         Configurations for additional tools that can be added to the project's workflow.
-      $ref: ci-tool
+      $ref: https://controlman.repodynamics.com/schema/tool
     properties:
       pre-commit:
         title: Pre-commit hooks.
@@ -2901,7 +2901,7 @@ properties:
           [Pre-commit](https://pre-commit.com/) is a framework for managing and maintaining
           multi-language hooks.
           These configurations define the pre-commit hooks to be used in the project.
-        $ref: ci-tool
+        $ref: https://controlman.repodynamics.com/schema/tool
       codecov:
         title: Codecov test coverage reporting.
         description: |
@@ -2991,7 +2991,7 @@ properties:
                     description: |
                       Configuration settings for the ReadTheDocs website.
                       See also: https://docs.readthedocs.io/en/stable/config-file/v2.html
-                    $ref: ci-tool-readthedocs
+                    type: object
               workflow:
                 title: Workflow configurations for the ReadTheDocs website.
                 description: |
@@ -3272,24 +3272,9 @@ properties:
             additionalProperties:
               type: string
           pkg_config:
-            type: object
-            properties:
-              manifest:
-                type: string
-              pyproject:
-                type: string
-              env_conda:
-                type: string
-              env_pip:
-                type: string
-              typed:
-                type: string
-              readme_conda:
-                type: string
-              readme_pypi:
-                type: string
+            $ref: https://controlman.repodynamics.com/schema/dynamicfile-pkg
           test_config:
-            $ref: ??
+            $ref: https://controlman.repodynamics.com/schema/dynamicfile-pkg
           pkg_source:
             type: object
             additionalProperties:
@@ -3306,5 +3291,3 @@ properties:
             type: object
             additionalProperties:
               type: string
-
-

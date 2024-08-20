@@ -1,0 +1,64 @@
+$id: https://controlman.repodynamics.com/schema/dep-module
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Module Dependency
+description: Definition of a module as a dependency.
+type: object
+properties:
+  name:
+    title: Name of the module.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  import_name:
+    type: string
+    pattern: '^[a-zA-Z0-9_\.-]*$'
+  url:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      required: [ url ]
+    properties:
+      docs:
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      pip:
+        title: URL of the pip package.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      conda:
+        type: string
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      source:
+        type: string
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  intersphinx_mapping:
+    type: object
+    additionalProperties: false
+    properties:
+      key:
+        type: string
+      target:
+        type: string
+        format: uri
+      inventory:
+        type: array
+        items:
+          type: string
+        minItems: 1
+    required: [ target ]
+  description:
+    type: string
+  notes:
+    type: string
+required: [ import_name ]
+examples:
+  - pip_spec: "numpy >= 1.21.2"
+    usage: Numerical computing.
+    url_source: ""
+    url_homepage: ""
+    url_docs: ""
+    conda_spec: ""
+    conda_channel: ""

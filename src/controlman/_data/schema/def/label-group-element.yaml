@@ -1,0 +1,19 @@
+$id: https://controlman.repodynamics.com/schema/label-group-element
+$schema: https://json-schema.org/draft/2020-12/schema
+title: GitHub Label Group Element
+description: An element of a group of GitHub labels.
+type: object
+additionalProperties: false
+required: [ suffix ]
+properties:
+  suffix:
+    title: Suffix
+    description: Suffix of the label name.
+    type: string
+    examples:
+      - 'major-release'
+      - 'triage'
+  description:
+    title: Description
+    description: Description of the label.
+    $ref: https://jsonschemata.repodynamics.com/config/github/label/description

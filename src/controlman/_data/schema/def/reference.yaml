@@ -1,0 +1,404 @@
+$id: https://controlman.repodynamics.com/schema/reference
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Reference
+description: A bibliographic reference.
+type: object
+additionalProperties: false
+required: [ authors, title, type ]
+properties:
+  abbreviation:
+    title: Abbreviation
+    description: The abbreviation of a work.
+    $ref: nonempty_string
+  abstract:
+    title: Abstract
+    description: The abstract of a work.
+    $ref: nonempty_string
+  authors:
+    title: Authors
+    description: The author(s) of the work.
+    type: array
+    uniqueItems: true
+    minItems: 1
+    items:
+      title: An author of the work.
+      examples:
+        - '${{ team.owner }}'
+        - ${{ team.some_author_id }}
+        - name:
+            first: John
+            last: Doe
+            suffix: Jr.
+      $ref: proj-entity
+  collection-doi:
+    $ref: https://jsonschemata.repodynamics.com/id/doi
+    description: The DOI of a collection containing the work.
+  collection-title:
+    description: The title of a collection or proceedings.
+    minLength: 1
+    type: string
+  collection-type:
+    description: The type of a collection.
+    minLength: 1
+    type: string
+  commit:
+    title: Commit hash (e.g., Git) or revision number (e.g., Subversion) of the work.
+    $ref: nonempty_string
+  conference:
+    $ref: proj-entity
+    description: The conference where the work was presented.
+  contact:
+    description: The contact person, group, company, etc. for a work.
+    items:
+      $ref: proj-entity
+    minItems: 1
+    type: array
+    uniqueItems: true
+  copyright:
+    description: The copyright information pertaining to the work.
+    minLength: 1
+    type: string
+  data-type:
+    description: The data type of a data set.
+    minLength: 1
+    type: string
+  database:
+    description: The name of the database where a work was accessed/is stored.
+    minLength: 1
+    type: string
+  database-provider:
+    $ref: proj-entity
+    description: The provider of the database where a work was accessed/is stored.
+  date-accessed:
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+    description: The date the work was accessed.
+  date-downloaded:
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+    description: The date the work has been downloaded.
+  date-published:
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+    description: The date the work has been published.
+  date-released:
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+    description: The date the work has been released.
+  department:
+    description: The department where a work has been produced.
+    minLength: 1
+    type: string
+  doi:
+    $ref: https://jsonschemata.repodynamics.com/id/doi
+    description: The DOI of the work.
+  edition:
+    description: The edition of the work.
+    minLength: 1
+    type: string
+  editors:
+    description: The editor(s) of a work.
+    items:
+      $ref: proj-entity
+    minItems: 1
+    type: array
+    uniqueItems: true
+  editors-series:
+    description: The editor(s) of a series in which a work has been published.
+    items:
+      $ref: proj-entity
+    minItems: 1
+    type: array
+    uniqueItems: true
+  end:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The end page of the work.
+  entry:
+    description: An entry in the collection that constitutes the work.
+    minLength: 1
+    type: string
+  filename:
+    description: The name of the electronic file containing the work.
+    minLength: 1
+    type: string
+  format:
+    description: The format in which a work is represented.
+    minLength: 1
+    type: string
+  identifiers:
+    description: The identifier(s) of the work.
+    items:
+      $ref: proj-identifier
+    minItems: 1
+    type: array
+    uniqueItems: true
+  institution:
+    $ref: proj-entity
+    description: The institution where a work has been produced or published.
+  isbn:
+    description: The ISBN of the work.
+    pattern: ^[0-9\- ]{10,17}X?$
+    type: string
+  issn:
+    description: The ISSN of the work.
+    pattern: ^\d{4}-\d{3}[\dxX]$
+    type: string
+  issue:
+    anyOf:
+      - minLength: 1
+        type: string
+      - type: number
+    description: The issue of a periodical in which a work appeared.
+  issue-date:
+    description: The publication date of the issue of a periodical in which a
+      work appeared.
+    minLength: 1
+    type: string
+  issue-title:
+    description: The name of the issue of a periodical in which the work appeared.
+    minLength: 1
+    type: string
+  journal:
+    description: The name of the journal/magazine/newspaper/periodical where the
+      work was published.
+    minLength: 1
+    type: string
+  keywords:
+    description: Keywords pertaining to the work.
+    items:
+      minLength: 1
+      type: string
+    minItems: 1
+    type: array
+    uniqueItems: true
+  languages:
+    description: The language identifier(s) of the work according to ISO 639 language
+      strings.
+    items:
+      maxLength: 3
+      minLength: 2
+      pattern: ^[a-z]{2,3}$
+      type: string
+    minItems: 1
+    type: array
+    uniqueItems: true
+  license:
+    $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+  license-url:
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    description: The URL of the license text under which the work is licensed
+      (only for non-standard licenses not included in the SPDX License List).
+  loc-end:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The line of code in the file where the work ends.
+  loc-start:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The line of code in the file where the work starts.
+  location:
+    $ref: proj-entity
+    description: The location of the work.
+  medium:
+    description: The medium of the work.
+    minLength: 1
+    type: string
+  month:
+    maximum: 12
+    minimum: 1
+    type: integer
+    description: The month in which a work has been published.
+  nihmsid:
+    description: The NIHMSID of a work.
+    minLength: 1
+    type: string
+  notes:
+    description: Notes pertaining to the work.
+    minLength: 1
+    type: string
+  number:
+    anyOf:
+      - minLength: 1
+        type: string
+      - type: number
+    description: The accession number for a work.
+  number-volumes:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The number of volumes making up the collection in which the work
+      has been published.
+  pages:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The number of pages of the work.
+  patent-states:
+    description: The states for which a patent is granted.
+    items:
+      minLength: 1
+      type: string
+    minItems: 1
+    type: array
+    uniqueItems: true
+  pmcid:
+    description: The PMCID of a work.
+    pattern: ^PMC[0-9]{7}$
+    type: string
+  publisher:
+    $ref: proj-entity
+    description: The publisher who has published the work.
+  recipients:
+    description: The recipient(s) of a personal communication.
+    minItems: 1
+    type: array
+    uniqueItems: true
+    items:
+      $ref: proj-entity
+  repository:
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    description: The URL of the work in a repository (when the repository is neither
+      a source code repository nor a build artifact repository).
+  repository-artifact:
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    description: The URL of the work in a build artifact/binary repository.
+  repository-code:
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    description: The URL of the work in a source code repository.
+  scope:
+    description: The scope of the reference, e.g., the section of the work it
+      adheres to.
+    minLength: 1
+    type: string
+  section:
+    anyOf:
+      - minLength: 1
+        type: string
+      - type: number
+    description: The section of a work that is referenced.
+  senders:
+    description: The sender(s) of a personal communication.
+    minItems: 1
+    type: array
+    uniqueItems: true
+    items:
+      $ref: proj-entity
+  start:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The start page of the work.
+  status:
+    description: The publication status of the work.
+    enum:
+      - abstract
+      - advance-online
+      - in-preparation
+      - in-press
+      - preprint
+      - submitted
+    type: string
+  term:
+    description: The term being referenced if the work is a dictionary or encyclopedia.
+    minLength: 1
+    type: string
+  thesis-type:
+    description: The type of the thesis that is the work.
+    minLength: 1
+    type: string
+  title:
+    description: The title of the work.
+    minLength: 1
+    type: string
+  translators:
+    description: The translator(s) of a work.
+    minItems: 1
+    type: array
+    uniqueItems: true
+    items:
+      $ref: proj-entity
+  type:
+    description: The type of the work.
+    enum:
+      - art
+      - article
+      - audiovisual
+      - bill
+      - blog
+      - book
+      - catalogue
+      - conference-paper
+      - conference
+      - data
+      - database
+      - dictionary
+      - edited-work
+      - encyclopedia
+      - film-broadcast
+      - generic
+      - government-document
+      - grant
+      - hearing
+      - historical-work
+      - legal-case
+      - legal-rule
+      - magazine-article
+      - manual
+      - map
+      - multimedia
+      - music
+      - newspaper-article
+      - pamphlet
+      - patent
+      - personal-communication
+      - proceedings
+      - report
+      - serial
+      - slides
+      - software-code
+      - software-container
+      - software-executable
+      - software-virtual-machine
+      - software
+      - sound-recording
+      - standard
+      - statute
+      - thesis
+      - unpublished
+      - video
+      - website
+    type: string
+  url:
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    description: The URL of the work.
+  version:
+    title: The version of the work.
+    $ref: nonempty_string
+  volume:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The volume of the periodical in which a work appeared.
+  volume-title:
+    description: The title of the volume in which the work appeared.
+    minLength: 1
+    type: string
+  year:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The year in which a work has been published.
+  year-original:
+    anyOf:
+      - type: integer
+      - minLength: 1
+        type: string
+    description: The year of the original publication.
