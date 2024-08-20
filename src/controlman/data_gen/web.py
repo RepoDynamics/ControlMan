@@ -3,7 +3,7 @@ from pathlib import Path as _Path
 import docsman as _dm
 from loggerman import logger as _logger
 import pyserials as _ps
-from markitup import txt as _txt
+from markitup import text as _txt
 
 from controlman import exception as _exception
 

@@ -10,6 +10,7 @@ import jsonschemata as _js
 import pkgdata as _pkgdata
 from loggerman import logger as _logger
 import pyserials as _ps
+from docsman import schema as _docsman_schema
 
 from controlman import exception as _exception
 from controlman import _file_util
@@ -20,7 +21,7 @@ _schema_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_dat
 
 def validate(
     data: dict,
-    schema: _Literal["full", "local", "cache"] = "full",
+    schema: _Literal["main", "local", "cache"] = "main",
     before_substitution: bool = False,
 ) -> None:
     """Validate data against a schema."""
@@ -40,13 +41,12 @@ def validate(
             registry=_registry_before if before_substitution else _registry_after,
             fill_defaults=True,
             iter_errors=True,
-            raise_invalid_data=raise_invalid_data,
         )
-    except _ps.exception.validate.PySerialsSchemaValidationError as e:
+    except _ps.exception.validate.PySerialsJsonSchemaValidationError as e:
         raise _exception.ControlManSchemaValidationError(
             msg="Validation against schema failed."
         ) from e
-    if schema == "full" and not before_substitution:
+    if schema == "main" and not before_substitution:
         DataValidator(data).validate()
     return
 
@@ -357,7 +357,11 @@ def modify_schema(schema: dict) -> dict:
         "type": "string",
         "minLength": 6,
     }
-    new_schema = {"anyOf": [schema, alt_schema]}
+    new_schema = {
+        "anyOf": [schema, alt_schema]
+    }
+    if "$id" in schema:
+        new_schema["$id"] = schema.pop("$id")
     if "default" in schema:
         # If the schema has a default value, add it to the new schema,
         # otherwise it is not filled when inside an 'anyOf' clause.
@@ -373,7 +377,7 @@ def _make_registry():
         return _referencing.Resource.from_contents(schema, default_specification=spec)
 
     resources = []
-    def_schemas_path = _schema_dir_path / "def"
+    def_schemas_path = _schema_dir_path
     for schema_filepath in def_schemas_path.glob("**/*.yaml"):
         schema_dict = _file_util.read_data_from_file(
             path=schema_filepath,
@@ -382,7 +386,7 @@ def _make_registry():
         )
         _js.edit.required_last(schema_dict)
         resources.append(make_resource(schema_dict))
-    registry_after = _js.registry.make(online=False, crawl=True, add_resource=resources)
+    registry_after, _ = _docsman_schema.load(dynamic=False, crawl=True, add_resources=resources)
     resources_before = []
     for registry_schema_id in registry_after:
         registry_schema_dict = registry_after[registry_schema_id].contents

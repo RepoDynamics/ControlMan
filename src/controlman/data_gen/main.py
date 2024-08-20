@@ -5,7 +5,7 @@ import re as _re
 # Non-standard libraries
 from gittidy import Git as _Git
 import pylinks
-from markitup import txt as _txt
+from markitup import text as _txt
 from loggerman import logger as _logger
 import pyserials as _ps
 

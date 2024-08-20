@@ -6,7 +6,7 @@ from loggerman import logger as _logger
 import pylinks as _pylinks
 import pyserials as _ps
 from gittidy import Git as _Git
-from markitup.html import element as _html
+from markitup.html import elem as _html
 
 from controlman import data_gen as _data_gen
 from controlman.hook_manager import HookManager as _HookManager
@@ -120,7 +120,7 @@ class CenterManager:
         dirs = self._compare_dirs()
         return self._changes, files, dirs
 
-    def report(self) -> tuple[bool, _html.Figure, _html.Figure, _html.Figure, _html.Figure, _html.ElementCollection]:
+    def report(self) -> tuple[bool, _html.Figure, _html.Figure, _html.Figure, _html.Figure]:
         self.compare()
         table_data = self._report_metadata()
         table_files = self._report_files()

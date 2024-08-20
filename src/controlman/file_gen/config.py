@@ -4,7 +4,7 @@ from loggerman import logger
 import pyserials as _ps
 import pylinks
 from pylinks.exceptions import WebAPIError
-from markitup import txt as _txt
+from markitup import text as _txt
 
 from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit

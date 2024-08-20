@@ -10,7 +10,7 @@ from pathlib import Path as _Path
 import pyserials as _ps
 import pysyntax as _pysyntax
 from loggerman import logger
-from markitup import txt as _txt
+from markitup import text as _txt
 
 from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
