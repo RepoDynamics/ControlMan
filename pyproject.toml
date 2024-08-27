@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev265"
+version = "0.0.0.dev266"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -38,6 +38,7 @@ dependencies = [
     "PyShellMan",
     "PySyntax",
     "referencing == 0.35.1",
-    "jsonpath-ng == 1.6.1"
+    "jsonpath-ng == 1.6.1",
+    "ExceptionMan",
 ]
 requires-python = ">=3.10"

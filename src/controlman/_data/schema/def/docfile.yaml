@@ -15,10 +15,15 @@ properties:
       - .github/README.txt
       - docs/README.rst
   content:
-    $ref: https://docsman.repodynamics.com/schema
+    default: ""
+    oneOf:
+      - type: string
+      - $ref: https://docsman.repodynamics.com/schema
   footer:
     title: Footer configurations.
-    $ref: https://docsman.repodynamics.com/schema
+    oneOf:
+      - type: string
+      - $ref: https://docsman.repodynamics.com/schema
   url:
     title: |
       URL of the GitHub repository's main `README` file

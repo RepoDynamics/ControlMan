@@ -1,12 +1,13 @@
 from pathlib import Path as _Path
 import shutil as _shutil
 
-from versionman import PEP440SemVer as _PEP440SemVer
+from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
 from loggerman import logger as _logger
 import pylinks as _pylinks
 import pyserials as _ps
 from gittidy import Git as _Git
 from markitup.html import elem as _html
+from markitup import doc as _doc
 
 from controlman import data_gen as _data_gen
 from controlman.hook_manager import HookManager as _HookManager
@@ -21,6 +22,7 @@ from controlman.cache_manager import CacheManager
 from controlman import file_gen as _file_gen
 from controlman import data_loader as _data_loader
 from controlman import data_validator as _data_validator
+from controlman.reporter import ControlCenterReporter as _ControlCenterReporter
 
 
 class CenterManager:
@@ -115,35 +117,18 @@ class CenterManager:
         all_paths = []
         for change_type in ("removed", "added", "modified"):
             for changed_key in metadata_changes[change_type]:
-                all_paths.append((changed_key.removeprefix("$."), DynamicFileChangeType[change_type.upper()]))
+                all_paths.append((changed_key, DynamicFileChangeType[change_type.upper()]))
         self._changes = all_paths
         dirs = self._compare_dirs()
         return self._changes, files, dirs
 
-    def report(self) -> tuple[bool, _html.Figure, _html.Figure, _html.Figure, _html.Figure]:
+    def report(self) -> _ControlCenterReporter:
         self.compare()
-        table_data = self._report_metadata()
-        table_files = self._report_files()
-        table_dirs = self._report_dirs()
-        rows = []
-        sections = []
-        has_changes = False
-        for table, name in ((table_data, "Metadata"), (table_files, "Files"), (table_dirs, "Directories")):
-            change_title = "Sync" if table else "No Changes"
-            change_emoji = "🔄" if table else "✅"
-            rows.append([name, (change_emoji, {"title": change_title})])
-            if table:
-                sections.append(_html.details([_html.summary(name), _html.br(), table]))
-                has_changes = True
-        summary_figure = _html.table_from_rows(
-            body_rows=rows,
-            head_rows=["Type", "Status"],
-            as_figure=True,
-            caption=f"Changes in the project's metadata and dynamic content.",
+        return _ControlCenterReporter(
+            metadata=self._changes,
+            files=self._files,
+            dirs=self._dirs,
         )
-
-        report = [_miu.html.h(1, "Control Center Report"), summary_table] + sections
-        return has_changes, summary_table, table_data, table_files, table_dirs, _miu.html.ElementCollection(report)
 
     @_logger.sectioner("Apply Changes To Dynamic Repository File")
     def apply_changes(self) -> None:
@@ -274,69 +259,3 @@ class CenterManager:
             status = DynamicFileChangeType.UNCHANGED if path_exists else DynamicFileChangeType.ADDED
         return status
 
-    def _report_metadata(self):
-        if not self._changes:
-            return
-        rows = []
-        for changed_key, change_type in sorted(self._changes, key=lambda elem: elem[0]):
-            change = change_type.value
-            rows.append([_html.code(changed_key), (change.emoji, {"title": change.title})])
-        figure = _html.table_from_rows(
-            body_rows=rows,
-            head_rows=["Path", "Change"],
-            as_figure=True,
-            caption=f"Changes in the project's metadata.",
-        )
-        return figure
-
-    def _report_files(self):
-        rows = []
-        for file in sorted(
-            self.generate_files(),
-            key=lambda elem: (elem.type.value[1], elem.subtype[1]),
-        ):
-            if file.change in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED):
-                continue
-            change = file.change.value
-            rows.append(
-                [
-                    file.type.value[1],
-                    file.subtype[1],
-                    (change.emoji, {"title": change.title}),
-                    _html.code(file.path),
-                    _html.code(file.path_before) if file.path_before else "—"
-                ]
-            )
-        if not rows:
-            return
-        figure = _html.table_from_rows(
-            body_rows=rows,
-            head_rows=["Type", "Subtype", "Change", "Path", "Old Path"],
-            as_figure=True,
-            caption=f"Changes in the project's dynamic files.",
-        )
-        return figure
-
-    def _report_dirs(self):
-        rows = []
-        for dir_ in sorted(self._dirs, key=lambda elem: elem.type.value):
-            if dir_.change in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED):
-                continue
-            change = dir_.change.value
-            rows.append(
-                [
-                    dir_.type.value,
-                    (change.emoji, {"title": change.title}),
-                    _html.code(dir_.path),
-                    _html.code(dir_.path_before or "—"),
-                ]
-            )
-        if not rows:
-            return
-        figure = _html.table_from_rows(
-            body_rows=rows,
-            head_rows=["Type", "Change", "Path", "Old Path"],
-            as_figure=True,
-            caption=f"Changes in the project's dynamic directories.",
-        )
-        return figure

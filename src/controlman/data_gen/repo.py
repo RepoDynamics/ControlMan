@@ -1,13 +1,12 @@
 import re as _re
 
 from gittidy import Git as _Git
-from versionman import PEP440SemVer
+from versionman import pep440_semver as _ver
 from loggerman import logger as _logger
 import pyserials as _ps
 
 import controlman as _controlman
 from controlman import exception as _exception
-from controlman import version as _version
 
 
 class RepoDataGenerator:
@@ -17,7 +16,7 @@ class RepoDataGenerator:
         data: _ps.NestedDict,
         git_manager: _Git,
         data_main: _ps.NestedDict | None = None,
-        future_versions: dict[str, str | PEP440SemVer] | None = None,
+        future_versions: dict[str, str | _ver.PEP440SemVer] | None = None,
     ):
         self._data = data
         self._data_main = data_main
@@ -48,9 +47,12 @@ class RepoDataGenerator:
                 continue
             self._git.checkout(branch)
             if self._future_versions.get(branch):
-                ver = PEP440SemVer(str(self._future_versions[branch]))
+                ver = _ver.PEP440SemVer(str(self._future_versions[branch]))
             else:
-                ver, dist = _version.get_latest_version(version_tag_prefix=ver_tag_prefix, git_manager=self._git)
+                ver = _ver.latest_version_from_tags(
+                    tags=self._git.get_tags(),
+                    version_tag_prefix=ver_tag_prefix,
+                )
             if not ver:
                 _logger.warning(f"Failed to get latest version from branch '{branch}'; skipping branch.")
                 continue
@@ -125,7 +127,7 @@ class RepoDataGenerator:
             self._package_development_status(curr_branch_latest_version)
         return
 
-    def _package_development_status(self, ver: PEP440SemVer) -> None:
+    def _package_development_status(self, ver: _ver.PEP440SemVer) -> None:
         phase = {
             1: "Planning",
             2: "Pre-Alpha",
@@ -147,7 +149,7 @@ class RepoDataGenerator:
         elif ver.major == 0:
             status_code = 4
         else:
-            latest_ver = max(PEP440SemVer(ver) for ver in self._data["project"]["versions"])
+            latest_ver = max(_ver.PEP440SemVer(ver) for ver in self._data["project"]["versions"])
             if ver.major < latest_ver.major:
                 status_code = 6
             else:

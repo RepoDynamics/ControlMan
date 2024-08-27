@@ -3,14 +3,12 @@
 from pathlib import Path as _Path
 from typing import Type as _Type
 
+from markitup import html as _html, doc as _doc
 
-class ControlManException(Exception):
-    """Base class for all exceptions raised by ControlMan."""
 
-    def __init__(self, msg: str):
-        self.msg = msg
-        super().__init__(msg)
-        return
+
+
+
 
 
 class ControlManRepositoryError(ControlManException):
@@ -70,3 +68,5 @@ class ControlManFileDataTypeError(ControlManFileReadError):
         )
         self.expected_type = expected_type
         return
+
+

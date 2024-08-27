@@ -70,7 +70,7 @@ class PythonPackageFileGenerator:
             subtype=("typed", "Typing Marker"),
             content=(
                 "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
-                if self._pkg["typed"] else ""
+                if self._pkg["typed"] else None
             ),
             path=f"{self._pkg['path.import']}/{_const.FILENAME_PACKAGE_TYPING_MARKER}",
             path_before=f"{self._pkg_before['path.import']}/{_const.FILENAME_PACKAGE_TYPING_MARKER}" if self._pkg_before['path.import'] else None,

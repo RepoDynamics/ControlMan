@@ -444,7 +444,7 @@ properties:
               maxProperties: 1
               additionalProperties:
                 title: Code owners of the path or glob pattern.
-                $ref: https://controlman.repodynamics.com/schema/entity
+                $ref: https://controlman.repodynamics.com/schema/entities
           path:
             title: |
               Path to the
@@ -784,7 +784,7 @@ properties:
     type: object
     default: { }
     additionalProperties: false
-    required: [ path, color, logo]
+    required: [ path, color, logo ]
     properties:
       path:
         title: Path to the media directory.
@@ -866,7 +866,9 @@ properties:
         description: |
           The footer is automatically added to the project's [README](#cc.readme) and
           [community health files](#cc.health).
-        $ref: https://docsman.repodynamics.com/schema
+        oneOf:
+          - type: string
+          - $ref: https://docsman.repodynamics.com/schema
   readme:
     title: README file configurations.
     description: |
@@ -2741,11 +2743,13 @@ properties:
   tag:
     title: Configurations for the repository tags.
     type: object
+    default: { }
     additionalProperties: false
     properties:
       version:
         title: Configurations for version tags.
         type: object
+        default: { }
         additionalProperties: false
         properties:
           prefix:
@@ -2755,6 +2759,7 @@ properties:
               For example, if you choose `v` (so version tags are `v1.0.0`, `v1.0.1`, etc.),
               then no other tags should start with `v`.
             type: string
+            default: vers/
             examples:
               - version/
               - ver/

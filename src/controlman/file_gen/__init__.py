@@ -50,7 +50,7 @@ def generate(
     readme_files = _readme_gen.generate(
         data=data,
         data_before=data_before,
-        root_path=repo_path
+        repo_path=repo_path
     )
     generated_files.extend(readme_files)
     out = []
@@ -80,7 +80,7 @@ def _compare_file(file: _dtype.DynamicFile, repo_path: _Path) -> _dtype.DynamicF
         path_before_abs = None
         path_before_exists = False
 
-    if not file.content:
+    if file.content is None:
         typ = _dtype.DynamicFileChangeType.REMOVED if path_before_exists else _dtype.DynamicFileChangeType.DISABLED
     elif not file.path:
         typ = _dtype.DynamicFileChangeType.DISABLED

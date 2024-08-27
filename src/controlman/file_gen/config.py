@@ -118,7 +118,7 @@ class ConfigFileGenerator:
         )
         return [
             DynamicFile(content=conda_env, **conda_env_file),
-            DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
+            DynamicFile(content=pip_env if pip_full else None, **pip_env_file)
         ]
 
     @logger.sectioner("Generate GitHub Funding Configuration File")

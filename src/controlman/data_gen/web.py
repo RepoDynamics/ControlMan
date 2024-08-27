@@ -1,9 +1,8 @@
 from pathlib import Path as _Path
 
-import docsman as _dm
 from loggerman import logger as _logger
 import pyserials as _ps
-from markitup import text as _txt
+from markitup import text as _txt, md as _md
 
 from controlman import exception as _exception
 
@@ -28,10 +27,10 @@ class WebDataGenerator:
                 continue
             rel_path = str(md_filepath.relative_to(self._path).with_suffix(""))
             text = md_filepath.read_text()
-            frontmatter = _dm.read.frontmatter(text)
+            frontmatter = _md.parse.frontmatter(text)
             if "ccid" in frontmatter:
                 pages[_txt.slug(frontmatter["ccid"])] = {
-                    "title": _dm.read.title(text),
+                    "title": _md.parse.title(text),
                     "path": rel_path,
                     "url": f"{self._data['web.url.home']}/{rel_path}",
                 }
@@ -61,7 +60,8 @@ class WebDataGenerator:
                     if final_key in pages:
                         raise _exception.ControlManWebsiteError(
                             "Duplicate page ID. "
-                            f"Generated ID '{final_key}' already exists for page '{pages[final_key]['path']}'. "
+                            f"Generated ID '{final_key}' already exists "
+                            f"for page '{pages[final_key]['path']}'. "
                             "Please do not use `ccid` values that start with 'blog_'."
                         )
                     blog_path_prefix = f"{blog_path_str}/" if blog_path_str != "." else ""

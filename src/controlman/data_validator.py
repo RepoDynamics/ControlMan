@@ -344,6 +344,7 @@ class DataValidator:
 
 
 def modify_schema(schema: dict) -> dict:
+    schema.pop("$schema", None)  # see: https://github.com/python-jsonschema/jsonschema/issues/1295
     if "properties" in schema:
         for key, subschema in schema["properties"].items():
             schema["properties"][key] = modify_schema(subschema)
@@ -357,16 +358,21 @@ def modify_schema(schema: dict) -> dict:
         "type": "string",
         "minLength": 6,
     }
-    new_schema = {
-        "anyOf": [schema, alt_schema]
-    }
+    new_schema = {}
     if "$id" in schema:
         new_schema["$id"] = schema.pop("$id")
     if "default" in schema:
         # If the schema has a default value, add it to the new schema,
         # otherwise it is not filled when inside an 'anyOf' clause.
         new_schema["default"] = schema["default"]
+    new_schema["anyOf"] = [schema, alt_schema]
     return new_schema
+
+import re
+re.match(
+    r"^https://(www\.)?[a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)$",
+    "https://pydata-sphinx-theme.readthedocs.io"
+)
 
 
 def _make_registry():

@@ -9,7 +9,7 @@ import pyserials as _ps
 from gittidy import Git as _Git
 
 
-from controlman import const
+from controlman import const, exception
 from controlman import data_validator as _data_validator
 from controlman import _file_util
 from controlman.center_manager import CenterManager
