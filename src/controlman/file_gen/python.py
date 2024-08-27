@@ -246,7 +246,11 @@ class PythonPackageFileGenerator:
             "requires": ("array", self._data[f"{self._type}.build.requires"]),
             "build-backend": ("str", self._data[f"{self._type}.build.backend"]),
         }
-        return data
+        output = {}
+        for key, (dtype, val) in data.items():
+            if val:
+                output[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
+        return output
 
     def pyproject_project(self) -> dict:
         data = {

@@ -17,7 +17,7 @@ def generate(
     metadata_file = _dtype.DynamicFile(
         type=_dtype.DynamicFileType.CONFIG,
         subtype=("meta", "Metadata"),
-        content=_ps.write.to_json_string(data=data(), sort_keys=True, indent=None),
+        content=_ps.write.to_json_string(data=data(), sort_keys=True, indent=3),
         path=_const.FILEPATH_METADATA,
         path_before=_const.FILEPATH_METADATA,
     )

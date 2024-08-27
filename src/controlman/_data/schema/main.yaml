@@ -1128,6 +1128,9 @@ properties:
           source:
             $ref: https://jsonschemata.repodynamics.com/path/dir-name
             default: source
+          to_root:
+            title: Relative path from the source directory to the root of the repository.
+            default: ../../..
       sphinx:
         title: Configurations for the Sphinx website generator.
         description: |
@@ -1241,10 +1244,10 @@ properties:
                 title: Patterns to exclude from the build.
                 type: array
                 default:
-                  - "**Thumbs.db"
-                  - "**.DS_Store"
-                  - "**.ipynb_checkpoints"
-                  - "**README.md"
+                  - "Thumbs.db"
+                  - ".DS_Store"
+                  - ".ipynb_checkpoints"
+                  - "README.md"
                 items:
                   type: string
               html_static_path:
