@@ -1,3 +1,5 @@
+from typing import Literal as _Literal
+
 from exceptionman import ReporterException as _ReporterException
 from markitup import html as _html
 import ansi_sgr as _sgr
@@ -12,6 +14,7 @@ class ControlManException(_ReporterException):
         description: str,
         message_html: str | _html.Element | None = None,
         description_html: str | _html.Element | None = None,
+        cause: Exception | None = None,
         report_heading: str = "ControlMan Error Report",
     ):
         super().__init__(
@@ -21,6 +24,14 @@ class ControlManException(_ReporterException):
             description_html=description_html,
             report_heading=report_heading,
         )
+        self.cause = cause
+        return
+
+    def _report_content(self, mode: _Literal["full", "short"], md: bool) -> list[str | _html.Element] | str | _html.Element | None:
+        if isinstance(self.cause, _ReporterException):
+            return self.cause._report_content(mode, md)
+        if self.cause:
+            return str(self.cause)
         return
 
 

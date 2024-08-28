@@ -3,7 +3,7 @@ import datetime as _datetime
 
 
 from loggerman import logger as _logger
-import pyserials as _pyserials
+import pyserials as _ps
 
 from controlman import exception as _exception, const as _const, _file_util
 from controlman import data_validator as _data_validator
@@ -26,13 +26,8 @@ class CacheManager:
             self._cache = {}
         else:
             try:
-                self._cache = _file_util.read_data_from_file(
-                    path=self._path,
-                    base_path=path_repo,
-                    extension="yaml",
-                    raise_errors=True
-                )
-            except _exception.ControlManException as e:
+                self._cache = _ps.read.yaml_from_file(path=self._path)
+            except _ps.exception.read.PySerialsReadException as e:
                 self._cache = {}
                 _logger.info(
                     "Caching", f"API cache file at '{self._path}' is corrupted; initialized new cache."
@@ -81,7 +76,7 @@ class CacheManager:
         return
 
     def save(self):
-        _pyserials.write.to_yaml_file(
+        _ps.write.to_yaml_file(
             data=self._cache,
             path=self._path,
             make_dirs=True,

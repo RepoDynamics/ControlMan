@@ -12,6 +12,7 @@ from gittidy import Git as _Git
 from controlman import const, exception
 from controlman import data_validator as _data_validator
 from controlman import _file_util
+from controlman import exception as _exception
 from controlman.center_manager import CenterManager
 
 
@@ -54,7 +55,6 @@ def manager(
 def from_json_file(
     repo_path: str | _Path,
     filepath: str = const.FILEPATH_METADATA,
-    validate: bool = True,
 ) -> _ps.NestedDict:
     """Load control center data from the full JSON file.
 
@@ -64,42 +64,40 @@ def from_json_file(
         Path to the repository root.
     filepath : str, default: controlman.const.FILEPATH_METADATA
         Relative path to the JSON file in the repository.
-    validate : bool, default: True
-        Validate the data against the schema.
 
     Raises
     ------
     controlman.exception.ControlManFileReadError
         If the file cannot be read.
     """
-    data_dict = _file_util.read_data_from_file(
-        path=_Path(repo_path) / filepath,
-        base_path=repo_path,
-        extension="json",
-        raise_errors=True,
-    )
-    if validate:
-        _data_validator.validate(data=data_dict)
-    return _ps.NestedDict(data_dict)
+    try:
+        data = _ps.read.json_from_file(path=_Path(repo_path) / filepath)
+    except _ps.exception.read.PySerialsReadException as e:
+        raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=filepath) from None
+    _data_validator.validate(data=data)
+    return _ps.NestedDict(data)
 
 
 def from_json_file_at_commit(
     git_manager: _Git,
     commit_hash: str,
     filepath: str = const.FILEPATH_METADATA,
-    validate: bool = True,
 ) -> _ps.NestedDict:
     data_str = git_manager.file_at_hash(
         commit_hash=commit_hash,
         path=filepath,
     )
-    return from_json_string(data=data_str, validate=validate)
+    try:
+        data = _ps.read.json_from_string(data=data_str)
+    except _ps.exception.read.PySerialsReadException as e:
+        raise _exception.load.ControlManInvalidMetadataError(
+            cause=e, filepath=filepath, commit_hash=commit_hash
+        ) from None
+    _data_validator.validate(data=data)
+    return _ps.NestedDict(data)
 
 
-def from_json_string(
-    data: str,
-    validate: bool = True,
-) -> _ps.NestedDict:
+def from_json_string(data: str) -> _ps.NestedDict:
     """Load control center data from the full JSON string.
 
     Parameters
@@ -114,11 +112,9 @@ def from_json_string(
     controlman.exception.ControlManFileReadError
         If the data cannot be read.
     """
-    data_dict = _file_util.read_datafile_from_string(
-        data=data,
-        extension="json",
-        raise_errors=True,
-    )
-    if validate:
-        _data_validator.validate(data=data_dict)
-    return _ps.NestedDict(data_dict)
+    try:
+        data = _ps.read.json_from_string(data=data)
+    except _ps.exception.read.PySerialsReadException as e:
+        raise _exception.load.ControlManInvalidMetadataError(e) from None
+    _data_validator.validate(data=data)
+    return _ps.NestedDict(data)

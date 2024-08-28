@@ -59,11 +59,11 @@ class MainDataGenerator:
             fallback_purpose=False
         )
         if not repo_address:
-            _exception.ControlManRepositoryError(
-                "Failed to determine GitHub address. "
-                "The Git repository has not remote set for 'push' to 'origin'. "
-                f"Following remotes were found: {str(self._git.get_remotes())}",
+            raise _exception.data_gen.ControlManRepositoryError(
                 repo_path=self._git.repo_path,
+                description="Failed to determine GitHub address. "
+                "The Git repository has no remote set for push to origin. "
+                f"Following remotes were found: {str(self._git.get_remotes())}",
             )
         username, repo_name = repo_address
         self._gh_api_repo = self._gh_api.user(username).repo(repo_name)
@@ -127,9 +127,12 @@ class MainDataGenerator:
         if not license_info:
             for key in ("name", "text", "notice"):
                 if key not in data:
-                    raise _exception.ControlManSchemaValidationError(
-                        f"`license.{key}` is required when `license.id` is not a supported ID.",
-                        key="license"
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source="source",
+                        before_substitution=True,
+                        description=f"`license.{key}` is required when `license.id` is not a supported ID.",
+                        json_path="license",
+                        data=self._data(),
                     )
             _logger.info("License data is manually set.")
             return
@@ -161,12 +164,14 @@ class MainDataGenerator:
             _logger.info(f"Project start year set from repository creation date: {start_year}")
         else:
             if start_year > current_year:
-                raise _exception.ControlManSchemaValidationError(
-                    msg=(
+                raise _exception.load.ControlManSchemaValidationError(
+                    source="source",
+                    description=(
                         f"Project start year ({start_year}) cannot be greater "
                         f"than current year ({current_year})."
                     ),
-                    key="copyright.start_year"
+                    json_path="copyright.start_year",
+                    data=self._data(),
                 )
             _logger.info(f"Project start year already set manually in metadata: {start_year}")
         year_range = f"{start_year}{'' if start_year == current_year else f'–{current_year}'}"

@@ -74,17 +74,23 @@ class PythonDataGenerator:
         version_spec_key = "pkg.python.version.spec"
         spec_str = self._data.fill(version_spec_key)
         if not spec_str:
-            _exception.ControlManSchemaValidationError(
-                "The package has not specified a Python version specifier.",
-                key=version_spec_key,
+            _exception.load.ControlManSchemaValidationError(
+                source="source",
+                before_substitution=True,
+                description="The package has not specified a Python version specifier.",
+                json_path=version_spec_key,
+                data=self._data(),
             )
         try:
             spec = _specifiers.SpecifierSet(spec_str)
         except _specifiers.InvalidSpecifier as e:
-            raise _exception.ControlManSchemaValidationError(
-                f"Invalid Python version specifier '{spec_str}'.",
-                key=version_spec_key,
-            ) from e
+            raise _exception.load.ControlManSchemaValidationError(
+                source="source",
+                before_substitution=True,
+                description=f"Invalid Python version specifier '{spec_str}'.",
+                json_path=version_spec_key,
+                data=self._data(),
+            ) from None
 
         current_python_versions = get_python_releases()
         micro_str = []
@@ -104,10 +110,13 @@ class PythonDataGenerator:
             minor_str_pyxy.append(f"py{''.join(map(str, compat_ver_micro_int[:2]))}")
 
         if len(micro_str) == 0:
-            raise _exception.ControlManSchemaValidationError(
-                f"The Python version specifier '{spec_str}' does not match any "
+            raise _exception.load.ControlManSchemaValidationError(
+                source="source",
+                before_substitution=True,
+                description=f"The Python version specifier '{spec_str}' does not match any "
                 f"released Python version: '{current_python_versions}'.",
-                key=version_spec_key,
+                json_path=version_spec_key,
+                data=self._data(),
             )
         output = {
             "micros": sorted(micro_str, key=lambda x: tuple(map(int, x.split(".")))),
@@ -124,9 +133,12 @@ class PythonDataGenerator:
     def _package_operating_systems(self):
         data_os = self._data.fill("pkg.os")
         if not isinstance(data_os, dict):
-            raise _exception.ControlManSchemaValidationError(
-                "The package has not specified any operating systems.",
-                key="pkg.os",
+            raise _exception.load.ControlManSchemaValidationError(
+                source="source",
+                before_substitution=True,
+                description="The package has not specified any operating systems.",
+                json_path="pkg.os",
+                data=self._data(),
             )
         pure_python = not any("ci_build" in os for os in data_os.values())
         self._data["pkg.python.pure"] = pure_python
@@ -182,9 +194,12 @@ class PythonDataGenerator:
             classifiers = self._data.get(f"{path}.classifiers", [])
             for classifier in classifiers:
                 if classifier not in _trove_classifiers.classifiers:
-                    raise _exception.ControlManSchemaValidationError(
-                        f"Trove classifier '{classifier}' is not valid.",
-                        key=f"{path}.classifiers"
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source="source",
+                        before_substitution=True,
+                        description=f"Trove classifier '{classifier}' is not valid.",
+                        json_path=f"{path}.classifiers",
+                        data=self._data(),
                     )
             classifiers.extend(common_classifiers)
             self._data[f"{path}.classifiers"] = sorted(classifiers)

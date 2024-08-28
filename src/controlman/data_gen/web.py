@@ -58,7 +58,7 @@ class WebDataGenerator:
                     key_singular = key.removesuffix('s')
                     final_key = f"blog_{key_singular}_{value_slug}"
                     if final_key in pages:
-                        raise _exception.ControlManWebsiteError(
+                        raise _exception.data_gen.ControlManWebsiteError(
                             "Duplicate page ID. "
                             f"Generated ID '{final_key}' already exists "
                             f"for page '{pages[final_key]['path']}'. "

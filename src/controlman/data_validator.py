@@ -22,14 +22,11 @@ _schema_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_dat
 def validate(
     data: dict,
     schema: _Literal["main", "local", "cache"] = "main",
+    source: _Literal["source", "compiled"] = "compiled",
     before_substitution: bool = False,
 ) -> None:
     """Validate data against a schema."""
-    schema_dict = _file_util.read_data_from_file(
-        path=_schema_dir_path / f"{schema}.yaml",
-        extension="yaml",
-        raise_errors=True,
-    )
+    schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / f"{schema}.yaml")
     schema_dict = _js.edit.required_last(schema_dict)
     if before_substitution:
         schema_dict = modify_schema(schema_dict)["anyOf"][0]
@@ -43,17 +40,20 @@ def validate(
             iter_errors=True,
         )
     except _ps.exception.validate.PySerialsJsonSchemaValidationError as e:
-        raise _exception.ControlManSchemaValidationError(
-            msg="Validation against schema failed."
-        ) from e
+        raise _exception.load.ControlManSchemaValidationError(
+            source=source,
+            before_substitution=before_substitution,
+            cause=e,
+        ) from None
     if schema == "main" and not before_substitution:
-        DataValidator(data).validate()
+        DataValidator(data=data, source=source).validate()
     return
 
 
 class DataValidator:
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, source: _Literal["source", "compiled"] = "compiled"):
         self._data = data
+        self._source = source
         return
 
     @_logger.sectioner("Validate Control Center Contents")
@@ -94,10 +94,12 @@ class DataValidator:
                     rel_key = path_keys[idx + idx2 + 1]
                 else:
                     continue
-                raise _exception.ControlManSchemaValidationError(
-                    f"Directory path '{rel_path}' defined at '{rel_key}' is relative to"
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    description=f"Directory path '{rel_path}' defined at '{rel_key}' is relative to"
                     f"directory path '{main_path}' defined at '{main_key}'.",
-                    key=rel_key,
+                    json_path=rel_key,
+                    data=self._data,
                 )
         return
 
@@ -111,10 +113,12 @@ class DataValidator:
         for idx, branch_name in enumerate(branch_names):
             for idx2, branch_name2 in enumerate(branch_names[idx + 1:]):
                 if branch_name.startswith(branch_name2) or branch_name2.startswith(branch_name):
-                    raise _exception.ControlManSchemaValidationError(
-                        f"Branch name '{branch_name}' defined at 'branch.{branch_keys[idx]}' "
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source=self._source,
+                        description=f"Branch name '{branch_name}' defined at 'branch.{branch_keys[idx]}' "
                         f"overlaps with branch name '{branch_name2}' defined at 'branch.{branch_keys[idx + idx2 + 1]}'.",
-                        key=branch_keys[idx],
+                        json_path=branch_keys[idx],
+                        data=self._data,
                     )
         return
 
@@ -124,17 +128,21 @@ class DataValidator:
         changelog_names = []
         for changelog_id, changelog_data in self._data["changelog"].items():
             if changelog_data["path"] in changelog_paths:
-                raise _exception.ControlManSchemaValidationError(
-                    f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    description=f"The path '{changelog_data['path']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
-                    key=f"changelog.{changelog_id}.path"
+                    json_path=f"changelog.{changelog_id}.path",
+                    data=self._data,
                 )
             changelog_paths.append(changelog_data["path"])
             if changelog_data["name"] in changelog_names:
-                raise _exception.ControlManSchemaValidationError(
-                    f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    description=f"The name '{changelog_data['name']}' set for changelog '{changelog_id}' "
                     f"is already used by another earlier changelog.",
-                    key=f"changelog.{changelog_id}.name"
+                    json_path=f"changelog.{changelog_id}.name",
+                    data=self._data,
                 )
             changelog_names.append(changelog_data["name"])
             # if changelog_id == "package_public_prerelease": #TODO: check package_public_prerelease
@@ -142,10 +150,12 @@ class DataValidator:
             section_ids = []
             for idx, section in enumerate(changelog_data.get("sections", [])):
                 if section["id"] in section_ids:
-                    raise _exception.ControlManSchemaValidationError(
-                        f"The changelog section ID '{section['id']}' set for changelog '{changelog_id}' "
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source=self._source,
+                        description=f"The changelog section ID '{section['id']}' set for changelog '{changelog_id}' "
                         f"is already used by another earlier section.",
-                        key=f"changelog.{changelog_id}.sections[{idx}]"
+                        json_path=f"changelog.{changelog_id}.sections[{idx}]",
+                        data=self._data,
                     )
                 section_ids.append(section["id"])
         return
@@ -156,10 +166,12 @@ class DataValidator:
         for main_type in ("primary", "primary_custom"):
             for commit_id, commit_data in self._data["commit"][main_type].items():
                 if commit_data["type"] in commit_types:
-                    raise _exception.ControlManSchemaValidationError(
-                        f"The commit type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source=self._source,
+                        description=f"The commit type '{commit_data['type']}' set for commit '{main_type}.{commit_id}' "
                         f"is already used by another earlier commit.",
-                        key=f"commit.{main_type}.{commit_id}.type"
+                        json_path=f"commit.{main_type}.{commit_id}.type",
+                        data=self._data,
                     )
                 commit_types.append(commit_data["type"])
                 for subtype_type, subtypes in commit_data["subtypes"]:
@@ -385,11 +397,7 @@ def _make_registry():
     resources = []
     def_schemas_path = _schema_dir_path
     for schema_filepath in def_schemas_path.glob("**/*.yaml"):
-        schema_dict = _file_util.read_data_from_file(
-            path=schema_filepath,
-            extension="yaml",
-            raise_errors=True,
-        )
+        schema_dict = _ps.read.yaml_from_file(path=schema_filepath)
         _js.edit.required_last(schema_dict)
         resources.append(make_resource(schema_dict))
     registry_after, _ = _docsman_schema.load(dynamic=False, crawl=True, add_resources=resources)

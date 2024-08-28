@@ -70,7 +70,7 @@ class CenterManager:
                 const.FUNCNAME_CC_HOOK_POST_LOAD,
                 full_data,
             )
-        _data_validator.validate(data=full_data, before_substitution=True)
+        _data_validator.validate(data=full_data, source="source", before_substitution=True)
         self._data_raw = _ps.NestedDict(full_data)
         return self._data_raw
 
@@ -94,7 +94,7 @@ class CenterManager:
             )
         self._cache_manager.save()
         data.fill()
-        _data_validator.validate(data=data())
+        _data_validator.validate(data=data(), source="source")
         self._data = data
         return self._data
 
