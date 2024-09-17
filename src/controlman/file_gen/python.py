@@ -10,7 +10,7 @@ from pathlib import Path as _Path
 import pyserials as _ps
 import pysyntax as _pysyntax
 from loggerman import logger
-from markitup import text as _txt
+import pylinks as _pl
 
 from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
@@ -100,7 +100,7 @@ class PythonPackageFileGenerator:
             dependencies.extend(list(optional_dep_group["package"].values()))
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
-            env_name=_txt.slug(self._data[f"{self._type}.dependency.env.conda.name"]),
+            env_name=_pl.string.to_slug(self._data[f"{self._type}.dependency.env.conda.name"]),
         )
         return [
             DynamicFile(content=conda_env, **conda_env_file),
@@ -200,7 +200,7 @@ class PythonPackageFileGenerator:
         if self.is_disabled("manifest"):
             return []
         file_content = "\n".join(self._pkg.get("manifest", []))
-        logger.debug(code_title="File content", code=file_content)
+        logger.debug("File content", file_content)
         file = DynamicFile(
             type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
             subtype=("manifest", "Manifest"),
@@ -231,7 +231,7 @@ class PythonPackageFileGenerator:
             if tool_config:
                 pyproject["tool"] = tool_config
         file_content = _ps.write.to_toml_string(data=pyproject, sort_keys=False)
-        logger.debug(code_title="File content", code=file_content)
+        logger.debug("File content", file_content)
         file = DynamicFile(
             type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
             subtype=("pyproject", "PyProject"),

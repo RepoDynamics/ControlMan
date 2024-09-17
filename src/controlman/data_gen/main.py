@@ -5,7 +5,6 @@ import re as _re
 # Non-standard libraries
 from gittidy import Git as _Git
 import pylinks
-from markitup import text as _txt
 from loggerman import logger as _logger
 import pyserials as _ps
 
@@ -61,7 +60,7 @@ class MainDataGenerator:
         if not repo_address:
             raise _exception.data_gen.ControlManRepositoryError(
                 repo_path=self._git.repo_path,
-                description="Failed to determine GitHub address. "
+                problem="Failed to determine GitHub address. "
                 "The Git repository has no remote set for push to origin. "
                 f"Following remotes were found: {str(self._git.get_remotes())}",
             )
@@ -72,8 +71,8 @@ class MainDataGenerator:
         if "source" in repo_info:
             repo_info = repo_info["source"]
             _logger.info(
-                title=f"Fork Detected",
-                msg=f"Repository is a fork and target is set to '{repo_info['source']['full_name']}'.",
+                f"Fork Detected",
+                f"Repository is a fork and target is set to '{repo_info['source']['full_name']}'.",
             )
         repo_info["created_at"] = _datetime.datetime.strptime(
             repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
@@ -100,8 +99,8 @@ class MainDataGenerator:
         if not name:
             name = self._data["name"] = repo_name.replace("-", " ")
             _logger.info(f"Set `name`", f"Set to '{name}' from repository name")
-        self._data["slug.name"] = _txt.slug(name)
-        self._data["slug.repo_name"] = _txt.slug(repo_name)
+        self._data["slug.name"] = pylinks.string.to_slug(name)
+        self._data["slug.repo_name"] = pylinks.string.to_slug(repo_name)
         return
 
     @_logger.sectioner("Keyword slugs")
@@ -109,7 +108,7 @@ class MainDataGenerator:
         keywords = self._data.fill("keywords")
         if not keywords:
             _logger.info("No keywords specified.")
-        slugs = [_txt.slug(keyword) for keyword in keywords if len(keyword) <= 50]
+        slugs = [pylinks.string.to_slug(keyword) for keyword in keywords if len(keyword) <= 50]
         self._data["slug.keywords"] = slugs
         _logger.info("Set `slug.keywords`", f"Set from `keywords`")
         _logger.debug(f"Keyword slugs: {str(slugs)}")
@@ -130,7 +129,7 @@ class MainDataGenerator:
                     raise _exception.load.ControlManSchemaValidationError(
                         source="source",
                         before_substitution=True,
-                        description=f"`license.{key}` is required when `license.id` is not a supported ID.",
+                        problem=f"`license.{key}` is required when `license.id` is not a supported ID.",
                         json_path="license",
                         data=self._data(),
                     )
@@ -147,7 +146,7 @@ class MainDataGenerator:
             filename = license_id.removesuffix("-or-later")
             data["notice"] = _file_util.get_package_datafile(f"db/license/notice/{filename}.txt")
         _logger.info(f"License data set for license ID '{license_id}'.")
-        _logger.debug("License data:", code=str(license_info))
+        _logger.debug("License data:", str(license_info))
         return
 
     @_logger.sectioner("Project Copyright")
@@ -166,7 +165,7 @@ class MainDataGenerator:
             if start_year > current_year:
                 raise _exception.load.ControlManSchemaValidationError(
                     source="source",
-                    description=(
+                    problem=(
                         f"Project start year ({start_year}) cannot be greater "
                         f"than current year ({current_year})."
                     ),
@@ -326,7 +325,7 @@ class MainDataGenerator:
                         match.group(1),
                         f"https://{base_pattern}{match.group(1)}{match.group(2)}"
                     )
-                    _logger.info(title=f"{provider.capitalize()} account", msg=account['url'])
+                    _logger.info(f"{provider.capitalize()} account", account['url'])
                     break
             else:
                 if account["provider"] != "generic":
@@ -334,7 +333,7 @@ class MainDataGenerator:
                 else:
                     generics = socials.setdefault("generics", [])
                     generics.append(account["url"])
-                    _logger.info(title=f"Unknown account", msg=account['url'])
+                    _logger.info(f"Unknown account", account['url'])
         _logger.section_end()
         self._cache.set("user", username, user_info)
         return user_info

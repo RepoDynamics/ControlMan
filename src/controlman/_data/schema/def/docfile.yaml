@@ -3,7 +3,7 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: README File
 type: object
 additionalProperties: false
-required: [ path, content ]
+required: [ path, content, url ]
 properties:
   path:
     title: Filepath
@@ -18,12 +18,12 @@ properties:
     default: ""
     oneOf:
       - type: string
-      - $ref: https://docsman.repodynamics.com/schema
+      - type: object
   footer:
     title: Footer configurations.
     oneOf:
       - type: string
-      - $ref: https://docsman.repodynamics.com/schema
+      - type: array
   url:
     title: |
       URL of the GitHub repository's main `README` file

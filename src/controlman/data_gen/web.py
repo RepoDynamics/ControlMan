@@ -2,7 +2,8 @@ from pathlib import Path as _Path
 
 from loggerman import logger as _logger
 import pyserials as _ps
-from markitup import text as _txt, md as _md
+import mdit as _mdit
+import pylinks as _pl
 
 from controlman import exception as _exception
 
@@ -27,10 +28,10 @@ class WebDataGenerator:
                 continue
             rel_path = str(md_filepath.relative_to(self._path).with_suffix(""))
             text = md_filepath.read_text()
-            frontmatter = _md.parse.frontmatter(text)
+            frontmatter = _mdit.parse.frontmatter(text)
             if "ccid" in frontmatter:
-                pages[_txt.slug(frontmatter["ccid"])] = {
-                    "title": _md.parse.title(text),
+                pages[_pl.string.to_slug(frontmatter["ccid"])] = {
+                    "title": _mdit.parse.title(text),
                     "path": rel_path,
                     "url": f"{self._data['web.url.home']}/{rel_path}",
                 }
@@ -54,7 +55,7 @@ class WebDataGenerator:
                 continue
             for key in ["category", "tags"]:
                 for value in keywords_and_tags.get(key, []):
-                    value_slug = _txt.slug(value)
+                    value_slug = _pl.string.to_slug(value)
                     key_singular = key.removesuffix('s')
                     final_key = f"blog_{key_singular}_{value_slug}"
                     if final_key in pages:

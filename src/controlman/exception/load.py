@@ -2,11 +2,10 @@ from typing import Literal as _Literal
 from pathlib import Path as _Path
 
 import pyserials as _ps
-from markitup import html as _html
-import _ruamel_yaml as _yaml
+import mdit as _mdit
+import ruamel.yaml as _yaml
 
 from controlman.exception import ControlManException as _ControlManException
-from controlman.exception.base import format_code as _format_code
 
 
 class ControlManDataReadException(_ControlManException):
@@ -14,22 +13,20 @@ class ControlManDataReadException(_ControlManException):
 
     def __init__(
         self,
-        message: str,
-        description: str,
-        message_html: str | _html.Element | None = None,
-        description_html: str | _html.Element | None = None,
+        intro,
+        problem,
+        section: dict | None = None,
         data: str | dict | None = None,
         cause: Exception | None = None,
     ):
-        super().__init__(
-            message=message,
-            message_html=message_html,
-            description=description,
-            description_html=description_html,
-            cause=cause,
-            report_heading="ControlMan Data Read Error Report",
+        report = _mdit.document(
+            heading="Data Read Error",
+            body={"intro": intro, "problem": problem},
+            section=section,
         )
+        super().__init__(report)
         self.data = data
+        self.cause = cause
         return
 
 
@@ -40,18 +37,20 @@ class ControlManConfigFileReadException(ControlManDataReadException):
         self,
         filepath: str | _Path,
         data: str | dict,
-        description: str,
-        description_html: str | _html.Element | None = None,
+        problem,
+        section: dict | None = None,
         cause: Exception | None = None,
     ):
-        message_template = "Failed to read control center configuration file at {filepath}."
-        filepath_console, filepath_html = _format_code(filepath)
+        intro = _mdit.inline_container(
+            "Failed to read control center configuration file at ",
+            _mdit.element.code_span(str(filepath)),
+            ".",
+        )
         super().__init__(
+            intro=intro,
+            problem=problem,
             data=data,
-            message=message_template.format(filepath=filepath_console),
-            message_html=message_template.format(filepath=filepath_html),
-            description=description,
-            description_html=description_html,
+            section=section,
             cause=cause,
         )
         self.filepath = filepath
@@ -65,8 +64,8 @@ class ControlManInvalidConfigFileDataError(ControlManConfigFileReadException):
         super().__init__(
             filepath=cause.filepath,
             data=cause.data,
-            description=cause.description,
-            description_html=cause.description_html,
+            problem=cause.report.body["problem"].content,
+            section=cause.report.section,
             cause=cause,
         )
         return
@@ -80,25 +79,20 @@ class ControlManDuplicateConfigFileDataError(ControlManConfigFileReadException):
         filepath: _Path,
         cause: _ps.exception.update.PySerialsUpdateDictFromAddonError,
     ):
-        description_template = (
-            "The value of type {type_data_addon} at {path} already exists in another configuration file"
-        ) + "." if cause.problem_type == "duplicate" else " with type {type_data}."
-        type_data_console, type_data_html = _format_code(cause.type_data.__name__)
-        type_data_addon_console, type_data_addon_html = _format_code(cause.type_data_addon.__name__)
-        path_console, path_html = _format_code(cause.path)
-        kwargs_console, kwargs_html = (
-            {"path": path, "type_data": type_data, "type_data_addon": type_data_addon}
-            for path, type_data, type_data_addon in zip(
-            (path_console, path_html),
-            (type_data_console, type_data_html),
-            (type_data_addon_console, type_data_addon_html),
-        )
+        problem = _mdit.inline_container(
+            "The value of type ",
+            _mdit.element.code_span(cause.type_data_addon.__name__),
+            " at ",
+            _mdit.element.code_span(cause.path),
+            " already exists in another configuration file",
+            "." if cause.problem_type == "duplicate" else _mdit.inline_container(
+                " with type ", _mdit.element.code_span(cause.type_data.__name__), "."
+            ),
         )
         super().__init__(
             filepath=filepath,
             data=cause.data_addon_full,
-            description=description_template.format(**kwargs_console),
-            description_html=description_template.format(**kwargs_html),
+            problem=problem,
             cause=cause,
         )
         return
@@ -111,8 +105,7 @@ class ControlManInvalidConfigFileTagException(ControlManConfigFileReadException)
         self,
         filepath: str | _Path,
         data: str,
-        description: str,
-        description_html: str | _html.Element,
+        problem,
         node: _yaml.ScalarNode,
         cause: Exception | None = None,
     ):
@@ -122,12 +115,10 @@ class ControlManInvalidConfigFileTagException(ControlManConfigFileReadException)
         self.start_column = node.start_mark.column + 1
         self.end_column = node.end_mark.column + 1
         self.tag_name = node.tag
-        tag_name_console, tag_name_html = _format_code(node.tag)
         super().__init__(
             filepath=filepath,
             data=data,
-            description=description.format(tag_name=tag_name_console, start_line=self.start_line),
-            description_html=description_html.format(tag_name=tag_name_html, start_line=self.start_line),
+            problem=problem,
             cause=cause,
         )
         return
@@ -142,12 +133,17 @@ class ControlManEmptyTagInConfigFileError(ControlManInvalidConfigFileTagExceptio
         data: str,
         node: _yaml.ScalarNode,
     ):
-        description_template = "The {tag_name} tag at line {start_line} has no value."
+        problem = _mdit.inline_container(
+            "The ",
+            _mdit.element.code_span(node.tag),
+            " tag at line ",
+            _mdit.element.code_span(str(node.start_mark.line + 1)),
+            " has no value.",
+        )
         super().__init__(
             filepath=filepath,
             data=data,
-            description=description_template,
-            description_html=description_template,
+            problem=problem,
             node=node,
         )
         return
@@ -164,15 +160,19 @@ class ControlManUnreachableTagInConfigFileError(ControlManInvalidConfigFileTagEx
         url: str,
         cause: Exception,
     ):
-        description_template = (
-            "Failed to download external data from {url} defined in {tag_name} tag at line {start_line}."
+        problem = _mdit.inline_container(
+            "Failed to download external data from ",
+            _mdit.element.code_span(url),
+            " defined in ",
+            _mdit.element.code_span(node.tag),
+            " tag at line ",
+            _mdit.element.code_span(str(node.start_mark.line + 1)),
+            ".",
         )
-        url_console, url_html = _format_code(url)
         super().__init__(
             filepath=filepath,
             data=data,
-            description=description_template.format(url=url_console),
-            description_html=description_template.format(url=url_html),
+            problem=problem,
             node=node,
             cause=cause,
         )
@@ -188,21 +188,23 @@ class ControlManInvalidMetadataError(ControlManDataReadException):
         filepath: str | _Path | None = None,
         commit_hash: str | None = None,
     ):
-        filepath_console, filepath_html = _format_code(str(filepath))
-        commit_hash_console, commit_hash_html = _format_code(str(commit_hash))
-        if filepath:
-            from_source = "file at {filepath}"
-            if commit_hash:
-                from_source += " from commit hash {commit_hash}"
-        else:
-            from_source = "from input string"
-        message_template = f"Failed to read project metadata {from_source}."
+        intro = _mdit.inline_container(
+            "Failed to read project metadata ",
+            _mdit.inline_container(
+                "file at ",
+                _mdit.element.code_span(str(filepath)),
+                _mdit.inline_container(
+                    " from commit hash ",
+                    _mdit.element.code_span(str(commit_hash)),
+                ) if commit_hash else "",
+            ) if filepath else "from input string",
+            ".",
+        )
         super().__init__(
+            intro=intro,
+            problem=cause.report.body["problem"].content,
+            section=cause.report.section,
             data=getattr(cause, "data", None),
-            message=message_template.format(filepath=filepath_console, commit_hash=commit_hash_console),
-            message_html=message_template.format(filepath=filepath_html, commit_hash=commit_hash_html),
-            description=cause.description,
-            description_html=cause.description_html,
             cause=cause,
         )
         return
@@ -216,21 +218,24 @@ class ControlManSchemaValidationError(ControlManDataReadException):
         source: _Literal["source", "compiled"] = "source",
         before_substitution: bool = False,
         cause: _ps.exception.validate.PySerialsValidateException | None = None,
-        description: str | None = None,
-        description_html: str | _html.Element | None = None,
+        problem: str | None = None,
         json_path: str | None = None,
         data: dict | None = None,
     ):
-        source_desc = "Control center configurations are" if source == "source" else "Project metadata is"
-        problem_end = "." if not json_path else f" at path '$.{json_path}'."
-        message = f"{source_desc} invalid against the schema{problem_end}"
-
+        intro = _mdit.inline_container(
+            "Control center configurations are " if source == "source" else "Project metadata is ",
+            "invalid against the schema",
+            "." if not json_path else _mdit.inline_container(
+                " at path ",
+                _mdit.element.code_span(f"$.{json_path}"),
+                ".",
+            ),
+        )
         super().__init__(
+            intro=intro,
+            problem=problem or cause.report.body["problem"].content if cause else "",
+            section=cause.report.section if cause else None,
             data=data or cause.data,
-            message=message,
-            message_html=message,
-            description=description or cause.description,
-            description_html=description_html or cause.description_html if cause else None,
             cause=cause,
         )
         self.source = source

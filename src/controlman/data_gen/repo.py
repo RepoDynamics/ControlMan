@@ -217,6 +217,6 @@ class RepoDataGenerator:
                     }
                 )
         _logger.info("Successfully compiled all labels")
-        _logger.debug("Generated data:", code=str(out))
+        _logger.debug("Generated data:", str(out))
         self._data["label.all"] = out
         return

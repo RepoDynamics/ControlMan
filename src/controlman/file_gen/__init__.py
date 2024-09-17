@@ -14,14 +14,7 @@ def generate(
     data_before: _ps.NestedDict,
     repo_path: _Path,
 ) -> list[_dtype.DynamicFile]:
-    metadata_file = _dtype.DynamicFile(
-        type=_dtype.DynamicFileType.CONFIG,
-        subtype=("meta", "Metadata"),
-        content=_ps.write.to_json_string(data=data(), sort_keys=True, indent=3),
-        path=_const.FILEPATH_METADATA,
-        path_before=_const.FILEPATH_METADATA,
-    )
-    generated_files = [metadata_file]
+    generated_files = []
     form_files = _FormGenerator(
         data=data,
         repo_path=repo_path,
@@ -54,7 +47,9 @@ def generate(
     )
     generated_files.extend(readme_files)
     out = []
-    data_entry = {}
+    data_entry = {
+        _dtype.DynamicFileType.CONFIG.value[0]: {"meta": _const.FILEPATH_METADATA},
+    }
     for generated_file in generated_files:
         generated_file_full = _compare_file(generated_file, repo_path=repo_path)
         out.append(generated_file_full)
@@ -67,6 +62,15 @@ def generate(
                 raise RuntimeError(f"Duplicate dynamic file subtype: {generated_file.subtype[0]}")
             type_dict[generated_file.subtype[0]] = generated_file.path
     data["project.file"] = data_entry
+    metadata_file = _dtype.DynamicFile(
+        type=_dtype.DynamicFileType.CONFIG,
+        subtype=("meta", "Metadata"),
+        content=_ps.write.to_json_string(data=data(), sort_keys=True, indent=3),
+        path=_const.FILEPATH_METADATA,
+        path_before=_const.FILEPATH_METADATA,
+    )
+    metadata_full = _compare_file(metadata_file, repo_path=repo_path)
+    out.append(metadata_full)
     return out
 
 

@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev268"
+version = "0.0.0.dev269"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -25,7 +25,6 @@ dependencies = [
     "trove-classifiers",
     "readme-renderer[md]",
     "pylinks",
-    "markitup",
     "pycolorit",
     "pybadger",
     "ConventionalCommits",
@@ -40,6 +39,6 @@ dependencies = [
     "referencing == 0.35.1",
     "jsonpath-ng == 1.6.1",
     "ExceptionMan",
-    "DocsMan",
+    "mdit",
 ]
 requires-python = ">=3.10"

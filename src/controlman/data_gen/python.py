@@ -77,7 +77,7 @@ class PythonDataGenerator:
             _exception.load.ControlManSchemaValidationError(
                 source="source",
                 before_substitution=True,
-                description="The package has not specified a Python version specifier.",
+                problem="The package has not specified a Python version specifier.",
                 json_path=version_spec_key,
                 data=self._data(),
             )
@@ -87,7 +87,7 @@ class PythonDataGenerator:
             raise _exception.load.ControlManSchemaValidationError(
                 source="source",
                 before_substitution=True,
-                description=f"Invalid Python version specifier '{spec_str}'.",
+                problem=f"Invalid Python version specifier '{spec_str}'.",
                 json_path=version_spec_key,
                 data=self._data(),
             ) from None
@@ -113,7 +113,7 @@ class PythonDataGenerator:
             raise _exception.load.ControlManSchemaValidationError(
                 source="source",
                 before_substitution=True,
-                description=f"The Python version specifier '{spec_str}' does not match any "
+                problem=f"The Python version specifier '{spec_str}' does not match any "
                 f"released Python version: '{current_python_versions}'.",
                 json_path=version_spec_key,
                 data=self._data(),
@@ -136,7 +136,7 @@ class PythonDataGenerator:
             raise _exception.load.ControlManSchemaValidationError(
                 source="source",
                 before_substitution=True,
-                description="The package has not specified any operating systems.",
+                problem="The package has not specified any operating systems.",
                 json_path="pkg.os",
                 data=self._data(),
             )
@@ -197,7 +197,7 @@ class PythonDataGenerator:
                     raise _exception.load.ControlManSchemaValidationError(
                         source="source",
                         before_substitution=True,
-                        description=f"Trove classifier '{classifier}' is not valid.",
+                        problem=f"Trove classifier '{classifier}' is not valid.",
                         json_path=f"{path}.classifiers",
                         data=self._data(),
                     )

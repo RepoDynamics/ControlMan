@@ -1,10 +1,11 @@
 from pathlib import Path as _Path
 
+import copy as _copy
+
 from loggerman import logger
 import pyserials as _ps
 import pylinks
 from pylinks.exceptions import WebAPIError
-from markitup import text as _txt
 
 from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit
@@ -114,7 +115,7 @@ class ConfigFileGenerator:
             dependencies.append(add_dep)
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
-            env_name=_txt.slug(self._data["web.env.file.conda.name"]),
+            env_name=pylinks.string.to_slug(self._data["web.env.file.conda.name"]),
         )
         return [
             DynamicFile(content=conda_env, **conda_env_file),
@@ -145,7 +146,7 @@ class ConfigFileGenerator:
             else:
                 output[funding_platform] = users
         file_content = _ps.write.to_yaml_string(data=output, end_of_file_newline=True)
-        logger.debug(code_title="File content", code=file_content)
+        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **funding_file)]
 
     @logger.sectioner("Generate Workflow Requirements Files")
@@ -183,7 +184,7 @@ class ConfigFileGenerator:
                 for content in conf_entry["contents"]:
                     if type(content) is not type(conf_file["content"]):
                         raise ValueError()
-                conf_entry["contents"].append(conf_file["content"])
+                conf_entry["contents"].append(_copy.deepcopy(conf_file["content"]))
                 conf_entry["tool_names"].append(tool_name)
         out = []
         # Write conda environment files
@@ -312,7 +313,7 @@ class ConfigFileGenerator:
         if issues.get("contact_links"):
             config["contact_links"] = self._data["issue"]["contact_links"]
         file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
-        logger.debug(code_title="File content", code=file_content)
+        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **generate_file)]
 
     @logger.sectioner("Generate Gitignore File")
@@ -326,7 +327,7 @@ class ConfigFileGenerator:
                 f"!{local_dir}/**/README.md",
             ]
         )
-        logger.debug(code_title="File content", code=file_content)
+        logger.debug("File content", file_content)
         generated_file = DynamicFile(
             type=DynamicFileType.CONFIG,
             subtype=("gitignore", "Git Ignore"),
@@ -357,8 +358,8 @@ class ConfigFileGenerator:
             attrs = list(attribute.values())[0]
             attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs).strip()
             file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
-        logger.info(code_title="File info", code=str(file_info))
-        logger.debug(code_title="File content", code=file_content)
+        logger.info("File info", str(file_info))
+        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **file_info)]
 
     def citation(self) -> list[DynamicFile]:

@@ -71,7 +71,7 @@ class FormGenerator:
                 )
             )
             paths.append(path)
-            logger.debug(code_title="File content", code=file_content)
+            logger.debug("File content", file_content)
             logger.section_end()
         # Check for outdated issue forms to be removed
         paths.append(_const.FILEPATH_ISSUES_CONFIG)
@@ -103,8 +103,8 @@ class FormGenerator:
                     path_before=path,
                 )
             )
-            paths.append(filename)
-            logger.debug(code_title="File content", code=file_content)
+            paths.append(path)
+            logger.debug("File content", file_content)
             logger.section_end()
         outdated_files = self._remove_outdated(
             dir_path=self._repo_path / _const.DIRPATH_DISCUSSIONS,
@@ -133,7 +133,7 @@ class FormGenerator:
                 )
             )
             paths.append(path)
-            logger.debug(code_title="File content", code=file_content)
+            logger.debug("File content", file_content)
             logger.section_end()
         outdated_files = self._remove_outdated(
             dir_path=self._repo_path / _const.DIRPATH_PULL_TEMPLATES,
@@ -145,7 +145,8 @@ class FormGenerator:
         return out
 
     def _remove_outdated(
-        self, dir_path: _Path,
+        self,
+        dir_path: _Path,
         include_glob: str,
         exclude_filepaths: list[str],
         filetype: DynamicFileType,

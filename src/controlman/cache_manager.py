@@ -5,7 +5,7 @@ import datetime as _datetime
 from loggerman import logger as _logger
 import pyserials as _ps
 
-from controlman import exception as _exception, const as _const, _file_util
+from controlman import exception as _exception, const as _const
 from controlman import data_validator as _data_validator
 
 
@@ -32,7 +32,7 @@ class CacheManager:
                 _logger.info(
                     "Caching", f"API cache file at '{self._path}' is corrupted; initialized new cache."
                 )
-                _logger.debug(code_title="Cache Corruption Details", code=e)
+                _logger.debug("Cache Corruption Details", str(e))
             try:
                 _data_validator.validate(
                     data=self._cache,
@@ -43,7 +43,7 @@ class CacheManager:
                 _logger.info(
                     "Caching", f"API cache file at '{self._path}' is invalid; initialized new cache."
                 )
-                _logger.debug(code_title="Cache Validation Details", code=e)
+                _logger.debug("Cache Validation Details", str(e))
         return
 
     def get(self, typ: str, key: str):
@@ -52,17 +52,17 @@ class CacheManager:
         log_title = f"Retrieve '{typ}.{key}' from API cache"
         item = self._cache.get(typ, {}).get(key)
         if not item:
-            _logger.info(title=log_title, msg="Item not found")
+            _logger.info(log_title, "Item not found")
             return
         timestamp = item.get("timestamp")
         if timestamp and self._is_expired(typ, timestamp):
             _logger.info(
-                title=log_title,
-                msg=f"Item expired; timestamp: {timestamp}, retention hours: {self._retention_hours}"
+                log_title,
+                f"Item expired; timestamp: {timestamp}, retention hours: {self._retention_hours}"
             )
             return
-        _logger.info(title=log_title, msg=f"Item found")
-        _logger.debug(title=log_title, msg=f"Item data:", code=str(item['data']))
+        _logger.info(log_title, f"Item found")
+        _logger.debug(log_title, str(item['data']))
         return item["data"]
 
     def set(self, typ: str, key: str, value: dict | list | str | int | float | bool):
@@ -72,7 +72,7 @@ class CacheManager:
         }
         self._cache.setdefault(typ, {})[key] = new_item
         _logger.info(f"Set API cache for '{key}'")
-        _logger.debug(code_title="Cache Data", code=new_item)
+        _logger.debug("Cache Data", str(new_item))
         return
 
     def save(self):
@@ -81,7 +81,7 @@ class CacheManager:
             path=self._path,
             make_dirs=True,
         )
-        _logger.debug("Save API cache file", msg=self._path)
+        _logger.debug("Save API cache file", self._path)
         return
 
     def _is_expired(self, typ: str, timestamp: str) -> bool:

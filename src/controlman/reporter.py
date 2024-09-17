@@ -1,6 +1,5 @@
-
-from markitup.html import elem as _html
-from markitup import doc as _doc
+import mdit as _mdit
+import htmp as _htmp
 from controlman.datatype import (
     DynamicFileChangeType,
     DynamicDirType,
@@ -32,14 +31,14 @@ class ControlCenterReporter:
         self.has_changes = self.has_changed_metadata or self.has_changed_files or self.has_changed_dirs
         return
 
-    def report(self) -> _doc.Document:
+    def report(self) -> _mdit.Document:
         if not self.has_changes:
             content = (
                 "All dynamic content were in sync with control center configurations. No changes were made."
             )
             return self._create_document(content=content)
         changed_categories = []
-        category_details = []
+        section = {}
         for category_name, category_changed, category_reporter in (
             ("metadata", self.has_changed_metadata, self._report_metadata),
             ("files", self.has_changed_files, self._report_files),
@@ -47,39 +46,49 @@ class ControlCenterReporter:
         ):
             if category_changed:
                 changed_categories.append(category_name)
-                category_details.append(category_reporter())
+                section[category_name] = category_reporter()
         changed_categories_str = self._comma_list(changed_categories)
         verb = "was" if len(changed_categories) == 1 else "were"
         content = f"Project's {changed_categories_str} {verb} out of sync with control center configurations."
-        section = _html.ul([_html.li(detail) for detail in category_details])
         return self._create_document(content=content, section=section)
 
-    def _create_document(self, content, section=None) -> _doc.Document:
-        details_section = _doc.from_contents(
+    def _create_document(self, content, section: dict | None = None) -> _mdit.Document:
+        details_section = _mdit.document(
             heading="Changes",
-            content={"details": section},
+            section=section,
         )
-        return _doc.from_contents(
+        return _mdit.document(
             heading="Control Center Report",
-            content={"summary": content},
+            body={"summary": content},
             section={"changes": details_section} if section else None,
         )
 
     def _report_metadata(self):
-        rows = []
+        rows = [["Path", "Change"]]
         for changed_key, change_type in sorted(self.metadata, key=lambda elem: elem[0]):
             change = change_type.value
-            rows.append([_html.code(changed_key), (change.emoji, {"title": change.title})])
-        figure = _html.table_from_rows(
-            rows_body=rows,
-            rows_head=[["Path", "Change"]],
-            as_figure=True,
-            caption=f"Changes in the project's metadata.",
+            rows.append(
+                [
+                    _mdit.element.code_span(changed_key),
+                    _htmp.element.span(change.emoji, {"title": change.title})
+                ]
+            )
+        table = _mdit.element.table(
+            rows,
+            caption=f"ℹ️ Changes in the project's metadata.",
+            align_table="center",
+            align_columns=["left", "center"],
+            num_rows_header=1,
+            width_columns="auto",
         )
-        return _html.details([_html.summary("ℹ️ Metadata"), figure])
+        page = _mdit.document(
+            heading="Metadata",
+            body={"table": table},
+        )
+        return page
 
-    def _report_files(self):
-        rows = []
+    def _report_files(self) -> _mdit.Document | None:
+        rows = [["Type", "Subtype", "Change", "Path", "Old Path"]]
         for file in sorted(
             self.files,
             key=lambda elem: (elem.type.value[1], elem.subtype[1]),
@@ -91,23 +100,29 @@ class ControlCenterReporter:
                 [
                     file.type.value[1],
                     file.subtype[1],
-                    (change.emoji, {"title": change.title}),
-                    _html.code(file.path),
-                    _html.code(file.path_before) if file.path_before else "—"
+                    _htmp.element.span(change.emoji, {"title": change.title}),
+                    _mdit.element.code_span(file.path),
+                    _mdit.element.code_span(file.path_before) if file.path_before else "—"
                 ]
             )
         if not rows:
             return
-        figure = _html.table_from_rows(
-            rows_body=rows,
-            rows_head=[["Type", "Subtype", "Change", "Path", "Old Path"]],
-            as_figure=True,
-            caption=f"Changes in the project's dynamic files.",
+        table = _mdit.element.table(
+            rows,
+            caption=f"📝 Changes in the project's dynamic files.",
+            align_table="center",
+            align_columns=["left", "left", "center", "left", "left"],
+            num_rows_header=1,
+            width_columns="auto",
         )
-        return _html.details([_html.summary("📝 Files"), figure])
+        page = _mdit.document(
+            heading="Files",
+            body={"table": table},
+        )
+        return page
 
-    def _report_dirs(self):
-        rows = []
+    def _report_dirs(self) -> _mdit.Document | None:
+        rows = [["Type", "Change", "Path", "Old Path"]]
         for dir_ in sorted(self.dirs, key=lambda elem: elem.type.value):
             if dir_.change in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED):
                 continue
@@ -115,20 +130,26 @@ class ControlCenterReporter:
             rows.append(
                 [
                     dir_.type.value,
-                    (change.emoji, {"title": change.title}),
-                    _html.code(dir_.path),
-                    _html.code(dir_.path_before or "—"),
+                    _htmp.element.span(change.emoji, {"title": change.title}),
+                    _mdit.element.code_span(dir_.path),
+                    _mdit.element.code_span(dir_.path_before) if dir_.path_before else "—",
                 ]
             )
         if not rows:
             return
-        figure = _html.table_from_rows(
-            rows_body=rows,
-            rows_head=[["Type", "Change", "Path", "Old Path"]],
-            as_figure=True,
-            caption=f"Changes in the project's dynamic directories.",
+        table = _mdit.element.table(
+            rows,
+            caption=f"🗂 Changes in the project's dynamic directories.",
+            align_table="center",
+            align_columns=["left", "left", "center", "left", "left"],
+            num_rows_header=1,
+            width_columns="auto",
         )
-        return _html.details([_html.summary("🗂 Directories"), figure])
+        page = _mdit.document(
+            heading="Directories",
+            body={"table": table},
+        )
+        return page
 
     @staticmethod
     def _comma_list(l):

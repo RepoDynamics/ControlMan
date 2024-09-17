@@ -53,5 +53,5 @@ class HookManager:
             return
         result = pyshellman.pip.install_requirements(path=filepath)
         for title, detail in result.details.items():
-            _logger.info(code_title=title, code=detail)
+            _logger.info(title, detail)
         return

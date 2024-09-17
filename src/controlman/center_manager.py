@@ -6,8 +6,6 @@ from loggerman import logger as _logger
 import pylinks as _pylinks
 import pyserials as _ps
 from gittidy import Git as _Git
-from markitup.html import elem as _html
-from markitup import doc as _doc
 
 from controlman import data_gen as _data_gen
 from controlman.hook_manager import HookManager as _HookManager
