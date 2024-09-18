@@ -171,29 +171,25 @@ class PythonPackageFileGenerator:
 
     @logger.sectioner("Generate Package __init__.py File")
     def _update_docstring(self, file_content: str, template: str, template_before: str) -> str:
-        docstring_text = textwrap.fill(
-            template.strip(),
-            width=80,
-            replace_whitespace=False,
-        ).strip()
-        pattern = re.compile(
-            r'^((?:[\t ]*#.*\n|[\t ]*\n)*)"""((?:.|\n)*?)"""((?:[ \t]*#.*)?(?:\n|$))', re.MULTILINE
-        )
-        match = pattern.match(file_content)
-        if not match:
-            docstring = f'"""{docstring_text}\n"""  # noqa: D400\n'
-            return f"{docstring}\n\n{file_content}".strip() + "\n"
-        before, within, after = [text.strip() for text in match.groups()]
-        if not template_before:
-            within = f"{within}\n\n{docstring_text}".strip()
+
+        def get_wrapped_docstring(string):
+            lines = []
+            for line in string.strip().splitlines():
+                line_parts = textwrap.wrap(line, width=80)
+                lines.append('') if not line_parts else lines.extend(line_parts)
+            return "\n".join(lines), lines
+
+        docstring_text, docstring_lines = get_wrapped_docstring(template)
+        docstring_before = _pysyntax.parse.docstring(file_content)
+        if docstring_before is None:
+            ending = '\n' if len(docstring_lines) > 1 else ''
+            docstring_replacement = f'{docstring_text}{ending}'
+        elif not template_before:
+            docstring_replacement = f"{docstring_before.strip()}\n\n{docstring_text}\n"
         else:
-            docstring_text_before = textwrap.fill(
-                template_before.strip(),
-                width=80,
-                replace_whitespace=False,
-            ).strip()
-            within = within.replace(docstring_text_before, docstring_text)
-        return re.sub(pattern, f'{before}\n\n"""{within}\n"""  {after}'.strip(), file_content)
+            template_before_wrapped, _ = get_wrapped_docstring(template_before)
+            docstring_replacement = docstring_before.replace(template_before_wrapped, docstring_text, 1)
+        return _pysyntax.modify.update_docstring(file_content, docstring_replacement)
 
     @logger.sectioner("Generate Package Manifest File")
     def manifest(self) -> list[DynamicFile]:

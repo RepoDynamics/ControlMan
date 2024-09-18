@@ -85,6 +85,11 @@ class CenterManager:
             data_main=self._data_main,
             future_versions=self._future_vers,
         )
+        # Validate again to fill default values that depend on generated data
+        # Example: A key may be referencing `team.owner.email.url`, which has a default
+        # value based on `team.owner.email.id`. But since `team.owner` is generated
+        # dynamically, the default value for `team.owner.email.url` is not set in the initial validation.
+        _data_validator.validate(data=data(), source="source", before_substitution=True)
         if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_DATA):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_DATA,

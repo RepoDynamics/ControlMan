@@ -76,7 +76,7 @@ def _generate_file(
     if isinstance(content, str):
         content_str = content
     else:
-        content_str = _mdit.generate(content).source(target)
+        content_str = _mdit.generate(content).source(target, heading_number_explicit=False)
     footer = file_data.get("footer")
     if footer is None:
         footer = default_footer
