@@ -7,8 +7,12 @@ These include paths to files and directories in the user repository.
 # ControlMan Constants
 DIRPATH_CC_DEFAULT = ".control"
 
+DIRNAME_LOCAL_CACHE = "cache"
+DIRNAME_LOCAL_REPORT = "reports"
+DIRNAME_LOCAL_REPODYNAMICS = "RepoDynamics"
+
 FILEPATH_METADATA = ".github/.control/.metadata.json"
-FILEPATH_METADATA_CACHE = ".github/.control/.metadata_cache.yaml"
+FILENAME_METADATA_CACHE = ".metadata_cache.yaml"
 FILEPATH_LOCAL_CONFIG = ".github/.control/local_config.yaml"
 
 DIRNAME_CC_HOOK = "hook"

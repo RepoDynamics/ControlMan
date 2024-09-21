@@ -16,61 +16,73 @@ class WebDataGenerator:
         return
 
     def generate(self):
-        self._process_website_toctrees()
+        self._process_frontmatter()
         return
 
-    @_logger.sectioner("Website Sections")
-    def _process_website_toctrees(self) -> None:
+    @_logger.sectioner("Website Pages")
+    def _process_frontmatter(self) -> None:
         pages = {}
-        blog_pages = {}
+        blog = {}
+
         for md_filepath in self._path.rglob("*.md", case_sensitive=False):
             if not md_filepath.is_file():
                 continue
-            rel_path = str(md_filepath.relative_to(self._path).with_suffix(""))
+            rel_path = md_filepath.relative_to(self._path)
+            dirhtml_path = str(rel_path.with_suffix("")).removesuffix("/index")
             text = md_filepath.read_text()
-            frontmatter = _mdit.parse.frontmatter(text)
+            frontmatter = _mdit.parse.frontmatter(text) or {}
             if "ccid" in frontmatter:
                 pages[_pl.string.to_slug(frontmatter["ccid"])] = {
                     "title": _mdit.parse.title(text),
-                    "path": rel_path,
-                    "url": f"{self._data['web.url.home']}/{rel_path}",
+                    "path": dirhtml_path,
+                    "url": f"{self._data['web.url.home']}/{dirhtml_path}",
                 }
             for key in ["category", "tags"]:
-                key_val = frontmatter.get(key)
-                if not key_val:
+                val = frontmatter.get(key)
+                if not val:
                     continue
-                if isinstance(key_val, str):
-                    key_val = [item.strip() for item in key_val.split(",")]
-                blog_pages.setdefault(rel_path, {}).setdefault(key, []).extend(key_val)
+                if isinstance(val, str):
+                    val = [item.strip() for item in val.split(",")]
+                if not isinstance(val, list):
+                    _logger.warning(
+                        _mdit.inline_container(
+                            "Invalid webpage frontmatter: ",
+                            _mdit.element.code_span(str(rel_path)),
+                        ),
+                        _mdit.inline_container(
+                            "Invalid frontmatter value for ",
+                            _mdit.element.code_span(key),
+                            " :"),
+                        _mdit.element.code_block(
+                            _ps.write.to_yaml_string(val, end_of_file_newline=False),
+                            language="yaml",
+                        ),
+                    )
+                blog.setdefault(key, []).extend(val)
         if "blog" not in pages:
             self._data["web.page"] = pages
             return
-        blog_path = _Path(pages["blog"]["path"]).parent
-        blog_path_str = str(blog_path)
-        blog_pages_final = {}
-        for potential_post_page_path, keywords_and_tags in blog_pages.items():
-            try:
-                _Path(potential_post_page_path).relative_to(blog_path)
-            except ValueError:
-                continue
-            for key in ["category", "tags"]:
-                for value in keywords_and_tags.get(key, []):
-                    value_slug = _pl.string.to_slug(value)
-                    key_singular = key.removesuffix('s')
-                    final_key = f"blog_{key_singular}_{value_slug}"
-                    if final_key in pages:
-                        raise _exception.data_gen.ControlManWebsiteError(
-                            "Duplicate page ID. "
-                            f"Generated ID '{final_key}' already exists "
-                            f"for page '{pages[final_key]['path']}'. "
-                            "Please do not use `ccid` values that start with 'blog_'."
-                        )
-                    blog_path_prefix = f"{blog_path_str}/" if blog_path_str != "." else ""
-                    blog_group_path = f"{blog_path_prefix}{key_singular}/{value_slug}"
-                    blog_pages_final[final_key] = {
-                        "title": value,
-                        "path": blog_group_path,
-                        "url": f"{self._data['web.url.home']}/{blog_group_path}",
-                    }
-        self._data["web.page"] = pages | blog_pages_final
+        blog_path = self._data["web.extension.ablog.config.blog_path"] or "blog"
+        for key, values in blog.items():
+            for value in set(values):
+                value_slug = _pl.string.to_slug(value)
+                key_singular = key.removesuffix('s')
+                final_key = f"blog_{key_singular}_{value_slug}"
+                if final_key in pages:
+                    _logger.error(
+                        _mdit.inline_container(
+                            "Duplicate webpage ID ",
+                            _mdit.element.code_span(final_key)
+                        ),
+                        f"Generated ID '{final_key}' already exists "
+                        f"for page '{pages[final_key]['path']}'. "
+                        "Please do not use `ccid` values that start with 'blog_'."
+                    )
+                blog_group_path = f"{blog_path}/{key_singular}/{value_slug}"
+                pages[final_key] = {
+                    "title": value,
+                    "path": blog_group_path,
+                    "url": f"{self._data['web.url.home']}/{blog_group_path}",
+                }
+        self._data["web.page"] = pages
         return

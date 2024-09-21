@@ -17,28 +17,27 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev269"
+version = "0.0.0.dev270"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
     "jsonschema >= 4.23, < 5",
-    "trove-classifiers",
-    "readme-renderer[md]",
-    "pylinks",
-    "pycolorit",
-    "pybadger",
-    "ConventionalCommits",
-    "actionman",
-    "loggerman",
-    "pyserials",
-    "gittidy",
-    "FileEx",
-    "PkgData",
-    "PyShellMan",
-    "PySyntax",
+    "trove-classifiers >= 2024.9.12",
+    "PyLinks == 0.0.0.dev27",
+    "PyColorIT == 0.0.0.dev5",
+    "PyBadger == 0.0.0.dev8",
+    "ConventionalCommits == 0.0.0.dev3",
+    "ActionMan == 0.0.0.dev15",
+    "LoggerMan == 0.0.0.dev15",
+    "PySerials == 0.0.0.dev7",
+    "GitTidy == 0.0.0.dev7",
+    "FileEx == 0.0.0.dev1",
+    "PkgData == 0.0.0.dev3",
+    "PyShellMan == 0.0.0.dev2",
+    "PySyntax == 0.0.0.dev2",
     "referencing == 0.35.1",
     "jsonpath-ng == 1.6.1",
-    "ExceptionMan",
-    "mdit",
+    "ExceptionMan == 0.0.0.dev4",
+    "MDit == 0.0.0.dev3",
 ]
 requires-python = ">=3.10"

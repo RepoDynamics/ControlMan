@@ -2,7 +2,6 @@
 
 # Standard libraries
 from typing import Literal
-import re
 import textwrap
 from pathlib import Path as _Path
 
