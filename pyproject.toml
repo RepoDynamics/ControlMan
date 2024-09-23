@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev271"
+version = "0.0.0.dev272"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -27,15 +27,15 @@ dependencies = [
     "jsonpath-ng == 1.6.1",
     "ruamel.yaml == 0.17.40",
     "PyLinks == 0.0.0.dev27",
-    "LoggerMan == 0.0.0.dev16",
-    "PySerials == 0.0.0.dev8",
-    "GitTidy == 0.0.0.dev8",
+    "LoggerMan == 0.0.0.dev17",
+    "PySerials == 0.0.0.dev9",
+    "GitTidy == 0.0.0.dev9",
     "PkgData == 0.0.0.dev4",
     "PyShellMan == 0.0.0.dev2",
     "PySyntax == 0.0.0.dev3",
-    "ExceptionMan == 0.0.0.dev5",
-    "MDit == 0.0.0.dev5",
-    "JSONSchemata == 0.0.0.dev4",
+    "ExceptionMan == 0.0.0.dev6",
+    "MDit == 0.0.0.dev6",
+    "JSONSchemata == 0.0.0.dev5",
     "VersionMan == 0.0.0.dev248",
     "HTMP == 0.0.0.dev3",
 ]
