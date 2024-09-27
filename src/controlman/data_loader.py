@@ -5,6 +5,7 @@ import ruamel.yaml as _yaml
 
 import pyserials as _ps
 import pylinks as _pl
+from pylinks.exception.api import WebAPIError as _WebAPIError
 
 from controlman.exception import load as _exception
 from controlman.cache_manager import CacheManager as _CacheManager
@@ -74,7 +75,7 @@ def _create_external_tag_constructor(
                 verb="GET",
                 response_type="str",
             )
-        except _pl.exceptions.WebAPIError as e:
+        except _WebAPIError as e:
             raise _exception.ControlManUnreachableTagInConfigFileError(
                 filepath=filepath,
                 data=file_content,

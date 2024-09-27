@@ -5,7 +5,7 @@ import copy as _copy
 from loggerman import logger
 import pyserials as _ps
 import pylinks
-from pylinks.exceptions import WebAPIError
+from pylinks.exception.api import WebAPIError as _WebAPIError
 
 from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit
@@ -474,6 +474,6 @@ class ConfigFileGenerator:
                 url="https://codecov.io/validate",
                 data=config.encode(),
             )
-        except WebAPIError as e:
+        except _WebAPIError as e:
             logger.error("Validation of Codecov configuration file failed.", str(e))
         return
