@@ -157,7 +157,6 @@ class RepoDataGenerator:
         self._data["pkg.classifiers"].append(f"Development Status :: {status_code} - {phase[status_code]}")
         return
 
-    @_logger.sectioner("Repository Labels")
     def _repo_labels(self) -> None:
         out = []
         for label_type in ("type", "subtype", "status"):
@@ -216,7 +215,5 @@ class RepoDataGenerator:
                         "color": label_data["color"],
                     }
                 )
-        _logger.info("Successfully compiled all labels")
-        _logger.debug("Generated data:", str(out))
         self._data["label.all"] = out
         return

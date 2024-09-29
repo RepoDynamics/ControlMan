@@ -10,41 +10,83 @@ from pylinks.exception.api import WebAPIError as _WebAPIError
 from controlman.exception import load as _exception
 from controlman.cache_manager import CacheManager as _CacheManager
 from controlman import const as _const
+import mdit as _mdit
+from loggerman import logger as _logger
 
 
-def load(control_center_path: _Path, cache_manager: _CacheManager | None = None) -> dict:
-    full_data = {}
-    for filepath in control_center_path.glob('*'):
-        if filepath.is_file() and filepath.suffix.lower() in ['.yaml', '.yml']:
-            file_content = filepath.read_text().strip()
-            if not file_content:
+def load(
+    path_cc: _Path,
+    cache_manager: _CacheManager | None = None
+) -> dict:
+
+    def _load_file(filepath: _Path):
+        file_content = filepath.read_text().strip()
+        if not file_content:
+            _logger.notice(
+                "Empty Configuration File",
+                _mdit.inline_container(
+                    "The control center configuration file at ",
+                    _mdit.element.code_span(str(filepath)),
+                    " is empty.",
+                ),
+            )
+            return
+        try:
+            data = _ps.read.yaml_from_file(
+                path=filepath,
+                safe=True,
+                constructors={
+                    _const.CC_EXTENSION_TAG: _create_external_tag_constructor(
+                        tag_name=_const.CC_EXTENSION_TAG,
+                        cache_manager=cache_manager,
+                        filepath=filepath,
+                        file_content=file_content,
+                    )
+                },
+            )
+        except _ps.exception.read.PySerialsInvalidDataError as e:
+            raise _exception.ControlManInvalidConfigFileDataError(cause=e) from None
+        try:
+            log = _ps.update.dict_from_addon(
+                data=full_data,
+                addon=data,
+                append_list=False,
+                append_dict=True,
+                raise_duplicates=True,
+                raise_type_mismatch=True,
+            )
+        except _ps.exception.update.PySerialsUpdateDictFromAddonError as e:
+            raise _exception.ControlManDuplicateConfigFileDataError(filepath=filepath, cause=e) from None
+        log_admonitions = []
+        for key, title in (
+            ("added", "Added"),
+            ("list_appended", "Appended List"),
+            ("skipped", "Skipped"),
+        ):
+            if not log[key]:
                 continue
-            try:
-                data = _ps.read.yaml_from_file(
-                    path=filepath,
-                    safe=True,
-                    constructors={
-                        _const.CC_EXTENSION_TAG: _create_external_tag_constructor(
-                            tag_name=_const.CC_EXTENSION_TAG,
-                            cache_manager=cache_manager,
-                            filepath=filepath,
-                            file_content=file_content,
-                        )
-                    },
+            key_list = _mdit.element.unordered_list(
+                [_mdit.element.code_span(item) for item in sorted(log[key])]
+            )
+            log_admonitions.append(
+                _mdit.element.admonition(
+                    title=f"{title} Keys",
+                    body=key_list,
+                    dropdown=True,
                 )
-            except _ps.exception.read.PySerialsInvalidDataError as e:
-                raise _exception.ControlManInvalidConfigFileDataError(cause=e) from None
-            try:
-                _ps.update.dict_from_addon(
-                    data=full_data,
-                    addon=data,
-                    append_list=False,
-                    append_dict=True,
-                    raise_duplicates=True,
-                    raise_type_mismatch=True,
-                )
-            except _ps.exception.update.PySerialsUpdateDictFromAddonError as e:
-                raise _exception.ControlManDuplicateConfigFileDataError(filepath=filepath, cause=e) from None
+            )
+        _logger.success(
+            "Loaded Configurations",
+            _mdit.block_container(*log_admonitions),
+        )
+        return
+
+    full_data = {}
+    hook_dir = path_cc / _const.DIRNAME_CC_HOOK
+    for path in path_cc.rglob('*'):
+        if hook_dir not in path.parents and path.is_file() and path.suffix.lower() in ['.yaml', '.yml']:
+            with _logger.sectioning(_mdit.element.code_span(str(path.relative_to(path_cc)))):
+                _load_file(filepath=path)
     return full_data
 
 

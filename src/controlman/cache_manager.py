@@ -30,7 +30,7 @@ class CacheManager:
             log_content = [msg]
             if traceback:
                 log_content.append(_logger.traceback())
-            _logger.warning(log_title, *log_content)
+            _logger.warning(log_title, *log_content, stack_up=1)
             return
 
         log_title = "Cache Initialization"

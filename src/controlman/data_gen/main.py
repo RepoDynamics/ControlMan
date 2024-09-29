@@ -7,6 +7,7 @@ from gittidy import Git as _Git
 import pylinks
 from loggerman import logger as _logger
 import pyserials as _ps
+import mdit as _mdit
 
 from controlman import _file_util
 from controlman.cache_manager import CacheManager
@@ -36,7 +37,6 @@ class MainDataGenerator:
         self._gh_api_repo = None
         return
 
-    @_logger.sectioner("Generate Contents")
     def generate(self) -> None:
         self._repo()
         self._team()
@@ -49,7 +49,6 @@ class MainDataGenerator:
         self._urls_website()
         return
 
-    @_logger.sectioner("Repository Data")
     def _repo(self) -> None:
         repo_address = self._git.get_remote_repo_name(
             remote_name="origin",
@@ -58,22 +57,34 @@ class MainDataGenerator:
             fallback_purpose=False
         )
         if not repo_address:
-            raise _exception.data_gen.ControlManRepositoryError(
+            raise _exception.data_gen.RemoteGitHubRepoNotFoundError(
                 repo_path=self._git.repo_path,
-                problem="Failed to determine GitHub address. "
-                "The Git repository has no remote set for push to origin. "
-                f"Following remotes were found: {str(self._git.get_remotes())}",
+                remotes=self._git.get_remotes(),
             )
         username, repo_name = repo_address
         self._gh_api_repo = self._gh_api.user(username).repo(repo_name)
-        _logger.info("GitHub API Call", f"Retrieve info for repository '{username}/{repo_name}'.")
         repo_info = self._gh_api.user(username).repo(repo_name).info
+        log_info = _mdit.inline_container(
+            "Retrieved data for repository ",
+            _mdit.element.code_span(f'{username}/{repo_name}'),
+            "."
+        )
         if "source" in repo_info:
             repo_info = repo_info["source"]
-            _logger.info(
-                f"Fork Detected",
-                f"Repository is a fork and target is set to '{repo_info['source']['full_name']}'.",
+            log_info.extend(
+                "The repository is a fork and thus the target is set to ",
+                _mdit.element.code_span(repo_info["full_name"]),
             )
+        repo_info_code_block = _mdit.element.code_block(
+            content=_ps.write.to_yaml_string(repo_info),
+            language="yaml",
+            caption="GitHub API Response",
+        )
+        _logger.info(
+            f"Repository Data",
+            log_info,
+            repo_info_code_block,
+        )
         repo_info["created_at"] = _datetime.datetime.strptime(
             repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
         ).strftime("%Y-%m-%d")
@@ -85,40 +96,36 @@ class MainDataGenerator:
         self._data["team.owner.github.id"] = repo_info["owner"]["login"]
         return
 
-    @_logger.sectioner("Project People")
     def _team(self) -> None:
         for person_id in self._data["team"].keys():
             self._data.fill(f"team.{person_id}")
             self.fill_entity(self._data[f"team.{person_id}"])
         return
 
-    @_logger.sectioner("Project Name")
     def _name(self) -> None:
         name = self._data.fill("name")
         repo_name = self._data["repo.name"]
         if not name:
             name = self._data["name"] = repo_name.replace("-", " ")
-            _logger.info(f"Set `name`", f"Set to '{name}' from repository name")
+            _logger.info(
+                f"Project Name",
+                f"Set to '{name}' from repository name."
+            )
         self._data["slug.name"] = pylinks.string.to_slug(name)
         self._data["slug.repo_name"] = pylinks.string.to_slug(repo_name)
         return
 
-    @_logger.sectioner("Keyword slugs")
     def _keywords(self) -> None:
         keywords = self._data.fill("keywords")
         if not keywords:
-            _logger.info("No keywords specified.")
+            return
         slugs = [pylinks.string.to_slug(keyword) for keyword in keywords if len(keyword) <= 50]
         self._data["slug.keywords"] = slugs
-        _logger.info("Set `slug.keywords`", f"Set from `keywords`")
-        _logger.debug(f"Keyword slugs: {str(slugs)}")
         return
 
-    @_logger.sectioner("Project License")
     def _license(self):
         data = self._data["license"]
         if not data:
-            _logger.info("No license specified.")
             return
         license_id = self._data.fill("license.id")
         license_db = _file_util.get_package_datafile("db/license/info.yaml")
@@ -133,7 +140,6 @@ class MainDataGenerator:
                         json_path="license",
                         data=self._data(),
                     )
-            _logger.info("License data is manually set.")
             return
         if "name" not in data:
             data["name"] = license_info["name"]
@@ -145,11 +151,8 @@ class MainDataGenerator:
         if "notice" not in data:
             filename = license_id.removesuffix("-or-later")
             data["notice"] = _file_util.get_package_datafile(f"db/license/notice/{filename}.txt")
-        _logger.info(f"License data set for license ID '{license_id}'.")
-        _logger.debug("License data:", str(license_info))
         return
 
-    @_logger.sectioner("Project Copyright")
     def _copyright(self):
         data = self._data["copyright"]
         if not data or "period" in data:
@@ -160,7 +163,6 @@ class MainDataGenerator:
             data["start_year"] = start_year = _datetime.datetime.strptime(
                 self._data["repo.created_at"], "%Y-%m-%d"
             ).year
-            _logger.info(f"Project start year set from repository creation date: {start_year}")
         else:
             if start_year > current_year:
                 raise _exception.load.ControlManSchemaValidationError(
@@ -172,21 +174,20 @@ class MainDataGenerator:
                     json_path="copyright.start_year",
                     data=self._data(),
                 )
-            _logger.info(f"Project start year already set manually in metadata: {start_year}")
         year_range = f"{start_year}{'' if start_year == current_year else f'–{current_year}'}"
         data["period"] = year_range
         return
 
-    @_logger.sectioner("GitHub Discussions Categories")
     def _discussion_categories(self):
         discussions_info = self._cache.get("repo", f"discussion_categories")
         if discussions_info:
-            _logger.info(f"Set from cache.")
             return
         if not self._gh_api.authenticated:
-            _logger.notice("GitHub token not provided. Cannot get discussions categories.")
+            _logger.notice(
+                "GitHub Discussion Categories",
+                "GitHub token not provided. Cannot get discussions categories."
+            )
             return
-        _logger.info("Get repository discussions from GitHub API")
         discussions_info = self._gh_api_repo.discussion_categories()
         self._cache.set("repo", f"discussions_categories", discussions_info)
         discussion = self._data.setdefault("discussion.category", {})
@@ -196,7 +197,6 @@ class MainDataGenerator:
             category_obj["name"] = category["name"]
         return
 
-    @_logger.sectioner("GitHub URLs")
     def _urls_github(self) -> None:
         self._data["repo.url.issues.new"] = {
             issue_type["id"]: f"{self._data['repo.url.home']}/issues/new?template={idx + 1:02}_{issue_type['id']}.yaml"
@@ -208,7 +208,6 @@ class MainDataGenerator:
         }
         return
 
-    @_logger.sectioner("Website URLs")
     def _urls_website(self) -> None:
         base_url = self._data.get("web.url.base")
         if not base_url:
@@ -292,7 +291,6 @@ class MainDataGenerator:
             data["orcid"]["pubs"] = self._get_orcid_publications(orcid_id=data["orcid"]["user"])
         return
 
-    @_logger.sectioner("Get GitHub User Data")
     def _get_github_user(self, username: str) -> dict:
 
         def add_social(name, user, url):
@@ -303,10 +301,8 @@ class MainDataGenerator:
         if user_info:
             _logger.section_end()
             return user_info
-        _logger.info(f"Get user info for '{username}' from GitHub API")
         user = self._gh_api.user(username=username)
         user_info = user.info
-        _logger.section(f"Get Social Accounts")
         social_accounts_info = user.social_accounts
         socials = {}
         user_info["socials"] = socials
@@ -325,7 +321,6 @@ class MainDataGenerator:
                         match.group(1),
                         f"https://{base_pattern}{match.group(1)}{match.group(2)}"
                     )
-                    _logger.info(f"{provider.capitalize()} account", account['url'])
                     break
             else:
                 if account["provider"] != "generic":
@@ -334,11 +329,9 @@ class MainDataGenerator:
                     generics = socials.setdefault("generics", [])
                     generics.append(account["url"])
                     _logger.info(f"Unknown account", account['url'])
-        _logger.section_end()
         self._cache.set("user", username, user_info)
         return user_info
 
-    @_logger.sectioner("Get Publications")
     def _get_orcid_publications(self, orcid_id: str) -> list[dict]:
         dois = self._cache.get("orcid", orcid_id)
         if not dois:

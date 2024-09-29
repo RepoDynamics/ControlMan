@@ -2,10 +2,10 @@ from pathlib import Path as _Path
 import shutil as _shutil
 
 from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
-from loggerman import logger as _logger
 import pylinks as _pylinks
 import pyserials as _ps
 from gittidy import Git as _Git
+from loggerman import logger as _logger
 
 from controlman import data_gen as _data_gen
 from controlman.hook_manager import HookManager as _HookManager
@@ -60,16 +60,18 @@ class CenterManager:
     def load(self) -> _ps.NestedDict:
         if self._data_raw:
             return self._data_raw
-        full_data = _data_loader.load(
-            control_center_path=self._path_cc,
-            cache_manager=self._cache_manager,
-        )
-        if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_LOAD):
-            full_data = self._hook_manager.generate(
+        with _logger.sectioning("Configuration File Load"):
+            full_data = _data_loader.load(
+                path_cc=self._path_cc,
+                cache_manager=self._cache_manager,
+            )
+        with _logger.sectioning("Post-Load User Hooks"):
+            self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_LOAD,
                 full_data,
             )
-        _data_validator.validate(data=full_data, source="source", before_substitution=True)
+        with _logger.sectioning("Post-Load Data Validation"):
+            _data_validator.validate(data=full_data, source="source", before_substitution=True)
         self._data_raw = _ps.NestedDict(full_data)
         return self._data_raw
 
@@ -77,28 +79,36 @@ class CenterManager:
         if self._data:
             return self._data
         self.load()
-        data = _data_gen.generate(
-            git_manager=self._git,
-            cache_manager=self._cache_manager,
-            github_api=self._github_api,
-            data=self._data_raw,
-            data_before=self._data_before,
-            data_main=self._data_main,
-            future_versions=self._future_vers,
-        )
-        # Validate again to fill default values that depend on generated data
-        # Example: A key may be referencing `team.owner.email.url`, which has a default
-        # value based on `team.owner.email.id`. But since `team.owner` is generated
-        # dynamically, the default value for `team.owner.email.url` is not set in the initial validation.
-        _data_validator.validate(data=data(), source="source", before_substitution=True)
-        if self._hook_manager.has_hook(const.FUNCNAME_CC_HOOK_POST_DATA):
+        with _logger.sectioning("Dynamic Data Generation"):
+            data = _data_gen.generate(
+                git_manager=self._git,
+                cache_manager=self._cache_manager,
+                github_api=self._github_api,
+                data=self._data_raw,
+                data_before=self._data_before,
+                data_main=self._data_main,
+                future_versions=self._future_vers,
+            )
+        with _logger.sectioning("Post-Generation Data Validation"):
+            # Validate again to fill default values that depend on generated data
+            # Example: A key may be referencing `team.owner.email.url`, which has a default
+            # value based on `team.owner.email.id`. But since `team.owner` is generated
+            # dynamically, the default value for `team.owner.email.url` is not set in the initial validation.
+            _data_validator.validate(data=data(), source="source", before_substitution=True)
+        with _logger.sectioning("Post-Generation User Hooks"):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_POST_DATA,
                 data,
             )
-        self._cache_manager.save()
-        data.fill()
-        _data_validator.validate(data=data(), source="source")
+            self._cache_manager.save()
+        with _logger.sectioning("Template Resolution"):
+            data.fill()
+            _logger.success(
+                "Filled Data",
+                "All template variables have been successfully resolved.",
+            )
+        with _logger.sectioning("Final Data Validation"):
+            _data_validator.validate(data=data(), source="source")
         self._data = data
         return self._data
 
@@ -106,11 +116,12 @@ class CenterManager:
         if self._files:
             return self._files
         self.generate_data()
-        self._files = _file_gen.generate(
-            data=self._data,
-            data_before=self._data_before,
-            repo_path=self._path_root,
-        )
+        with _logger.sectioning("Dynamic File Generation"):
+            self._files = _file_gen.generate(
+                data=self._data,
+                data_before=self._data_before,
+                repo_path=self._path_root,
+            )
         return self._files
 
     def compare(self):
@@ -134,7 +145,6 @@ class CenterManager:
             dirs=self._dirs,
         )
 
-    @_logger.sectioner("Apply Changes To Dynamic Repository File")
     def apply_changes(self) -> None:
         """Apply changes to dynamic repository files."""
 

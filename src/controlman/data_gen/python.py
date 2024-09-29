@@ -36,7 +36,6 @@ class PythonDataGenerator:
         self.trove_classifiers()
         return
 
-    @_logger.sectioner("Package Name")
     def _package_name(self) -> None:
         for path in ("pkg.name", "test.name"):
             name = self._data.fill(path)
@@ -50,14 +49,12 @@ class PythonDataGenerator:
                 self._data[path] = _re.sub(r'^[0-9]+', "", import_name_cleaned)
         return
 
-    @_logger.sectioner("Package Python Versions")
     def _package_python_versions(self) -> None:
 
         def get_python_releases():
             release_versions = self._cache.get("python", "releases")
             if release_versions:
                 return release_versions
-            _logger.info("Get Python versions from GitHub API")
             release_versions = self._github_api.user("python").repo("cpython").semantic_versions(tag_prefix="v")
             live_versions = []
             for version in release_versions:
@@ -126,10 +123,8 @@ class PythonDataGenerator:
         self._data["pkg.python.version"].update(output)
         if self._data["test"]:
             self._data["test.python.version.spec"] = spec_str
-        _logger.debug(f"Generated data: {str(output)}")
         return
 
-    @_logger.sectioner("Package Operating Systems")
     def _package_operating_systems(self):
         data_os = self._data.fill("pkg.os")
         if not isinstance(data_os, dict):

@@ -1,4 +1,6 @@
-from typing import Literal as _Literal
+from __future__ import annotations as _annotations
+
+from typing import Literal as _Literal, TYPE_CHECKING as _TYPE_CHECKING
 from pathlib import Path as _Path
 
 import pyserials as _ps
@@ -6,6 +8,10 @@ import mdit as _mdit
 import ruamel.yaml as _yaml
 
 from controlman.exception import ControlManException as _ControlManException
+from loggerman import logger as _logger
+
+if _TYPE_CHECKING:
+    from pylinks.exception.api import WebAPIError
 
 
 class ControlManDataReadException(_ControlManException):
@@ -108,6 +114,7 @@ class ControlManInvalidConfigFileTagException(ControlManConfigFileReadException)
         problem,
         node: _yaml.ScalarNode,
         cause: Exception | None = None,
+        section: dict | None = None,
     ):
         self.node = node
         self.start_line = node.start_mark.line + 1
@@ -120,6 +127,7 @@ class ControlManInvalidConfigFileTagException(ControlManConfigFileReadException)
             data=data,
             problem=problem,
             cause=cause,
+            section=section,
         )
         return
 
@@ -140,6 +148,10 @@ class ControlManEmptyTagInConfigFileError(ControlManInvalidConfigFileTagExceptio
             _mdit.element.code_span(str(node.start_mark.line + 1)),
             " has no value.",
         )
+        _logger.critical(
+            "Empty Tag in Configuration File",
+            problem,
+        )
         super().__init__(
             filepath=filepath,
             data=data,
@@ -158,16 +170,22 @@ class ControlManUnreachableTagInConfigFileError(ControlManInvalidConfigFileTagEx
         data: str,
         node: _yaml.ScalarNode,
         url: str,
-        cause: Exception,
+        cause: WebAPIError,
     ):
         problem = _mdit.inline_container(
-            "Failed to download external data from ",
+            "Failed to download external configurations from ",
             _mdit.element.code_span(url),
             " defined in ",
             _mdit.element.code_span(node.tag),
             " tag at line ",
             _mdit.element.code_span(str(node.start_mark.line + 1)),
-            ".",
+            ". ",
+            cause.report.body["intro"].content,
+        )
+        _logger.critical(
+            "Unreachable Tag in Configuration File",
+            problem,
+            cause.report.section["details"].content,
         )
         super().__init__(
             filepath=filepath,
@@ -175,6 +193,7 @@ class ControlManUnreachableTagInConfigFileError(ControlManInvalidConfigFileTagEx
             problem=problem,
             node=node,
             cause=cause,
+            section=cause.report.section,
         )
         return
 
@@ -231,9 +250,15 @@ class ControlManSchemaValidationError(ControlManDataReadException):
                 ".",
             ),
         )
+        problem = problem or cause.report.body["problem"].content if cause else ""
+        _logger.critical(
+            "Schema Validation Error",
+            intro,
+            problem,
+        )
         super().__init__(
             intro=intro,
-            problem=problem or cause.report.body["problem"].content if cause else "",
+            problem=problem,
             section=cause.report.section if cause else None,
             data=data or cause.data,
             cause=cause,

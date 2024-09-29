@@ -8,9 +8,9 @@ import referencing as _referencing
 from referencing import jsonschema as _referencing_jsonschema
 import jsonschemata as _js
 import pkgdata as _pkgdata
-from loggerman import logger as _logger
 import pyserials as _ps
 from mdit.data import schema as _mdit_schema
+from loggerman import logger as _logger
 
 from controlman import exception as _exception
 
@@ -46,6 +46,10 @@ def validate(
         ) from None
     if schema == "main" and not before_substitution:
         DataValidator(data=data, source=source).validate()
+    _logger.success(
+        "Validated Schema",
+        "The data has been successfully validated against the schema.",
+    )
     return
 
 
@@ -55,7 +59,6 @@ class DataValidator:
         self._source = source
         return
 
-    @_logger.sectioner("Validate Control Center Contents")
     def validate(self):
         self.dir_paths()
         # self.branch_names()

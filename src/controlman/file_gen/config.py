@@ -122,7 +122,6 @@ class ConfigFileGenerator:
             DynamicFile(content=pip_env if pip_full else None, **pip_env_file)
         ]
 
-    @logger.sectioner("Generate GitHub Funding Configuration File")
     def funding(self) -> list[DynamicFile]:
         """
         References
@@ -146,10 +145,8 @@ class ConfigFileGenerator:
             else:
                 output[funding_platform] = users
         file_content = _ps.write.to_yaml_string(data=output, end_of_file_newline=True)
-        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **funding_file)]
 
-    @logger.sectioner("Generate Workflow Requirements Files")
     def tools(self) -> tuple[list[DynamicFile], dict | str | None, dict | str | None]:
         # Collect all environment and config data per env/config file
         env_conda = {}
@@ -294,7 +291,6 @@ class ConfigFileGenerator:
                     )
         return out, pyproject_pkg, pyproject_test
 
-    @logger.sectioner("Generate Issue Template Chooser Configuration File")
     def issue_template_chooser(self) -> list[DynamicFile]:
         if self._is_disabled("issue"):
             return []
@@ -313,10 +309,8 @@ class ConfigFileGenerator:
         if issues.get("contact_links"):
             config["contact_links"] = self._data["issue"]["contact_links"]
         file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
-        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **generate_file)]
 
-    @logger.sectioner("Generate Gitignore File")
     def gitignore(self) -> list[DynamicFile]:
         local_dir = self._data["local.path"]
         file_content = "\n".join(
@@ -327,7 +321,6 @@ class ConfigFileGenerator:
                 f"!{local_dir}/**/README.md",
             ]
         )
-        logger.debug("File content", file_content)
         generated_file = DynamicFile(
             type=DynamicFileType.CONFIG,
             subtype=("gitignore", "Git Ignore"),
@@ -337,7 +330,6 @@ class ConfigFileGenerator:
         )
         return [generated_file]
 
-    @logger.sectioner("Generate Gitattributes File")
     def gitattributes(self) -> list[DynamicFile]:
         if not (self._data["repo.gitattributes"] or self._data_before["repo.gitattributes"]):
             return []
@@ -358,8 +350,6 @@ class ConfigFileGenerator:
             attrs = list(attribute.values())[0]
             attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs).strip()
             file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
-        logger.info("File info", str(file_info))
-        logger.debug("File content", file_content)
         return [DynamicFile(content=file_content, **file_info)]
 
     def citation(self) -> list[DynamicFile]:
@@ -464,7 +454,6 @@ class ConfigFileGenerator:
         file_content = _ps.write.to_yaml_string(data=out, end_of_file_newline=True)
         return [DynamicFile(content=file_content, **generated_file)]
 
-    @logger.sectioner("Generate Codecov Configuration File")
     def validate_codecov_config(self, config: str) -> None:
         try:
             # Validate the config file
@@ -475,5 +464,8 @@ class ConfigFileGenerator:
                 data=config.encode(),
             )
         except _WebAPIError as e:
-            logger.error("Validation of Codecov configuration file failed.", str(e))
+            logger.error(
+                "CodeCov Configuration File Validation",
+                "Validation of Codecov configuration file failed.", str(e)
+            )
         return

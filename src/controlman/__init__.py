@@ -35,7 +35,7 @@ def manager(
             cc_path = repo.repo_path / control_center_path
             if not cc_path.is_dir():
                 raise ValueError(f"Invalid control center path '{cc_path}'")
-            data_before = _ps.NestedDict({})
+            data_before = _ps.NestedDict()
         else:
             data_before = from_json_file(repo_path=repo.repo_path)
             cc_path = repo.repo_path / data_before["control.path"]

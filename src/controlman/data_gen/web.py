@@ -19,7 +19,6 @@ class WebDataGenerator:
         self._process_frontmatter()
         return
 
-    @_logger.sectioner("Website Pages")
     def _process_frontmatter(self) -> None:
         pages = {}
         blog = {}

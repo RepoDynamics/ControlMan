@@ -60,7 +60,6 @@ class PythonPackageFileGenerator:
     def is_disabled(self, key: str):
         return not any(key in source for source in [self._pkg, self._pkg_before])
 
-    @logger.sectioner("Generate Package PEP 561 Typing Marker")
     def typing_marker(self) -> list[DynamicFile]:
         if self.is_disabled("typed"):
             return []
@@ -76,7 +75,6 @@ class PythonPackageFileGenerator:
         )
         return [file]
 
-    @logger.sectioner("Generate Package Requirements File")
     def requirements(self) -> list[DynamicFile]:
         if self.is_disabled("dependency"):
             return []
@@ -106,7 +104,6 @@ class PythonPackageFileGenerator:
             DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
         ]
 
-    @logger.sectioner("Generate Package and Test-Suite Source Files")
     def python_files(self) -> list[DynamicFile]:
         # Generate import name mapping
         mapping = {}
@@ -168,7 +165,6 @@ class PythonPackageFileGenerator:
             )
         return out
 
-    @logger.sectioner("Generate Package __init__.py File")
     def _update_docstring(self, file_content: str, template: str, template_before: str) -> str:
 
         def get_wrapped_docstring(string):
@@ -190,12 +186,10 @@ class PythonPackageFileGenerator:
             docstring_replacement = docstring_before.replace(template_before_wrapped, docstring_text, 1)
         return _pysyntax.modify.update_docstring(file_content, docstring_replacement)
 
-    @logger.sectioner("Generate Package Manifest File")
     def manifest(self) -> list[DynamicFile]:
         if self.is_disabled("manifest"):
             return []
         file_content = "\n".join(self._pkg.get("manifest", []))
-        logger.debug("File content", file_content)
         file = DynamicFile(
             type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
             subtype=("manifest", "Manifest"),
@@ -205,7 +199,6 @@ class PythonPackageFileGenerator:
         )
         return [file]
 
-    @logger.sectioner("Generate Package pyproject.toml File")
     def pyproject(self, tool_config: dict | str | None) -> list[DynamicFile]:
         if tool_config:
             if isinstance(tool_config, str):
@@ -226,7 +219,6 @@ class PythonPackageFileGenerator:
             if tool_config:
                 pyproject["tool"] = tool_config
         file_content = _ps.write.to_toml_string(data=pyproject, sort_keys=False)
-        logger.debug("File content", file_content)
         file = DynamicFile(
             type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
             subtype=("pyproject", "PyProject"),

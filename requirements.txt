@@ -5,9 +5,9 @@ referencing == 0.35.1
 jsonpath-ng == 1.6.1
 ruamel.yaml == 0.17.40
 PyLinks == 0.0.0.dev28
-LoggerMan == 0.0.0.dev43
+LoggerMan == 0.0.0.dev44
 PySerials == 0.0.0.dev18
-GitTidy == 0.0.0.dev36
+GitTidy == 0.0.0.dev37
 PkgData == 0.0.0.dev4
 PyShellMan == 0.0.0.dev4
 PySyntax == 0.0.0.dev3

@@ -20,17 +20,14 @@ class FormGenerator:
     def generate(self) -> list[DynamicFile]:
         return self.issue_forms() + self.discussion_forms() + self.pull_request_templates()
 
-    @logger.sectioner("Generate Issue Forms")
     def issue_forms(self) -> list[DynamicFile]:
         out = []
         forms = self._data.get("issue.forms", [])
         maintainers = self._data.get("maintainer.issue", {})
         paths = []
         for form_idx, form in enumerate(forms):
-            logger.section(f"Issue Form {form_idx + 1}")
             pre_process = form.get("pre_process")
             if pre_process and not pre_process_existence(pre_process):
-                logger.section_end()
                 continue
             form_output = {
                 key: val
@@ -71,8 +68,6 @@ class FormGenerator:
                 )
             )
             paths.append(path)
-            logger.debug("File content", file_content)
-            logger.section_end()
         # Check for outdated issue forms to be removed
         paths.append(_const.FILEPATH_ISSUES_CONFIG)
         outdated_files = self._remove_outdated(
@@ -84,13 +79,11 @@ class FormGenerator:
         out.extend(outdated_files)
         return out
 
-    @logger.sectioner("Generate Discussion Forms")
     def discussion_forms(self) -> list[DynamicFile]:
         out = []
         paths = []
         forms = self._data.get("discussion.category", [])
         for slug, category_data in forms.items():
-            logger.section(f"Discussion Form '{slug}'")
             filename = f"{slug}.yaml"
             path = f"{_const.DIRPATH_DISCUSSIONS}/{filename}"
             file_content = _ps.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
@@ -104,8 +97,6 @@ class FormGenerator:
                 )
             )
             paths.append(path)
-            logger.debug("File content", file_content)
-            logger.section_end()
         outdated_files = self._remove_outdated(
             dir_path=self._repo_path / _const.DIRPATH_DISCUSSIONS,
             include_glob="*.yaml",
@@ -115,13 +106,11 @@ class FormGenerator:
         out.extend(outdated_files)
         return out
 
-    @logger.sectioner("Generate Pull Request Templates")
     def pull_request_templates(self) -> list[DynamicFile]:
         out = []
         paths = []
         templates = self._data.get("pull.template", {})
         for name, file_content in templates.items():
-            logger.section(f"Template '{name}'")
             path = _const.FILEPATH_PULL_TEMPLATE_MAIN if name == "default" else f"{_const.DIRPATH_PULL_TEMPLATES}/{name}.md"
             out.append(
                 DynamicFile(
@@ -133,8 +122,6 @@ class FormGenerator:
                 )
             )
             paths.append(path)
-            logger.debug("File content", file_content)
-            logger.section_end()
         outdated_files = self._remove_outdated(
             dir_path=self._repo_path / _const.DIRPATH_PULL_TEMPLATES,
             include_glob="*.md",
