@@ -312,15 +312,7 @@ class ConfigFileGenerator:
         return [DynamicFile(content=file_content, **generate_file)]
 
     def gitignore(self) -> list[DynamicFile]:
-        local_dir = self._data["local.path"]
-        file_content = "\n".join(
-            self._data.get("repo.gitignore", [])
-            + [
-                f"{local_dir}/**",
-                f"!{local_dir}/**/",
-                f"!{local_dir}/**/README.md",
-            ]
-        )
+        file_content = "\n".join(self._data.get("repo.gitignore", []))
         generated_file = DynamicFile(
             type=DynamicFileType.CONFIG,
             subtype=("gitignore", "Git Ignore"),
