@@ -16,7 +16,7 @@ class CacheManager:
 
     def __init__(
         self,
-        path_local_dir: _Path | str | None = None,
+        path_local_cache: _Path | str | None = None,
         retention_hours: dict[str, float] | None = None,
     ):
 
@@ -38,8 +38,8 @@ class CacheManager:
         self._cache = {}
         self._retention_hours = retention_hours or {}
 
-        if path_local_dir:
-            self._path = _Path(path_local_dir).resolve() / _const.DIRNAME_LOCAL_CACHE / _const.DIRNAME_LOCAL_REPODYNAMICS / _const.FILENAME_METADATA_CACHE
+        if path_local_cache:
+            self._path = _Path(path_local_cache).resolve() / _const.DIRNAME_LOCAL_REPODYNAMICS / _const.FILENAME_METADATA_CACHE
             if not self._path.is_file():
                 log_msg_new_cache("does not exist")
             else:
