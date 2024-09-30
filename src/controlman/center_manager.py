@@ -43,9 +43,9 @@ class CenterManager:
 
         self._path_root = self._git.repo_path
         self._hook_manager = _HookManager(dir_path=self._path_cc / const.DIRNAME_CC_HOOK)
-        local_dir_path = self._data_before.get("local.path")
+        local_cache_path = self._data_before.get("local.cache.path")
         self._cache_manager: CacheManager = CacheManager(
-            path_local_dir=self._path_root / local_dir_path if local_dir_path else None,
+            path_local_cache=self._path_root / local_cache_path if local_cache_path else None,
             retention_hours=self._data_before.get("control.cache.retention_hours", {}),
         )
 
