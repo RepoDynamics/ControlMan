@@ -123,8 +123,10 @@ class RepoDataGenerator:
                 out["interfaces"].append(key.removesuffix("_names").upper())
                 out["has_scripts"] = True
         self._data["project"] = out
-        if curr_branch_latest_version and self._data["pkg"]:
-            self._package_development_status(curr_branch_latest_version)
+        if curr_branch_latest_version:
+            self._data["version"] = str(curr_branch_latest_version)
+            if self._data["pkg"]:
+                self._package_development_status(curr_branch_latest_version)
         return
 
     def _package_development_status(self, ver: _ver.PEP440SemVer) -> None:
