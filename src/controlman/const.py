@@ -7,7 +7,6 @@ These include paths to files and directories in the user repository.
 # ControlMan Constants
 DIRPATH_CC_DEFAULT = ".control"
 
-DIRNAME_LOCAL_CACHE = "cache"
 DIRNAME_LOCAL_REPORT = "reports"
 DIRNAME_LOCAL_REPODYNAMICS = "RepoDynamics"
 
