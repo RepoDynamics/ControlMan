@@ -3198,6 +3198,7 @@ properties:
     properties:
       cache:
         type: object
+        default: { }
         additionalProperties: false
         properties:
           path:
@@ -3206,6 +3207,7 @@ properties:
             default: .local/cache
       report:
         type: object
+        default: { }
         additionalProperties: false
         properties:
           path:
