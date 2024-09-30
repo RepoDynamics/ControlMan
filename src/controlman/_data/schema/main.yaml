@@ -844,6 +844,9 @@ properties:
               raster:
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_light.png
+              ascii:
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+                default: logo/simple.txt
           full:
             type: object
             additionalProperties: false
@@ -859,6 +862,9 @@ properties:
               raster:
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.png
+              ascii:
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+                default: logo/full.txt
       badge:
         $ref: https://docsman.repodynamics.com/schema/element/badge
       footer:
@@ -3190,10 +3196,22 @@ properties:
     additionalProperties: false
     default: { }
     properties:
-      path:
-        title: Path to the local directory.
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: .local
+      cache:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            title: Path to the local cache directory.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: .local/cache
+      report:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            title: Path to the local report directory.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: .local/report
   # Custom
   custom:
     title: User-defined custom metadata and configurations.
@@ -3307,3 +3325,5 @@ properties:
             type: object
             additionalProperties:
               type: string
+  version:
+    type: string
