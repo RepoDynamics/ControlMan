@@ -199,7 +199,7 @@ class CenterManager:
             return self._dirs
         dirs = []
         to_apply = []
-        for path_key in ("theme", "control", "local"):
+        for path_key in ("theme", "control"):
             path, path_before, status = self._compare_dir(f"{path_key}.path")
             dirs.append(
                 _DynamicDir(

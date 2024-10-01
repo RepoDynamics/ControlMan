@@ -153,14 +153,14 @@ class PythonPackageFileGenerator:
                             )
             subtype = filepath.relative_to(self._path_repo / self._path_src)
             subtype_display = str(subtype.with_suffix("")).replace("/", ".")
-            path_src = self._path_src_before or self._path_src
+            fullpath_import_before = self._path_repo / (self._path_import_before or self._path_import)
             out.append(
                 DynamicFile(
                     type=DynamicFileType[f"{self._type.upper()}_SOURCE"],
                     subtype=(str(subtype), subtype_display),
                     content=file_content,
-                    path=str(filepath.relative_to(self._path_repo)),
-                    path_before=str(path_src / filepath.relative_to(self._path_repo / path_src)),
+                    path=str(self._path_import / filepath.relative_to(fullpath_import_before)),
+                    path_before=str(filepath.relative_to(self._path_repo)),
                 )
             )
         return out
