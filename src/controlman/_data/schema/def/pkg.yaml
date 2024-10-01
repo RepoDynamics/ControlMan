@@ -581,7 +581,6 @@ properties:
                     default: |
                       dict(
                         version: "{version}",
-                        version_tuple: {version_tuple},
                         author_date: "{author_date:%Y.%m.%d}",
                         build_date: "{build_date:%Y.%m.%d}",
                         branch: "{branch}",
