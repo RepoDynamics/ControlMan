@@ -82,11 +82,14 @@ class FormGenerator:
     def discussion_forms(self) -> list[DynamicFile]:
         out = []
         paths = []
-        forms = self._data.get("discussion.category", [])
+        forms = self._data.get("discussion.category", {})
         for slug, category_data in forms.items():
+            form = category_data.get("form")
+            if not form:
+                continue
             filename = f"{slug}.yaml"
             path = f"{_const.DIRPATH_DISCUSSIONS}/{filename}"
-            file_content = _ps.write.to_yaml_string(data=category_data["form"], end_of_file_newline=True)
+            file_content = _ps.write.to_yaml_string(data=form, end_of_file_newline=True)
             out.append(
                 DynamicFile(
                     type=DynamicFileType.DISCUSSION_FORM,
