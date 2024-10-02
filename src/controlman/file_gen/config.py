@@ -31,6 +31,7 @@ class ConfigFileGenerator:
             + self.generate_codeowners()
             + self.citation()
             + self.web_requirements()
+            + self.web_toc()
             + self.funding()
             + tools_out
             + self.issue_template_chooser()
@@ -84,6 +85,21 @@ class ConfigFileGenerator:
             "path_before": self._data_before["license.path"],
         }
         return [DynamicFile(**license_file)]
+
+    def web_toc(self) -> list[DynamicFile]:
+        if self._is_disabled("web.toc"):
+            return []
+        toc_file = {
+            "type": DynamicFileType.WEB_CONFIG,
+            "subtype": ("toc", "Table of Contents"),
+            "path": f"{self._data["web.path.root"]}/{self._data["web.path.source"]}/{self._data["web.toc.path"]}" if self._data["web.toc"] else None,
+            "path_before": f"{self._data_before["web.path.root"]}/{self._data_before["web.path.source"]}/{self._data_before["web.toc.path"]}" if self._data_before["web.toc"] else None,
+        }
+        toc = self._data["web.toc"]
+        if not toc:
+            return [DynamicFile(**toc_file)]
+        toc_content = _ps.write.to_yaml_string(data={k: v for k, v in toc.items() if k != "path"}, end_of_file_newline=True)
+        return [DynamicFile(content=toc_content, **toc_file)]
 
     def web_requirements(self) -> list[DynamicFile]:
         if self._is_disabled("web"):
