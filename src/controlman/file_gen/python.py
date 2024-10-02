@@ -208,7 +208,7 @@ class PythonPackageFileGenerator:
             tool_config["project"] = self.pyproject_project()
             tool_config["build-system"] = self.pyproject_build_system()
             for build_tool_name, build_tool_config in self._pkg["build"].get("tool", {}).items():
-                tool_config[build_tool_name] = build_tool_config
+                tool_config["tool"][build_tool_name] = build_tool_config
             pyproject = tool_config
         else:
             pyproject = {
