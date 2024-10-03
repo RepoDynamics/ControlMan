@@ -516,6 +516,12 @@ properties:
                         title: Include namespaces
                         type: boolean
                         default: true
+              cmdclass:
+                title: Command classes
+                type: object
+                default:
+                  build_py: versioningit.cmdclass.build_py
+                  sdist: versioningit.cmdclass.sdist
           versioningit:
             title: Versioningit
             type: object
@@ -549,13 +555,13 @@ properties:
                 properties:
                   distance:
                     type: string
-                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}'
+                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{rev}'
                   dirty:
                     type: string
-                    default: '{base_version}+0.{committer_date:%Y.%m.%d}.{revision}.dirty'
+                    default: '{base_version}+0.{committer_date:%Y.%m.%d}.{rev}.dirty'
                   distance-dirty:
                     type: string
-                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{revision}.dirty'
+                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{rev}.dirty'
               onbuild:
                 type: object
                 default: { }
@@ -566,27 +572,28 @@ properties:
                     default: replace-version
                   regex:
                     type: string
-                    default: '^\\s*__version_details__\\s*=\\s*(?P<version>.*)'
+                    default: '^__version_details__: dict\\[str, str\\] = (?P<version>.*)'
                   require-match:
                     type: boolean
                     default: true
                   source-file:
                     type: string
-                    default: '${{ .....path.import }}/__init__.py'
+                    default: '${{ .....path.source }}/${{ .....import_name }}/__init__.py'
                   build-file:
                     type: string
                     default: '${{ .....import_name }}/__init__.py'
                   replacement:
                     type: string
                     default: |
-                      dict(
-                        version: "{version}",
-                        author_date: "{author_date:%Y.%m.%d}",
-                        build_date: "{build_date:%Y.%m.%d}",
-                        branch: "{branch}",
-                        distance: "{distance}",
-                        head_commit_hash: "{revision}",
-                      )
+                      {{
+                          "version": "{version}",
+                          "build_date": "{build_date:%Y.%m.%d}",
+                          "committer_date": "{committer_date:%Y.%m.%d}",
+                          "author_date": "{author_date:%Y.%m.%d}",
+                          "branch": "{branch}",
+                          "distance": "{distance}",
+                          "commit_hash": "{revision}",
+                      }}
     required: [ requires ]
   pypi:
     title: URLs of the project's PyPI package.
