@@ -572,7 +572,7 @@ properties:
                     default: replace-version
                   regex:
                     type: string
-                    default: '^__version_details__: dict\\[str, str\\] = (?P<version>.*)'
+                    default: '^__version_details__: dict\[str, str\] = (?P<version>.*)'
                   require-match:
                     type: boolean
                     default: true
