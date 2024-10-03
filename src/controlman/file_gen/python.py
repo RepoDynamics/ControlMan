@@ -240,19 +240,18 @@ class PythonPackageFileGenerator:
         return output
 
     def pyproject_project(self) -> dict:
+        readme = _Path(self._pkg["readme.path"]).name if self._pkg["readme.path"] else None
+        license = {"file": _Path(self._data["license.path"]).name} if self._data["license.path"] else None
         data = {
             "name": ("str", self._pkg["name"]),
             "description": ("str", self._data["title"]),
             "keywords": ("array", self._data["keywords"]),
             "classifiers": ("array", self._pkg["classifiers"]),
-            "license": (
-                "inline_table",
-                {"file": self._data["license.path"]} if self._data["license.path"] else None,
-            ),
+            "license": ("inline_table", license),
             "urls": ("table", self._pkg["urls"]),
             "authors": ("array_of_inline_tables", self.pyproject_project_authors),
             "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
-            "readme": ("str", self._pkg["readme.path"]),
+            "readme": ("str", readme),
             "requires-python": ("str", self._pkg["python.version.spec"]),
             "dependencies": ("array", self.pyproject_project_dependencies),
             "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),
