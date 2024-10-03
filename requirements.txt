@@ -7,7 +7,7 @@ ruamel.yaml == 0.17.40
 PyLinks == 0.0.0.dev33
 LoggerMan == 0.0.0.dev49
 PySerials == 0.0.0.dev23
-GitTidy == 0.0.0.dev44
+GitTidy == 0.0.0.dev45
 PkgData == 0.0.0.dev5
 PyShellMan == 0.0.0.dev10
 PySyntax == 0.0.0.dev3
