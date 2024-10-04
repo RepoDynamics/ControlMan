@@ -176,6 +176,7 @@ class RepoDataGenerator:
                         "name": f"{prefix}{label['suffix']}",
                         "description": label["description"],
                         "color": color,
+                        "prefix": prefix,
                     }
                 )
         for group_name, group in self._data.get("label.custom.group", {}).items():
@@ -190,6 +191,7 @@ class RepoDataGenerator:
                         "name": f"{prefix}{label['suffix']}",
                         "description": label["description"],
                         "color": color,
+                        "prefix": prefix,
                     }
                 )
         for label_id, label_data in self._data.get("label.custom.single", {}).items():
@@ -201,20 +203,23 @@ class RepoDataGenerator:
                     "name": label_data["name"],
                     "description": label_data["description"],
                     "color": label_data["color"],
+                    "prefix": "",
                 }
             )
         for autogroup_name, release_key in (("version", "versions"), ("branch", "branches")):
             entries = self._data.get(f"project.{release_key}", [])
             label_data = self._data[f"label.{autogroup_name}"]
             for entry in entries:
+                prefix = label_data['prefix']
                 out.append(
                     {
                         "type": "auto",
                         "group_name": autogroup_name,
                         "id": entry,
-                        "name": f"{label_data['prefix']}{entry}",
+                        "name": f"{prefix}{entry}",
                         "description": label_data["description"],
                         "color": label_data["color"],
+                        "prefix": prefix,
                     }
                 )
         self._data["label.all"] = out
