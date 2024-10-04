@@ -114,10 +114,11 @@ class RepoDataGenerator:
                 if info_key != "branch":
                     out.setdefault(info_key, []).extend(info)
         for key, val in out.items():
-            out[key] = sorted(
-                set(val),
-                key=lambda x: x if key!="python_versions_minors" else tuple(map(int, x.split(".")))
-            )
+            if key != "version":
+                out[key] = sorted(
+                    set(val),
+                    key=lambda x: x if key!="python_versions" else tuple(map(int, x.split(".")))
+                )
         for key in ("cli_names", "gui_names", "api_names"):
             if key in out:
                 out["interfaces"].append(key.removesuffix("_names").upper())
