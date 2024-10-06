@@ -244,8 +244,8 @@ class PythonPackageFileGenerator:
         license = {"file": _Path(self._data["license.path"]).name} if self._data["license.path"] else None
         data = {
             "name": ("str", self._pkg["name"]),
-            "description": ("str", self._data["title"]),
-            "keywords": ("array", self._data["keywords"]),
+            "description": ("str", self._pkg["description"]),
+            "keywords": ("array", self._pkg["keywords"]),
             "classifiers": ("array", self._pkg["classifiers"]),
             "license": ("inline_table", license),
             "urls": ("table", self._pkg["urls"]),

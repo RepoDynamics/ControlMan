@@ -101,7 +101,7 @@ properties:
   roles:
     title: Roles of the person in the project.
     description: |
-      Define all roles in the project in [`role`](#cc.role),
+      Define all roles in the project in [`role`](#ccc-role),
       and use them here with templating.
     examples:
       - [ '${{ role.concept}}' ]

@@ -130,6 +130,39 @@ properties:
       your package `My-Package`, and the import name will be `my_package`.
     type: string
     pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
+  description:
+    title: Package Description
+    description: |
+      A single-line description or slogan of the package.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+
+      The description is added to the package metadata (see the
+      [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
+      key of the `pyproject.toml` file) and is used by indexing services and package managers
+      to provide a brief overview of the package.
+      For example, it is displayed on the package's homepage on PyPI and TestPyPI.
+      :::
+    default: ${{ title }}
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  keywords:
+    title: Keywords
+    description: |
+      Keywords categorizing the package.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      
+      Keywords are added to the package metadata (see the
+      [`project.keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
+      key of the `pyproject.toml` file) and are used by indexing services and package managers
+      to categorize the package and make it easier to find.
+      For example, they are displayed on the package's homepage on PyPI and TestPyPI,
+      and can be used to filter packages in search results.
+      :::
+    default: ${{ keywords }}
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   classifiers:
     title: |
       Project's [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers).
@@ -137,7 +170,7 @@ properties:
       The main classifiers are automatically generated based on the project's metadata.
       These are:
       - `Development Status`: Based on the latest version tag on the branch. 
-      - `License`: Based on [`license.id`](#cc.license.id), for supported licenses. 
+      - `License`: Based on [`license.id`](#ccc-license.id), for supported licenses. 
       - `Operating System`: Based on the provided [`os`](#cc-def.pkg_config.os) configurations.
       - `Programming Language`: Based on the provided [`python.version`](#cc-def.pkg_config.python.version.spec) configurations.
       - `Typed`: Based on [`typed`](#cc-def.pkg_config.typed).

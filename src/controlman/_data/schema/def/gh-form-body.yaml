@@ -22,17 +22,17 @@ description: |
     `${‎{ package.releases.branch_names }}` (for branch).
     It makes sense to add version to forms that concern an issue with the package,
     and branch to forms for package-independent issues.
-    When branch is set, {{ pp_meta.name }} parses the the user input
+    When branch is set, {{ ccc.name }} parses the the user input
     and automatically adds the corresponding [branch labels](../label/index.md#branches)
     to each issue that is created using the form.
-    Similarly, when version is set, {{ pp_meta.name }} determines the branch
+    Similarly, when version is set, {{ ccc.name }} determines the branch
     hosting each selected version, and automatically adds both
     [version labels](../label/index.md#versions) and branch labels to each issue.
     During the triage process, the maintainers can add or remove version/branch labels
     as needed; for example, the user may have selected only one version where they encountered the issue,
     but during the triage process, the maintainers may determine that the issue affects multiple versions.
     Subsequently, when the issue is labeled as [in development](../label/index.md#statuses),
-    {{ pp_meta.name }} automatically creates a new development branch from each branch that is labeled.
+    {{ ccc.name }} automatically creates a new development branch from each branch that is labeled.
   - The value of the `label` key for each element that defines it (i.e., all but the `markdown` element)
     must be unique across all form elements.
     This is needed for the [post-processing](#post-processing) step,

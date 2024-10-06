@@ -5,7 +5,7 @@ description: |
   This section contains a full reference and detailed explanation of all
   available options in your repository's control center.
   These are divided into two categories: **non-extendable** and **extendable** options.
-  Non-extendable options are those that are required by {{ pp_meta.name }}
+  Non-extendable options are those that are required by {{ ccc.name }}
   during workflow initialization, and thus cannot be extended from other repositories.
   These are all stored in YAML files at the root of your repository's control center directory.
   Extendable options, on the other hand, are those that can be freely extended from other repositories,
@@ -37,24 +37,27 @@ type: object
 required: [ theme, repo, branch, control ]
 properties:
   name:
-    title: Name of the project.
+    title: Name
     description: |
-      If not provided (recommended), this is automatically derived from the repository name
+      Name of the project.
+      If not provided (recommended), it is automatically derived from the repository name
       by replacing all hyphens with spaces.
 
       :::{admonition} Usage
       :class: dropdown note
-      This is used to dynamically reference the project name in various places,
+      
+      The name is used to dynamically reference the project in various places,
       such as documentation website, citation data, README files, and community health files.
-      It is also used to derive the [package name](#cc.pkg.name) when not explicitly specified.
+      It is also used to derive the [package name](#ccc-pkg-name) when not explicitly specified.
       :::
 
       :::{admonition} Best Practices
       :class: dropdown tip
+      
       The project name on itself has no restrictions and can be any valid unicode string.
       However, by default, it is also used to derive the 
-      distribution name (cf. [`pkg.name`](#cc.pkg.name))
-      and import name (cf. [`pkg.import_name`](#cc.pkg.import_name)) of the package,
+      [distribution name](#ccc-pkg-name)
+      and [import name](#ccc-pkg-import_name) of the package,
       which have stricter naming specifications.
       While you can separately set these to different values,
       for consistency, it is recommended to **choose a project name
@@ -64,90 +67,151 @@ properties:
     default_auto: |
       repository name (hyphens replaced with spaces)
     templating: load
+    examples:
+      - MyProject
+      - My Project
+      - My-New-Project
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
-    title: A single-line description or slogan of the project.
+    title: Title
     description: |
+      A single-line description or slogan of the project.
+      
       :::{admonition} Usage
       :class: dropdown note
 
-      The title is automatically added to the project's [`citation`](#cc.citation) and package metadata,
-      and is displayed on the About section of the project's GitHub, 
-      (cf. [`repo.description`](#cc.repo.description)),
-      PyPI, and TestPyPI repositories
-      (cf. [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
-      key of the `pyproject.toml` file). It is also used in various other places,
-      such as `title` HTML attributes of project logos and links.
+      By default, the title is added to the project's [citation](#ccc-citation-title),
+      [package](#ccc-pkg-description), and [repository](#ccc-repo-description) metadata.
+      It is also used in various other places,
+      such as `title` HTML attributes of project logos and links. 
       :::
+    examples:
+      - Effortless Scientific Computation and Data Analysis in Python
+      - Streamlined Sequence Analysis and Genomic Data Processing in Python
+      - Powerful Tools for Simulating Complex Engineering Systems
+      - Your Python Solution for Secure and Scalable Network Management
+      - Python Tools for Quantum Mechanics Simulations and Research
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   abstract:
-    title: A short description of the project.
+    title: Abstract
     description: |
+      A short description of the project.
       It can contain GitHub Flavored Markdown and HTML syntax,
       for example, to make text bold, italic, or to add hyperlinks.
 
       :::{admonition} Usage
       :class: dropdown note
-      This is automatically added to the project's [`citation`](#cc.citation.abstract) data,
-      and displayed on the repository's [`README`](#cc.readme.github) file,
+      
+      The abstract is automatically added to the project's [`citation`](#ccc-citation-abstract) data,
+      and displayed on the repository's [`README`](#ccc-readme-main) file,
       on the homepage of the project's website,
       on the project's PyPI and TestPyPI pages
-      (cf. [`readme.pypi`](#cc.readme.pypi)),
+      (cf. [`pkg.readme`](#ccc-pkg-readme)),
       and on the package's main docstring
-      (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
-      On online platforms, the first occurrence of the project's name in this text
-      is automatically styled as bold/italic and linked to the project's website.
+      (cf. [`pkg.file.*.docstring`](#ccc-pkg-file--wildcard--docstring)).
       :::
+    examples:
+      - |
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        Aliquam sit amet quam varius, pulvinar erat a, porta urna.
+        Integer eu mollis nisl. Pellentesque habitant morbi tristique senectus
+        et netus et malesuada fames ac turpis egestas.
+        Sed feugiat sem nec felis luctus vehicula.
+        Nam sit amet commodo lacus, sed varius sem. Vivamus at urna auctor,
+        tristique erat a, iaculis nulla. Integer eget tincidunt justo. 
+        Phasellus sit amet massa et leo porta mollis. 
+        Ut venenatis magna orci, in pellentesque dui convallis non. 
+        Etiam aliquam ante eu iaculis fermentum. 
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+        Nullam tristique efficitur lorem, semper sollicitudin mauris aliquet vel. 
+        Interdum et malesuada fames ac ante ipsum primis in faucibus. 
+        Cras eros risus, viverra ut lectus nec, lobortis rhoncus felis.
     $ref: https://jsonschemata.repodynamics.com/string/nonempty
   keywords:
-    title: Keywords categorizing the project.
+    title: Keywords
     description: |
+      Keywords categorizing the project.
+      
       :::{admonition} Usage
       :class: dropdown note
-      Keywords are automatically added to project citation data
-      (cf. [`citation.keywords`](#cc.citation.keywords)),
-      the GitHub repository (cf. [`repo.topics`](#cc.repo.topics)), 
-      and package metadata (cf. `pyproject.toml` file's
-      [`keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords) metadata),
+      
+      Keywords are automatically added to project [citation data](#ccc-citation-keywords),
+      [GitHub repository](#ccc-repo-topics), and [package metadata](#ccc-pkg-keywords),
       helping to make the project easier to discover.      
       :::
+    examples:
+      - Python
+      - Data Analysis
+      - Machine Learning
+      - Computer-Aided Design
+      - Scientific Computing
     $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   highlights:
-    title: Key features of the project.
+    title: Highlights
     description: |
+      Key features of the project.
+      
       :::{admonition} Usage
       :class: dropdown note
-      These are automatically displayed on the repository's main README file
-      (cf. [`readme.github`](#cc.readme.github)),
-      on the homepage of the project's website,
-      and on the project's PyPI and TestPyPI pages
-      (cf. [`readme.pypi`](#cc.readme.pypi)).
+      
+      By default, project highlights are included
+      in the [repository](#ccc-readme-main) and [package](#ccc-pkg-readme) README files,
+      as well as on the project's website.
       :::
+    examples:
+      - - title: Easy Installation
+          description: |
+            Install the package with a single command.
+        - title: Powerful Tools
+          description: |
+            A set of powerful tools for data analysis.
+        - title: Scalable
+          description: |
+            Scalable to large datasets and high-performance computing.
     type: array
     uniqueItems: true
     items:
       title: Highlight
+      description: |
+        A key feature of the project.
+        Each highlight must contain a `title` and a `description`.
       type: object
       additionalProperties: false
       required: [ title, description ]
       properties:
         title:
-          title: Title of the feature.
+          title: Title
+          description: Title of the project feature.
           $ref: https://jsonschemata.repodynamics.com/string/oneline
         description:
-          title: Description of the feature.
+          title: Description
+          description: Description of the project feature.
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
   license:
-    title: License of the project.
+    title: License
     description: |
+      License of the project.
       You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
       by providing its `id`, or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
       When a supported `id` is set, all other keys are filled automatically.
       Nevertheless, you can still override any key by providing the corresponding custom value.
       The license is then automatically incorporated into the project.
-
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      
+      After customizing the license with the project's [copyright notice](#ccc-copyright-notice):
+      
+      - A license file is added to the repository, where GitHub can recognize and display it.
+      - The license file is incorporated in all package releases.
+      - License identifiers are added to the package metadata.
+      - Full license and copyright information are featured on the documentation website.
+      - A license and copyright notice is included in library source files.
+      :::
+      
       :::{admonition} Open Source Licenses
       :class: dropdown seealso
+      
       For more information about open-source licenses, see:
       - [SPDX License List](https://spdx.org/licenses/)
       - [Open Source Initiative](https://opensource.org/license)
@@ -199,7 +263,7 @@ properties:
           :::{admonition} Usage
           :class: dropdown note
           This is automatically added to package metadata
-          (cf. [`pkg.classifiers`](#cc.pkg.classifiers))
+          (cf. [`pkg.classifiers`](#ccc-pkg.classifiers))
           to help PyPI better categorize your package,
           so that users can find your package when searching for packages with a specific license.
           :::
@@ -218,7 +282,7 @@ properties:
           :::{admonition} Usage
           :class: dropdown note
           This is automatically added to the main docstring of the package
-          (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)).
+          (cf. [`pkg.file.*.docstring`](#ccc-pkg.file.*.docstring)).
           :::
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       path:
@@ -240,7 +304,7 @@ properties:
       url:
         title: |
           URL of the repository's license file.
-          (cf. [`license`](#cc.license)).
+          (cf. [`license`](#ccc-license)).
         default: ${{ repo.url.blob }}/${{ license.path }}
         examples:
           - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
@@ -250,11 +314,11 @@ properties:
     description: |
       :::{admonition} Usage
       :class: dropdown note
-      The copyright [`notice`](#cc.copyright.notice)
+      The copyright [`notice`](#ccc-copyright.notice)
       is automatically included in several places,
       such as the license texts (when a pre-defined license is used),
-      the main docstring of the package (cf. [`pkg.file.*.docstring`](#cc.pkg.file.*.docstring)),
-      and the footer of website and documentation files (cf. [`theme.footer`](#cc.theme.footer)).
+      the main docstring of the package (cf. [`pkg.file.*.docstring`](#ccc-pkg.file.*.docstring)),
+      and the footer of website and documentation files (cf. [`theme.footer`](#ccc-theme.footer)).
       :::
     examples:
       - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
@@ -272,6 +336,8 @@ properties:
         title: Copyright notice.
         description: |
           This is the final form of the notice that will be displayed.
+          
+          - A short copyright notice is added to the footer of all README files.
         default: ${{ copyright.period }} ${{ team.owner.name.full }}
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
@@ -281,7 +347,7 @@ properties:
         title: Year period to use in the copyright notice.
         description: |
           If not provided, it will be automatically set
-          using the value of [`start_year`](#cc.copyright.start_year), as follows:
+          using the value of [`start_year`](#ccc-copyright.start_year), as follows:
           - If `start_year` is the same as the current year, 
             the period is set to the current year, e.g., `2024`.
           - If `start_year` is before the current year,
@@ -291,7 +357,7 @@ properties:
       start_year:
         title: Start year of the project.
         description: |
-          This can be used to dynamically set the [`period`](#cc.copyright.period).
+          This can be used to dynamically set the [`period`](#ccc-copyright.period).
         default_auto: repository creation year
         type: integer
         minimum: 1980
@@ -305,7 +371,7 @@ properties:
 
       :::{admonition} Usage
       :class: dropdown note
-      You can attribute roles to [`team`](#cc.team) members (cf. [`entity.roles`](#cc-def.entity.roles)),
+      You can attribute roles to [`team`](#ccc-team) members (cf. [`entity.roles`](#cc-def.entity.roles)),
       which will then be displayed on the project's website and citation data.
       :::
     type: object
@@ -334,18 +400,18 @@ properties:
     description: |
       For each person (copyright holder, author, maintainer, research group, institution, etc.),
       define a key-value pair, where the key is the ID of the person
-      ([`owner`](#cc.team.owner)) is pre-defined).
+      ([`owner`](#ccc-team.owner)) is pre-defined).
       The ID can then be used to reference the person in other configurations
       using templating
-      (e.g. see [`maintainer`](#cc.maintain) and [`citation`](#cc.citation)).
+      (e.g. see [`maintainer`](#ccc-maintain) and [`citation`](#ccc-citation)).
       Also, the information of each person can be used directly
-      (e.g. see [`copyright.notice`](#cc.copyright.notice)).
+      (e.g. see [`copyright.notice`](#ccc-copyright.notice)).
 
       :::{admonition} Automatic Data Filling
       :class: important
 
       For any person added here, additional information will be automatically filled
-      from web APIs, if available (see [`entity`](#cc.def.entity)).
+      from web APIs, if available (see [`entity`](#ccc-def.entity)).
 
       Only provide `username`; other keys are automatically fetched from the
       [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
@@ -359,17 +425,17 @@ properties:
       If `github.user` is provided, any of the following keys that is not provided will be automatically filled
       with information from the GitHub API, if available
       (cf. [Personalizing your profile on GitHub](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile)):
-      - [`name`](#cc.def.entity.name)
-      - [`bio`](#cc.def.entity.bio)
-      - [`affiliation`](#cc.def.entity.affiliation)
-      - [`avatar`](#cc.def.entity.avatar)
-      - [`email`](#cc.def.entity.email)
-      - [`website`](#cc.def.entity.website)
-      - [`orcid`](#cc.def.entity.orcid)
-      - [`researchgate`](#cc.def.entity.researchgate)
-      - [`linkedin`](#cc.def.entity.linkedin)
-      - [`twitter`](#cc.def.entity.twitter)
-      - [`city`](#cc.def.entity.city)
+      - [`name`](#ccc-def.entity.name)
+      - [`bio`](#ccc-def.entity.bio)
+      - [`affiliation`](#ccc-def.entity.affiliation)
+      - [`avatar`](#ccc-def.entity.avatar)
+      - [`email`](#ccc-def.entity.email)
+      - [`website`](#ccc-def.entity.website)
+      - [`orcid`](#ccc-def.entity.orcid)
+      - [`researchgate`](#ccc-def.entity.researchgate)
+      - [`linkedin`](#ccc-def.entity.linkedin)
+      - [`twitter`](#ccc-def.entity.twitter)
+      - [`city`](#ccc-def.entity.city)
 
 
 
@@ -387,7 +453,7 @@ properties:
           The `github` key is always automatically filled with information from the GitHub API.
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
-          in the GitHub API (cf. [`entity`](#cc.def.entity)).
+          in the GitHub API (cf. [`entity`](#ccc-def.entity)).
         $ref: https://controlman.repodynamics.com/schema/entity
     additionalProperties:
       title: A natural person or entity involved in the project.
@@ -403,7 +469,7 @@ properties:
       as well as package metadata.
 
       Each maintainer must be defined as an [`entity`](#cc-def.entity) object.
-      It is recommended to define all maintainers in [`team`](#cc.team),
+      It is recommended to define all maintainers in [`team`](#ccc-team),
       and reference them here (and elsewhere) using templating.
     type: object
     additionalProperties: false
@@ -422,7 +488,7 @@ properties:
             description: |
               This is used to automatically maintain the
               [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file (cf. [`doc.code_owners`](#cc.doc.code_owners)),
+              file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
               which will then be used to automatically assign reviewers to pull requests
               based on the modified files.
               For each path or glob pattern, add a key-value pair,
@@ -465,7 +531,7 @@ properties:
             title: |
               URL of the repository's code owners,
               i.e., the `CODEOWNERS` file
-              (cf. [`readme.code_owners`](#cc.readme.code_owners)).
+              (cf. [`readme.code_owners`](#ccc-readme.code_owners)).
             default: ${{ repo.url.blob }}/${{ maintainer.code_owners.path }}
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
@@ -473,8 +539,8 @@ properties:
       issue:
         title: Assignees of project issues.
         description: |
-          For each issue form defined in [`issue.forms`](#cc.issue.forms),
-          add a key-value pair where the key is the issue form's [`id`](#cc.issue.forms[i].id),
+          For each issue form defined in [`issue.forms`](#ccc-issue.forms),
+          add a key-value pair where the key is the issue form's [`id`](#ccc-issue.forms[i].id),
           and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
         examples:
           - app_bug_api: [ '${{ team.owner }}' ]
@@ -487,8 +553,8 @@ properties:
         title: Assignees of project discussions.
         description: |
           For each discussion category form defined in
-          [`discussion.category.*.form`](#cc.discussion.category.*.form),
-          add a key-value pair where the key is the category's [slug](#cc.discussion.category),
+          [`discussion.category.*.form`](#ccc-discussion.category.*.form),
+          add a key-value pair where the key is the category's [slug](#ccc-discussion.category),
           and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
         examples:
           - announcements: [ '${{ team.some_maintainer_id }}', '${{ team.some-other-maintainer-id }}' ]
@@ -523,8 +589,8 @@ properties:
       This is primarily used to automatically maintain a
       [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
       ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
-      However, information that are only defined here, such as [`authors`](#cc.citation.authors),
-      [`contacts`](#cc.citation.contacts), and [`preferred_citation`](#cc.citation.preferred_citation),
+      However, information that are only defined here, such as [`authors`](#ccc-citation.authors),
+      [`contacts`](#ccc-citation.contacts), and [`preferred_citation`](#ccc-citation.preferred_citation),
       are also used in other places, such as the project's website, README, and package metadata.
       :::
 
@@ -583,7 +649,7 @@ properties:
         title: Project's contact persons.
         description: |
           It is recommended to define the persons in 
-          [`team`](#cc.team) and reference them here using templating.
+          [`team`](#ccc-team) and reference them here using templating.
         default: [ '${{ team.owner }}' ]
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
@@ -654,7 +720,7 @@ properties:
         examples:
           - A custom description of the project that can span multiple lines.
       license:
-        title: SPDX license ID of the project (cf. [`license.id`](#cc.license.id)).
+        title: SPDX license ID of the project (cf. [`license.id`](#ccc-license.id)).
         default: ${{ license.id }}
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       license_url:
@@ -820,7 +886,7 @@ properties:
       logo:
         title: Logo of the project.
         description: |
-          All values must be filenames of files in the [media](#cc.theme.path) directory.
+          All values must be filenames of files in the [media](#ccc-theme.path) directory.
         type: object
         additionalProperties: false
         default: { }
@@ -870,8 +936,8 @@ properties:
       footer:
         title: Configurations of project's footer.
         description: |
-          The footer is automatically added to the project's [README](#cc.readme) and
-          [community health files](#cc.health).
+          The footer is automatically added to the project's [README](#ccc-readme) and
+          [community health files](#ccc-health).
         oneOf:
           - type: string
           - $ref: https://docsman.repodynamics.com/schema
@@ -1065,7 +1131,7 @@ properties:
                 description: |
                   Path to the
                   [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-                  file (cf. [`doc.support`](#cc.doc.support)).
+                  file (cf. [`doc.support`](#ccc-doc.support)).
 
                   This file must be named `SUPPORT` (case-sensitive)
                   and placed either in the `.github` directory, the `docs` directory,
@@ -1148,7 +1214,7 @@ properties:
           Note that not all keys are explicitly listed in the schema,
           but any valid key can still be added here. However, there are some exceptions:
           - [`extensions`](https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions)
-            are automatically added based on the definitions in [`extension`](#cc.web.extension),
+            are automatically added based on the definitions in [`extension`](#ccc-web.extension),
             and should not be set here.
         type: object
         additionalProperties: false
@@ -1187,7 +1253,7 @@ properties:
                 description: |
                   When not set (recommended),
                   this is determined at build time from the latest
-                  [version tag](#cc.tag.version) in the branch.
+                  [version tag](#ccc-tag.version) in the branch.
                 type: string
                 default_auto: determined from git tags
               release:
@@ -1195,7 +1261,7 @@ properties:
                 description: |
                   When not set (recommended),
                   this is determined at build time from the latest
-                  [version tag](#cc.tag.version) in the branch.
+                  [version tag](#ccc-tag.version) in the branch.
                 type: string
                 default_auto: determined from git tags
               needs_sphinx:
@@ -1203,7 +1269,7 @@ properties:
                 description: |
                   The version must be in the form of `major.minor`,
                   where `major` and `minor` are integers.
-                  This is automatically determined from the [`dependency`](#cc.web.sphinx.dependency) definition.
+                  This is automatically determined from the [`dependency`](#ccc-web.sphinx.dependency) definition.
                 type: string
                 default: '7.3'
               today_fmt:
@@ -1924,10 +1990,10 @@ properties:
                 or one of the [primary custom commit types](../commit/index.md#primary-custom-types).
 
                 This is used to correlate each issue in the repository with a primary commit type:
-                {{ pp_meta.name }} automatically adds the corresponding primary type label
+                {{ ccc.name }} automatically adds the corresponding primary type label
                 to each issue that is created using the form.
                 Subsequently, when a development branch is merged into a release branch,
-                {{ pp_meta.name }} first determines the corresponding issue of the branch from the branch name,
+                {{ ccc.name }} first determines the corresponding issue of the branch from the branch name,
                 and then ascertains the corresponding primary commit type from the issue's primary type label,
                 in order to decide which actions to perform on the release branch.
               type: string
@@ -1937,7 +2003,7 @@ properties:
                 If two or more forms are assigned the same [primary type](#primary-type),
                 they must each define a unique subtype.
                 The subtype must match the key of one of the [subtype labels](../label/index.md#subtypes).
-                {{ pp_meta.name }} automatically adds the corresponding subtype label
+                {{ ccc.name }} automatically adds the corresponding subtype label
                 to each issue that is created using the form,
                 and uses that with conjunction with the primary type label
                 to unambiguously identify the form that was used to create each issue in the repository.
@@ -1948,7 +2014,7 @@ properties:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
                 when certain conditions are met. Instead of you having to manually modify issue forms
-                each time one of these conditions changes, {{ pp_meta.name }} allows you to dynamically
+                each time one of these conditions changes, {{ ccc.name }} allows you to dynamically
                 define conditions for each form and each of its elements, so that they are automatically
                 added/removed according to the specified conditions. This is done by adding a `pre_process`
                 key either to the form itself, or to specific elements of the form. The value of the
@@ -1964,7 +2030,7 @@ properties:
                 in Python, thus for example, `0`, `0.0`, `""`, `[]`, `{}`, and `null` all evaluate to `False`,
                 while any non-zero number, non-empty string, non-empty list, and non-empty dictionary evaluates to `True`.
 
-                For example, in {{ pp_meta.name }}'s default configurations, there are three separate issue forms
+                For example, in {{ ccc.name }}'s default configurations, there are three separate issue forms
                 defined for reporting bugs in the package's API, GUI, and CLI. However, your package may only have
                 some of these interfaces, in which case it makes sense to only show the corresponding issue forms
                 when the corresponding interfaces are present. This is achieved by adding a condition to each form.
@@ -1975,7 +2041,7 @@ properties:
               $ref: https://controlman.repodynamics.com/schema/gh_form-preprocess
             post_process:
               description: |
-                {{ pp_meta.name }} allows you to define post-processing instructions for each form,
+                {{ ccc.name }} allows you to define post-processing instructions for each form,
                 which are executed after an issue is created using the form.
 
                 Issues that are created using GitHub's issue forms are visually not very appealing,
@@ -1983,7 +2049,7 @@ properties:
                 and adds the user input underneath, without any formatting.
                 Moreover, there may be some elements that are only meant for the submission step,
                 and are not meant to be displayed in the issue body (e.g., checkboxes for agreeing with terms and conditions).
-                Therefore, {{ pp_meta.name }} allows you to define a template for the issue body,
+                Therefore, {{ ccc.name }} allows you to define a template for the issue body,
                 which is used to reformat the issue body after the issue is created.
                 The template must be defined as a string representing valid Markdown and/or HTML syntax,
                 where the user input for each form element is referenced (similiar to Python strings)
@@ -2034,7 +2100,7 @@ properties:
                   description: |
                     You may want to ask the person who created an issue whether they would like to contribute
                     to the resolution of the issue, and if so, add them as an assignee to the issue.
-                    {{ pp_meta.name }} allows you to do this automatically; first you need to add a `checkbox` element
+                    {{ ccc.name }} allows you to do this automatically; first you need to add a `checkbox` element
                     to the form, which asks the user whether they would like to be added as an assignee.
                     Then, add a key `assign_creator` to the `post_process` object of the form, and under that,
                     add a key `if_checkbox` whose value must be an object with a key `id`,
@@ -2389,7 +2455,7 @@ properties:
     additionalProperties: false
     properties:
       description:
-        title: A short project description (cf. [`title`](#cc.title)).
+        title: A short project description (cf. [`title`](#ccc-title)).
         description: |
           This is displayed on the GitHub repository's homepage,
           and is added to repository metadata to improve 
@@ -2643,9 +2709,9 @@ properties:
               new:
                 title: URLs for opening a new issue.
                 description: |
-                  For each issue form defined in [`issue.forms`](#cc.issue.forms),
+                  For each issue form defined in [`issue.forms`](#ccc-issue.forms),
                   a key-value pair is automatically added here,
-                  where the key is the [`id`](#cc.issue.forms[i].id) of the form,
+                  where the key is the [`id`](#ccc-issue.forms[i].id) of the form,
                   and the value is the URL for opening a new issue with that form.
                 type: object
                 default: { }
@@ -2678,7 +2744,7 @@ properties:
               new:
                 title: URLs for opening a new discussion.
                 description: |
-                  For each discussion category in [`discussion.category`](#cc.discussion.category),
+                  For each discussion category in [`discussion.category`](#ccc-discussion.category),
                   a key-value pair is automatically added here,
                   where the key is the same as in `discussion.category` (i.e., the slug of the category name),
                   and the value is the URL for opening a new discussion in that category.
@@ -3061,7 +3127,7 @@ properties:
     title: Directory structure of the repository.
     description: |
       From the seven [main directories](/manual/fundamentals/structure/index.md) in your repository
-      that {{pp_meta.name}} manages and works with,
+      that {{ccc.name}} manages and works with,
       the [GitHub directory](/manual/fundamentals/structure/github.md)
       and the [Docs directory](/manual/fundamentals/structure/docs.md)
       have fixed paths according to GitHub requirements,
@@ -3096,7 +3162,7 @@ properties:
       You can also add other custom keys under `dir.local.cache` and `dir.local.report`
       for other tools that you use, and reference them in the corresponding configuration files.
       Note that you do not have to specify all keys in the `path.yaml` file;
-      for all keys that are not specified, {{pp_meta.name}} will use the default values.
+      for all keys that are not specified, {{ccc.name}} will use the default values.
       Also, you can entirely omit the `path.yaml` file if you do not want to customize any paths.
 
 
@@ -3116,9 +3182,9 @@ properties:
         meaning that they cannot be a subdirectory of any other main directory.
       :::
 
-      {{pp_meta.name}} automatically manages a variety of files in your repository's main directories,
+      {{ccc.name}} automatically manages a variety of files in your repository's main directories,
       and performs a number of tasks that require access to these files.
-      For example, to run your tests and build your website, {{pp_meta.name}} needs to know
+      For example, to run your tests and build your website, {{ccc.name}} needs to know
       the path to tests and website directories. In addition, these paths are used as
       substitutions in a number of other configuration files for your project,
       so that you do not have to manually update these files when you change a path.
