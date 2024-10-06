@@ -229,13 +229,14 @@ properties:
     required: [ id, path, url ]
     properties:
       id:
-        title: |
-          [SPDX](https://spdx.org/licenses/) ID of the license.
+        title: SPDX ID
         description: |
+          [SPDX](https://spdx.org/licenses/) identifier of the license.
           If one of the supported IDs are selected,
           the rest of the keys are automatically filled in.
           Otherwise, `name`, `text`, and `notice` must be provided.
           Supported IDs are:
+          
           - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
           - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
           - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
@@ -250,20 +251,25 @@ properties:
         default: AGPL-3.0-or-later
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       name:
-        title: Full name of the license.
+        title: Name
+        description: |
+          Full name of the license.
+          This is automatically filled when a supported `id` is selected.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - GNU Affero General Public License v3.0 or later
           - MIT License
           - BSD 3-Clause License
       trove:
-        title: |
-          [Trove classifier](https://pypi.org/classifiers/) of the license.
+        title: Trove Classifier
         description: |
+          [Trove classifier](https://pypi.org/classifiers/) of the license.
+          This is automatically filled when a supported `id` is selected.
+          
           :::{admonition} Usage
           :class: dropdown note
-          This is automatically added to package metadata
-          (cf. [`pkg.classifiers`](#ccc-pkg.classifiers))
+          
+          The classifier is automatically added to [package metadata](#ccc-pkg-classifiers)
           to help PyPI better categorize your package,
           so that users can find your package when searching for packages with a specific license.
           :::
@@ -274,23 +280,30 @@ properties:
           - 'License :: OSI Approved :: MIT License'
           - 'License :: OSI Approved :: BSD License'
       text:
-        title: Full text of the license.
+        title: Full Text
+        description: |
+          Full text of the license.
+          This is automatically filled when a supported `id` is selected.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       notice:
-        title: Short text of the license.
+        title: Notice
         description: |
+          Short text of the license.
+          This is automatically filled when a supported `id` is selected.
+          
           :::{admonition} Usage
           :class: dropdown note
-          This is automatically added to the main docstring of the package
-          (cf. [`pkg.file.*.docstring`](#ccc-pkg.file.*.docstring)).
+          
+          By default, the notice is added to the
+          [main docstring](#ccc-pkg-file---init---py-docstring) of the package.
           :::
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       path:
-        title: |
+        title: File Path
+        description: |
           Path to the repository's
           [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
           file.
-        description: |
           This file must be named `LICENSE` (case-sensitive)
           and placed in the root of the repository. 
           It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
@@ -302,23 +315,26 @@ properties:
           - LICENSE.txt
           - LICENSE.rst
       url:
-        title: |
-          URL of the repository's license file.
-          (cf. [`license`](#ccc-license)).
+        title: URL
+        description: |
+          URL to the repository's license file.
         default: ${{ repo.url.blob }}/${{ license.path }}
         examples:
           - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
         $ref: https://jsonschemata.repodynamics.com/url/https
   copyright:
-    title: Copyright information of the project.
+    title: Copyright
     description: |
+      Copyright information of the project.
+      
       :::{admonition} Usage
       :class: dropdown note
-      The copyright [`notice`](#ccc-copyright.notice)
-      is automatically included in several places,
+      
+      By default, the copyright [`notice`](#ccc-copyright-notice)
+      is included in several places,
       such as the license texts (when a pre-defined license is used),
-      the main docstring of the package (cf. [`pkg.file.*.docstring`](#ccc-pkg.file.*.docstring)),
-      and the footer of website and documentation files (cf. [`theme.footer`](#ccc-theme.footer)).
+      the [main docstring](#ccc-pkg-file---init---py-docstring) of the package,
+      and the [footer](#ccc-theme-footer) of website and documentation files.
       :::
     examples:
       - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
@@ -333,21 +349,21 @@ properties:
     required: [ notice ]
     properties:
       notice:
-        title: Copyright notice.
+        title: Notice
         description: |
+          Copyright notice of the project.
           This is the final form of the notice that will be displayed.
-          
-          - A short copyright notice is added to the footer of all README files.
         default: ${{ copyright.period }} ${{ team.owner.name.full }}
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - ${{ copyright.period }} John Doe
           - A Custom Copyright Notice
       period:
-        title: Year period to use in the copyright notice.
+        title: Period
         description: |
+          Year period to use in the copyright notice.
           If not provided, it will be automatically set
-          using the value of [`start_year`](#ccc-copyright.start_year), as follows:
+          using the value of [`start_year`](#ccc-copyright-start_year), as follows:
           - If `start_year` is the same as the current year, 
             the period is set to the current year, e.g., `2024`.
           - If `start_year` is before the current year,
@@ -355,28 +371,46 @@ properties:
           - If `start_year` is after the current year, an error is raised.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       start_year:
-        title: Start year of the project.
+        title: Start Year
         description: |
-          This can be used to dynamically set the [`period`](#ccc-copyright.period).
+          Start year of the project.
+          This can be used to dynamically set the [`period`](#ccc-copyright-period).
+          If not provided, it is automatically set to the repository creation year.
         default_auto: repository creation year
         type: integer
         minimum: 1980
         maximum: 2040
   role:
-    title: Author role definitions.
+    title: Roles
     description: |
+      Role definitions for project members.
       For each role, add a key-value pair
       where the key is an ID for the role,
-      and the value is a [`role_definition`](#cc-def.role_definition) object.
+      and the value is a [`Role`](#ccc-defs-role) object.
 
       :::{admonition} Usage
       :class: dropdown note
-      You can attribute roles to [`team`](#ccc-team) members (cf. [`entity.roles`](#cc-def.entity.roles)),
+      
+      You can attribute roles to [team members](#ccc-defs-entity-roles),
       which will then be displayed on the project's website and citation data.
       :::
     type: object
     additionalProperties:
-      title: An author role definition.
+      title: Role
+      description: A role in the project.
+      examples:
+        - concept:
+            title: Conceptualization
+            description: Formulation and evolution of overarching project goals and aims.
+            abbreviation: CNP
+        - dev:
+            title: Software Development
+            description: Implementation of the software.
+            abbreviation: DEV
+        - manage:
+            title: Management
+            description: Project administration and coordination.
+            abbreviation: MAN
       $ref: https://controlman.repodynamics.com/schema/role
     examples:
       - concept:
@@ -396,106 +430,91 @@ properties:
           description: Maintenance of the software and development workflows.
           abbreviation: MNT
   team:
-    title: Natural and legal persons involved in the project.
+    title: Team
     description: |
-      For each person (copyright holder, author, maintainer, research group, institution, etc.),
-      define a key-value pair, where the key is the ID of the person
-      ([`owner`](#ccc-team.owner)) is pre-defined).
+      Natural and legal persons
+      (e.g., copyright holders, authors, maintainers, research groups, institutions, etc.)
+      involved in the project.
+      For each person, define a key-value pair, where the key is the ID of the person.
       The ID can then be used to reference the person in other configurations
       using templating
-      (e.g. see [`maintainer`](#ccc-maintain) and [`citation`](#ccc-citation)).
+      (e.g. see [`maintainer`](#ccc-maintainer) and [`citation`](#ccc-citation)).
       Also, the information of each person can be used directly
-      (e.g. see [`copyright.notice`](#ccc-copyright.notice)).
+      (e.g. see [`copyright.notice`](#ccc-copyright-notice)).
+      Note that the [`owner`](#ccc-team-owner) key is always automatically added.
 
       :::{admonition} Automatic Data Filling
       :class: important
 
       For any person added here, additional information will be automatically filled
-      from web APIs, if available (see [`entity`](#ccc-def.entity)).
-
-      Only provide `username`; other keys are automatically fetched from the
-      [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user).
-
-      `int_id`, `node_id`, `url`
-
-      If provided, `name`, `email`, and `avatar`
-      will be fetched automatically from GitHub API,
-      unless they are provided explicitly.
-
-      If `github.user` is provided, any of the following keys that is not provided will be automatically filled
-      with information from the GitHub API, if available
-      (cf. [Personalizing your profile on GitHub](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile)):
-      - [`name`](#ccc-def.entity.name)
-      - [`bio`](#ccc-def.entity.bio)
-      - [`affiliation`](#ccc-def.entity.affiliation)
-      - [`avatar`](#ccc-def.entity.avatar)
-      - [`email`](#ccc-def.entity.email)
-      - [`website`](#ccc-def.entity.website)
-      - [`orcid`](#ccc-def.entity.orcid)
-      - [`researchgate`](#ccc-def.entity.researchgate)
-      - [`linkedin`](#ccc-def.entity.linkedin)
-      - [`twitter`](#ccc-def.entity.twitter)
-      - [`city`](#ccc-def.entity.city)
-
-
-
-
-
-      This is not done for other `entity` objects defined elsewhere in the control center.
+      from web APIs, if available (see the [`Entity`](#ccc-defs-entity) object).
+      This is not done for other `Entity` objects defined elsewhere in the control center.
       It is therefore recommended to define all persons involved in the project here,
       and reference them elsewhere using templating.
       :::
     type: object
     properties:
       owner:
-        title: The repository owner on GitHub.
+        title: Owner
         description: |
+          The repository owner on GitHub.
           The `github` key is always automatically filled with information from the GitHub API.
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
-          in the GitHub API (cf. [`entity`](#ccc-def.entity)).
+          in the GitHub API (cf. [`Entity`](#ccc-defs-entity)).
         $ref: https://controlman.repodynamics.com/schema/entity
     additionalProperties:
-      title: A natural person or entity involved in the project.
+      title: Person
+      description: A natural person or entity involved in the project.
       $ref: https://controlman.repodynamics.com/schema/entity
   maintainer:
-    title: Maintainers of the project.
+    title: Maintainers
     description: |
-      Here you can define maintainers for different parts of the project,
+      Maintainers for different parts of the project,
       such as pull request reviewers, issue assignees, and discussion moderators.
-      These will then be automatically assigned to corresponding tasks,
-      and their information will be added tp the project's documentation,
-      including website, citation, README, and community files,
-      as well as package metadata.
-
-      Each maintainer must be defined as an [`entity`](#cc-def.entity) object.
-      It is recommended to define all maintainers in [`team`](#ccc-team),
+      Each maintainer must be defined as an [`Entity`](#ccc-defs-entity) object.
+      It is recommended to define all maintainers in [`$.team`](#ccc-team),
       and reference them here (and elsewhere) using templating.
+      
+      :::{admonition} Usage
+      :class: dropdown note
+      
+      Maintainers are automatically assigned to corresponding tasks (e.g., issues, pull requests, discussions)
+      and their information is by default added to the project's documentation,
+      website, citation, README, and community files, as well as package metadata.
+      :::
     type: object
     additionalProperties: false
     properties:
       code_owners:
-        title: Code owners of the project.
+        title: Code Owners
         description: |
           Pull request reviewers of the project.
+          
+          This is used to automatically maintain the
+          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
+          which will then be used to automatically assign reviewers to pull requests
+          based on the modified files.
         type: object
         default: { }
         additionalProperties: false
         required: [ owners, path ]
         properties:
           owners:
-            title: Code owners of the project.
+            title: Owners Definitions
             description: |
-              This is used to automatically maintain the
-              [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
-              which will then be used to automatically assign reviewers to pull requests
-              based on the modified files.
-              For each path or glob pattern, add a key-value pair,
+              Code owner definitions for different parts of the project.
+              For each filepath or glob pattern, add a key-value pair,
               where the key is the path or glob pattern,
-              and the value is an array of code owners, i.e., [`entities`](#cc-def.entities).
+              and the value is an array of code owners, i.e., [`Entities`](#ccc-defs-entities).
+              
+              :::{admonition} Order of Entries
+              :class: dropdown important
+              
               Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
               the last matching pattern takes the most precedence.
+              :::
             type: array
             minItems: 1
             uniqueItems: true
@@ -504,20 +523,23 @@ properties:
                 - "/*": [ '${{ team.a_maintainer }}' ]  # All files directly under root directory.
                 - "/.github/": [ '${{ team.a_maintainer}}', '${{ team.another_maintainer }}' ]  # All files in `.github` directory.
             items:
-              title: Code owners of a specific path or glob pattern.
+              title: Owners Definition
+              description: Code owners defined for a specific path or glob pattern.
               type: object
               minProperties: 1
               maxProperties: 1
               additionalProperties:
-                title: Code owners of the path or glob pattern.
+                title: Owners
+                description: Code owners of the path or glob pattern.
+                examples:
+                  - [ '${{ team.owner }}' ]
+                  - [ '${{ team.owner }}', '${{ team.a_maintainer }}' ]
                 $ref: https://controlman.repodynamics.com/schema/entities
           path:
-            title: |
+            title: File Path
               Path to the
               [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file.
-
-              This file must be named `CODEOWNERS` (case-sensitive, without extension)
+              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
               and placed either in the `.github` directory, the `docs` directory,
               or the root of the repository.
             type: string
@@ -528,80 +550,90 @@ properties:
               - .github/CODEOWNERS
               - docs/CODEOWNERS
           url:
-            title: |
-              URL of the repository's code owners,
-              i.e., the `CODEOWNERS` file
-              (cf. [`readme.code_owners`](#ccc-readme.code_owners)).
+            title: URL
+            description: URL of the repository's `CODEOWNERS` file.
             default: ${{ repo.url.blob }}/${{ maintainer.code_owners.path }}
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
             $ref: https://jsonschemata.repodynamics.com/url/https
       issue:
-        title: Assignees of project issues.
+        title: Issue Assignees
         description: |
-          For each issue form defined in [`issue.forms`](#ccc-issue.forms),
-          add a key-value pair where the key is the issue form's [`id`](#ccc-issue.forms[i].id),
-          and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
+          Assignees of project issues.
+          For each issue form defined in [`$.issue.forms`](#ccc-issue-forms),
+          add a key-value pair where the key is the issue form's [`id`](#ccc-issue-forms--wildcard--id),
+          and the value is an array of assignees, i.e., [`Entities`](#ccc-defs-entities).
         examples:
           - app_bug_api: [ '${{ team.owner }}' ]
             app_bug_cli: [ '${{ team.owner }}', '${{ team.a_maintainer }}' ]
         type: object
         additionalProperties:
-          title: Assignees of the issue form.
+          title: Form Assignees
+          description: Assignees of a specific issue form.
           $ref: https://controlman.repodynamics.com/schema/entities
       discussion:
-        title: Assignees of project discussions.
+        title: Discussion Moderators
         description: |
+          Moderators of project discussions.
           For each discussion category form defined in
-          [`discussion.category.*.form`](#ccc-discussion.category.*.form),
-          add a key-value pair where the key is the category's [slug](#ccc-discussion.category),
-          and the value is an array of assignees, i.e., [`entities`](#cc-def.entities).
+          [`$.discussion.category.*.form`](#ccc-discussion-category--wildcard--form),
+          add a key-value pair where the key is the category's [`slug`](#ccc-discussion-category),
+          and the value is an array of assignees, i.e., [`Entities`](#ccc-defs-entities).
         examples:
           - announcements: [ '${{ team.some_maintainer_id }}', '${{ team.some-other-maintainer-id }}' ]
             questions: [ '${{ team.a_maintainer }}' ]
         type: object
         additionalProperties:
-          title: Assignees of the discussion category.
+          title: Category Moderators
+          description: Moderators of a specific discussion category.
           $ref: https://controlman.repodynamics.com/schema/entities
       security:
-        title: Project's security maintainer.
+        title: Security Adviser
+        description: Project's security adviser and contact person.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
         $ref: https://controlman.repodynamics.com/schema/entity
       code_of_conduct:
-        title: Project's code of conduct enforcer.
+        title: Code of Conduct Supervisor
+        description: Project's code of conduct supervisor and contact person.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
         $ref: https://controlman.repodynamics.com/schema/entity
       support:
-        title: Project's support contact.
+        title: Support Contact
+        description: Project's support contact person.
         examples:
           - '${{ team.owner }}'
           - '${{ team.some_maintainer_id }}'
         $ref: https://controlman.repodynamics.com/schema/entity
   citation:
-    title: Project citation information.
+    title: Citation
     description: |
+      Project's citation information.
+      
       :::{admonition} Usage
       :class: dropdown note
+      
       This is primarily used to automatically maintain a
       [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
       ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
-      However, information that are only defined here, such as [`authors`](#ccc-citation.authors),
-      [`contacts`](#ccc-citation.contacts), and [`preferred_citation`](#ccc-citation.preferred_citation),
+      However, information that are only defined here, such as [`authors`](#ccc-citation-authors),
+      [`contacts`](#ccc-citation-contacts), and [`preferred_citation`](#ccc-citation-preferred_citation),
       are also used in other places, such as the project's website, README, and package metadata.
       :::
 
       :::{admonition} Citation File Format (CFF)
       :class: dropdown seealso
+      
       This object closely follows the
       [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
       (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)).
-      However, it is simplified (e.g., `entity` and `person` are merged into [`entity`](#cc-def.entity)),
+      However, it is simplified (e.g., `entity` and `person` are merged into [`Entity`](#ccc-defs-entity)),
       and many fields are automatically filled, e.g.:
-      - `doi` (given you have [activated your Zenodo account](#man.activate_zenodo)),
+      
+      - `doi` (given you have [activated your Zenodo account](#install-zenodo)),
         `version` and `date-released`are automatically filled for each new release.
       - `cff-version` is automatically added to the file.
       :::
@@ -610,7 +642,11 @@ properties:
     required: [ title, authors, message ]
     properties:
       title:
-        title: The name of the project.
+        title: Title
+        description: |
+          Title of the citation.
+          This can be your project's [name](#ccc-name), [title](#ccc-title),
+          a combination of both, or any other custom title.
         default: '${{ name }}: ${{ title }}'
         examples:
           - '${{ name }}: ${{ title }}'
@@ -619,10 +655,13 @@ properties:
           - A Custom Title
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       authors:
-        title: Core author(s) of the project, ordered by contribution (highest first).
+        title: Authors
         description: |
+          Core author(s) of the project, ordered by contribution (highest first).
+          
           :::{admonition} Usage
           :class: dropdown note
+          
           These are automatically displayed on the project's website,
           the front page of the project's PDF documentation,
           and the project's PyPI and TestPyPI pages
@@ -631,25 +670,25 @@ properties:
           key of the `pyproject.toml` file).
           :::
         default: [ '${{ team.owner }}' ]
-        type: array
-        uniqueItems: true
-        minItems: 1
-        items:
-          title: An author of the project/package.
-          $ref: https://controlman.repodynamics.com/schema/entity
+        $ref: https://controlman.repodynamics.com/schema/entities
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
           - - name:
                 first: Jane
                 last: Doe
+              email:
+                id: jane@doe.com
             - name:
-                first: John
-                last: Doe
+                legal: XYZ Organization
+              website: https://xyz.org
+              linkedin:
+                id: xyz-org
       contacts:
-        title: Project's contact persons.
+        title: Contacts
         description: |
+          Project's contact persons.
           It is recommended to define the persons in 
-          [`team`](#ccc-team) and reference them here using templating.
+          [`$.team`](#ccc-team) and reference them here using templating.
         default: [ '${{ team.owner }}' ]
         examples:
           - [ '${{ team.owner }}', '${{ team.some_author }}' ]
@@ -664,7 +703,11 @@ properties:
               website: 'https://johndoe.com'
         $ref: https://controlman.repodynamics.com/schema/entities
       message:
-        title: A message to the human reader of the file.
+        title: Message
+        description: |
+          A message to include in the citation file.
+          On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
+          on the repository's main page.
         examples:
           - If you use this software, please cite both the article from preferred-citation and the software itself.
           - If you use this software, please cite it using the metadata from this file.
@@ -673,40 +716,53 @@ properties:
         default: If you use ${{ name }}, please cite it using the metadata from this file.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       preferred_citation:
-        title: |
+        title: Preferred Citation
+        description: |
           A reference to another work that should be cited
           instead of the software itself.
         $ref: https://controlman.repodynamics.com/schema/reference
       grant_ids:
-        title: List of OpenAIRE-supported grants funding the research for this project.
+        title: Grant IDs
         description: |
+          List of OpenAIRE-supported grants funding the research for this project.
           These can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
         examples:
           - [ '10.13039/501100000780::283595', 283595 ]
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       zenodo_communities:
-        title: ID list of Zenodo communities you wish the project to appear in.
+        title: Zenodo Communities
         description: |
+          ID list of Zenodo communities you wish the project to appear in.
           The owner of the communities will be notified,
           and can either accept or reject your request.
         examples:
           - [ ecfunded ]
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       references:
-        title: Reference(s) to other creative works.
+        title: References
+        description: |
+          Reference(s) to other creative works related to, or used/referenced by, the project.
         type: array
         uniqueItems: true
         items:
+          title: Reference
+          description: A reference to another work.
           $ref: https://controlman.repodynamics.com/schema/reference
       identifiers:
-        title: The identifiers of the project.
+        title: Identifiers
+        description: |
+          List of identifiers for the project.
+          These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
         type: array
         uniqueItems: true
         minItems: 1
         items:
+          title: Identifier
+          description: An identifier for the project.
           $ref: https://controlman.repodynamics.com/schema/identifier
       language:
-        title: |
+        title: Language
+        description: |
           [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
           or 639-3 code of the primary natural language of the work.
         type: string
@@ -714,52 +770,68 @@ properties:
         examples:
           - eng
       abstract:
-        title: A description of the project.
+        title: Abstract
+        description: |
+          A brief description of the project.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
         default: ${{ abstract }}
         examples:
-          - A custom description of the project that can span multiple lines.
+          - |
+            A custom description of the project
+            that can span multiple lines.
       license:
-        title: SPDX license ID of the project (cf. [`license.id`](#ccc-license.id)).
+        title: License
+        description: |
+          SPDX [license ID](#ccc-license-id) of the project.
         default: ${{ license.id }}
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       license_url:
-        title: The URL of the project's license (only for non-SPDX licenses).
+        title: License URL
+        description: The URL of the project's license (only required for non-SPDX licenses).
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       keywords:
-        title: Keywords that describe the work.
+        title: Keywords
+        description: Keywords categorizing the project.
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
         default: ${{ keywords }}
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
       repository:
-        title: Repository information.
+        title: Repository
+        description: |
+          URLs of the project's repositories.
         type: object
         default: { }
         additionalProperties: false
         properties:
           build:
-            title: URL of the project in a build artifact/binary repository.
+            title: Build
+            description: URL of the project in a build artifact/binary repository.
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           source:
-            title: URL of the project in a source code repository.
+            title: Source
+            description: URL of the project in a source code repository.
             default: ${{ repo.url.home }}
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           other:
-            title: URL of the project in another type of repository.
+            title: Other
+            description: URL of the project in another type of repository.
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       url:
-        title: URL of a landing page for the project.
+        title: URL
+        description: URL of the project's landing (home) page.
         default: ${{ web.url.home }}
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       type:
-        title: Type of the project.
+        title: Type
+        description: Type of the work. This can be either `dataset` or `software`.
         type: string
         enum: [ dataset, software ]
         default: software
   funding:
-    title: Available funding options of the project.
+    title: Funding
     description: |
+      Available funding options of the project.
       You can specify up to four
       [sponsored GitHub accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors),
       up to four custom URLs,
@@ -767,11 +839,13 @@ properties:
 
       :::{admonition} Usage
       :class: dropdown note
+      
       These settings are used to automatically maintain the GitHub `FUNDING` configuration file,
       which is used to
       [display a sponsor button in your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
-      Clicking on the *Sponsor* button opens the *Sponsor this project* section,
-      where a list of links to your specified funding platforms is displayed to the user.
+      Clicking on the button opens the ***Sponsor this project*** section,
+      where a list of links to your specified funding platforms is displayed to the user,
+      allowing them to sponsor your project.
       :::
     examples:
       - github: [ '${{ owner.username }}', EXAMPLE-GITHUB-USERNAME ]
@@ -781,33 +855,39 @@ properties:
     additionalProperties: false
     properties:
       community_bridge:
-        title: |
+        title: LFX Mentorship
+        description: |
           [LFX Mentorship (CommunityBridge)](https://lfx.linuxfoundation.org/tools/mentorship) project name.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       issuehunt:
-        title: |
+        title: IssueHunt
+        description: |
           [IssueHunt](https://issuehunt.io/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       ko_fi:
-        title: |
+        title: Ko-fi
+        description: |
           [Ko-fi](https://ko-fi.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       liberapay:
-        title: |
+        title: Liberapay
+        description: |
           [Liberapay](https://liberapay.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       open_collective:
-        title: |
+        title: Open Collective
+        description: |
           [Open Collective](https://opencollective.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       patreon:
-        title: |
+        title: Patreon
+        description: |
           [Patreon](https://www.patreon.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       tidelift:
-        title: |
-          [Tidelift](https://tidelift.com/) package address.
+        title: Tidelift
         description: |
+          [Tidelift](https://tidelift.com/) package address.
           This is a string with the format `<PLATFORM-NAME>/<PACKAGE-NAME>`,
           where `<PACKAGE-NAME>` is the name of your package,
           and platform name is the name of the package manager
@@ -818,16 +898,19 @@ properties:
         type: string
         pattern: ^(npm|pypi|rubygems|maven|packagist|nuget)/\S+$
       polar:
-        title: |
+        title: Polar
+        description: |
           [Polar](https://www.polar.sh/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       buy_me_a_coffee:
-        title: |
+        title: Buy Me a Coffee
+        description: |
           [Buy Me a Coffee](https://www.buymeacoffee.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       github:
-        title: Usernames of up to four [GitHub Sponsors](https://docs.github.com/en/sponsors/) accounts.
+        title: GitHub Sponsors
         description: |
+          Usernames of up to four [GitHub Sponsors](https://docs.github.com/en/sponsors/) accounts.
           One of these can be a
           [sponsored organization account](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors/setting-up-github-sponsors-for-your-organization),
           while the others must be
@@ -836,13 +919,33 @@ properties:
         maxItems: 4
         uniqueItems: true
         items:
+          title: GitHub Sponsors Account
+          description: |
+            GitHub username of a sponsored account.
+            This can be either a personal or an organization account.
           $ref: https://jsonschemata.repodynamics.com/id/github/user
       custom:
-        title: URLs of up to four custom funding platforms.
+        title: Custom
+        description: |
+          URLs to up to four custom funding platforms.
+          These can be any URL, such as a PayPal donation link.
+        examples:
+          - [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME', 'https://example.com/donate' ]
+          - [ 'https://example.com/donate' ]
+          - - 'https://funding-platform-1.com'
+            - 'https://funding-platform-2.com'
+            - 'https://funding-platform-3.com'
+            - 'https://funding-platform-4.com'
         type: array
         maxItems: 4
         uniqueItems: true
         items:
+          title: URL
+          description: |
+              URL to a custom funding platform.
+          examples:
+            - https://paypal.me/EXAMPLE-PAYPAL-USERNAME
+            - https://example.com/donate
           $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   # Documentation
   theme:

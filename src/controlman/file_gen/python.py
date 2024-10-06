@@ -268,7 +268,7 @@ class PythonPackageFileGenerator:
 
     @property
     def pyproject_project_authors(self) -> list[dict[str, str]]:
-        authors = self._data["citation.authors"]
+        authors = self._data["pkg.authors"]
         if not authors:
             return []
         authors_list = []

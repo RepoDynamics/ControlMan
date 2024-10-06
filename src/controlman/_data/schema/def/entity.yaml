@@ -1,7 +1,28 @@
 $id: https://controlman.repodynamics.com/schema/entity
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Entity
-description: Information about a natural or legal person.
+description: |
+  Information about a natural or legal person.
+  
+  If `github.user` is provided, any of the following keys that is not explicitly provided
+  will be automatically filled with information retrieved from the
+  [GitHub API](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user), if available
+  (cf. [Personalizing your profile on GitHub](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile)):
+  - [`name`](#ccc-defs-entity-name)
+  - [`bio`](#ccc-defs-entity-bio)
+  - [`affiliation`](#ccc-defs-entity-affiliation)
+  - [`avatar`](#ccc-defs-entity-avatar)
+  - [`email`](#ccc-defs-entity-email)
+  - [`website`](#ccc-defs-entity-website)
+  - [`orcid`](#ccc-defs-entity-orcid)
+  - [`researchgate`](#ccc-defs-entity-researchgate)
+  - [`linkedin`](#ccc-defs-entity-linkedin)
+  - [`twitter`](#ccc-defs-entity-twitter)
+  - [`city`](#ccc-defs-entity-city)
+  - [`github.rest_id`](#ccc-defs-entity-github-rest_id)
+  - [`github.node_id`](#ccc-defs-entity-github-node_id)
+  - [`github.url`](#ccc-defs-entity-github-url)
+
 type: object
 additionalProperties: false
 properties:

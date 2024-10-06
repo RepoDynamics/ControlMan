@@ -171,9 +171,9 @@ properties:
       These are:
       - `Development Status`: Based on the latest version tag on the branch. 
       - `License`: Based on [`license.id`](#ccc-license.id), for supported licenses. 
-      - `Operating System`: Based on the provided [`os`](#cc-def.pkg_config.os) configurations.
-      - `Programming Language`: Based on the provided [`python.version`](#cc-def.pkg_config.python.version.spec) configurations.
-      - `Typed`: Based on [`typed`](#cc-def.pkg_config.typed).
+      - `Operating System`: Based on the provided [`os`](#ccc-defs-pkg_config.os) configurations.
+      - `Programming Language`: Based on the provided [`python.version`](#ccc-defs-pkg_config.python.version.spec) configurations.
+      - `Typed`: Based on [`typed`](#ccc-defs-pkg_config.typed).
       Here you can add additional classifiers, such as `Topic` or `Intended Audience`.
       For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/),
       or the [trove-classifiers](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
@@ -221,6 +221,34 @@ properties:
       `readme` metadata of your package
       (formerly known as `long_description`)
     $ref: https://controlman.repodynamics.com/schema/docfile
+  authors:
+    title: Authors
+    description: |
+      Core author(s) of the package, ordered by contribution (highest first).
+
+      :::{admonition} Usage
+      :class: dropdown note
+      
+      Authors are added to the package metadata (see the
+      [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+      key of the `pyproject.toml` file) and are used by indexing services and package managers
+      to provide credit to the authors of the package.
+      For example, they are displayed on the package's homepage on PyPI and TestPyPI.
+      :::
+    default: ${{ citation.authors }}
+    $ref: https://controlman.repodynamics.com/schema/entities
+    examples:
+      - ${{ citation.authors }}
+      - [ '${{ team.owner }}', '${{ team.some_author }}' ]
+      - - name:
+            first: Jane
+            last: Doe
+          email:
+            id: jane@doe.com
+        - name:
+            legal: XYZ Organization
+          email:
+            id: contact@xyz.org
   typed:
     description: Whether the package is typed
     type: boolean

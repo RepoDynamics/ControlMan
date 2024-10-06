@@ -4,6 +4,7 @@ title: Identifier
 description: An identifier for the work.
 type: object
 additionalProperties: false
+required: [ type, value ]
 properties:
   type:
     title: Type
@@ -36,7 +37,6 @@ properties:
         DOI specified in the doi field in the root of this file.
       - The identifier provided by Archival Repository, which points to this version
         of the software.
-required: [ type, value ]
 allOf:
   - if:
       properties:

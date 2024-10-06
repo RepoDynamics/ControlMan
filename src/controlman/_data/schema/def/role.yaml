@@ -1,6 +1,8 @@
 $id: https://controlman.repodynamics.com/schema/role
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Definition of a role in the project.
+title: Role
+description: |
+  Definition of a role in the project.
 examples:
   - title: Conceptualization
     description: Formulation and evolution of overarching project goals and aims.
