@@ -949,92 +949,139 @@ properties:
           $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   # Documentation
   theme:
-    title: Configurations defining the visual theme of the project.
+    title: Theme
+    description: |
+      Configurations defining the visual theme of the project,
+      such as colors, logos, and badges.
     type: object
     default: { }
     additionalProperties: false
     required: [ path, color, logo ]
     properties:
       path:
-        title: Path to the media directory.
+        title: Path
         description: |
-          Due to an issue with the PyData Sphinx Theme, the logo files used in the navbar must be explicitly
-          added to the root of static path, since PyData always looks there, regardless of the set path.
-          Ref:
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1325 
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1328
-          - https://github.com/pydata/pydata-sphinx-theme/issues/1385
+          Path to the directory containing the project's media files.
+          
+          :::{admonition} Usage
+          :class: dropdown note
+          
+          The media directory is used to store images, logos, and other media files
+          that are displayed on the project's website and documentation files.
+          By default, they are included in the website builds
+          (see [`$.web.sphinx.config.html_static_path`](#ccc-web-sphinx-config-html_static_path))
+          and thus can be directly used in the website, and linked to in the documentation. 
+          :::
         default: docs/media
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
       color:
-        title: Colors of the project's theme.
+        title: Colors
         description: |
-          All colors must be in hexadecimal format (without the leading `#` character).
+          Colors of the project's light and dark themes.
+          Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
+          such as hexadecimal, RGB, HSL, or named colors.
         type: object
         default: { }
         required: [ primary, secondary ]
         properties:
           primary:
-            title: Primary colors of the project.
+            title: Primary
+            description: Primary color of the project.
             $ref: https://controlman.repodynamics.com/schema/themed-color
             default:
-              light: 0F3460
-              dark: 3A98B9
+              light: '#0F3460'
+              dark: '#3A98B9'
           secondary:
-            title: Secondary colors of the project.
+            title: Secondary
+            description: Secondary color of the project.
             $ref: https://controlman.repodynamics.com/schema/themed-color
             default:
-              light: 562B08
-              dark: E3651D
+              light: '#562B08'
+              dark: '#E3651D'
       logo:
-        title: Logo of the project.
+        title: Logo
         description: |
-          All values must be filenames of files in the [media](#ccc-theme.path) directory.
+          Logos of the project.
+          All values must be filenames of files in the [media](#ccc-theme-path) directory,
+          given as paths relative to the media directory.
         type: object
         additionalProperties: false
         default: { }
         required: [ icon, simple, full ]
         properties:
           icon:
+            title: Icon
+            description: Favicon (website icon) of the project.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: logo/favicon.svg
           simple:
+            title: Simple
+            description: Simple versions of the project's logo, to be used in small spaces.
             type: object
             additionalProperties: false
             required: [ light, dark ]
             default: { }
             properties:
               light:
+                title: Light
+                description: Light-themed version of the simple logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_light.svg
               dark:
+                title: Dark
+                description: Dark-themed version of the simple logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_dark.svg
               raster:
+                title: Raster
+                description: |
+                  Raster version of the simple logo,
+                  to be used in places where vector graphics are not supported.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple_light.png
               ascii:
+                title: ASCII
+                description: |
+                  ASCII art version of the simple logo,
+                  to be used in command-line interfaces and text-based environments.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/simple.txt
           full:
+            title: Full
+            description: Full versions of the project's logo, to be used in large spaces.
             type: object
             additionalProperties: false
             required: [ light, dark ]
             default: { }
             properties:
               light:
+                title: Light
+                description: Light-themed version of the full logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.svg
               dark:
+                title: Dark
+                description: Dark-themed version of the full logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_dark.svg
               raster:
+                title: Raster
+                description: |
+                  Raster version of the full logo,
+                  to be used in places where vector graphics are not supported.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full_light.png
               ascii:
+                title: ASCII
+                description: |
+                  ASCII art version of the full logo,
+                  to be used in command-line interfaces and text-based environments.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
                 default: logo/full.txt
       badge:
+        title: Badge
+        description: |
+
         $ref: https://docsman.repodynamics.com/schema/element/badge
       footer:
         title: Configurations of project's footer.
