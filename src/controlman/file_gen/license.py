@@ -93,6 +93,7 @@ class SPDXLicenseTextParser:
             "p": self.process_p,
             "br": lambda x: "\n\n",
             "item": self.process_list_item,
+            "bullet": self.process_generic,
             "optional": self.process_optional,
             "alt": self.process_alt,
         }
@@ -111,6 +112,7 @@ class SPDXLicenseTextParser:
         self._list_bullet_unordered_char: str = "–"
         self._text_wrapper: _TextWrapper | None = None
         self._curr_bullet_len: int = 0
+        self._alts = []
         return
 
     def parse(
@@ -121,8 +123,8 @@ class SPDXLicenseTextParser:
         alt: dict[str, str] | None = None,
         line_length: int = 88,
         list_item_indent: int = 2,
-        list_item_vertical_spacing: int = 1,
-        list_indent: int = 4,
+        list_item_vertical_spacing: int = 2,
+        list_indent: int = 3,
         list_bullet_prefer_default: bool = True,
         list_bullet_ordered: bool = True,
         list_bullet_unordered_char: str = "–",
@@ -264,11 +266,11 @@ class SPDXLicenseTextParser:
             out[-1].append(element.text)
         for child in element:
             tag_name = self.clean_tag(child.tag)
-            if tag_name not in self._element_processor:
+            if tag_name != "bullet" and tag_name not in self._element_processor:
                 raise ValueError(f"Unsupported element: {tag_name}")
             if tag_name == "br":
                 out.append([])
-            else:
+            elif tag_name != "bullet":
                 content = self._element_processor[tag_name](child)
                 if content:
                     out[-1].append(content)
@@ -311,7 +313,7 @@ class SPDXLicenseTextParser:
         return f"{newlines}{list_str}{newlines}"
 
     def process_list_item(self, elem: ET.Element, idx: int) -> str:
-        bullet_elems = elem.findall('bullet', self._ns)
+        bullet_elems = elem.findall("./bullet", self._ns) + elem.findall("./p/bullet", self._ns)
         if len(bullet_elems) > 1:
             raise ValueError("Item element should contain at most one bullet element")
         if len(bullet_elems) == 1:
@@ -331,9 +333,7 @@ class SPDXLicenseTextParser:
                 content.append(text)
         for child in elem:
             tag = self.clean_tag(child.tag)
-            if tag == 'bullet':
-                bullet_elems.append(child)
-            else:
+            if tag != 'bullet':
                 child_str = self.process_element(child)
                 if child_str:
                     content.append(child_str.lstrip(" "))
@@ -342,14 +342,11 @@ class SPDXLicenseTextParser:
                 if tail:
                     needs_dedent = not content or content[-1].endswith("\n")
                     content.append(tail.lstrip() if needs_dedent else tail)
-        if not content:
-            raise ValueError("Item element should contain text content")
         content_raw = "".join(content).strip()
-        # paragraphs = [paragraph for paragraph in _re.split(r'\n\s*\n+', content_raw)]
 
         lines = content_raw.splitlines()
         wrapped = "\n".join(
-            [f"{bullet}{lines[0]}"] + [f"{subsequent_indent}{line}" for line in lines[1:]]
+            [f"{bullet}{lines[0] if lines else ""}"] + [f"{subsequent_indent}{line}" for line in lines[1:]]
         )
         self._curr_bullet_len -= len(bullet)
         return wrapped
@@ -376,14 +373,15 @@ class SPDXLicenseTextParser:
             The <alt> element.
         """
         name = element.get('name')
+        match = element.get('match')
         if not name:
             raise ValueError("Alt element must have a 'name' attribute")
+        if not match:
+            raise ValueError("Alt element must have a 'match' attribute")
+        self._alts.append({"name": name, "match": match, "text": element.text})
         text = self._alt.get(name)
         if not text:
             return element.text
-        match = element.get('match')
-        if not match:
-            raise ValueError("Alt element must have a 'match' attribute")
         if not _re.match(match, text):
             raise ValueError(f"Alt element '{name}' does not match '{match}'")
         return text
@@ -419,3 +417,7 @@ class SPDXLicenseTextParser:
         The tag without namespace.
         """
         return tag.removeprefix(f'{{{self._ns_uri}}}')
+
+
+def get_all_licenses() -> dict:
+    return pl.http.request("https://spdx.org/licenses/licenses.json", response_type="json")
