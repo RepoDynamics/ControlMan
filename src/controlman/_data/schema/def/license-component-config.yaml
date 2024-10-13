@@ -29,14 +29,14 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/number/non-negative
         default: 1
       bullet:
-        type: [ null, integer, string ]
+        type: [ 'null', integer, string ]
         default: 1
       title_centered:
         type: boolean
         default: false
       title_underline:
         type: string
-        default: =
+        default: '='
       title_underline_full:
         type: boolean
         default: false

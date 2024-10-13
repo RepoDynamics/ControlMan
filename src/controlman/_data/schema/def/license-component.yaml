@@ -1,4 +1,4 @@
-$id: https://controlman.repodynamics.com/schema/license-details
+$id: https://controlman.repodynamics.com/schema/license-component
 $schema: https://json-schema.org/draft/2020-12/schema
 title: License Details
 type: object
@@ -21,7 +21,7 @@ properties:
     properties:
       text_plain:
         type: string
-        pattern: ^OFL|PATENTS|(LICENSE|COPYING(-[a-zA-Z0-9-.]+)?(?i:.(txt|md|rst))?)$
+        pattern: ^(OFL|PATENTS|((LICENSE|COPYING)(-[a-zA-Z0-9-.]+)?))(?i:.(txt|md|rst))?$
         default: LICENSE-${{ .id }}.md
         examples:
           - OFL
@@ -54,7 +54,9 @@ properties:
     description: |
       Reference number of the license.
       This is automatically filled when a supported `id` is selected.
-    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
+      - type: 'null'
   osi_approved:
     title: OSI Approved
     description: |

@@ -263,29 +263,44 @@ properties:
         additionalProperties:
           $ref: https://controlman.repodynamics.com/schema/license-component
       config:
-        $ref: https://controlman.repodynamics.com/schema/license-component-config
+        type: object
+        properties:
+          text:
+            $ref: https://controlman.repodynamics.com/schema/license-component-config
+          header:
+            $ref: https://controlman.repodynamics.com/schema/license-component-config
         default:
-          xml_to_plain:
-            alts:
-              copyright: ${{ copyright.notice }}
-              author: ${{ team.owner.name.full }}
-              softwareName: ${{ name }}
-              description: ${{ title }}
-              contributor: ${{ team.owner.name.full }}
-              copyrightHolderAsIs: ${{ team.owner.name.full }}
-              initialDeveloper: ${{ team.owner.name.full }}
-              copyrightHolderLiability: ${{ team.owner.name.full }}
-              version: ${{ version }}
-              copyrightHolder0: ${{ team.owner.name.full }}
-              copyrightHolder1: ${{ team.owner.name.full }}
-              copyrightHolder2: ${{ team.owner.name.full }}
-              copyrightHolder3: ${{ team.owner.name.full }}
-              creator: ${{ team.owner.name.full }}
-              owner: ${{ team.owner.name.full }}
-              maintainer: ${{ team.owner.name.full }}
-              organization: ${{ team.owner.name.full }}
-              email: ${{ team.owner.email.url }}
-              softwareVersion: ${{ version }}
+          text: &license_config_default_text
+            plain:
+              alts:
+                copyright: ${{ copyright.notice }}
+                author: ${{ team.owner.name.full }}
+                softwareName: ${{ name }}
+                description: ${{ title }}
+                contributor: ${{ team.owner.name.full }}
+                copyrightHolderAsIs: ${{ team.owner.name.full }}
+                initialDeveloper: ${{ team.owner.name.full }}
+                copyrightHolderLiability: ${{ team.owner.name.full }}
+                version: ${{ version }}
+                copyrightHolder0: ${{ team.owner.name.full }}
+                copyrightHolder1: ${{ team.owner.name.full }}
+                copyrightHolder2: ${{ team.owner.name.full }}
+                copyrightHolder3: ${{ team.owner.name.full }}
+                creator: ${{ team.owner.name.full }}
+                owner: ${{ team.owner.name.full }}
+                maintainer: ${{ team.owner.name.full }}
+                organization: ${{ team.owner.name.full }}
+                email: ${{ team.owner.email.url }}
+                softwareVersion: ${{ version }}
+          header: *license_config_default_text
+      notice:
+        title: Notice
+        description: |
+          Custom license notice.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        default: |
+          ${{ copyright.notice }}
+          SPDX-License-Identifier: ${{ license.expression }}
   copyright:
     title: Copyright
     description: |
@@ -747,7 +762,7 @@ properties:
         title: License
         description: |
           SPDX [license ID](#ccc-license-id) of the project.
-        default: ${{ license.id }}
+        default: ${{ license.expression }}
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       license_url:
         title: License URL

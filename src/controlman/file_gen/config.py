@@ -91,12 +91,13 @@ class ConfigFileGenerator:
                 for output_type in ("plain", "md"):
                     text = component_data.get(f"{part}_{output_type}")
                     xml = component_data.get(f"{part}_xml")
-                    if not (text or xml):
+                    path = component_data["path"].get(f"{part}_{output_type}")
+                    if not (path and (text or xml)):
                         continue
                     if not text:
                         config_component = component_data.get(f"{part}_config", {}).get(output_type, {})
-                        config_default = self._data[f"license.config.{output_type}"] or {}
-                        config = _ps.update.dict_from_addon(
+                        config_default = self._data[f"license.config.{part}.{output_type}"] or {}
+                        _ps.update.dict_from_addon(
                             data=config_component,
                             addon=config_default,
                             append_list=True,
@@ -105,16 +106,17 @@ class ConfigFileGenerator:
                             raise_type_mismatch=False,
                         )
                         xml_elem = _ElementTree.fromstring(xml)
-                        text = _license_text.SPDXLicenseTextPlain(xml_elem).generate(**config)
+                        text = _license_text.SPDXLicenseTextPlain(xml_elem).generate(**config_component)
                     subtype_type = "license" if component_data["type"] == "license" else "license_exception"
                     subtype = f"{subtype_type}_{component_id}_{output_type}_{part}"
                     file = DynamicFile(
                         type=DynamicFileType.CONFIG,
                         subtype=(subtype, subtype_type.replace("_", " ").title()),
                         content=text,
-                        path=component_data["path"][f"{part}_{output_type}"],
-                        path_before=self._data_before["license.component"][component_id]["path"][
-                            f"{part}_{output_type}"],
+                        path=path,
+                        path_before=self._data_before.get(
+                            "license.component", {}
+                        ).get(component_id, {}).get("path", {}).get(f"{part}_{output_type}")
                     )
                     files.append(file)
         return files
