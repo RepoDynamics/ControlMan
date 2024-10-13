@@ -202,7 +202,8 @@ properties:
       
       After customizing the license with the project's [copyright notice](#ccc-copyright-notice):
       
-      - A license file is added to the repository, where GitHub can recognize and display it.
+      - A license file is [added to the repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository),
+        where GitHub can recognize and display it.
       - The license file is incorporated in all package releases.
       - License identifiers are added to the package metadata.
       - Full license and copyright information are featured on the documentation website.
@@ -225,11 +226,10 @@ properties:
           This is a custom license notice that overwrites
           the default MIT license's notice.
     type: object
-    additionalProperties: false
-    required: [ id, path, url ]
+    required: [ expression ]
     properties:
-      id:
-        title: SPDX ID
+      expression:
+        title: SPDX License Expression
         description: |
           [SPDX](https://spdx.org/licenses/) identifier of the license.
           If one of the supported IDs are selected,
@@ -250,78 +250,42 @@ properties:
           - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
         default: AGPL-3.0-or-later
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
-      name:
-        title: Name
-        description: |
-          Full name of the license.
-          This is automatically filled when a supported `id` is selected.
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
-        examples:
-          - GNU Affero General Public License v3.0 or later
-          - MIT License
-          - BSD 3-Clause License
-      trove:
-        title: Trove Classifier
-        description: |
-          [Trove classifier](https://pypi.org/classifiers/) of the license.
-          This is automatically filled when a supported `id` is selected.
-          
-          :::{admonition} Usage
-          :class: dropdown note
-          
-          The classifier is automatically added to [package metadata](#ccc-pkg-classifiers)
-          to help PyPI better categorize your package,
-          so that users can find your package when searching for packages with a specific license.
-          :::
-        type: string
-        pattern: "^License :: "
-        examples:
-          - 'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
-          - 'License :: OSI Approved :: MIT License'
-          - 'License :: OSI Approved :: BSD License'
-      text:
-        title: Full Text
-        description: |
-          Full text of the license.
-          This is automatically filled when a supported `id` is selected.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-      notice:
-        title: Notice
-        description: |
-          Short text of the license.
-          This is automatically filled when a supported `id` is selected.
-          
-          :::{admonition} Usage
-          :class: dropdown note
-          
-          By default, the notice is added to the
-          [main docstring](#ccc-pkg-file---init---py-docstring) of the package.
-          :::
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-      path:
-        title: File Path
-        description: |
-          Path to the repository's
-          [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
-          file.
-          This file must be named `LICENSE` (case-sensitive)
-          and placed in the root of the repository. 
-          It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-        type: string
-        pattern: ^LICENSE(?i:.(txt|md|rst))?$
-        default: LICENSE
-        examples:
-          - LICENSE.md
-          - LICENSE.txt
-          - LICENSE.rst
-      url:
-        title: URL
-        description: |
-          URL to the repository's license file.
-        default: ${{ repo.url.blob }}/${{ license.path }}
-        examples:
-          - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
-        $ref: https://jsonschemata.repodynamics.com/url/https
+      component:
+        type: object
+        patternProperties:
+          '^(DocumentRef-[a-zA-Z0-9-.]+:)?(AdditionRef|LicenseRef)-[a-zA-Z0-9.-]+$':
+            allOf:
+              - $ref: https://controlman.repodynamics.com/schema/license-component
+              - required: [ name ]
+              - anyOf:
+                  - required: [ text_xml ]
+                  - required: [ text_plain ]
+        additionalProperties:
+          $ref: https://controlman.repodynamics.com/schema/license-component
+      config:
+        $ref: https://controlman.repodynamics.com/schema/license-component-config
+        default:
+          xml_to_plain:
+            alts:
+              copyright: ${{ copyright.notice }}
+              author: ${{ team.owner.name.full }}
+              softwareName: ${{ name }}
+              description: ${{ title }}
+              contributor: ${{ team.owner.name.full }}
+              copyrightHolderAsIs: ${{ team.owner.name.full }}
+              initialDeveloper: ${{ team.owner.name.full }}
+              copyrightHolderLiability: ${{ team.owner.name.full }}
+              version: ${{ version }}
+              copyrightHolder0: ${{ team.owner.name.full }}
+              copyrightHolder1: ${{ team.owner.name.full }}
+              copyrightHolder2: ${{ team.owner.name.full }}
+              copyrightHolder3: ${{ team.owner.name.full }}
+              creator: ${{ team.owner.name.full }}
+              owner: ${{ team.owner.name.full }}
+              maintainer: ${{ team.owner.name.full }}
+              organization: ${{ team.owner.name.full }}
+              email: ${{ team.owner.email.url }}
+              softwareVersion: ${{ version }}
   copyright:
     title: Copyright
     description: |
@@ -1009,11 +973,14 @@ properties:
         default: { }
         required: [ icon, simple, full ]
         properties:
+          root:
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ web.path.root }}/${{ web.path.source}}/_media/logo
           icon:
             title: Icon
             description: Favicon (website icon) of the project.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: logo/favicon.svg
+            default: ${{ theme.logo.root }}/favicon.svg
           simple:
             title: Simple
             description: Simple versions of the project's logo, to be used in small spaces.
@@ -1026,26 +993,26 @@ properties:
                 title: Light
                 description: Light-themed version of the simple logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/simple_light.svg
+                default: ${{ theme.logo.root }}/simple_light.svg
               dark:
                 title: Dark
                 description: Dark-themed version of the simple logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/simple_dark.svg
+                default: ${{ theme.logo.root }}/simple_dark.svg
               raster:
                 title: Raster
                 description: |
                   Raster version of the simple logo,
                   to be used in places where vector graphics are not supported.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/simple_light.png
+                default: ${{ theme.logo.root }}/simple_light.png
               ascii:
                 title: ASCII
                 description: |
                   ASCII art version of the simple logo,
                   to be used in command-line interfaces and text-based environments.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/simple.txt
+                default: ${{ theme.logo.root }}/simple.txt
           full:
             title: Full
             description: Full versions of the project's logo, to be used in large spaces.
@@ -1058,41 +1025,43 @@ properties:
                 title: Light
                 description: Light-themed version of the full logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/full_light.svg
+                default: ${{ theme.logo.root }}/full_light.svg
               dark:
                 title: Dark
                 description: Dark-themed version of the full logo.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/full_dark.svg
+                default: ${{ theme.logo.root }}/full_dark.svg
               raster:
                 title: Raster
                 description: |
                   Raster version of the full logo,
                   to be used in places where vector graphics are not supported.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/full_light.png
+                default: ${{ theme.logo.root }}/full_light.png
               ascii:
                 title: ASCII
                 description: |
                   ASCII art version of the full logo,
                   to be used in command-line interfaces and text-based environments.
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: logo/full.txt
+                default: ${{ theme.logo.root }}/full.txt
       badge:
         title: Badge
         description: |
-
+          General settings for project badges.
+          These will be used as default values for all badges in the project.
         $ref: https://docsman.repodynamics.com/schema/element/badge
       footer:
-        title: Configurations of project's footer.
+        title: Footer
         description: |
+          Configurations of project's footer.
           The footer is automatically added to the project's [README](#ccc-readme) and
           [community health files](#ccc-health).
         oneOf:
           - type: string
           - $ref: https://docsman.repodynamics.com/schema
   readme:
-    title: README file configurations.
+    title: README Files
     description: |
       These include README files that are displayed to users on landing pages of
       project's repositories, such as GitHub, PyPI, and Anaconda, as well as
@@ -1373,9 +1342,9 @@ properties:
             default:
               import_name: sphinx
               pip:
-                spec: sphinx == 7.3.7
+                spec: sphinx == 7.4.7
               conda:
-                spec: sphinx == 7.3.7
+                spec: sphinx == 7.4.7
                 channel: conda-forge
               url:
                 docs: https://www.sphinx-doc.org/
@@ -1674,6 +1643,27 @@ properties:
             examples:
               - ${{ web.url.base }}/some/path
             $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+      quicklinks:
+        title: Quicklinks
+        description: |
+          Quicklinks to important pages on the website.
+          These are displayed in the footer of the website.
+        type: array
+        items:
+          title: Group
+          type: object
+          required: [ links ]
+          properties:
+            title:
+              title: Title
+              type: string
+              examples:
+                - About
+                - Contact
+                - Help
+            links:
+              title: Links
+              type: array
     required: [ path, sphinx ]
   announcement:
     title: Configurations of project announcements.
@@ -1809,6 +1799,7 @@ properties:
         title: Automatic Commits
         description: Automatic commit types
         type: object
+        default: { }
         additionalProperties: false
         required: [ maintain, sync ]
         properties:
@@ -1816,16 +1807,21 @@ properties:
             title: Maintain
             description: |
               Continuous maintenance and refactoring tasks.
+            default:
+              type: auto-maintain
             $ref: https://controlman.repodynamics.com/schema/commit-auto
           sync:
             title: Sync
             description: |
               Continuous configuration automation and synchronization of dynamic files.
+            default:
+              type: auto-sync
             $ref: https://controlman.repodynamics.com/schema/commit-auto
       primary:
         title: Primary Commits
         description: Primary action commit types
         type: object
+        default: { }
         additionalProperties:
           title: Custom Primary Commit
           description: |
@@ -1837,22 +1833,32 @@ properties:
           major:
             title: Major Release
             description: Configurations for a major release commit type.
+            default:
+              type: major
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           minor:
             title: Minor Release
             description: Configurations for a minor release commit type.
+            default:
+              type: minor
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           patch:
             title: Patch Release
             description: Configurations for a patch release commit type.
+            default:
+              type: patch
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           post:
             title: Post-release
             description: Configurations for a post-release commit type.
+            default:
+              type: post
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           web:
             title: Website
             description: Configurations for a website commit type.
+            default:
+              type: web
             $ref: https://controlman.repodynamics.com/schema/commit-primary
       secondary:
         title: Secondary Commits
@@ -1862,6 +1868,7 @@ properties:
           where the key is both the ID of the commit type (to reference in other places)
           and its commit message type.
         type: object
+        default: { }
         additionalProperties:
           title: Custom Secondary Commit
           description: Configurations for a secondary commit type.
@@ -2079,6 +2086,35 @@ properties:
       templates used to automatically maintain issue ticket forms,
       and settings for the project's [issue template chooser]()https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser),
       which is automatically maintained via the `.github/ISSUE_TEMPLATE/config.yaml` configuration file.
+      
+      # GitHub Issues Settings
+      This directory contains templates and configurations used when an issue is opened in the repository.
+
+      ## Templates
+      The issues templates use the GitHub's [issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#creating-issue-forms)
+      to create customizable web form fields. Each `.yml` file (other than `config.yml`) provides a template for
+      a specific issue type. The issue forms use the YAML format, with a series of defined [top-level keys](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms#top-level-syntax)
+      such as `name`, `description` and `labels`, and a [body syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema)
+      to define the form fields.
+
+      Any YAML file created in this directory using the specified syntax will be automatically added to the list of possible
+      issue forms that users can select from when opening a new issue in the repository.
+
+
+      ## Configurations
+      The [config.yml](../../.meta/config/issues_template_chooser.yaml) file contains the configurations for the
+      [template chooser](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser),
+      i.e. the landing page of the repository's 'Issues' section.
+
+      ### Options
+      - `blank_issues_enabled`: A boolean value defining whether free-form issues can be opened by users.
+      - `contact_links`: An array of dictionaries, defining additional external links for opening issues.
+      These options will be displayed alongside the available templates in the 'Issues' section of the repository.
+
+      ## References
+      - [GitHub Documentation](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates)
+  
+
     type: object
     default : { }
     additionalProperties: false
@@ -2434,7 +2470,14 @@ properties:
           
           - Pull request template filenames are not case-sensitive, and can have an extension such as `.md` or `.txt`.
           - The YAML syntax used for issue forms is not supported for pull requests templates.
-
+          
+          By default, the template defined at [./github/pull_request_template.md](./github/pull_request_template.md)
+          is used when opening a pull request. To use the extra templates in this directory,
+          the `template` [query parameter](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/using-query-parameters-to-create-a-pull-request)
+          must be added to the URL of the pull request form, defining the name of the template to use.
+          For example, to use a template file named `my_custom_template.md`, add the following query string at the end of the
+          URL: `?template=my_custom_template.md`. A full URL may e.g. look like this:
+          https://github.com/my-username/my-repo/compare/main...my-branch?template=my_custom_template.md
         type: object
         additionalProperties:
           type: string
@@ -2445,7 +2488,7 @@ properties:
     title: GitHub Discussions
     description: |
       [GitHub Discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions)
-      configurations for the repository.
+      configurations of the repository.
     type: object
     additionalProperties: false
     properties:
@@ -2508,6 +2551,20 @@ properties:
                 Form definition for a specific discussion category, according to GitHub's
                 [syntax for discussion category forms](https://docs.github.com/en/discussions/managing-discussions-for-your-community/syntax-for-discussion-category-forms),
                 which is a subset of the [syntax for issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms).
+                
+                Each YAML file defines a form for a specific discussion category, indicated by the
+                filename, which must correspond with the slug for one of the discussion categories.
+                For example, the template for the "New Announcements" category should be stored in
+                `.github/DISCUSSION_TEMPLATE/new-announcements.yml`.
+                
+                To be recognized by GitHub, discussion category forms must be stored in the directory `/.github/DISCUSSION_TEMPLATE/`
+                (i.e. this directory).
+                
+                Each YAML file defines a form for a specific discussion category, indicated by the
+                filename, which must correspond with the slug for one of the discussion categories.
+                For example, the template for the "New Announcements" category should be stored in `.github/DISCUSSION_TEMPLATE/new-announcements.yml`.
+                Discussion forms, like issue forms, are written in YAML, using the
+                GitHub [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema).
               type: object
               additionalProperties: false
               properties:
@@ -2962,18 +3019,28 @@ properties:
     properties:
       main:
         title: Configurations for the default (aka main, trunk) branch of the repository.
+        default:
+          name: main
         $ref: https://controlman.repodynamics.com/schema/branch
       release:
         title: Configurations for release branches.
+        default:
+          name: release/v
         $ref: https://controlman.repodynamics.com/schema/branch
       pre:
         title: Configurations for pre-release branches.
+        default:
+          name: pre-release/v
         $ref: https://controlman.repodynamics.com/schema/branch
       dev:
         title: Configurations for development branches.
+        default:
+          name: dev/
         $ref: https://controlman.repodynamics.com/schema/branch
       auto:
         title: Configurations for auto-update branches.
+        default:
+          name: auto-update/
         $ref: https://controlman.repodynamics.com/schema/branch
   tag:
     title: Configurations for the repository tags.

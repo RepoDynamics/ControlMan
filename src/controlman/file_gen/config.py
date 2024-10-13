@@ -1,15 +1,21 @@
+from __future__ import annotations as _annotations
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 from pathlib import Path as _Path
-
+from xml.etree import ElementTree as _ElementTree
 import copy as _copy
 
 from loggerman import logger
 import pyserials as _ps
 import pylinks
 from pylinks.exception.api import WebAPIError as _WebAPIError
+from licenseman.spdx import license_text as _license_text
 
 from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
+
+if _TYPE_CHECKING:
+    from typing import Literal
 
 
 class ConfigFileGenerator:
@@ -77,14 +83,41 @@ class ConfigFileGenerator:
     def _generate_license(self) -> list[DynamicFile]:
         if self._is_disabled("license"):
             return []
-        license_file = {
-            "type": DynamicFileType.CONFIG,
-            "subtype": ("license", "License"),
-            "content": self._data["license.text"],
-            "path": self._data["license.path"],
-            "path_before": self._data_before["license.path"],
-        }
-        return [DynamicFile(**license_file)]
+        files = []
+        for component_id, component_data in self._data["license.component"].items():
+            for part in ("text", "header"):
+                if component_data["type"] == "exception" and part == "header":
+                    continue
+                for output_type in ("plain", "md"):
+                    text = component_data.get(f"{part}_{output_type}")
+                    xml = component_data.get(f"{part}_xml")
+                    if not (text or xml):
+                        continue
+                    if not text:
+                        config_component = component_data.get(f"{part}_config", {}).get(output_type, {})
+                        config_default = self._data[f"license.config.{output_type}"] or {}
+                        config = _ps.update.dict_from_addon(
+                            data=config_component,
+                            addon=config_default,
+                            append_list=True,
+                            append_dict=True,
+                            raise_duplicates=False,
+                            raise_type_mismatch=False,
+                        )
+                        xml_elem = _ElementTree.fromstring(xml)
+                        text = _license_text.SPDXLicenseTextPlain(xml_elem).generate(**config)
+                    subtype_type = "license" if component_data["type"] == "license" else "license_exception"
+                    subtype = f"{subtype_type}_{component_id}_{output_type}_{part}"
+                    file = DynamicFile(
+                        type=DynamicFileType.CONFIG,
+                        subtype=(subtype, subtype_type.replace("_", " ").title()),
+                        content=text,
+                        path=component_data["path"][f"{part}_{output_type}"],
+                        path_before=self._data_before["license.component"][component_id]["path"][
+                            f"{part}_{output_type}"],
+                    )
+                    files.append(file)
+        return files
 
     def web_toc(self) -> list[DynamicFile]:
         if self._is_disabled("web.toc"):

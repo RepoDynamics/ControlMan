@@ -75,7 +75,7 @@ class DataValidator:
         for dirpath_key in (
             "control.path",
             # "local.path",
-            "theme.path",
+            # "theme.path",
             "pkg.path.root",
             "test.path.root",
             "web.path.root",

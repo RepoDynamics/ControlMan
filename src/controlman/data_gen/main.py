@@ -1,4 +1,5 @@
 # Standard libraries
+from dataclasses import asdict as _asdict
 import datetime as _datetime
 import re as _re
 
@@ -8,6 +9,7 @@ import pylinks
 from loggerman import logger as _logger
 import pyserials as _ps
 import mdit as _mdit
+from licenseman import spdx as _spdx
 
 from controlman import _file_util
 from controlman.cache_manager import CacheManager
@@ -124,33 +126,75 @@ class MainDataGenerator:
         return
 
     def _license(self):
-        data = self._data["license"]
-        if not data:
+        if not self._data["license"]:
             return
-        license_id = self._data.fill("license.id")
-        license_db = _file_util.get_package_datafile("db/license/info.yaml")
-        license_info = license_db.get(license_id)
-        if not license_info:
-            for key in ("name", "text", "notice"):
-                if key not in data:
+        expression = self._data.fill("license.expression")
+        license_ids, license_ids_custom = _spdx.expression.license_ids(expression)
+        exception_ids, exception_ids_custom = _spdx.expression.exception_ids(expression)
+        for custom_ids, spdx_typ in ((license_ids_custom, "license"), (exception_ids_custom, "exception")):
+            for custom_id in custom_ids:
+                if custom_id not in self._data["license.component"]:
                     raise _exception.load.ControlManSchemaValidationError(
                         source="source",
-                        before_substitution=True,
-                        problem=f"`license.{key}` is required when `license.id` is not a supported ID.",
-                        json_path="license",
+                        problem=f"Custom {spdx_typ} '{custom_id}' not found at `$.license.component`.",
+                        json_path="license.expression",
                         data=self._data(),
                     )
-            return
-        if "name" not in data:
-            data["name"] = license_info["name"]
-        if "trove" not in data:
-            data["trove"] = f"License :: OSI Approved :: {license_info['trove_classifier']}"
-        if "text" not in data:
-            filename = license_id.removesuffix("-or-later")
-            data["text"] = _file_util.get_package_datafile(f"db/license/text/{filename}.txt")
-        if "notice" not in data:
-            filename = license_id.removesuffix("-or-later")
-            data["notice"] = _file_util.get_package_datafile(f"db/license/notice/{filename}.txt")
+        for spdx_ids, spdx_typ in ((license_ids, "license"), (exception_ids, "exception")):
+            func = _spdx.license if spdx_typ == "license" else _spdx.exception
+            class_ = _spdx.SPDXLicense if spdx_typ == "license" else _spdx.SPDXLicenseException
+            for spdx_id in spdx_ids:
+                user_data = self._data.setdefault("license.component", {}).setdefault(spdx_id, {})
+                path_text = normalize_license_filename(
+                    user_data["path"]["text_plain"] if user_data else f"LICENSE-{spdx_id}.md"
+                )
+                path_header = normalize_license_filename(
+                    user_data["path"]["header_plain"] if user_data else f"COPYRIGHT-{spdx_id}.md"
+                )
+                source_data = self._cache.get("license", spdx_id)
+                if source_data:
+                    licence = class_(source_data)
+                else:
+                    licence = func(spdx_id)
+                    self._cache.set("license", spdx_id, licence.raw_data)
+                out_data = {
+                    "type": spdx_typ,
+                    "custom": False,
+                    "path": {
+                        "text_plain": path_text,
+                        "header_plain": path_header,
+                    },
+                    "id": licence.id,
+                    "name": licence.name,
+                    "reference_num": licence.reference_number,
+                    "osi_approved": licence.osi_approved,
+                    "fsf_libre": licence.fsf_libre,
+                    "url": {
+                        "reference": licence.url_reference,
+                        "json": licence.url_json,
+                        "cross_refs": licence.url_cross_refs,
+                        "repo_text_plain": f"{self._data["repo.url.blob"]}/{path_text}",
+                        "repo_header_plain": f"{self._data["repo.url.blob"]}/{path_header}",
+                    },
+                    "version_added": licence.version_added,
+                    "deprecated": licence.deprecated,
+                    "version_deprecated": licence.version_deprecated,
+                    "obsoleted_by": licence.obsoleted_by,
+                    "alts": licence.alts,
+                    "optionals": licence.optionals_xml_str,
+                    "comments": licence.comments,
+                    "trove_classifier": _spdx.trove_classifier(licence.id),
+                    "text_xml": licence.text_xml_str,
+                    "header_xml": licence.header_xml_str if spdx_typ == "license" else None,
+                }
+                _ps.update.dict_from_addon(
+                    data=user_data,
+                    addon=out_data,
+                    append_list=True,
+                    append_dict=True,
+                    raise_duplicates=False,
+                    raise_type_mismatch=True,
+                )
         return
 
     def _copyright(self):
@@ -303,6 +347,8 @@ class MainDataGenerator:
             return user_info
         user = self._gh_api.user(username=username)
         user_info = user.info
+        if user_info["blog"] and "://" not in user_info["blog"]:
+            user_info["blog"] = f"https://{user_info['blog']}"
         social_accounts_info = user.social_accounts
         socials = {}
         user_info["socials"] = socials
@@ -345,3 +391,16 @@ class MainDataGenerator:
                 self._cache.set("doi", doi, publication_data)
             publications.append(publication_data)
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
+
+
+def normalize_license_filename(filename: str) -> str:
+    """Normalize a license filename.
+
+    Check whether the filename has more than one period,
+    and if it does, replace all but the last period with a hyphen.
+    This is done because GitHub doesn't recognize license files that have more than one period.
+    """
+    parts = filename.split(".")
+    if len(parts) <= 2:
+        return filename
+    return f"{"-".join(parts[:-1])}.{parts[-1]}"

@@ -1,0 +1,48 @@
+$id: https://controlman.repodynamics.com/schema/license-component-config
+$schema: https://json-schema.org/draft/2020-12/schema
+title: License Config
+type: object
+properties:
+  plain:
+    type: object
+    properties:
+      title:
+        type: [ boolean, string ]
+        default: true
+      copyright_notice:
+        type: [ boolean, string ]
+        default: ${{ copyright.notice }}
+      optionals:
+        type: [ boolean, array ]
+      alts:
+        type: object
+      line_length:
+        $ref: https://jsonschemata.repodynamics.com/number/non-negative
+        default: 88
+      list_indent:
+        $ref: https://jsonschemata.repodynamics.com/number/non-negative
+        default: 0
+      item_indent:
+        $ref: https://jsonschemata.repodynamics.com/number/non-negative
+        default: 1
+      item_spacing:
+        $ref: https://jsonschemata.repodynamics.com/number/non-negative
+        default: 1
+      bullet:
+        type: [ null, integer, string ]
+        default: 1
+      title_centered:
+        type: boolean
+        default: false
+      title_underline:
+        type: string
+        default: =
+      title_underline_full:
+        type: boolean
+        default: false
+      subtitle_underline:
+        type: string
+        default: '-'
+      line_breaks:
+        type: integer
+        default: 2

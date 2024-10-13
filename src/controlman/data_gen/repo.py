@@ -208,8 +208,10 @@ class RepoDataGenerator:
                 }
             )
         for autogroup_name, release_key in (("version", "versions"), ("branch", "branches")):
-            entries = self._data.get(f"project.{release_key}", [])
             label_data = self._data[f"label.{autogroup_name}"]
+            if not label_data:
+                continue
+            entries = self._data.get(f"project.{release_key}", [])
             for entry in entries:
                 prefix = label_data['prefix']
                 out.append(
