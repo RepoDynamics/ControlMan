@@ -50,7 +50,7 @@ def load(
             log = _ps.update.dict_from_addon(
                 data=full_data,
                 addon=data,
-                append_list=False,
+                append_list=True,
                 append_dict=True,
                 raise_duplicates=True,
                 raise_type_mismatch=True,
@@ -83,7 +83,7 @@ def load(
 
     full_data = {}
     hook_dir = path_cc / _const.DIRNAME_CC_HOOK
-    for path in path_cc.rglob('*'):
+    for path in sorted(path_cc.rglob('*'), key=lambda p: (p.parts, p)):
         if hook_dir not in path.parents and path.is_file() and path.suffix.lower() in ['.yaml', '.yml']:
             with _logger.sectioning(_mdit.element.code_span(str(path.relative_to(path_cc)))):
                 _load_file(filepath=path)
