@@ -391,16 +391,23 @@ def _make_registry():
     ) -> _referencing.Resource:
         return _referencing.Resource.from_contents(schema, default_specification=spec)
 
+    def add_custom(schema: dict):
+        _js.edit.add_property(schema, "__custom__", {})
+        _js.edit.add_property(schema, "__custom_template__", {})
+        return
+
     resources = []
     def_schemas_path = _schema_dir_path
     for schema_filepath in def_schemas_path.glob("**/*.yaml"):
         schema_dict = _ps.read.yaml_from_file(path=schema_filepath)
         _js.edit.required_last(schema_dict)
+        add_custom(schema_dict)
         resources.append(make_resource(schema_dict))
     registry_after, _ = _mdit_schema.make_registry(dynamic=False, crawl=True, add_resources=resources)
     resources_before = []
     for registry_schema_id in registry_after:
         registry_schema_dict = registry_after[registry_schema_id].contents
+        add_custom(registry_schema_dict)
         registry_schema_spec = registry_after[registry_schema_id]._specification
         registry_schema_dict_before = modify_schema(copy.deepcopy(registry_schema_dict))
         resources_before.append(make_resource(registry_schema_dict_before, spec=registry_schema_spec))

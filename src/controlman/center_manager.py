@@ -72,7 +72,7 @@ class CenterManager:
             )
         with _logger.sectioning("Post-Load Data Validation"):
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
-        self._data_raw = _ps.NestedDict(full_data)
+        self._data_raw = _ps.NestedDict(full_data, template_ignore_key_regex="^__custom_template__$")
         return self._data_raw
 
     def generate_data(self) -> _ps.NestedDict:
