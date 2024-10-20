@@ -2536,9 +2536,10 @@ properties:
                     Description of task2.
               timeline:
                 type: string
-                default: |
+                default: >-
                   
                   | Date | Time | Actor | Description |
+                  
                   | ---- | ---- | ----- | ----------- |
               references:
                 type: string
