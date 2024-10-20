@@ -32,10 +32,14 @@ class FormGenerator:
                 key: val for key, val in form.items() if key in _const.ISSUE_FORM_TOP_LEVEL_KEYS
             }
             form_output[_const.ISSUE_FORM_BODY_KEY] = []
+            marker_added = False
             for elem in form[_const.ISSUE_FORM_BODY_KEY]:
                 pre_process = elem.get("pre_process")
                 if pre_process and not pre_process_existence(pre_process):
                     continue
+                if not marker_added and elem["type"] != "markdown":
+                    elem["attributes"]["label"] += f"<!-- ISSUE-ID: {form['id']} -->"
+                    marker_added = True
                 form_output["body"].append(
                     {key: val for key, val in elem.items() if key in _const.ISSUE_FORM_BODY_TOP_LEVEL_KEYS}
                 )
