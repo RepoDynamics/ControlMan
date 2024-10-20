@@ -2537,13 +2537,9 @@ properties:
               timeline:
                 type: string
                 default: |
+                  
                   | Date | Time | Actor | Description |
                   | ---- | ---- | ----- | ----------- |
-                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {% if issue.user.name -%}
-                  {{ issue.user.name }} (@{{ issue.user.login }})
-                  {%- else -%}
-                  @{{ issue.user.login }}
-                  {%- endif %} | Ticket submitted. |
               references:
                 type: string
                 default: ''

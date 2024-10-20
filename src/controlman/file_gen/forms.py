@@ -23,7 +23,6 @@ class FormGenerator:
     def issue_forms(self) -> list[DynamicFile]:
         out = []
         forms = self._data.get("issue.forms", [])
-        maintainers = self._data.get("maintainer.issue", {})
         paths = []
         for form_idx, form in enumerate(forms):
             pre_process = form.get("pre_process")
@@ -32,19 +31,6 @@ class FormGenerator:
             form_output = {
                 key: val for key, val in form.items() if key in _const.ISSUE_FORM_TOP_LEVEL_KEYS
             }
-            labels = form_output.setdefault("labels", [])
-            type_label_prefix = self._data["label.type.prefix"]
-            type_label_suffix = self._data["label.type.label"][form["type"]]["suffix"]
-            labels.append(f"{type_label_prefix}{type_label_suffix}")
-            if form["subtype"]:
-                subtype_label_prefix = self._data["label.subtype.prefix"]
-                subtype_label_suffix = self._data["label.subtype.label"][form["subtype"]]["suffix"]
-                labels.append(f"{subtype_label_prefix}{subtype_label_suffix}")
-            status_label_prefix = self._data["label.status.prefix"]
-            status_label_suffix = self._data["label.status.label.triage.suffix"]
-            labels.append(f"{status_label_prefix}{status_label_suffix}")
-            if form["id"] in maintainers.keys():
-                form_output["assignees"] = [maintainer["github"]["id"] for maintainer in maintainers[form["id"]]]
             form_output[_const.ISSUE_FORM_BODY_KEY] = []
             for elem in form[_const.ISSUE_FORM_BODY_KEY]:
                 pre_process = elem.get("pre_process")
