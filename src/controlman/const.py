@@ -24,6 +24,9 @@ FUNCNAME_CC_HOOK_POST_DATA = "post_data"
 
 CC_EXTENSION_TAG = u"!ext"
 
+RELATIVE_TEMPLATE_KEYS = ["__custom_template__"]
+CUSTOM_KEY = "__custom__"
+
 # GitHub Constants
 DIRPATH_ISSUES = ".github/ISSUE_TEMPLATE"
 FILEPATH_ISSUES_CONFIG = f"{DIRPATH_ISSUES}/config.yml"
@@ -36,6 +39,22 @@ DIRPATH_PULL_TEMPLATES = ".github/PULL_REQUEST_TEMPLATE"
 # Git Constants
 FILEPATH_GITIGNORE = ".gitignore"
 FILEPATH_GIT_ATTRIBUTES = ".gitattributes"
+ISSUE_FORM_TOP_LEVEL_KEYS = (
+    "name",
+    "description",
+    "body",
+    "assignees",
+    "labels",
+    "title",
+    "projects",
+)
+ISSUE_FORM_BODY_KEY = "body"
+ISSUE_FORM_BODY_TOP_LEVEL_KEYS = (
+    "type",
+    "id",
+    "attributes",
+    "validations",
+)
 
 # Python Constants
 FILENAME_PACKAGE_TYPING_MARKER = "py.typed"

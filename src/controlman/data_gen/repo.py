@@ -86,6 +86,7 @@ class RepoDataGenerator:
                 ]
                 if branch == curr_branch:
                     branch_metadata.fill("pkg.entry")
+                    branch_metadata.fill("test.entry")
                 version_info |= {
                     "python_versions": branch_metadata["pkg.python.version.minors"],
                     "os_names": [
@@ -93,20 +94,34 @@ class RepoDataGenerator:
                         if name in branch_metadata["pkg.os"]
                     ],
                     "package_managers": package_managers,
+                    "python_api_names": [
+                        script["name"] for script in branch_metadata.get("pkg.entry.python", {}).values()
+                    ],
+                    "test_python_api_names": [
+                        script["name"] for script in branch_metadata.get("test.entry.python", {}).values()
+                    ],
                     "cli_names": [
                         script["name"] for script in branch_metadata.get("pkg.entry.cli", {}).values()
+                    ],
+                    "test_cli_names": [
+                        script["name"] for script in branch_metadata.get("test.entry.cli", {}).values()
                     ],
                     "gui_names": [
                         script["name"] for script in branch_metadata.get("pkg.entry.gui", {}).values()
                     ],
+                    "test_gui_names": [
+                        script["name"] for script in branch_metadata.get("test.entry.gui", {}).values()
+                    ],
                     "api_names": [
-                        script["name"] for script in branch_metadata.get("pkg.entry.api", {}).values()
+                        script["name"]
+                        for group in branch_metadata.get("pkg.entry.api", {}).values()
+                        for script in group["entry"].values()
                     ]
                 }
             release_info[str(ver)] = version_info
         self._git.checkout(curr_branch)
         self._git.stash_pop()
-        out = {"version": release_info, "versions": [], "branches": [], "interfaces": ["Python API"]}
+        out = {"version": release_info, "versions": [], "branches": [], "interfaces": []}
         for version, version_info in release_info.items():
             out["versions"].append(version)
             out["branches"].append(version_info["branch"])
@@ -117,12 +132,19 @@ class RepoDataGenerator:
             if key != "version":
                 out[key] = sorted(
                     set(val),
-                    key=lambda x: x if key!="python_versions" else tuple(map(int, x.split(".")))
+                    key=lambda x: x if key not in ("python_versions", "versions") else _ver.PEP440SemVer(f"{x}.0" if key == "python_versions" else x),
+                    reverse=key in ("python_versions", "versions"),
                 )
-        for key in ("cli_names", "gui_names", "api_names"):
+        for key, title in (
+            ("python_api_names", "Python API"),
+            ("api_names", "Plugin API"),
+            ("gui_names", "GUI"),
+            ("cli_names", "CLI"),
+        ):
             if key in out:
                 out["interfaces"].append(key.removesuffix("_names").upper())
-                out["has_scripts"] = True
+                if key in ("gui_names", "cli_names"):
+                    out["has_scripts"] = True
         self._data["project"] = out
         if curr_branch_latest_version:
             self._data["version"] = str(curr_branch_latest_version)

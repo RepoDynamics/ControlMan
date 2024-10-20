@@ -425,7 +425,17 @@ properties:
     required: [ version ]
   entry:
     type: object
+    default: { }
     properties:
+      python:
+        title: Python API
+        description: Python API entry points for the project
+        default:
+          main:
+            name: ${{ ....name }}
+            description: Main Python API entry of the package.
+            ref: '${{ ....import_name }}:__init__'
+        $ref: https://controlman.repodynamics.com/schema/pkg-entry
       cli:
         description: Scripts for the project
         $ref: https://controlman.repodynamics.com/schema/pkg-entry
@@ -447,10 +457,7 @@ properties:
         additionalProperties:
           type: object
           additionalProperties: false
-          required:
-            - name
-            - description
-            - entry
+          required: [ name, description, entry ]
           properties:
             name:
               title: Group name
@@ -725,3 +732,12 @@ properties:
           recipe-maintainers:
             - jakirkham
           feedstock-name: scipy
+  python_api:
+    title: Python API
+    description: |
+      Python API settings.
+      The Python API is the interface of the package that is used by other Python packages.
+      It is defined by the package's public modules, classes, functions, and methods.
+      The API is used by other packages to interact with the package, and is the part of the package
+      that is considered stable and should not change between versions.
+    type:

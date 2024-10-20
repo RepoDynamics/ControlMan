@@ -26,7 +26,8 @@ def validate(
 ) -> None:
     """Validate data against a schema."""
     schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / f"{schema}.yaml")
-    schema_dict = _js.edit.required_last(schema_dict)
+    _js.edit.required_last(schema_dict)
+    _add_custom_keys(schema_dict)
     if before_substitution:
         schema_dict = modify_schema(schema_dict)["anyOf"][0]
     try:
@@ -391,29 +392,30 @@ def _make_registry():
     ) -> _referencing.Resource:
         return _referencing.Resource.from_contents(schema, default_specification=spec)
 
-    def add_custom(schema: dict):
-        _js.edit.add_property(schema, "__custom__", {})
-        _js.edit.add_property(schema, "__custom_template__", {})
-        return
-
     resources = []
     def_schemas_path = _schema_dir_path
     for schema_filepath in def_schemas_path.glob("**/*.yaml"):
         schema_dict = _ps.read.yaml_from_file(path=schema_filepath)
         _js.edit.required_last(schema_dict)
-        add_custom(schema_dict)
+        _add_custom_keys(schema_dict)
         resources.append(make_resource(schema_dict))
     registry_after, _ = _mdit_schema.make_registry(dynamic=False, crawl=True, add_resources=resources)
     resources_before = []
     for registry_schema_id in registry_after:
         registry_schema_dict = registry_after[registry_schema_id].contents
-        add_custom(registry_schema_dict)
+        _add_custom_keys(registry_schema_dict)
         registry_schema_spec = registry_after[registry_schema_id]._specification
         registry_schema_dict_before = modify_schema(copy.deepcopy(registry_schema_dict))
         resources_before.append(make_resource(registry_schema_dict_before, spec=registry_schema_spec))
 
     registry_before = resources_before @ _referencing.Registry()
     return registry_before, registry_after
+
+
+def _add_custom_keys(schema: dict):
+    _js.edit.add_property(schema, "__custom__", {})
+    _js.edit.add_property(schema, "__custom_template__", {})
+    return
 
 
 _registry_before, _registry_after = _make_registry()

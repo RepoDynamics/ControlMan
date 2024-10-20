@@ -30,9 +30,7 @@ class FormGenerator:
             if pre_process and not pre_process_existence(pre_process):
                 continue
             form_output = {
-                key: val
-                for key, val in form.items()
-                if key not in ["id", "type", "subtype", "body", "pre_process", "post_process"]
+                key: val for key, val in form.items() if key in _const.ISSUE_FORM_TOP_LEVEL_KEYS
             }
             labels = form_output.setdefault("labels", [])
             type_label_prefix = self._data["label.type.prefix"]
@@ -47,13 +45,13 @@ class FormGenerator:
             labels.append(f"{status_label_prefix}{status_label_suffix}")
             if form["id"] in maintainers.keys():
                 form_output["assignees"] = [maintainer["github"]["id"] for maintainer in maintainers[form["id"]]]
-            form_output["body"] = []
-            for elem in form["body"]:
+            form_output[_const.ISSUE_FORM_BODY_KEY] = []
+            for elem in form[_const.ISSUE_FORM_BODY_KEY]:
                 pre_process = elem.get("pre_process")
                 if pre_process and not pre_process_existence(pre_process):
                     continue
                 form_output["body"].append(
-                    {key: val for key, val in elem.items() if key not in ["pre_process", "post_process"]}
+                    {key: val for key, val in elem.items() if key in _const.ISSUE_FORM_BODY_TOP_LEVEL_KEYS}
                 )
             file_content = _ps.write.to_yaml_string(data=form_output, end_of_file_newline=True)
             filename = f"{form_idx + 1:02}_{form['id']}.yaml"

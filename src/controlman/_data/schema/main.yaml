@@ -1850,30 +1850,28 @@ properties:
             description: Configurations for a major release commit type.
             default:
               type: major
+              description: New major release containing breaking changes.
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           minor:
             title: Minor Release
             description: Configurations for a minor release commit type.
             default:
               type: minor
+              description: New minor release containing backward-compatible new features and improvements.
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           patch:
             title: Patch Release
             description: Configurations for a patch release commit type.
             default:
               type: patch
+              description: New patch release containing backward-compatible bug fixes.
             $ref: https://controlman.repodynamics.com/schema/commit-primary
           post:
             title: Post-release
             description: Configurations for a post-release commit type.
             default:
               type: post
-            $ref: https://controlman.repodynamics.com/schema/commit-primary
-          web:
-            title: Website
-            description: Configurations for a website commit type.
-            default:
-              type: web
+              description: New post-release containing non-API related changes.
             $ref: https://controlman.repodynamics.com/schema/commit-primary
       secondary:
         title: Secondary Commits
@@ -1914,7 +1912,9 @@ properties:
         title: Primary Labels
         description: Labels for primary commit types.
         type: object
+        default: { }
         additionalProperties: false
+        required: [ prefix, color, label ]
         properties:
           prefix:
             title: Prefix
@@ -1928,30 +1928,40 @@ properties:
             title: Labels
             description: Primary labels.
             type: object
+            default: { }
             additionalProperties:
               title: Custom Primary Labels
               description: Custom primary labels.
               $ref: https://controlman.repodynamics.com/schema/label-group-element
+            required: [ major, minor, patch, post ]
             properties:
               major:
                 title: Major Release
                 description: Label for major release.
+                default:
+                  suffix: Major Release
+                  description: ${{ commit.primary.major.description }}
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               minor:
                 title: Minor Release
                 description: Label for minor release.
+                default:
+                  suffix: Minor Release
+                  description: ${{ commit.primary.minor.description }}
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               patch:
                 title: Patch Release
                 description: Label for patch release.
+                default:
+                  suffix: Patch Release
+                  description: ${{ commit.primary.patch.description }}
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               post:
                 title: Post Release
                 description: Label for post release.
-                $ref: https://controlman.repodynamics.com/schema/label-group-element
-              web:
-                title: Website
-                description: Label for website deployment.
+                default:
+                  suffix: Post Release
+                  description: ${{ commit.primary.post.description }}
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
       subtype:
         title: Secondary Type Labels
@@ -1961,21 +1971,25 @@ properties:
         title: Status
         description: Issue/pull status
         type: object
+        default: { }
         additionalProperties: false
         required: [ prefix, color, label ]
         properties:
           prefix:
             title: Prefix
             description: Prefix for the label name
+            default: 'status: '
             $ref: https://controlman.repodynamics.com/schema/label-prefix
           color:
             title: Color
             description: Color of the label.
+            default: '#0366d6'
             $ref: https://jsonschemata.repodynamics.com/color/hex-string
           label:
             title: Labels
             description: Labels for the issue sub-type
             type: object
+            default : { }
             additionalProperties: false
             required:
               - triage
@@ -1995,62 +2009,109 @@ properties:
               triage:
                 title: Triage
                 description: The issue is being triaged.
+                default:
+                  suffix: Triage
+                  description: The issue is being triaged.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               rejected:
                 title: Rejected
-                description: The issue/pull-request has been rejected.
+                description: The issue/PR has been rejected.
+                default:
+                  suffix: Rejected
+                  description: The issue/PR has been rejected.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               duplicate:
                 title: Duplicate
-                description: The issue/pull-request is a duplicate.
+                description: The issue/PR is a duplicate.
+                default:
+                  suffix: Duplicate
+                  description: The issue/PR is a duplicate.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               invalid:
                 title: Invalid
-                description: The issue/pull-request is invalid.
+                description: The issue/PR is invalid.
+                default:
+                  suffix: Invalid
+                  description: The issue/PR is invalid.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               planning:
                 title: Planning
                 description: The issue is in the planning phase.
+                default:
+                  suffix: Planning
+                  description: The issue is in the planning phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               requirement_analysis:
                 title: Requirement Analysis
                 description: The issue is in the requirement analysis phase.
+                default:
+                  suffix: Requirement Analysis
+                  description: The issue is in the requirement analysis phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               design:
                 title: Design
                 description: The issue is in the design phase.
+                default:
+                  suffix: Design
+                  description: The issue is in the design phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               implementation:
                 title: Implementation
                 description: The issue is in the implementation phase.
+                default:
+                  suffix: Implementation
+                  description: The issue is in the implementation phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               testing:
                 title: Testing
                 description: The issue is in the testing phase.
+                default:
+                  suffix: Testing
+                  description: The issue is in the testing phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_alpha:
                 title: Alpha Release
-                description: The issue/pull-request is in alpha release.
+                description: The issue/PR is in alpha release.
+                default:
+                  suffix: Alpha Release
+                  description: The issue/PR is in alpha release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_beta:
                 title: Beta Release
-                description: The issue/pull-request is in beta release.
+                description: The issue/PR is in beta release.
+                default:
+                  suffix: Beta Release
+                  description: The issue/PR is in beta release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_rc:
                 title: Release Candidate
-                description: The issue/pull-request is published as a release candidate.
+                description: The issue/PR is published as a release candidate.
+                default:
+                  suffix: Release Candidate
+                  description: The issue/PR is published as a release candidate.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_final:
                 title: Final Release
-                description: The issue/pull-request has been merged into a release branch.
+                description: The issue/PR has been merged into a release branch.
+                default:
+                  suffix: Final Release
+                  description: The issue/PR is published as a final release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
       branch:
         title: Branch
         description: Branch labels. This is an automatic label group.
+        default:
+          prefix: 'branch: '
+          description: Related to this specific branch of the repository.
+          color: '#0366d6'
         $ref: https://controlman.repodynamics.com/schema/label-auto
       version:
         title: Version
         description: Version labels. This is an automatic label group.
+        default:
+          prefix: 'Version: '
+          description: Related to this specific version of the package.
+          color: '#0366d6'
         $ref: https://controlman.repodynamics.com/schema/label-auto
       custom:
         title: Custom Labels
@@ -2239,7 +2300,7 @@ properties:
                 - if_any: [ "${‎{ package.releases.gui_scripts }}" ] # Display a form only if the package has a GUI interface
                 - if_any: [ "${‎{ package.releases.cli_scripts }}" ] # Display a form only if the package has a CLI interface
                 - if_any: [ "${‎{ package.releases.has_scripts }}" ] # Display an element within a form only if the package has scripts
-              $ref: https://controlman.repodynamics.com/schema/gh_form-preprocess
+              $ref: https://controlman.repodynamics.com/schema/gh-form-preprocess
             post_process:
               description: |
                 {{ ccc.name }} allows you to define post-processing instructions for each form,
@@ -2417,11 +2478,12 @@ properties:
               type: string
             body:
               $ref: https://controlman.repodynamics.com/schema/gh-form-body
-  document:
+  doc:
     description: Development process protocol specifications
     type: object
     default: { }
     additionalProperties: false
+    required: [ prerelease_temp_path, dev_protocol ]
     properties:
       prerelease_temp_path:
         description: >-
@@ -2429,43 +2491,122 @@ properties:
           for storing pre-release development process protocols.
         type: string
         default: docs/prerelease_dev_protocols.md
-      template:
+      dev_protocol:
         type: object
         default: { }
         additionalProperties: false
+        required: [ marker ]
         properties:
-          title:
-            type: string
-            default: Development Process Protocol
-          body:
+          marker:
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              start:
+                  type: string
+                  default: 'BEGIN: '
+              end:
+                  type: string
+                  default: 'END: '
+          data:
+            type: object
+            default: { }
+            properties:
+              commit_summary:
+                type: string
+                default: ''
+              commit_description:
+                type: string
+                default: ''
+              issue_number:
+                type: string
+                default: '#{{ issue.number }}'
+              tasklist:
+                type: string
+                default: |
+                  
+                  - [ ] Summary of task1.
+                    Description of task1.
+                    - [ ] Summary of subtask1.
+                      Description of subtask1.
+                  - [ ] Summary of task2.
+                    Description of task2.
+              timeline:
+                type: string
+                default: |
+                  | Date | Time | Actor | Description |
+                  | ---- | ---- | ----- | ----------- |
+                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {% if issue.user.name -%}
+                  {{ issue.user.name }} (@{{ issue.user.login }})
+                  {%- else -%}
+                  @{{ issue.user.login }}
+                  {%- endif %} | Ticket submitted. |
+              references:
+                type: string
+                default: ''
+              pr_list:
+                type: string
+                default: ''
+          template:
             type: string
             default: |
-              ## Plan
+              # Development Protocol {issue_number}
+      
+              - **Type**: {{ form.description }}
+              - **Client**: {% if issue.user.name -%}
+                {{ issue.user.name }} (@{{ issue.user.login }})
+                {%- else -%}
+                @{{ issue.user.login }}
+                {%- endif %} 
+              
+              ## User Requirements Document (URD)
+              
               {issue_body}
-
-
-              ## Software Requirements Specification
-              TBD
-
-
-              ## Design Specification
-              TBD
-
-
+              
+              ## Triage
+      
+              ## Plan
+        
+              ## Software Requirements Specification (SRS)
+        
+              ## Software Design Document (SDD)
+        
               ## Implementation
-              TBD
-              {primary_commit_summary}
-              {secondary_commits_tasklist}
-
-
+              
+              {{ commit_summary }}
+              
+              {{ commit_description }}
+              
+              {{ tasklist }}
+        
               ## References
-              {references}
-
-
+              
+              {{ references }}
+        
               ## Timeline
-              {timeline}
-        required: [ title, body ]
-    required: [ prerelease_temp_path, template ]
+              
+              {{ timeline }}
+          as_comment:
+            type: boolean
+            default: false
+          timeline_template:
+            type: object
+            additionalProperties: false
+            default: {}
+            properties:
+              labeled:
+                type: string
+          reference_template:
+            type: string
+            default: |
+              - [{{ ref.title }}]({{ ref.url }})
+          pr_list_template:
+            type: string
+            default: |
+              The implementation is tracked in the following pull requests:
+              {% for target in targets %}
+              - #{{ target.pull_number }} (Branch: [{{ target.branch_name }}]({{ target.branch_url }}))
+              {% endfor %}
   pull:
     title: Pull Requests
     description: GitHub pull request settings for the project

@@ -72,7 +72,7 @@ class CenterManager:
             )
         with _logger.sectioning("Post-Load Data Validation"):
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
-        self._data_raw = _ps.NestedDict(full_data, template_ignore_key_regex="^__custom_template__$")
+        self._data_raw = _ps.NestedDict(full_data, relative_template_keys=const.RELATIVE_TEMPLATE_KEYS)
         return self._data_raw
 
     def generate_data(self) -> _ps.NestedDict:
@@ -107,6 +107,7 @@ class CenterManager:
                 "Filled Data",
                 "All template variables have been successfully resolved.",
             )
+        data = _ps.NestedDict(_ps.update.remove_keys(data(), const.RELATIVE_TEMPLATE_KEYS))
         with _logger.sectioning("Final Data Validation"):
             _data_validator.validate(data=data(), source="source")
         self._data = data
@@ -118,7 +119,7 @@ class CenterManager:
         self.generate_data()
         with _logger.sectioning("Dynamic File Generation"):
             self._files = _file_gen.generate(
-                data=self._data,
+                data=_ps.NestedDict(_ps.update.remove_keys(self._data(), const.CUSTOM_KEY)),
                 data_before=self._data_before,
                 repo_path=self._path_root,
             )
