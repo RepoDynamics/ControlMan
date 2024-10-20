@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev327"
+version = "0.0.0.dev328"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",

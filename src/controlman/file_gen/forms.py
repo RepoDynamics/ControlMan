@@ -1,6 +1,7 @@
 from pathlib import Path as _Path
 
 import pyserials as _ps
+from controlman.exception.load import ControlManSchemaValidationError
 from loggerman import logger
 
 from controlman.datatype import DynamicFileType, DynamicFile
@@ -37,11 +38,21 @@ class FormGenerator:
                 pre_process = elem.get("pre_process")
                 if pre_process and not pre_process_existence(pre_process):
                     continue
-                if not marker_added and elem["type"] != "markdown":
-                    elem["attributes"]["label"] += f"<!-- ISSUE-ID: {form['id']} -->"
+                if not marker_added and elem["type"] == "checkboxes":
+                    elem["attributes"]["options"][0]["label"] += f"<!-- ISSUE-ID: {form['id']} -->"
                     marker_added = True
                 form_output["body"].append(
                     {key: val for key, val in elem.items() if key in _const.ISSUE_FORM_BODY_TOP_LEVEL_KEYS}
+                )
+            if not marker_added:
+                logger.critical(
+                    "Issue Form Marker",
+                    f"No marker added to issue form with ID: {form["id"]}.",
+                )
+                raise ControlManSchemaValidationError(
+                    source="compiled",
+                    problem=f"Issue form {form["id"]} does not have a 'checkboxes' element; no marker could be added.",
+                    json_path=f"issue.forms[{form_idx}].body",
                 )
             file_content = _ps.write.to_yaml_string(data=form_output, end_of_file_newline=True)
             filename = f"{form_idx + 1:02}_{form['id']}.yaml"
