@@ -2591,7 +2591,6 @@ properties:
             default: false
           timeline_template:
             type: object
-            additionalProperties: false
             default: {}
             properties:
               opened:
@@ -2607,6 +2606,10 @@ properties:
               locked:
                 type: string
               unlocked:
+                type: string
+              pull_opened:
+                type: string
+              push:
                 type: string
           reference_template:
             type: string
