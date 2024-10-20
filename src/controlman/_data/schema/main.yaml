@@ -2593,7 +2593,19 @@ properties:
             additionalProperties: false
             default: {}
             properties:
+              opened:
+                type: string
               labeled:
+                type: string
+              assigned:
+                type: string
+              unlabeled:
+                type: string
+              unassigned:
+                type: string
+              locked:
+                type: string
+              unlocked:
                 type: string
           reference_template:
             type: string
