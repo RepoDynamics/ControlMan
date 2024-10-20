@@ -432,7 +432,7 @@ properties:
         description: Python API entry points for the project
         default:
           main:
-            name: ${{ ....name }}
+            name: ${{ ....import_name }}
             description: Main Python API entry of the package.
             ref: '${{ ....import_name }}:__init__'
         $ref: https://controlman.repodynamics.com/schema/pkg-entry

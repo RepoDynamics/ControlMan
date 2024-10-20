@@ -62,7 +62,7 @@ class DataValidator:
 
     def validate(self):
         self.dir_paths()
-        # self.branch_names()
+        self.branch_names()
         # self.changelogs()
         # self.commits()
         # self.issue_forms()
@@ -122,7 +122,7 @@ class DataValidator:
                         problem=f"Branch name '{branch_name}' defined at 'branch.{branch_keys[idx]}' "
                         f"overlaps with branch name '{branch_name2}' defined at 'branch.{branch_keys[idx + idx2 + 1]}'.",
                         json_path=branch_keys[idx],
-                        data=self._data,
+                        data=self._data(),
                     )
         return
 

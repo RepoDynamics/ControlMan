@@ -1905,6 +1905,7 @@ properties:
     description: |
       [GitHub docs](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels)
     type: object
+    default: { }
     additionalProperties: false
     required: [ type, status, branch, version ]
     properties:
@@ -1919,10 +1920,12 @@ properties:
           prefix:
             title: Prefix
             description: Prefix for label names.
+            default: 'type: '
             $ref: https://controlman.repodynamics.com/schema/label-prefix
           color:
             title: Color
             description: Color of the labels.
+            default: '#A00000'
             $ref: https://jsonschemata.repodynamics.com/color/hex-string
           label:
             title: Labels
