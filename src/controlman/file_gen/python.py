@@ -43,11 +43,11 @@ class PythonPackageFileGenerator:
         self._pkg = _ps.NestedDict(self._data[typ])
         self._pkg_before = _ps.NestedDict(self._data_before[typ] or {})
         self._path_root = _Path(self._data[f"{typ}.path.root"])
-        self._path_src = self._path_root / self._data[f"{typ}.path.source"]
+        self._path_src = self._path_root / self._data[f"{typ}.path.source_rel"]
         self._path_import = self._path_src / self._pkg["import_name"]
         if self._data_before[f"{typ}.path"]:
             self._path_root_before = _Path(self._data_before[f"{typ}.path.root"])
-            self._path_src_before = self._path_root_before / self._data_before[f"{typ}.path.source"]
+            self._path_src_before = self._path_root_before / self._data_before[f"{typ}.path.source_rel"]
             self._path_import_before = self._path_src_before / self._pkg_before["import_name"]
         return (
             self.requirements()
@@ -241,7 +241,7 @@ class PythonPackageFileGenerator:
 
     def pyproject_project(self) -> dict:
         readme = _Path(self._pkg["readme.path"]).name if self._pkg["readme.path"] else None
-        license = {"file": _Path(self._data["license.path"]).name} if self._data["license.path"] else None
+        license = {"text": self._data["license.expression"]} if self._data["license.expression"] else None
         data = {
             "name": ("str", self._pkg["name"]),
             "description": ("str", self._pkg["description"]),

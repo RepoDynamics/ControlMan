@@ -28,16 +28,19 @@ properties:
     type: object
     default: { }
     additionalProperties: false
-    required: [ root, source, import ]
+    required: [ root, source, source_rel, import ]
     properties:
       root:
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-      source:
-        $ref: https://jsonschemata.repodynamics.com/path/dir-name
+      source_rel:
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: src
+      source:
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+        default: ${{ .root }}/${{ .source_rel }}
       import:
         type: string
-        default: ${{ .root }}/${{ .source }}/${{ ..import_name }}
+        default: ${{ .source }}/${{ ..import_name }}
   name:
     title: Name of the Python distribution package.
     description: |
@@ -249,6 +252,9 @@ properties:
             legal: XYZ Organization
           email:
             id: contact@xyz.org
+  license:
+    type: string
+    default: ${{ license.expression }}
   typed:
     description: Whether the package is typed
     type: boolean
@@ -528,12 +534,13 @@ properties:
       - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
       - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
     type: object
-    default: { }
+    required: [ requires ]
     properties:
       requires:
         description: Build system requirements
         type: array
-        default: [ setuptools >= 72.1.0, versioningit >= 3.1.2 ]
+        examples:
+          - [ setuptools >= 72.1.0, versioningit >= 3.1.2 ]
         uniqueItems: true
         minItems: 1
         items:
@@ -541,14 +548,14 @@ properties:
       backend:
         description: Build backend
         type: string
-        default: setuptools.build_meta
+        examples:
+          - setuptools.build_meta
       tool:
         title: Build system definitions
         description: |
           Configurations for the build backend, e.g.,
           [Setuptools]([SetupTools](https://setuptools.pypa.io/).
         type: object
-        default: { }
         additionalProperties:
           type: object
         properties:
@@ -559,37 +566,25 @@ properties:
               include-package-data:
                 title: Include package data
                 type: boolean
-                default: true
-              zip-safe:
-                title: Zip-safe
-                type: boolean
-                default: false
               packages:
                 title: Package definitions
                 type: object
-                default: { }
                 properties:
                   find:
                     title: Find packages
                     type: object
-                    default: { }
                     properties:
                       where:
                         title: Where to find packages
                         type: array
-                        default: [ '${{ .......path.source }}' ]
                         items:
                           type: string
                       namespaces:
                         title: Include namespaces
                         type: boolean
-                        default: true
               cmdclass:
                 title: Command classes
                 type: object
-                default:
-                  build_py: versioningit.cmdclass.build_py
-                  sdist: versioningit.cmdclass.sdist
           versioningit:
             title: Versioningit
             type: object
@@ -646,7 +641,7 @@ properties:
                     default: true
                   source-file:
                     type: string
-                    default: '${{ .....path.source }}/${{ .....import_name }}/__init__.py'
+                    default: '${{ .....path.source_rel }}/${{ .....import_name }}/__init__.py'
                   build-file:
                     type: string
                     default: '${{ .....import_name }}/__init__.py'
@@ -662,7 +657,6 @@ properties:
                           "distance": "{distance}",
                           "commit_hash": "{revision}",
                       }}
-    required: [ requires ]
   pypi:
     title: URLs of the project's PyPI package.
     type: object
@@ -699,7 +693,7 @@ properties:
       readme:
         title: README file of the Conda package.
         default:
-          path: ${{ ...path.root }}/${{ ...path.source }}/README_conda.md
+          path: ${{ ...path.root }}/README_conda.md
           content:
             id: pypackit
         $ref: https://controlman.repodynamics.com/schema/docfile

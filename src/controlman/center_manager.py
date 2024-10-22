@@ -176,12 +176,27 @@ class CenterManager:
                     f.write(f"{generated_file.content.strip()}\n")
                 if generated_file.change in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
                     filepath_before_abs.unlink(missing_ok=True)
+
+        for duplicate in self._data_before.get("file.duplicate", {}).values():
+            if "source" in duplicate:
+                self._path_root.joinpath(duplicate["destination"]).unlink(missing_ok=True)
+            else:
+                for source in duplicate["sources"]:
+                    self._path_root.joinpath(duplicate["destination"]).joinpath(_Path(source).stem).unlink(missing_ok=True)
+        for duplicate in self._data.get("file.duplicate", {}).values():
+            if "source" in duplicate:
+                _shutil.copy2(self._path_root.joinpath(duplicate["source"]), self._path_root.joinpath(duplicate["destination"]))
+            else:
+                for source in duplicate["sources"]:
+                    destination_path = self._path_root.joinpath(duplicate["destination"]).joinpath(_Path(source).stem)
+                    destination_path.parent.mkdir(parents=True, exist_ok=True)
+                    _shutil.copy2(self._path_root.joinpath(source), destination_path)
         return
 
     def _compare_dirs(self):
 
         def compare_source(main_key: str, root_path: str, root_path_before: str):
-            source_name, source_name_before = self._get_dirpath(f"{main_key}.path.source")
+            source_name, source_name_before = self._get_dirpath(f"{main_key}.path.source_rel")
             source_path = f"{root_path}/{source_name}" if root_path else None
             source_path_before_real = f"{root_path_before}/{source_name_before}" if root_path_before and source_name_before else None
             change = self._compare_dir_paths(source_path, source_path_before_real)
@@ -200,7 +215,7 @@ class CenterManager:
             return self._dirs
         dirs = []
         to_apply = []
-        for path_key in ("theme", "control"):
+        for path_key in ("control", ):
             path, path_before, status = self._compare_dir(f"{path_key}.path")
             dirs.append(
                 _DynamicDir(

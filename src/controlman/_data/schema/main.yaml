@@ -34,7 +34,7 @@ description: |
       maintenance, testing, and refactoring tasks.
 
 type: object
-required: [ theme, repo, branch, control ]
+required: [ repo, branch, control ]
 properties:
   name:
     title: Name
@@ -248,7 +248,6 @@ properties:
           - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
           - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
           - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
-        default: AGPL-3.0-or-later
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       component:
         type: object
@@ -269,38 +268,23 @@ properties:
             $ref: https://controlman.repodynamics.com/schema/license-component-config
           header:
             $ref: https://controlman.repodynamics.com/schema/license-component-config
-        default:
-          text: &license_config_default_text
-            plain:
-              alts:
-                copyright: ${{ copyright.notice }}
-                author: ${{ team.owner.name.full }}
-                softwareName: ${{ name }}
-                description: ${{ title }}
-                contributor: ${{ team.owner.name.full }}
-                copyrightHolderAsIs: ${{ team.owner.name.full }}
-                initialDeveloper: ${{ team.owner.name.full }}
-                copyrightHolderLiability: ${{ team.owner.name.full }}
-                version: ${{ version }}
-                copyrightHolder0: ${{ team.owner.name.full }}
-                copyrightHolder1: ${{ team.owner.name.full }}
-                copyrightHolder2: ${{ team.owner.name.full }}
-                copyrightHolder3: ${{ team.owner.name.full }}
-                creator: ${{ team.owner.name.full }}
-                owner: ${{ team.owner.name.full }}
-                maintainer: ${{ team.owner.name.full }}
-                organization: ${{ team.owner.name.full }}
-                email: ${{ team.owner.email.url }}
-                softwareVersion: ${{ version }}
-          header: *license_config_default_text
       notice:
         title: Notice
         description: |
           Custom license notice.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: |
-          ${{ copyright.notice }}
-          SPDX-License-Identifier: ${{ license.expression }}
+      path:
+        type: object
+        additionalProperties: false
+        properties:
+          texts_plain:
+            type: array
+            items:
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+          headers_plain:
+            type: array
+            items:
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
   copyright:
     title: Copyright
     description: |
@@ -476,7 +460,6 @@ properties:
           which will then be used to automatically assign reviewers to pull requests
           based on the modified files.
         type: object
-        default: { }
         additionalProperties: false
         required: [ owners, path ]
         properties:
@@ -933,26 +916,24 @@ properties:
       Configurations defining the visual theme of the project,
       such as colors, logos, and badges.
     type: object
-    default: { }
     additionalProperties: false
-    required: [ path, color, logo ]
     properties:
-      path:
-        title: Path
-        description: |
-          Path to the directory containing the project's media files.
-          
-          :::{admonition} Usage
-          :class: dropdown note
-          
-          The media directory is used to store images, logos, and other media files
-          that are displayed on the project's website and documentation files.
-          By default, they are included in the website builds
-          (see [`$.web.sphinx.config.html_static_path`](#ccc-web-sphinx-config-html_static_path))
-          and thus can be directly used in the website, and linked to in the documentation. 
-          :::
-        default: docs/media
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+#      path:
+#        title: Path
+#        description: |
+#          Path to the directory containing the project's media files.
+#
+#          :::{admonition} Usage
+#          :class: dropdown note
+#
+#          The media directory is used to store images, logos, and other media files
+#          that are displayed on the project's website and documentation files.
+#          By default, they are included in the website builds
+#          (see [`$.web.sphinx.config.html_static_path`](#ccc-web-sphinx-config-html_static_path))
+#          and thus can be directly used in the website, and linked to in the documentation.
+#          :::
+#        default: ${{ web.path.root }}/${{ web.path.source}}/_media
+#        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
       color:
         title: Colors
         description: |
@@ -967,16 +948,10 @@ properties:
             title: Primary
             description: Primary color of the project.
             $ref: https://controlman.repodynamics.com/schema/themed-color
-            default:
-              light: '#0F3460'
-              dark: '#3A98B9'
           secondary:
             title: Secondary
             description: Secondary color of the project.
             $ref: https://controlman.repodynamics.com/schema/themed-color
-            default:
-              light: '#562B08'
-              dark: '#E3651D'
       logo:
         title: Logo
         description: |
@@ -986,80 +961,63 @@ properties:
         type: object
         additionalProperties: false
         default: { }
-        required: [ icon, simple, full ]
         properties:
-          root:
-            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ web.path.root }}/${{ web.path.source}}/_media/logo
           icon:
             title: Icon
             description: Favicon (website icon) of the project.
-            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ theme.logo.root }}/favicon.svg
+            $ref: https://controlman.repodynamics.com/schema/media-file
           simple:
             title: Simple
             description: Simple versions of the project's logo, to be used in small spaces.
             type: object
             additionalProperties: false
-            required: [ light, dark ]
-            default: { }
             properties:
               light:
                 title: Light
                 description: Light-themed version of the simple logo.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/simple_light.svg
+                $ref: https://controlman.repodynamics.com/schema/media-file
               dark:
                 title: Dark
                 description: Dark-themed version of the simple logo.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/simple_dark.svg
+                $ref: https://controlman.repodynamics.com/schema/media-file
               raster:
                 title: Raster
                 description: |
                   Raster version of the simple logo,
                   to be used in places where vector graphics are not supported.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/simple_light.png
+                $ref: https://controlman.repodynamics.com/schema/media-file
               ascii:
                 title: ASCII
                 description: |
                   ASCII art version of the simple logo,
                   to be used in command-line interfaces and text-based environments.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/simple.txt
+                $ref: https://controlman.repodynamics.com/schema/media-file
           full:
             title: Full
             description: Full versions of the project's logo, to be used in large spaces.
             type: object
             additionalProperties: false
-            required: [ light, dark ]
-            default: { }
             properties:
               light:
                 title: Light
                 description: Light-themed version of the full logo.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/full_light.svg
+                $ref: https://controlman.repodynamics.com/schema/media-file
               dark:
                 title: Dark
                 description: Dark-themed version of the full logo.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/full_dark.svg
+                $ref: https://controlman.repodynamics.com/schema/media-file
               raster:
                 title: Raster
                 description: |
                   Raster version of the full logo,
                   to be used in places where vector graphics are not supported.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/full_light.png
+                $ref: https://controlman.repodynamics.com/schema/media-file
               ascii:
                 title: ASCII
                 description: |
                   ASCII art version of the full logo,
                   to be used in command-line interfaces and text-based environments.
-                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-                default: ${{ theme.logo.root }}/full.txt
+                $ref: https://controlman.repodynamics.com/schema/media-file
       badge:
         title: Badge
         description: |
@@ -1140,7 +1098,6 @@ properties:
       Configurations for 
       [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
     type: object
-    default: { }
     additionalProperties: false
     properties:
       contributing:
@@ -1333,9 +1290,12 @@ properties:
           root:
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: docs/website
-          source:
-            $ref: https://jsonschemata.repodynamics.com/path/dir-name
+          source_rel:
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: source
+          source:
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ .root }}/${{ .source_rel }}
           to_root:
             title: Relative path from the source directory to the root of the repository.
             default: ../../..
@@ -3419,6 +3379,28 @@ properties:
               - v
         required: [ prefix ]
     required: [ version ]
+  file:
+    type: object
+    additionalProperties: false
+    properties:
+      duplicate:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [ destination ]
+          properties:
+            source:
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            sources:
+              type: array
+              items:
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            destination:
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+          oneOf:
+            - required: [ source ]
+            - required: [ sources ]
   # CI
   control:
     title: Configurations for the project's control center.

@@ -16,4 +16,4 @@ MDit == 0.0.0.dev27
 JSONSchemata == 0.0.0.dev26
 VersionMan == 0.0.0.dev248
 HTMP == 0.0.0.dev5
-LicenseMan == 0.0.0.dev12
+LicenseMan == 0.0.0.dev13

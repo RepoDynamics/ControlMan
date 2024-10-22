@@ -49,11 +49,10 @@ def generate(
             github_api=github_api,
         ).generate()
     if data.get("web"):
-        web_data_source = data_before if data_before["web.path.source"] else data
+        web_path_source = data_before["web.path.source"] or data.fill("web.path.source")
         _WebDataGenerator(
             data=data,
-            source_path=git_manager.repo_path / web_data_source["web.path.root"] / web_data_source[
-                "web.path.source"],
+            source_path=git_manager.repo_path / web_path_source,
         ).generate()
     _RepoDataGenerator(
         data=data,

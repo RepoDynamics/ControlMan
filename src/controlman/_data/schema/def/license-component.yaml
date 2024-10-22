@@ -161,7 +161,7 @@ properties:
     description: |
       XML header of the license.
       This is automatically filled when a supported `id` is selected.
-    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+    type: string
   header_plain:
     title: Notice
     description: |
@@ -174,13 +174,13 @@ properties:
       By default, the notice is added to the
       [main docstring](#ccc-pkg-file---init---py-docstring) of the package.
       :::
-    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+    type: string
   header_md:
     title: Markdown Header
     description: |
       Markdown header of the license.
       This is automatically filled when a supported `id` is selected.
-    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+    type: string
   text_config:
     $ref: https://controlman.repodynamics.com/schema/license-component-config
   header_config:

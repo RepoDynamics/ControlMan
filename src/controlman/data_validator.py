@@ -75,8 +75,8 @@ class DataValidator:
         path_keys = []
         for dirpath_key in (
             "control.path",
-            # "local.path",
-            # "theme.path",
+            "local.cache.path",
+            "local.report.path"
             "pkg.path.root",
             "test.path.root",
             "web.path.root",
@@ -103,6 +103,40 @@ class DataValidator:
                     problem=f"Directory path '{rel_path}' defined at '{rel_key}' is relative to"
                     f"directory path '{main_path}' defined at '{main_key}'.",
                     json_path=rel_key,
+                    data=self._data,
+                )
+        for pkg_path_key in ("pkg.path", "test.path", "web.path"):
+            path_data = self._data[pkg_path_key]
+            if not path_data:
+                continue
+            path_root = _Path(path_data["root"])
+            path_source = _Path(path_data["source"])
+            if not path_source.is_relative_to(path_root):
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    problem=f"Directory path '{path_source}' defined at '{pkg_path_key}.source' is not relative to"
+                    f"directory path '{path_root}' defined at '{pkg_path_key}.root'.",
+                    json_path=f"{pkg_path_key}.source",
+                    data=self._data,
+                )
+            source_rel = path_source.relative_to(path_root)
+            if source_rel != _Path(path_data["source_rel"]):
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    problem=f"Directory path '{path_data['source_rel']}' defined at '{pkg_path_key}.source_rel' does not match"
+                    f"the relative path '{source_rel}' between '{path_root}' and '{path_source}'.",
+                    json_path=f"{pkg_path_key}.source_rel",
+                    data=self._data,
+                )
+            if pkg_path_key == "web.path":
+                continue
+            path_import = _Path(path_data["import"])
+            if not path_import.is_relative_to(path_source):
+                raise _exception.load.ControlManSchemaValidationError(
+                    source=self._source,
+                    problem=f"Directory path '{path_import}' defined at '{pkg_path_key}.import' is not relative to"
+                    f"directory path '{path_source}' defined at '{pkg_path_key}.source'.",
+                    json_path=f"{pkg_path_key}.import",
                     data=self._data,
                 )
         return

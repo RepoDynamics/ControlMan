@@ -127,8 +127,8 @@ class ConfigFileGenerator:
         toc_file = {
             "type": DynamicFileType.WEB_CONFIG,
             "subtype": ("toc", "Table of Contents"),
-            "path": f"{self._data["web.path.root"]}/{self._data["web.path.source"]}/{self._data["web.toc.path"]}" if self._data["web.toc"] else None,
-            "path_before": f"{self._data_before["web.path.root"]}/{self._data_before["web.path.source"]}/{self._data_before["web.toc.path"]}" if self._data_before["web.toc"] else None,
+            "path": f"{self._data["web.path.source"]}/{self._data["web.toc.path"]}" if self._data["web.toc"] else None,
+            "path_before": f"{self._data_before["web.path.source"]}/{self._data_before["web.toc.path"]}" if self._data_before["web.toc"] else None,
         }
         toc = self._data["web.toc"]
         if not toc:

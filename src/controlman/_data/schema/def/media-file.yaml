@@ -1,0 +1,22 @@
+$id: https://controlman.repodynamics.com/schema/media-file
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Media File
+description: Media file.
+type: object
+additionalProperties: false
+required: [ path, url ]
+properties:
+  path:
+    title: Absolute Path
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+    default: ${{ web.path.source }}/${{ .path_web }}
+  path_web:
+    title: Web Path
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+  path_pkg:
+    title: Package Path
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+  url:
+    title: URL
+    $ref: https://jsonschemata.repodynamics.com/url/https
+    default: ${{ repo.url.raw }}/${{ .path }}

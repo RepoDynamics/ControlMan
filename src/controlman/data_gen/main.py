@@ -140,16 +140,19 @@ class MainDataGenerator:
                         json_path="license.expression",
                         data=self._data(),
                     )
+        path_texts = []
+        path_headers = []
         for spdx_ids, spdx_typ in ((license_ids, "license"), (exception_ids, "exception")):
             func = _spdx.license if spdx_typ == "license" else _spdx.exception
             class_ = _spdx.SPDXLicense if spdx_typ == "license" else _spdx.SPDXLicenseException
             for spdx_id in spdx_ids:
                 user_data = self._data.setdefault("license.component", {}).setdefault(spdx_id, {})
+                user_data_path = user_data.setdefault("path", {})
                 path_text = normalize_license_filename(
-                    user_data["path"]["text_plain"] if user_data else f"LICENSE-{spdx_id}.md"
+                    user_data_path.get("text_plain", f"LICENSE-{spdx_id}.md")
                 )
                 path_header = normalize_license_filename(
-                    user_data["path"]["header_plain"] if user_data else f"COPYRIGHT-{spdx_id}.md"
+                    user_data_path.get("header_plain", f"COPYRIGHT-{spdx_id}.md")
                 )
                 source_data = self._cache.get("license", spdx_id)
                 if source_data:
@@ -157,13 +160,10 @@ class MainDataGenerator:
                 else:
                     licence = func(spdx_id)
                     self._cache.set("license", spdx_id, licence.raw_data)
+                header_xml = (licence.header_xml_str or "") if spdx_typ == "license" else ""
                 out_data = {
                     "type": spdx_typ,
                     "custom": False,
-                    "path": {
-                        "text_plain": path_text,
-                        "header_plain": path_header,
-                    },
                     "id": licence.id,
                     "name": licence.name,
                     "reference_num": licence.reference_number,
@@ -174,7 +174,7 @@ class MainDataGenerator:
                         "json": licence.url_json,
                         "cross_refs": licence.url_cross_refs,
                         "repo_text_plain": f"{self._data["repo.url.blob"]}/{path_text}",
-                        "repo_header_plain": f"{self._data["repo.url.blob"]}/{path_header}",
+                        "repo_header_plain": f"{self._data["repo.url.blob"]}/{path_header}" if header_xml else "",
                     },
                     "version_added": licence.version_added or "",
                     "deprecated": licence.deprecated,
@@ -185,7 +185,11 @@ class MainDataGenerator:
                     "comments": licence.comments or "",
                     "trove_classifier": _spdx.trove_classifier(licence.id) or "",
                     "text_xml": licence.text_xml_str,
-                    "header_xml": licence.header_xml_str if spdx_typ == "license" else "",
+                    "header_xml": header_xml,
+                }
+                user_data_path |= {  # Overwrite with normalized paths
+                        "text_plain": path_text,
+                        "header_plain": path_header if header_xml else "",
                 }
                 _ps.update.dict_from_addon(
                     data=user_data,
@@ -195,6 +199,11 @@ class MainDataGenerator:
                     raise_duplicates=False,
                     raise_type_mismatch=True,
                 )
+                path_texts.append(path_text)
+                if header_xml:
+                    path_headers.append(path_header)
+        self._data["license.path.texts_plain"] = path_texts
+        self._data["license.path.headers_plain"] = path_headers
         return
 
     def _copyright(self):

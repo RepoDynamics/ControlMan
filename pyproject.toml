@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev332"
+version = "0.0.0.dev333"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -38,6 +38,6 @@ dependencies = [
     "JSONSchemata == 0.0.0.dev26",
     "VersionMan == 0.0.0.dev248",
     "HTMP == 0.0.0.dev5",
-    "LicenseMan == 0.0.0.dev12",
+    "LicenseMan == 0.0.0.dev13",
 ]
 requires-python = ">=3.10"
