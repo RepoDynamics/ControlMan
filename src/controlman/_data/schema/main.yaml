@@ -2540,12 +2540,12 @@ properties:
             default:
               value: >-
 
-                | Date | Time | Actor | Description |
+                |    Date    |   Time   |              Actor               |                      Description                      |
 
-                | ---- | ---- | ----- | ----------- |
+                | ---------- | -------- | -------------------------------- | ----------------------------------------------------- |
               template: |
                 {%- macro make_entry(actor, description) -%}
-                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ actor }} | {{ description }} |
+                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ actor | ljust(32) }} | {{ description | ljust(53) }} |
                 {%- endmacro -%}
 
                 {%- macro make_user(user) -%}
@@ -2684,33 +2684,19 @@ properties:
             additionalProperties: false
             default:
               triage:
-                value: >-
-
-                  - [ ] Triage
+                value: '\n  - [ ] Triage'
               planning:
-                value: >-
-
-                  - [ ] Planning
+                value: '\n  - [ ] Planning'
               requirement_analysis:
-                value: >-
-
-                  - [ ] Requirement Analysis
+                value: '\n  - [ ] Requirement Analysis'
               design:
-                value: >-
-
-                  - [ ] Design
+                value: '\n  - [ ] Design'
               implementation:
-                value: >-
-
-                  - [ ] Implementation
+                value: '\n  - [ ] Implementation'
               testing:
-                value: >-
-
-                  - [ ] Testing
+                value: '\n  - [ ] Testing'
               deploy:
-                value: >-
-
-                  - [ ] Deployment
+                value: '\n  - [ ] Deployment'
             properties:
               triage:
                 $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
@@ -2732,19 +2718,19 @@ properties:
               description:
                 value: '**TBD**'
               urd:
-                value: '{{ issue_body }}'
+                value: '\n{{ issue_body }}\n'
               triage:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
               plan:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
               srs:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
               sdd:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
               testing:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
               deployment:
-                value: '**TBD**'
+                value: '\n**TBD**\n'
             additionalProperties:
               $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
           marker:
