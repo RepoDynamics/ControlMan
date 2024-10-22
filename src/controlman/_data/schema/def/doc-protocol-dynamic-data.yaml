@@ -1,9 +1,10 @@
-$id: https://controlman.repodynamics.com/schema/doc-protocol-data
+$id: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Development Protocol Data
 description: Development protocol data.
 type: object
 additionalProperties: false
+required: [ template ]
 properties:
   start:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
@@ -12,3 +13,5 @@ properties:
   value:
     type: string
     default: ''
+  template:
+    type: string

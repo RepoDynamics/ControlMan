@@ -2486,7 +2486,7 @@ properties:
     type: object
     default: { }
     additionalProperties: false
-    required: [ prerelease_temp_path, dev_protocol ]
+    required: [ prerelease_temp_path, protocol ]
     properties:
       prerelease_temp_path:
         description: >-
@@ -2494,134 +2494,313 @@ properties:
           for storing pre-release development process protocols.
         type: string
         default: docs/prerelease_dev_protocols.md
-      dev_protocol:
+      protocol:
         type: object
         default: { }
         additionalProperties: false
         required: [ marker ]
         properties:
+          template:
+            type: string
+            default: |
+              {%- macro make_user(user) -%}
+                {%- if user.name -%}
+                  {{ user.name }} (@{{ user.login }})
+                {%- else -%}
+                  @{{ user.login }}
+                {%- endif -%}
+              {%- endmacro -%}
+              
+              # Development Protocol #{{ issue.number }}
+              
+              - **Type**: {{ form.description }}
+              - **Client**: {{ make_user(issue.user) }}
+              - **Summary**: {{ pr_title }}
+              - **Current Status**: {{ status }}
+              - **Progress**:
+                {{ status_checkbox.triage }}{{ status_checkbox.planning }}{{ status_checkbox.requirement_analysis }}{{ status_checkbox.design }}{{ status_checkbox.implementation }}{{ status_checkbox.testing }}{{ status_checkbox.deploy }}
+              
+              {{ pr_list }}
+              
+              ## User Requirements Document (URD)
+              
+              {{ data.urd }}
+              
+              ## Triage
+              
+              {{ data.triage }}
+              
+              ## Plan
+              
+              {{ data.plan }}
+              
+              ## Software Requirements Specification (SRS)
+              
+              {{ data.srs }}
+              
+              ## Software Design Document (SDD)
+              
+              {{ data.sdd }}
+              
+              ## Implementation
+              
+              {{ data.description }}
+              
+              ### Task List
+              
+              {{ tasklist }}
+              
+              ## Testing
+              
+              {{ data.testing }}
+              
+              ## Deployment
+              
+              {{ data.deployment }}
+              
+              ## Timeline
+              
+              {{ timeline }}
+              
+              {{ references }}
+          tasklist:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+            default:
+              value: |
+                <!-- Tasklist
+                - [ ] secondary-commit-type: Summary of task 1.
+                  Description of task 1.
+                  - [ ] secondary-commit-type: Summary of subtask 1.1.
+                    Description of subtask 1.1.
+                - [ ] secondary-commit-type: Summary of task 2.
+                  Description of task 2.
+                -->
+          timeline:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
+            default:
+              value: >-
+
+                | Date | Time | Actor | Description |
+
+                | ---- | ---- | ----- | ----------- |
+              template: |
+                {%- macro make_entry(actor, description) -%}
+                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ actor }} | {{ description }} |
+                {%- endmacro -%}
+
+                {%- macro make_user(user) -%}
+                  {%- if user.name -%}
+                    {{ user.name }} (@{{ user.login }})
+                  {%- else -%}
+                    @{{ user.login }}
+                  {%- endif -%}
+                {%- endmacro -%}
+
+                {%- macro make_description() -%}
+                  {%- if action == "assigned" -%}
+                    Assigned to {{ make_user(payload.assignee) }}.
+                  {%- elif action == "unassigned" -%}
+                    Unassigned from {{ make_user(payload.assignee) }}.
+                  {%- elif action == "review_requested" -%}
+                    Assigned to {{ make_user(payload.requested_reviewer) }} for review.
+                  {%- elif action == "review_request_removed" -%}
+                    Unassigned from {{ make_user(payload.requested_reviewer) }} for review.
+                  {%- elif action == "synchronize" -%}
+                    New commits pushed to [{{ head.name }}]({{ head.url }}) (CI [{{ context.run_id }}]({{ workflow_url }})).
+                  {%- elif action == "labeled" -%}
+                    {%- set category = label.category -%}
+                    {%- if category == "type" -%}
+                        Type set to `{{ label.suffix }}`.
+                    {%- elif category == "subtype" -%}
+                        Subtype set to `{{ label.suffix }}`.
+                    {%- elif category == "version" -%}
+                          Target version set to `{{ label.suffix }}`.
+                    {%- elif category == "branch" -%}
+                          Target branch set to `{{ label.suffix }}`.
+                    {%- elif category == "status" -%}
+                      {%- set status = label.id -%}
+                      {%- if status == "triage" -%}
+                        Entered the triage phase.
+                      {%- elif status == "rejected" -%}
+                        Rejected and closed.
+                      {%- elif status == "duplicate" -%}
+                        Marked as duplicate and closed.
+                      {%- elif status == "invalid" -%}
+                        Marked as invalid and closed.
+                      {%- elif status == "planning" -%}
+                        Entered the planning phase.
+                      {%- elif status == "requirement_analysis" -%}
+                        Entered the requirement analysis phase.
+                      {%- elif status == "design" -%}
+                        Entered the design phase.
+                      {%- elif status == "implementation" -%}
+                        Entered the implementation phase.
+                      {%- elif status == "testing" -%}
+                        Entered the testing phase.
+                      {%- elif status == "deploy_alpha" -%}
+                        Deployed as alpha release.
+                      {%- elif status == "deploy_beta" -%}
+                        Deployed as beta release.
+                      {%- elif status == "deploy_rc" -%}
+                        Deployed as release candidate.
+                      {%- elif status == "deploy_final" -%}
+                        Deployed as final release.
+                      {%- else -%}
+                        Status changed to {{ status }}.
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- elif action == "opened" -%}
+                    {%- if event == "issues" -%}
+                      Issue ticket #{{ payload.issue.number }} submitted by {{ make_user(payload.issue.user) }}.
+                    {%- elif event == "pull_request" -%}
+                      Pull request #{{ payload.pull_request.number }} opened by {{ make_user(payload.pull_request.user) }}.
+                    {%- endif -%}
+                  {%- endif -%}
+                {%- endmacro %}
+                {{ make_entry(make_user(payload.sender), make_description()) -}}
+          references:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
+            default:
+              template: |
+                [^{{ ref.id }}]: [{{ ref.title }}]({{ ref.url }})
+          pr_title:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+            default:
+              value: TBD
+          pr_list:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
+            default:
+              template: |
+                {%- macro make_pull(pull) -%}
+                  #{{ pull.number }} (branch [{{ pull.head.name }}]({{ pull.head.url }}))
+                {%- endmacro -%}
+
+                {%- macro describe() -%}
+                  {%- if pulls|length == 1 -%}
+                    PR {{ make_pull(pulls[0]) }}.
+                  {%- else -%}
+                    the following PRs:
+                    {% for pull in pulls -%}
+                      > - {{ make_pull(pull) }}
+                    {% endfor -%}
+                  {%- endif -%}
+                {%- endmacro %}
+
+                > [!NOTE]
+                > The implementation, testing, and deployment are tracked in {{ describe() -}}
+          status:
+            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
+            default:
+              template: |
+                {%- if status == "triage" -%}
+                  Submitted and awaiting triage.
+                {%- elif status == "rejected" -%}
+                  Rejected and closed.
+                {%- elif status == "duplicate" -%}
+                  Marked as duplicate and closed.
+                {%- elif status == "invalid" -%}
+                  Marked as invalid and closed.
+                {%- elif status == "planning" -%}
+                  In the planning phase.
+                {%- elif status == "requirement_analysis" -%}
+                  In the requirement analysis phase.
+                {%- elif status == "design" -%}
+                  In the design phase.
+                {%- elif status == "implementation" -%}
+                  In the implementation phase.
+                {%- elif status == "testing" -%}
+                  In the testing phase.
+                {%- elif status == "deploy_alpha" -%}
+                  Deployed as alpha release.
+                {%- elif status == "deploy_beta" -%}
+                  Deployed as beta release.
+                {%- elif status == "deploy_rc" -%}
+                  Deployed as release candidate.
+                {%- elif status == "deploy_final" -%}
+                  Deployed as final release.
+                {%- endif -%}
+          status_checkbox:
+            type: object
+            additionalProperties: false
+            default:
+              triage:
+                value: >-
+
+                  - [ ] Triage
+              planning:
+                value: >-
+
+                  - [ ] Planning
+              requirement_analysis:
+                value: >-
+
+                  - [ ] Requirement Analysis
+              design:
+                value: >-
+
+                  - [ ] Design
+              implementation:
+                value: >-
+
+                  - [ ] Implementation
+              testing:
+                value: >-
+
+                  - [ ] Testing
+              deploy:
+                value: >-
+
+                  - [ ] Deployment
+            properties:
+              triage:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              planning:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              requirement_analysis:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              design:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              implementation:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              testing:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+              deploy:
+                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
+          data:
+            type: object
+            default:
+              description:
+                value: '**TBD**'
+              urd:
+                value: '{{ issue_body }}'
+              triage:
+                value: '**TBD**'
+              plan:
+                value: '**TBD**'
+              srs:
+                value: '**TBD**'
+              sdd:
+                value: '**TBD**'
+              testing:
+                value: '**TBD**'
+              deployment:
+                value: '**TBD**'
+            additionalProperties:
+              $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
           marker:
             type: object
             default: { }
             additionalProperties: false
             properties:
               start:
-                  type: string
-                  default: 'BEGIN: '
+                type: string
+                default: '<!-- BEGIN: {} -->'
               end:
-                  type: string
-                  default: 'END: '
-          data:
-            type: object
-            default: { }
-            properties:
-              commit_summary:
                 type: string
-                default: ''
-              commit_description:
-                type: string
-                default: ''
-              issue_number:
-                type: string
-                default: '#{{ issue.number }}'
-              tasklist:
-                type: string
-                default: |
-                  
-                  - [ ] Summary of task1.
-                    Description of task1.
-                    - [ ] Summary of subtask1.
-                      Description of subtask1.
-                  - [ ] Summary of task2.
-                    Description of task2.
-              timeline:
-                type: string
-                default: >-
-                  
-                  | Date | Time | Actor | Description |
-                  
-                  | ---- | ---- | ----- | ----------- |
-              references:
-                type: string
-                default: ''
-              pr_list:
-                type: string
-                default: ''
-          template:
-            type: string
-            default: |
-              # Development Protocol {issue_number}
-      
-              - **Type**: {{ form.description }}
-              - **Client**: {% if issue.user.name -%}
-                {{ issue.user.name }} (@{{ issue.user.login }})
-                {%- else -%}
-                @{{ issue.user.login }}
-                {%- endif %} 
-              
-              ## User Requirements Document (URD)
-              
-              {issue_body}
-              
-              ## Triage
-      
-              ## Plan
-        
-              ## Software Requirements Specification (SRS)
-        
-              ## Software Design Document (SDD)
-        
-              ## Implementation
-              
-              {{ commit_summary }}
-              
-              {{ commit_description }}
-              
-              {{ tasklist }}
-        
-              ## References
-              
-              {{ references }}
-        
-              ## Timeline
-              
-              {{ timeline }}
+                default: '<!-- END: {} -->'
           as_comment:
             type: boolean
             default: false
-          timeline_template:
-            type: object
-            default: {}
-            properties:
-              opened:
-                type: string
-              labeled:
-                type: string
-              assigned:
-                type: string
-              unlabeled:
-                type: string
-              unassigned:
-                type: string
-              locked:
-                type: string
-              unlocked:
-                type: string
-              pull_opened:
-                type: string
-              push:
-                type: string
-          reference_template:
-            type: string
-            default: |
-              - [{{ ref.title }}]({{ ref.url }})
-          pr_list_template:
-            type: string
-            default: |
-              The implementation is tracked in the following pull requests:
-              {% for target in targets %}
-              - #{{ target.pull_number }} (Branch: [{{ target.branch_name }}]({{ target.branch_url }}))
-              {% endfor %}
   pull:
     title: Pull Requests
     description: GitHub pull request settings for the project
