@@ -2520,7 +2520,11 @@ properties:
               
               ## Timeline
               
+              <div align="center">
+              
               {{ timeline }}
+              
+              </div>
               
               {{ references }}
           tasklist:
