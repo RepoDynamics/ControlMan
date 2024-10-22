@@ -2549,7 +2549,7 @@ properties:
                 | ---------- | -------- | -------------------------------- | ----------------------------------------------------- |
               template: |
                 {%- macro make_entry(actor, description) -%}
-                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ actor | ljust(32) }} | {{ description | ljust(53) }} |
+                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ "{:<32}".format(actor) }} | {{ "{:<53}".format(description) }} |
                 {%- endmacro -%}
 
                 {%- macro make_user(user) -%}
