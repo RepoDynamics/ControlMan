@@ -2530,15 +2530,14 @@ properties:
           tasklist:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
             default:
-              value: |
-                <!-- Tasklist
-                - [ ] secondary-commit-type: Summary of task 1.
-                  Description of task 1.
-                  - [ ] secondary-commit-type: Summary of subtask 1.1.
-                    Description of subtask 1.1.
-                - [ ] secondary-commit-type: Summary of task 2.
-                  Description of task 2.
-                -->
+              value: "\n\n<!-- Tasklist\n
+                - [ ] secondary-commit-type: Summary of task 1.\n
+                \u0020\u0020Description of task 1.\n
+                \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
+                \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
+                - [ ] secondary-commit-type: Summary of task 2.\n
+                \u0020\u0020Description of task 2.\n
+                -->\n\n"
           timeline:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
             default:
@@ -2722,19 +2721,19 @@ properties:
               description:
                 value: '**TBD**'
               urd:
-                value: '\n{{ issue_body }}\n'
+                value: "\n\n{{ issue_body }}\n\n"
               triage:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
               plan:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
               srs:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
               sdd:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
               testing:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
               deployment:
-                value: '\n**TBD**\n'
+                value: "\n\n**TBD**\n\n"
             additionalProperties:
               $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
           marker:
