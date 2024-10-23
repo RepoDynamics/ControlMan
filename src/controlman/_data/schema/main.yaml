@@ -2719,7 +2719,7 @@ properties:
             type: object
             default:
               description:
-                value: '**TBD**'
+                value: "\n\n**TBD**\n\n"
               urd:
                 value: "\n\n{{ issue_body }}\n\n"
               triage:
