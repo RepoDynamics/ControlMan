@@ -67,18 +67,21 @@ class ConfigFileGenerator:
             "path": self._data[f"{key}.path"],
             "path_before": self._data_before[f"{key}.path"],
         }
-        codeowners = self._data[key]["owners"]
+        codeowners = self._data[f"{key}.entries"]
         if not codeowners:
             return [DynamicFile(**codeowners_files)]
         # Get the maximum length of patterns to align the columns when writing the file
-        max_len = max([len(list(codeowner_dic.keys())[0]) for codeowner_dic in codeowners])
-        text = ""
+        max_len = max([len(codeowner_dic["glob"]) for codeowner_dic in codeowners])
+        lines = []
         for entry in codeowners:
-            pattern = list(entry.keys())[0]
-            reviewers_list = entry[pattern]
-            reviewers = " ".join([f"@{reviewer["github"]["id"]}" for reviewer in reviewers_list])
-            text += f"{pattern: <{max_len}}   {reviewers}\n"
-        return [DynamicFile(content=text, **codeowners_files)]
+            comment = entry.get("description", "")
+            for comment_line in comment.splitlines():
+                lines.append(f"# {comment_line}")
+            pattern = entry["glob"]
+            reviewers_list = entry["owners"]
+            reviewers = " ".join([f"@{self._data["team"][reviewer]["github"]["id"]}" for reviewer in reviewers_list])
+            lines.append(f"{pattern: <{max_len}}   {reviewers}{"\n" if comment else ''}")
+        return [DynamicFile(content="\n".join(lines), **codeowners_files)]
 
     def _generate_license(self) -> list[DynamicFile]:
         if self._is_disabled("license"):
@@ -397,7 +400,11 @@ class ConfigFileGenerator:
 
     def citation(self) -> list[DynamicFile]:
 
-        def create_person(entity):
+        def create_person(entity: str | dict):
+            if isinstance(entity, str):
+                entity = self._data["team"].get(entity)
+                if not entity:
+                    raise ValueError(f"Person '{entity}' not found in team data.")
             _out = {}
             if entity["name"].get("legal"):
                 _out["name"] = entity["name"]["legal"]
@@ -438,6 +445,7 @@ class ConfigFileGenerator:
             return _out
 
         def create_reference(ref: dict):
+            #TODO: Complete this function
             out = {}
             for key in (
                 "abbreviation",

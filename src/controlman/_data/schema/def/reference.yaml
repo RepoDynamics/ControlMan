@@ -23,8 +23,8 @@ properties:
     items:
       title: An author of the work.
       examples:
-        - '${{ team.owner }}'
-        - ${{ team.some_author_id }}
+        - '${{ team.owner }}$'
+        - ${{ team.some_author_id }}$
         - name:
             first: John
             last: Doe

@@ -22,7 +22,6 @@ class WebDataGenerator:
     def _process_frontmatter(self) -> None:
         pages = {}
         blog = {}
-
         for md_filepath in self._path.rglob("*.md", case_sensitive=False):
             if not md_filepath.is_file():
                 continue

@@ -30,23 +30,8 @@ class PythonDataGenerator:
         return
 
     def generate(self):
-        self._package_name()
         self._package_python_versions()
-        self._package_operating_systems()
         self.trove_classifiers()
-        return
-
-    def _package_name(self) -> None:
-        for path in ("pkg.name", "test.name"):
-            name = self._data.fill(path)
-            if name:
-                name_cleaned = _re.sub(r'[^a-zA-Z0-9._-]', '-', name)
-                self._data[path] = _re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', name_cleaned)
-        for path in ("pkg.import_name", "test.import_name"):
-            import_name = self._data.fill(path)
-            if import_name:
-                import_name_cleaned = _re.sub(r'[^a-zA-Z0-9]', '_', import_name.lower())
-                self._data[path] = _re.sub(r'^[0-9]+', "", import_name_cleaned)
         return
 
     def _package_python_versions(self) -> None:
@@ -123,21 +108,6 @@ class PythonDataGenerator:
         self._data["pkg.python.version"].update(output)
         if self._data["test"]:
             self._data["test.python.version.spec"] = spec_str
-        return
-
-    def _package_operating_systems(self):
-        data_os = self._data.fill("pkg.os")
-        if not isinstance(data_os, dict):
-            raise _exception.load.ControlManSchemaValidationError(
-                source="source",
-                before_substitution=True,
-                problem="The package has not specified any operating systems.",
-                json_path="pkg.os",
-                data=self._data(),
-            )
-        pure_python = not any("ci_build" in os for os in data_os.values())
-        self._data["pkg.python.pure"] = pure_python
-        self._data["pkg.os.independent"] = len(data_os) == 3 and pure_python
         return
 
     def trove_classifiers(self):

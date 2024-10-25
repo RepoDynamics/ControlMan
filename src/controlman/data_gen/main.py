@@ -42,13 +42,8 @@ class MainDataGenerator:
     def generate(self) -> None:
         self._repo()
         self._team()
-        self._name()
-        self._keywords()
         self._license()
-        self._copyright()
         self._discussion_categories()
-        self._urls_github()
-        self._urls_website()
         return
 
     def _repo(self) -> None:
@@ -99,30 +94,9 @@ class MainDataGenerator:
         return
 
     def _team(self) -> None:
+        self._data.fill("team")
         for person_id in self._data["team"].keys():
-            self._data.fill(f"team.{person_id}")
             self.fill_entity(self._data[f"team.{person_id}"])
-        return
-
-    def _name(self) -> None:
-        name = self._data.fill("name")
-        repo_name = self._data["repo.name"]
-        if not name:
-            name = self._data["name"] = repo_name.replace("-", " ")
-            _logger.info(
-                f"Project Name",
-                f"Set to '{name}' from repository name."
-            )
-        self._data["slug.name"] = pylinks.string.to_slug(name)
-        self._data["slug.repo_name"] = pylinks.string.to_slug(repo_name)
-        return
-
-    def _keywords(self) -> None:
-        keywords = self._data.fill("keywords")
-        if not keywords:
-            return
-        slugs = [pylinks.string.to_slug(keyword) for keyword in keywords if len(keyword) <= 50]
-        self._data["slug.keywords"] = slugs
         return
 
     def _license(self):
@@ -206,31 +180,6 @@ class MainDataGenerator:
         self._data["license.path.headers_plain"] = path_headers
         return
 
-    def _copyright(self):
-        data = self._data["copyright"]
-        if not data or "period" in data:
-            return
-        current_year = _datetime.date.today().year
-        start_year = self._data.fill("copyright.start_year")
-        if not start_year:
-            data["start_year"] = start_year = _datetime.datetime.strptime(
-                self._data["repo.created_at"], "%Y-%m-%d"
-            ).year
-        else:
-            if start_year > current_year:
-                raise _exception.load.ControlManSchemaValidationError(
-                    source="source",
-                    problem=(
-                        f"Project start year ({start_year}) cannot be greater "
-                        f"than current year ({current_year})."
-                    ),
-                    json_path="copyright.start_year",
-                    data=self._data(),
-                )
-        year_range = f"{start_year}{'' if start_year == current_year else f'–{current_year}'}"
-        data["period"] = year_range
-        return
-
     def _discussion_categories(self):
         discussions_info = self._cache.get("repo", f"discussion_categories")
         if discussions_info:
@@ -248,34 +197,6 @@ class MainDataGenerator:
             category_obj = discussion.setdefault(category["slug"], {})
             category_obj["id"] = category["id"]
             category_obj["name"] = category["name"]
-        return
-
-    def _urls_github(self) -> None:
-        self._data["repo.url.issues.new"] = {
-            issue_type["id"]: f"{self._data['repo.url.home']}/issues/new?template={idx + 1:02}_{issue_type['id']}.yaml"
-            for idx, issue_type in enumerate(self._data.get("issue.forms", []))
-        }
-        self._data["repo.url.discussions.new"] = {
-            slug: f"{self._data['repo.url.home']}/discussions/new?category={slug}"
-            for slug in self._data.get("discussion.category", {}).keys()
-        }
-        return
-
-    def _urls_website(self) -> None:
-        base_url = self._data.get("web.url.base")
-        if not base_url:
-            custom = self._data.fill("web.url.custom")
-            if custom:
-                protocol = "https" if custom["enforce_https"] else "http"
-                domain = custom["name"]
-                base_url = f"{protocol}://{domain}"
-            elif self._data["repo.name"] == f"{self._data['team.owner.github.id']}.github.io":
-                base_url = f"https://{self._data['team.owner.github.user']}.github.io"
-            else:
-                base_url = f"https://{self._data['team.owner.github.id']}.github.io/{self._data['repo.name']}"
-            self._data["web.url.base"] = base_url
-        if not self._data["web.url.home"]:
-            self._data["web.url.home"] = base_url
         return
 
     def fill_entity(self, data: dict) -> None:

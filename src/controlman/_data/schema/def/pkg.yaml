@@ -37,10 +37,10 @@ properties:
         default: src
       source:
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: ${{ .root }}/${{ .source_rel }}
+        default: ${{ .root }}$/${{ .source_rel }}$
       import:
         type: string
-        default: ${{ .source }}/${{ ..import_name }}
+        default: ${{ .source }}$/${{ ..import_name }}$
   name:
     title: Name of the Python distribution package.
     description: |
@@ -103,6 +103,14 @@ properties:
       ::::
     type: string
     pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9])$
+    default: |
+      #{{
+        import re
+        
+        project_name = "${{ name }}$"
+        project_name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", project_name)
+        return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", project_name_normalized)
+      }}#
   import_name:
     title: Name of the top-level Python import package.
     description: |
@@ -133,6 +141,14 @@ properties:
       your package `My-Package`, and the import name will be `my_package`.
     type: string
     pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
+    default: |
+      #{{
+        import re
+        
+        pkg_name = "${{ .name }}$"
+        import_name_raw = re.sub(r"[^a-zA-Z0-9]", "_", pkg_name.lower())
+        return re.sub(r"^[0-9]+", "", import_name_raw)
+      }}#
   description:
     title: Package Description
     description: |
@@ -147,7 +163,7 @@ properties:
       to provide a brief overview of the package.
       For example, it is displayed on the package's homepage on PyPI and TestPyPI.
       :::
-    default: ${{ title }}
+    default: ${{ title }}$
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   keywords:
     title: Keywords
@@ -164,7 +180,7 @@ properties:
       For example, they are displayed on the package's homepage on PyPI and TestPyPI,
       and can be used to filter packages in search results.
       :::
-    default: ${{ keywords }}
+    default: ${{ keywords }}$
     $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   classifiers:
     title: |
@@ -209,10 +225,10 @@ properties:
         - `issue`, `bug`, `tracker`, `report`
         - `sponsor`, `funding`, `donate`, `donation`
     default:
-      Homepage: ${{ web.url.home }}
-      Source: ${{ repo.url.home }}
-      Download: ${{ repo.url.releases.home }}
-      Issue-Tracker: ${{ repo.url.issues.home }}
+      Homepage: ${{ web.url.home }}$
+      Source: ${{ repo.url.home }}$
+      Download: ${{ repo.url.releases.home }}$
+      Issue-Tracker: ${{ repo.url.issues.home }}$
     type: object
     additionalProperties:
       title: URL
@@ -227,7 +243,8 @@ properties:
   authors:
     title: Authors
     description: |
-      Core author(s) of the package, ordered by contribution (highest first).
+      Core authors of the package, ordered by contribution (highest first).
+      Authors are defined by their [team](#ccc-team)-member IDs.
 
       :::{admonition} Usage
       :class: dropdown note
@@ -238,23 +255,33 @@ properties:
       to provide credit to the authors of the package.
       For example, they are displayed on the package's homepage on PyPI and TestPyPI.
       :::
-    default: ${{ citation.authors }}
-    $ref: https://controlman.repodynamics.com/schema/entities
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
     examples:
-      - ${{ citation.authors }}
-      - [ '${{ team.owner }}', '${{ team.some_author }}' ]
-      - - name:
-            first: Jane
-            last: Doe
-          email:
-            id: jane@doe.com
-        - name:
-            legal: XYZ Organization
-          email:
-            id: contact@xyz.org
+      - ${{ citation.authors }}$
+      - [ owner, some_author_id ]
+  maintainers:
+    title: Maintainers
+    description: |
+      Core maintainers of the package, ordered by contribution (highest first).
+      Maintainers are defined by their [team](#ccc-team)-member IDs.
+
+      :::{admonition} Usage
+      :class: dropdown note
+
+      Maintainers are added to the package metadata (see the
+      [`project.maintainers`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+      key of the `pyproject.toml` file) and are used by indexing services and package managers
+      to provide credit to the maintainers of the package.
+      For example, they are displayed on the package's homepage on PyPI and TestPyPI.
+      :::
+    description_default: All maintainers defined in `$.maintainers`.
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+    examples:
+      - ${{ citation.authors }}$
+      - [ owner, some_author_id ]
   license:
     type: string
-    default: ${{ license.expression }}
+    default: ${{ license.expression }}$
   typed:
     description: Whether the package is typed
     type: boolean
@@ -336,14 +363,21 @@ properties:
             title: Cibuild configurations.
             $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
         required: [ name, runner ]
-      independent:
-        type: boolean
+  os_independent:
+    type: boolean
+    default: |
+      #{{
+        os_data = ${{ .os }}$
+        pure_python = ${{ .python.pure }}$
+        return pure_python and len(os_data) == 3
+      }}#
   python:
     title: Python configurations for the package.
     description: |
       This is only required for the package, and is automatically reused for the test suite.
     type: object
     default: { }
+    required: [ version ]
     properties:
       version:
         title: Python version requirements.
@@ -418,6 +452,11 @@ properties:
         required: [ spec ]
       pure:
         type: boolean
+        default: |
+          #{{
+            os_data = ${{ ..os }}$
+            return not any("ci_build" in os for os in os_data.values())
+          }}#
       implementation:
         type: string
         enum:
@@ -428,7 +467,6 @@ properties:
           - micropython
           - stackless
         default: cpython
-    required: [ version ]
   entry:
     type: object
     default: { }
@@ -438,9 +476,9 @@ properties:
         description: Python API entry points for the project
         default:
           main:
-            name: ${{ ....import_name }}
+            name: ${{ ....import_name }}$
             description: Main Python API entry of the package.
-            ref: '${{ ....import_name }}:__init__'
+            ref: '${{ ....import_name }}$:__init__'
         $ref: https://controlman.repodynamics.com/schema/pkg-entry
       cli:
         description: Scripts for the project
@@ -500,10 +538,10 @@ properties:
         $ref: https://controlman.repodynamics.com/schema/env-file
         default:
           conda:
-            name: ${{ ....import_name }}
-            path: ${{ ....path.root }}/conda_env.yaml
+            name: ${{ ....import_name }}$
+            path: ${{ ....path.root }}$/conda_env.yaml
           pip:
-            path: ${{ ....path.root }}/requirements.txt
+            path: ${{ ....path.root }}$/requirements.txt
   file:
     title: Package documentation settings
     type: object
@@ -521,7 +559,7 @@ properties:
       to include in the source distribution.
     type: array
     examples:
-      - - graft ${{ dir.pkg.import }}
+      - - graft ${{ dir.pkg.import }}$
         - global-exclude *.py[cod] __pycache__ *.so
     uniqueItems: true
     items:
@@ -599,19 +637,19 @@ properties:
                     default: git
                   match:
                     type: array
-                    default: [ '${{tag.version.prefix}}[0-9]*.[0-9]*.[0-9]*']
+                    default: [ '${{ tag.version.prefix }}$[0-9]*.[0-9]*.[0-9]*']
                     items:
                       type: string
                   default-tag:
                     type: string
-                    default: ${{ tag.version.prefix }}0.0.0
+                    default: ${{ tag.version.prefix }}$0.0.0
               tag2version:
                 type: object
                 default: { }
                 properties:
                   rmprefix:
                     type: string
-                    default: ${{ tag.version.prefix }}
+                    default: ${{ tag.version.prefix }}$
               format:
                 type: object
                 default: {}
@@ -641,10 +679,10 @@ properties:
                     default: true
                   source-file:
                     type: string
-                    default: '${{ .....path.source_rel }}/${{ .....import_name }}/__init__.py'
+                    default: '${{ .....path.source_rel }}$/${{ .....import_name }}$/__init__.py'
                   build-file:
                     type: string
-                    default: '${{ .....import_name }}/__init__.py'
+                    default: '${{ .....import_name }}$/__init__.py'
                   replacement:
                     type: string
                     default: |
@@ -669,7 +707,7 @@ properties:
         properties:
           home:
             title: Homepage URL of the PyPI package.
-            default: https://pypi.org/project/${{ ...name }}
+            default: https://pypi.org/project/${{ ...name }}$
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   conda:
     title: Conda Recipe
@@ -693,7 +731,7 @@ properties:
       readme:
         title: README file of the Conda package.
         default:
-          path: ${{ ...path.root }}/README_conda.md
+          path: ${{ ...path.root }}$/README_conda.md
           content:
             id: pypackit
         $ref: https://controlman.repodynamics.com/schema/docfile
@@ -704,7 +742,7 @@ properties:
         properties:
           home:
             title: Homepage URL of the Conda package.
-            default: https://anaconda.org/conda-forge/${{ ...name }}
+            default: https://anaconda.org/conda-forge/${{ ...name }}$
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
     examples:
       - about:
@@ -726,12 +764,3 @@ properties:
           recipe-maintainers:
             - jakirkham
           feedstock-name: scipy
-  python_api:
-    title: Python API
-    description: |
-      Python API settings.
-      The Python API is the interface of the package that is used by other Python packages.
-      It is defined by the package's public modules, classes, functions, and methods.
-      The API is used by other packages to interact with the package, and is the part of the package
-      that is considered stable and should not change between versions.
-    type:

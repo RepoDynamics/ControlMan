@@ -15,10 +15,10 @@ additionalProperties:
       type: string
 examples:
   - main:
-      name: ${{ pkg.import_name }}
+      name: ${{ pkg.import_name }}$
       description: Main CLI entry of the package.
-      ref: "${{ pkg.import_name }}:__main__"
+      ref: "${{ pkg.import_name }}$:__main__"
   - gui_main:
       name: entry_point_1
       description: Main GUI entry of the package.
-      ref: "${{ pkg.import_name}}:gui"
+      ref: "${{ pkg.import_name }}$:gui"

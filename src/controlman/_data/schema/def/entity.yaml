@@ -125,8 +125,8 @@ properties:
       Define all roles in the project in [`role`](#ccc-role),
       and use them here with templating.
     examples:
-      - [ '${{ role.concept}}' ]
-      - [ '${{ role.concept}}', '${{ role.dev }}' ]
+      - [ '${{ role.concept }}$' ]
+      - [ '${{ role.concept }}$', '${{ role.dev }}$' ]
     type: array
     uniqueItems: true
     items:
@@ -181,7 +181,7 @@ properties:
       url:
         title: Email URI
         description: A `mailto` URI for the email address.
-        default: 'mailto:${{ .id }}'
+        default: 'mailto:${{ .id }}$'
         $ref: https://jsonschemata.repodynamics.com/uri/mailto
     examples:
       - id: info@repodynamic.com
@@ -217,7 +217,7 @@ properties:
         title: ORCID account URL
         description: |
           This is automatically set to `https://orcid.org/{user}`.
-        default: 'https://orcid.org/${{ .id }}'
+        default: 'https://orcid.org/${{ .id }}$'
         $ref: https://jsonschemata.repodynamics.com/url/orcid/user
       get_pubs:
         title: Get publications.
@@ -251,7 +251,7 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/id/researchgate
       url:
         title: ResearchGate account URL
-        default: 'https://researchgate.net/profile/${{ .id }}'
+        default: 'https://researchgate.net/profile/${{ .id }}$'
         $ref: https://jsonschemata.repodynamics.com/url/researchgate/user
   linkedin:
     title: LinkedIn Account
@@ -273,7 +273,7 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/id/linkedin
       url:
         title: LinkedIn URL
-        default: 'https://linkedin.com/in/${{ .id }}'
+        default: 'https://linkedin.com/in/${{ .id }}$'
         $ref: https://jsonschemata.repodynamics.com/url/linkedin/user
   twitter:
     title: Twitter account
@@ -293,7 +293,7 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/id/twitter
       url:
         title: Twitter account URL
-        default: 'https://twitter.com/${{ .id }}'
+        default: 'https://twitter.com/${{ .id }}$'
         $ref: https://jsonschemata.repodynamics.com/url/twitter/user
     required: [ id ]
   address:

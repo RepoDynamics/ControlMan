@@ -9,7 +9,7 @@ properties:
   path:
     title: Absolute Path
     $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-    default: ${{ web.path.source }}/${{ .path_web }}
+    default: ${{ web.path.source }}$/${{ .path_web }}$
   path_web:
     title: Web Path
     $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
@@ -19,4 +19,4 @@ properties:
   url:
     title: URL
     $ref: https://jsonschemata.repodynamics.com/url/https
-    default: ${{ repo.url.raw }}/${{ .path }}
+    default: ${{ repo.url.raw }}$/${{ .path }}$

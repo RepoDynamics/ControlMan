@@ -36,22 +36,22 @@ properties:
           examples:
             - name: Conda Distribution
               icon: fa-custom fa-conda
-              url: ${{ pkg.conda.url.home }}
+              url: ${{ pkg.conda.url.home }}$
             - name: Email
               icon: fa-regular fa-envelope
-              url: ${{ team.owner.email.url }}
+              url: ${{ team.owner.email.url }}$
             - name: Twitter
               icon: fa-brands fa-twitter
-              url: ${{ team.owner.twitter.url }}
+              url: ${{ team.owner.twitter.url }}$
             - name: LinkedIn
               icon: fa-brands fa-linkedin
-              url: ${{ team.owner.linkedin.url }}
+              url: ${{ team.owner.linkedin.url }}$
             - name: ResearchGate
               icon: fa-brands fa-researchgate
-              url: ${{ team.owner.researchgate.url }}
+              url: ${{ team.owner.researchgate.url }}$
             - name: ORCiD
               icon: fa-brands fa-orcid
-              url: ${{ team.owner.orcid.url }}
+              url: ${{ team.owner.orcid.url }}$
           properties:
             name:
               title: Label for the icon.
@@ -84,7 +84,7 @@ properties:
         title: Quicklinks for the navbar.
         type: array
         uniqueItems: true
-        default: ${{ path.web.subsections }}
+        default: ${{ path.web.subsections }}$
         items:
           type: object
           additionalProperties: false

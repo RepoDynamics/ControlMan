@@ -268,51 +268,47 @@ class PythonPackageFileGenerator:
 
     @property
     def pyproject_project_authors(self) -> list[dict[str, str]]:
-        authors = self._data["pkg.authors"]
-        if not authors:
-            return []
-        authors_list = []
-        for author in authors:
-            author_entry = {"name": author["name"]["full"]}
-            if "email" in author:
-                author_entry["email"] = author["email"]["id"]
-            authors_list.append(author_entry)
-        return authors_list
+        return [self._make_person_entry(author_id) for author_id in self._pkg.get("authors", [])]
+
+    def _make_person_entry(self, person_id: str) -> dict[str, str]:
+        person = self._data["team"][person_id]
+        person_entry = {"name": person["name"]["full"]}
+        if "email" in person:
+            person_entry["email"] = person["email"]["id"]
+        return person_entry
 
     @property
     def pyproject_project_maintainers(self) -> list[dict[str, str]]:
+        if self._pkg["maintainers"]:
+            return [self._make_person_entry(maintainer_id) for maintainer_id in self._pkg["maintainers"]]
 
-        def update_dict(maintainer, weight: int):
-            for registered_maintainer in registered_maintainers:
-                if registered_maintainer[0] == maintainer:
-                    registered_maintainer[1] += weight
-                    break
-            else:
-                registered_maintainers.append([maintainer, weight])
-            return
-
-        registered_maintainers = []
-
-        for code_owners_entry in self._data.get("maintainer.code_owners.owners", []):
-            for code_owners in code_owners_entry.values():
-                for code_owner in code_owners:
-                    update_dict(code_owner, 4)
-        for maintainer_type, weight in (("issue", 3), ("discussion", 2)):
-            for maintainers in self._data.get(f"maintainer.{maintainer_type}", {}).values():
+        maintainer_rank = {}
+        for code_owners_entry in self._data.get("maintainer.code_owners.entries", []):
+            for code_owner in code_owners_entry["owners"]:
+                maintainer_rank[code_owner] = maintainer_rank.get(code_owner, 0) + 1
+        for issue_maintainer_data in self._data.get(f"maintainer.issue", {}).values():
+            for maintainers in issue_maintainer_data.values():
                 for maintainer in maintainers:
-                    update_dict(maintainer, weight)
+                    maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
+        for discussion_maintainer_data in self._data.get(f"maintainer.discussion", {}).values():
+            for maintainer in discussion_maintainer_data:
+                maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
         for maintainer_type in ("security", "code_of_conduct", "support"):
             maintainer = self._data.get(f"maintainer.{maintainer_type}")
             if maintainer:
-                update_dict(maintainer, 1)
-        maintainers_list = []
-        for maintainer in sorted(registered_maintainers, key=lambda x: x[1], reverse=True):
-            maintainer_info = maintainer[0]
-            maintainer_entry = {"name": maintainer_info["name"]["full"]}
-            if "email" in maintainer_info:
-                maintainer_entry["email"] = maintainer_info["email"]["id"]
-            maintainers_list.append(maintainer_entry)
-        return maintainers_list
+                maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
+
+        ranked_maintainers = {}
+        for maintainer, rank in maintainer_rank.items():
+            ranked_maintainers.setdefault(rank, []).append(maintainer)
+
+        out = []
+        for _, maintainers in sorted(ranked_maintainers.items(), key=lambda x: x[0], reverse=True):
+            maintainers_list = [
+                self._make_person_entry(maintainer_id) for maintainer_id in maintainers
+            ]
+            out.extend(sorted(maintainers_list, key=lambda x: x["name"]))
+        return out
 
     @property
     def pyproject_project_dependencies(self):

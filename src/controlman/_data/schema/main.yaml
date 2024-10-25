@@ -64,9 +64,13 @@ properties:
       that is as similar as possible to the distribution and import name of the package**.
       This helps to avoid confusion and makes it easier for others to find, install, and use your package.
       :::
-    default_auto: |
-      repository name (hyphens replaced with spaces)
-    templating: load
+    description_default: Repository name (hyphens replaced with spaces)
+    required_stage: post-load
+    default: |
+      #{{
+        repo_name = "${{ repo.name }}$"
+        return repo_name.replace("-", " ")
+      }}#
     examples:
       - MyProject
       - My Project
@@ -263,13 +267,16 @@ properties:
           $ref: https://controlman.repodynamics.com/schema/license-component
       config:
         type: object
+        default: { }
         properties:
           text:
+            default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
           header:
+            default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
-      notice:
-        title: Notice
+      header:
+        title: Header
         description: |
           Custom license notice.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
@@ -288,61 +295,35 @@ properties:
   copyright:
     title: Copyright
     description: |
-      Copyright information of the project.
+      Copyright notice of the project.
       
       :::{admonition} Usage
       :class: dropdown note
       
-      By default, the copyright [`notice`](#ccc-copyright-notice)
+      By default, the copyright notice
       is included in several places,
-      such as the license texts (when a pre-defined license is used),
+      such as license texts,
       the [main docstring](#ccc-pkg-file---init---py-docstring) of the package,
       and the [footer](#ccc-theme-footer) of website and documentation files.
       :::
-    examples:
-      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-      - notice: ${{ copyright.period }} ${{ team.owner.name.full }}
-        year_start: 2020
-      - notice: ${{ copyright.period }} John Doe
-      - notice: John Doe
-        year_start: 2020
-    type: object
-    default: { }
-    additionalProperties: false
-    required: [ notice ]
-    properties:
-      notice:
-        title: Notice
-        description: |
-          Copyright notice of the project.
-          This is the final form of the notice that will be displayed.
-        default: ${{ copyright.period }} ${{ team.owner.name.full }}
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
-        examples:
-          - ${{ copyright.period }} John Doe
-          - A Custom Copyright Notice
-      period:
-        title: Period
-        description: |
-          Year period to use in the copyright notice.
-          If not provided, it will be automatically set
-          using the value of [`start_year`](#ccc-copyright-start_year), as follows:
-          - If `start_year` is the same as the current year, 
-            the period is set to the current year, e.g., `2024`.
-          - If `start_year` is before the current year,
-            the period is set to `{start_year}–{CURRENT-YEAR}`, e.g., `2023–2024`.
-          - If `start_year` is after the current year, an error is raised.
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
-      start_year:
-        title: Start Year
-        description: |
-          Start year of the project.
-          This can be used to dynamically set the [`period`](#ccc-copyright-period).
-          If not provided, it is automatically set to the repository creation year.
-        default_auto: repository creation year
-        type: integer
-        minimum: 1980
-        maximum: 2040
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+    default: |
+      #{{
+        from datetime import datetime
+        
+        repo_creation_date = "${{ repo.created_at }}$"
+        owner = """${{ team.owner.name.full }}$"""
+        start_year = datetime.strptime(repo_creation_date, "%Y-%m-%d").year
+        current_year = datetime.today().year
+        period = f"{start_year}–{current_year}" if start_year < current_year else f"{current_year}"
+        return f"© {period} {owner}"
+      }}#
+    description_default: |
+      Set to `© {period} {owner}`, where `{owner}` is the repository owner's name
+      and period is calculated as follows:
+      - If repository creation year is the same as the current year, 
+        the period is set to the current year, e.g., `2024`.
+      - Otherwise, the period is set to the repository creation year and the current year, e.g., `2024–2026`.
   role:
     title: Roles
     description: |
@@ -435,9 +416,7 @@ properties:
     description: |
       Maintainers for different parts of the project,
       such as pull request reviewers, issue assignees, and discussion moderators.
-      Each maintainer must be defined as an [`Entity`](#ccc-defs-entity) object.
-      It is recommended to define all maintainers in [`$.team`](#ccc-team),
-      and reference them here (and elsewhere) using templating.
+      Maintainers are defined by their [team](#ccc-team)-member ID.
       
       :::{admonition} Usage
       :class: dropdown note
@@ -447,29 +426,29 @@ properties:
       website, citation, README, and community files, as well as package metadata.
       :::
     type: object
+    default: { }
     additionalProperties: false
     properties:
       code_owners:
         title: Code Owners
         description: |
-          Pull request reviewers of the project.
-          
+          Pull request reviewers for different parts of the project.
           This is used to automatically maintain the
           [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
           file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
           which will then be used to automatically assign reviewers to pull requests
-          based on the modified files.
+          based on the glob pattern of the modified files.
         type: object
         additionalProperties: false
-        required: [ owners, path ]
+        required: [ entries, path ]
         properties:
-          owners:
+          entries:
             title: Owners Definitions
             description: |
               Code owner definitions for different parts of the project.
               For each filepath or glob pattern, add a key-value pair,
               where the key is the path or glob pattern,
-              and the value is an array of code owners, i.e., [`Entities`](#ccc-defs-entities).
+              and the value is an array of [`team`](#ccc-defs-entities)-member IDs.
               
               :::{admonition} Order of Entries
               :class: dropdown important
@@ -481,22 +460,41 @@ properties:
             minItems: 1
             uniqueItems: true
             examples:
-              - - "*": [ '${{ team.owner }}' ]  # Default owners for all unassigned files.
-                - "/*": [ '${{ team.a_maintainer }}' ]  # All files directly under root directory.
-                - "/.github/": [ '${{ team.a_maintainer}}', '${{ team.another_maintainer }}' ]  # All files in `.github` directory.
+              - - "*": [ owner ]  # Default owners for all unassigned files.
+                - "/*": [ a_maintainer ]  # All files directly under root directory.
+                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
             items:
               title: Owners Definition
               description: Code owners defined for a specific path or glob pattern.
               type: object
-              minProperties: 1
-              maxProperties: 1
-              additionalProperties:
-                title: Owners
-                description: Code owners of the path or glob pattern.
-                examples:
-                  - [ '${{ team.owner }}' ]
-                  - [ '${{ team.owner }}', '${{ team.a_maintainer }}' ]
-                $ref: https://controlman.repodynamics.com/schema/entities
+              additionalProperties: false
+              required: [ glob, owners ]
+              properties:
+                description:
+                  title: Description
+                  description: Description of the path or glob pattern.
+                  type: string
+                  minLength: 1
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                glob:
+                  title: Glob Pattern
+                  description: Glob pattern to match the files.
+                  type: string
+                  minLength: 1
+                  examples:
+                      - "*"
+                      - "/*"
+                      - "/.github/"
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                owners:
+                  title: Owners
+                  description: |
+                    Code owners of the path or glob pattern,
+                    defined by their [`team`](#ccc-defs-entities)-member IDs.
+                  examples:
+                    - [ owner ]
+                    - [ owner, a_maintainer ]
+                  $ref: https://jsonschemata.repodynamics.com/array/unique-strings
           path:
             title: File Path
               Path to the
@@ -514,7 +512,7 @@ properties:
           url:
             title: URL
             description: URL of the repository's `CODEOWNERS` file.
-            default: ${{ repo.url.blob }}/${{ maintainer.code_owners.path }}
+            default: ${{ repo.url.blob }}$/${{ maintainer.code_owners.path }}$
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
             $ref: https://jsonschemata.repodynamics.com/url/https
@@ -523,16 +521,40 @@ properties:
         description: |
           Assignees of project issues.
           For each issue form defined in [`$.issue.forms`](#ccc-issue-forms),
-          add a key-value pair where the key is the issue form's [`id`](#ccc-issue-forms--wildcard--id),
-          and the value is an array of assignees, i.e., [`Entities`](#ccc-defs-entities).
+          add a key-value pair where the key is the issue form's [`id`](#ccc-issue-forms--wildcard--id).
         examples:
-          - app_bug_api: [ '${{ team.owner }}' ]
-            app_bug_cli: [ '${{ team.owner }}', '${{ team.a_maintainer }}' ]
+          - app_bug_api: [ owner ]
+            app_bug_cli: [ owner, a_maintainer ]
         type: object
+        default: |
+          #{{
+            issue_forms_matches = $[[ issue.forms ]]$
+            if not issue_forms_matches:
+              return {}
+            issue_forms = issue_forms_matches[0]
+            issue_maintainers = {}
+            for issue_form in issue_forms:
+              issue_maintainers[issue_form["id"]] = {"ticket": ["owner"], "pull": ["owner"]}
+            return issue_maintainers
+          }}#
         additionalProperties:
           title: Form Assignees
-          description: Assignees of a specific issue form.
-          $ref: https://controlman.repodynamics.com/schema/entities
+          description: |
+            Assignees of a specific issue form.
+            This can be either an array of [`team`](#ccc-defs-entities)-member IDs,
+            or a mapping with keys `ticket` and `pull` for issue and pull request assignees, respectively.
+          type: object
+          required: [ ticket, pull ]
+          additionalProperties: false
+          properties:
+            ticket:
+              title: Issue Assignees
+              description: Assignees of project issues.
+              $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+            pull:
+              title: Pull Request Assignees
+              description: Assignees of project pull requests.
+              $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       discussion:
         title: Discussion Moderators
         description: |
@@ -542,34 +564,48 @@ properties:
           add a key-value pair where the key is the category's [`slug`](#ccc-discussion-category),
           and the value is an array of assignees, i.e., [`Entities`](#ccc-defs-entities).
         examples:
-          - announcements: [ '${{ team.some_maintainer_id }}', '${{ team.some-other-maintainer-id }}' ]
-            questions: [ '${{ team.a_maintainer }}' ]
+          - announcements: [ some_maintainer_id, some-other-maintainer-id ]
+            questions: [ team.a_maintainer ]
         type: object
+        default: |
+          #{{
+            discussion_categories_matches = $[[ discussion.category ]]$
+            if not discussion_categories_matches:
+              return {}
+            discussion_categories = discussion_categories_matches[0]
+            discussion_maintainers = {}
+            for category_slug in discussion_categories.keys():
+              discussion_maintainers[category_slug] = ["owner"]
+            return discussion_maintainers
+          }}#
         additionalProperties:
           title: Category Moderators
           description: Moderators of a specific discussion category.
-          $ref: https://controlman.repodynamics.com/schema/entities
+          $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       security:
         title: Security Adviser
         description: Project's security adviser and contact person.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        default: owner
         examples:
-          - '${{ team.owner }}'
-          - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/entity
+          - owner
+          - some_maintainer_id
       code_of_conduct:
         title: Code of Conduct Supervisor
         description: Project's code of conduct supervisor and contact person.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        default: owner
         examples:
-          - '${{ team.owner }}'
-          - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/entity
+          - owner
+          - some_maintainer_id
       support:
         title: Support Contact
         description: Project's support contact person.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        default: owner
         examples:
-          - '${{ team.owner }}'
-          - '${{ team.some_maintainer_id }}'
-        $ref: https://controlman.repodynamics.com/schema/entity
+          - owner
+          - some_maintainer_id
   citation:
     title: Citation
     description: |
@@ -609,11 +645,10 @@ properties:
           Title of the citation.
           This can be your project's [name](#ccc-name), [title](#ccc-title),
           a combination of both, or any other custom title.
-        default: '${{ name }}: ${{ title }}'
         examples:
-          - '${{ name }}: ${{ title }}'
-          - ${{ name }}
-          - ${{ pkg.name }}
+          - '${{ name }}$: ${{ title }}$'
+          - ${{ name }}$
+          - ${{ pkg.name }}$
           - A Custom Title
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       authors:
@@ -631,39 +666,20 @@ properties:
           the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
           key of the `pyproject.toml` file).
           :::
-        default: [ '${{ team.owner }}' ]
-        $ref: https://controlman.repodynamics.com/schema/entities
+        default: [ owner ]
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
         examples:
-          - [ '${{ team.owner }}', '${{ team.some_author }}' ]
-          - - name:
-                first: Jane
-                last: Doe
-              email:
-                id: jane@doe.com
-            - name:
-                legal: XYZ Organization
-              website: https://xyz.org
-              linkedin:
-                id: xyz-org
+          - [ owner, some_author_id ]
       contacts:
         title: Contacts
         description: |
           Project's contact persons.
           It is recommended to define the persons in 
           [`$.team`](#ccc-team) and reference them here using templating.
-        default: [ '${{ team.owner }}' ]
+        default: [ owner ]
         examples:
-          - [ '${{ team.owner }}', '${{ team.some_author }}' ]
-          - - name:
-                first: Jane
-                last: Doe
-              email:
-                user: janedoe@example.com
-            - name:
-                first: John
-                last: Doe
-              website: 'https://johndoe.com'
-        $ref: https://controlman.repodynamics.com/schema/entities
+          - [ owner, some_author_id ]
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
       message:
         title: Message
         description: |
@@ -675,7 +691,7 @@ properties:
           - If you use this software, please cite it using the metadata from this file.
           - Please cite this software using these metadata.
           - Please cite this software using the metadata from 'preferred-citation'.
-        default: If you use ${{ name }}, please cite it using the metadata from this file.
+        default: If you use ${{ name }}$, please cite it using this reference.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       preferred_citation:
         title: Preferred Citation
@@ -736,7 +752,7 @@ properties:
         description: |
           A brief description of the project.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: ${{ abstract }}
+        default: ${{ abstract }}$
         examples:
           - |
             A custom description of the project
@@ -745,7 +761,7 @@ properties:
         title: License
         description: |
           SPDX [license ID](#ccc-license-id) of the project.
-        default: ${{ license.expression }}
+        default: ${{ license.expression }}$
         $ref: https://jsonschemata.repodynamics.com/id/spdx-license
       license_url:
         title: License URL
@@ -755,7 +771,7 @@ properties:
         title: Keywords
         description: Keywords categorizing the project.
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-        default: ${{ keywords }}
+        default: ${{ keywords }}$
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
       repository:
@@ -769,11 +785,12 @@ properties:
           build:
             title: Build
             description: URL of the project in a build artifact/binary repository.
+            default: ${{ pkg.pypi.url.home }}$
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           source:
             title: Source
             description: URL of the project in a source code repository.
-            default: ${{ repo.url.home }}
+            default: ${{ repo.url.home }}$
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           other:
             title: Other
@@ -782,7 +799,7 @@ properties:
       url:
         title: URL
         description: URL of the project's landing (home) page.
-        default: ${{ web.url.home }}
+        default: ${{ web.url.home }}$
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       type:
         title: Type
@@ -810,9 +827,9 @@ properties:
       allowing them to sponsor your project.
       :::
     examples:
-      - github: [ '${{ owner.username }}', EXAMPLE-GITHUB-USERNAME ]
+      - github: [ '${{ owner.username }}$', EXAMPLE-GITHUB-USERNAME ]
         custom: [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME' ]
-        tideleft: pypi/${{ package.name }}
+        tideleft: pypi/${{ package.name }}$
     type: object
     additionalProperties: false
     properties:
@@ -932,7 +949,7 @@ properties:
 #          (see [`$.web.sphinx.config.html_static_path`](#ccc-web-sphinx-config-html_static_path))
 #          and thus can be directly used in the website, and linked to in the documentation.
 #          :::
-#        default: ${{ web.path.root }}/${{ web.path.source}}/_media
+#        default: ${{ web.path.root }}$/${{ web.path.source }}$/_media
 #        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
       color:
         title: Colors
@@ -1295,7 +1312,7 @@ properties:
             default: source
           source:
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ .root }}/${{ .source_rel }}
+            default: ${{ .root }}$/${{ .source_rel }}$
           to_root:
             title: Relative path from the source directory to the root of the repository.
             default: ../../..
@@ -1333,15 +1350,15 @@ properties:
               project:
                 title: Name of the project.
                 type: string
-                default: ${{ name }}
+                default: ${{ name }}$
               author:
                 title: Author(s) of the project.
                 type: string
-                default: ${{ team.owner.name.full }}
+                default: ${{ team.owner.name.full }}$
               project_copyright:
                 title: Copyright notice of the project.
                 type: string
-                default: ${{ copyright.notice }}
+                default: ${{ copyright }}$
               version:
                 title: Public (`major.minor`) version of the project.
                 description: |
@@ -1599,24 +1616,38 @@ properties:
           base:
             title: Base URL of the website.
             description: |
-              If not set, this will be set to `https://${{ web.url.cname }}` if specified,
+              If not set, this will be set to `https://${{ web.url.cname }}$` if specified,
               or the default GitHub Pages domain,
-              which is `https://${{ team.owner.github.user }}.github.io/${{ repo.name }}`,
+              which is `https://${{ team.owner.github.user }}$.github.io/${{ repo.name }}$`,
               unless the repository is for a
               [user page](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)
-              (i.e., named `${{ team.owner.github.user }}.github.io`),
-              in which case the base URL is set to `https://${{ team.owner.github.user }}.github.io`.
+              (i.e., named `${{ team.owner.github.user }}$.github.io`),
+              in which case the base URL is set to `https://${{ team.owner.github.user }}$.github.io`.
             $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+            default: |
+              #{{
+                custom_domain_matches = $[[ web.url.custom ]]$
+                if custom_domain_matches:
+                  custom_domain = custom_domain_matches[0]
+                  protocol = "https" if custom_domain["enforce_https"] else "http"
+                  domain = custom_domain["name"]
+                  return f"{protocol}://{domain}"
+                repo_name = "${{ repo.name }}$"
+                owner_github_username = "${{ team.owner.github.id }}$"
+                if repo_name == f"{owner_github_username}.github.io":
+                  return f"https://{owner_github_username}.github.io"
+                return f"https://{owner_github_username}.github.io/{repo_name}"
+              }}#
             examples:
-              - 'https://${{ repo.info.owner.login }}.github.io'
+              - 'https://${{ repo.info.owner.login }}$.github.io'
           home:
             title: Homepage URL of the website.
             description: |
               This should point to the main landing page (i.e., `index` file) of the website.
               If not set, this will be set to the base URL.
-            default: ${{ web.url.base }}
+            default: ${{ web.url.base }}$
             examples:
-              - ${{ web.url.base }}/some/path
+              - ${{ web.url.base }}$/some/path
             $ref: https://jsonschemata.repodynamics.com/url/http-explicit
       quicklinks:
         title: Quicklinks
@@ -1648,7 +1679,7 @@ properties:
       path:
         title: Path to the announcement banner file.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: ${{ web.path.root }}/announcement.html
+        default: ${{ web.path.root }}$/announcement.html
         examples:
           - docs/announcement.html
       retention_days:
@@ -1658,7 +1689,7 @@ properties:
       url:
         title: URL to the announcement banner file.
         $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-        default: ${{ repo.url.raw }}/${{ announcement.path }}
+        default: ${{ repo.url.raw }}$/${{ announcement.path }}$
   # Package
   pkg:
     title: Package
@@ -1705,7 +1736,7 @@ properties:
           description: Title of the changelog document.
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples:
-            - ${{ name }} Changelog (Public API)
+            - ${{ name }}$ Changelog (Public API)
         intro:
           title: Introduction
           description: Introduction text of the changelog.
@@ -1903,28 +1934,28 @@ properties:
                 description: Label for major release.
                 default:
                   suffix: Major Release
-                  description: ${{ commit.primary.major.description }}
+                  description: ${{ commit.primary.major.description }}$
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               minor:
                 title: Minor Release
                 description: Label for minor release.
                 default:
                   suffix: Minor Release
-                  description: ${{ commit.primary.minor.description }}
+                  description: ${{ commit.primary.minor.description }}$
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               patch:
                 title: Patch Release
                 description: Label for patch release.
                 default:
                   suffix: Patch Release
-                  description: ${{ commit.primary.patch.description }}
+                  description: ${{ commit.primary.patch.description }}$
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               post:
                 title: Post Release
                 description: Label for post release.
                 default:
                   suffix: Post Release
-                  description: ${{ commit.primary.post.description }}
+                  description: ${{ commit.primary.post.description }}$
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
       subtype:
         title: Secondary Type Labels
@@ -2215,10 +2246,10 @@ properties:
                 or one of the [primary custom commit types](../commit/index.md#primary-custom-types).
 
                 This is used to correlate each issue in the repository with a primary commit type:
-                {{ ccc.name }} automatically adds the corresponding primary type label
+                {{ ccc.name }}$ automatically adds the corresponding primary type label
                 to each issue that is created using the form.
                 Subsequently, when a development branch is merged into a release branch,
-                {{ ccc.name }} first determines the corresponding issue of the branch from the branch name,
+                {{ ccc.name }}$ first determines the corresponding issue of the branch from the branch name,
                 and then ascertains the corresponding primary commit type from the issue's primary type label,
                 in order to decide which actions to perform on the release branch.
               type: string
@@ -2260,9 +2291,9 @@ properties:
                 some of these interfaces, in which case it makes sense to only show the corresponding issue forms
                 when the corresponding interfaces are present. This is achieved by adding a condition to each form.
               examples:
-                - if_any: [ "${‎{ package.releases.gui_scripts }}" ] # Display a form only if the package has a GUI interface
-                - if_any: [ "${‎{ package.releases.cli_scripts }}" ] # Display a form only if the package has a CLI interface
-                - if_any: [ "${‎{ package.releases.has_scripts }}" ] # Display an element within a form only if the package has scripts
+                - if_any: [ "${‎{ package.releases.gui_scripts }}$" ] # Display a form only if the package has a GUI interface
+                - if_any: [ "${‎{ package.releases.cli_scripts }}$" ] # Display a form only if the package has a CLI interface
+                - if_any: [ "${‎{ package.releases.has_scripts }}$" ] # Display an element within a form only if the package has scripts
               $ref: https://controlman.repodynamics.com/schema/gh-form-preprocess
             post_process:
               description: |
@@ -2967,8 +2998,16 @@ properties:
           and is added to repository metadata to improve 
           project findability and visibility.
         type: string
+        default: |
+          #{{
+            project_title_matches = $[[ title ]]$
+            if not project_title_matches:
+                return ""
+            return project_title_matches[0]
+          }}#
+        description_default: Project [title](#ccc-title).
         examples:
-          - ${{ title }}
+          - ${{ title }}$
           - Another description different from project title.
       topics:
         title: |
@@ -2982,7 +3021,19 @@ properties:
         type: array
         uniqueItems: true
         maxItems: 20
-        default: ${{ slug.keywords[:20] }}
+        default: |
+          #{{
+            import pylinks
+            
+            project_keywords_matches = $[[ keywords ]]$
+            if not project_keywords_matches:
+                return []
+            project_keywords = project_keywords_matches[0]
+            return [
+              pylinks.string.to_slug(keyword)
+              for keyword in project_keywords if len(keyword) <= 50
+            ][:20]
+          }}#
         items:
           title: A project keyword.
           description: |
@@ -2997,7 +3048,7 @@ properties:
           This is displayed on the GitHub repository's homepage,
           helping users to easily find your project's website.
         $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-        default: ${{ web.url.home }}
+        default: ${{ web.url.home }}$
       secret_scanning:
         title: Enable secret scanning.
         type: boolean
@@ -3178,19 +3229,19 @@ properties:
             $ref: https://jsonschemata.repodynamics.com/url/https
           tree:
             title: URL of the default branch's tree view.
-            default: ${{ repo.url.home }}/tree/${{ branch.main.name }}
+            default: ${{ repo.url.home }}$/tree/${{ branch.main.name }}$
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/tree/main"
             $ref: https://jsonschemata.repodynamics.com/url/https
           blob:
             title: URL of the default branch's blob view.
-            default: ${{ repo.url.home }}/blob/${{ branch.main.name }}
+            default: ${{ repo.url.home }}$/blob/${{ branch.main.name }}$
             examples:
               - "https://github.com/RepoDynamics/PyPackIT/blob/main"
             $ref: https://jsonschemata.repodynamics.com/url/https
           raw:
             title: URL of the default branch's raw file view.
-            default: 'https://raw.githubusercontent.com/${{ repo.full_name }}/${{ branch.main.name }}'
+            default: 'https://raw.githubusercontent.com/${{ repo.full_name }}$/${{ branch.main.name }}$'
             examples:
               - "https://raw.githubusercontent.com/RepoDynamics/PyPackIT/main"
             $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3202,13 +3253,13 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Issues homepage.
-                default: ${{ repo.url.home }}/issues
+                default: ${{ repo.url.home }}$/issues
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues"
                 $ref: https://jsonschemata.repodynamics.com/url/https
               chooser:
                 title: URL of repository's GitHub Issue template chooser.
-                default: ${{ repo.url.issues.home }}/new/choose
+                default: ${{ repo.url.issues.home }}$/new/choose
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/issues/new/choose"
                 $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3220,7 +3271,17 @@ properties:
                   where the key is the [`id`](#ccc-issue.forms[i].id) of the form,
                   and the value is the URL for opening a new issue with that form.
                 type: object
-                default: { }
+                default: |
+                  #{{
+                    issue_forms_matches = $[[ issue.forms ]]$
+                    if not issue_forms_matches:
+                      return { }
+                    issue_forms = issue_forms_matches[0]
+                    return {
+                      form["id"]: f"${{ repo.url.issues.home }}$/new?template={idx + 1:02}_{form["id"]}.yaml"
+                      for idx, form in enumerate(issue_forms)
+                    }
+                  }}#
                 additionalProperties:
                   title: New Issue URL
                   description: URL for opening a new issue with a specific template.
@@ -3234,7 +3295,7 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Pull Requests homepage.
-                default: ${{ repo.url.home }}/pulls
+                default: ${{ repo.url.home }}$/pulls
                 $ref: https://jsonschemata.repodynamics.com/url/https
           discussions:
             title: GitHub Discussions URLs.
@@ -3243,7 +3304,7 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Discussions homepage.
-                default: ${{ repo.url.home }}/discussions
+                default: ${{ repo.url.home }}$/discussions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/discussions"
                 $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3255,7 +3316,17 @@ properties:
                   where the key is the same as in `discussion.category` (i.e., the slug of the category name),
                   and the value is the URL for opening a new discussion in that category.
                 type: object
-                default: { }
+                default: |
+                  #{{
+                    discussion_categories_matches = $[[ discussion.category ]]$
+                    if not discussion_categories_matches:
+                      return { }
+                    discussion_categories = discussion_categories_matches[0]
+                    return {
+                      slug: f"${{ repo.url.discussions.home }}$/new?category={slug}"
+                      for slug in discussion_categories.keys()
+                    }
+                  }}#
                 additionalProperties:
                   title: URL for opening a new discussion in a specific category.
                   examples:
@@ -3268,7 +3339,7 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Actions homepage.
-                default: ${{ repo.url.home }}/actions
+                default: ${{ repo.url.home }}$/actions
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/actions"
                 $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3279,7 +3350,7 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Releases homepage.
-                default: ${{ repo.url.home }}/releases
+                default: ${{ repo.url.home }}$/releases
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/releases"
                 $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3290,20 +3361,20 @@ properties:
             properties:
               home:
                 title: URL of the repository's GitHub Security homepage.
-                default: ${{ repo.url.home }}/security
+                default: ${{ repo.url.home }}$/security
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security"
                 $ref: https://jsonschemata.repodynamics.com/url/https
 
               advisories:
                 title: URL of the repository's security advisories.
-                default: ${{ repo.url.security.home }}/advisories
+                default: ${{ repo.url.security.home }}$/advisories
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories"
                 $ref: https://jsonschemata.repodynamics.com/url/https
               new_advisory:
                 title: URL for creating a new security advisory.
-                default: ${{ repo.url.security.advisories }}/new
+                default: ${{ repo.url.security.advisories }}$/new
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories/new"
                 $ref: https://jsonschemata.repodynamics.com/url/https
@@ -3487,7 +3558,7 @@ properties:
                 $ref: https://jsonschemata.repodynamics.com/number/non-negative
       url:
         title: URL of the project's configuration file.
-        default: ${{ repo.url.raw }}/.github/.control/.metadata.json
+        default: ${{ repo.url.raw }}$/.github/.control/.metadata.json
         $ref: https://jsonschemata.repodynamics.com/url/https
   schedule:
     title: Configurations for scheduled workflow jobs.
@@ -3633,7 +3704,7 @@ properties:
                     description: |
                       This is the slug name of the project.
                     type: string
-                    default: ${{ repo.name }}
+                    default: ${{ repo.name }}$
                   platform:
                     title: ReadTheDocs hosting platform type.
                     type: string
@@ -3731,38 +3802,38 @@ properties:
       :::{code-block} toml
       :caption: 🗂 `package_python/build.toml`
       [tool.setuptools.packages.find]
-      where = [ "${‎{ dir.pkg.source }}" ]
+      where = [ "${‎{ dir.pkg.source }}$" ]
 
       [tool.versioningit.onbuild]
-      source-file = "${‎{ dir.pkg.source }}/${‎{ package.name }}/__init__.py"
+      source-file = "${‎{ dir.pkg.source }}$/${‎{ package.name }}$/__init__.py"
       :::
 
       :::{code-block} toml
       :caption: 🗂 `package_python/tools/mypy.toml`
       [tool.mypy]
-      cache_dir = "${‎{ dir.local.cache.mypy }}"
-      any_exprs_report = "${‎{ dir.local.report.mypy }}"
-      html_report = "${‎{ dir.local.report.mypy }}"
-      linecount_report = "${‎{ dir.local.report.mypy }}"
-      linecoverage_report = "${‎{ dir.local.report.mypy }}"
-      lineprecision_report = "${‎{ dir.local.report.mypy }}"
-      txt_report = "${‎{ dir.local.report.mypy }}"
+      cache_dir = "${‎{ dir.local.cache.mypy }}$"
+      any_exprs_report = "${‎{ dir.local.report.mypy }}$"
+      html_report = "${‎{ dir.local.report.mypy }}$"
+      linecount_report = "${‎{ dir.local.report.mypy }}$"
+      linecoverage_report = "${‎{ dir.local.report.mypy }}$"
+      lineprecision_report = "${‎{ dir.local.report.mypy }}$"
+      txt_report = "${‎{ dir.local.report.mypy }}$"
       :::
 
 
       :::{code-block} toml
       :caption: 🗂 `package_python/tools/ruff.toml`
       [tool.ruff]
-      cache-dir = "${‎{ dir.local.cache.ruff }}"
+      cache-dir = "${‎{ dir.local.cache.ruff }}$"
       :::
 
       :::{code-block} yaml
       :caption: 🗂 `ui/web.yaml`
       readthedocs:
         conda:
-          environment: ${‎{ dir.web }}/requirements.yaml
+          environment: ${‎{ dir.web }}$/requirements.yaml
         sphinx:
-          configuration: ${‎{ dir.web }}/source/conf.py
+          configuration: ${‎{ dir.web }}$/source/conf.py
       :::
 
       :::{code-block} text
@@ -3820,13 +3891,6 @@ properties:
             title: Path to the local report directory.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: .local/report
-  # Custom
-  custom:
-    title: User-defined custom metadata and configurations.
-    description: |
-      Here you can store custom data that can be dynamically referenced 
-      anywhere else in the project.
-    type: object
   # Auto
   slug:
     title: Slugs of the project.

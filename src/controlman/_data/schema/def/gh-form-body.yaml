@@ -18,8 +18,8 @@ description: |
     and whose `options` are an array of all the supported package versions (for version)
     or active release branches (for branch) in the repository.
     The `options` can be defined dynamically, by setting it equal to
-    `${‎{ package.releases.package_versions }}` (for version) or
-    `${‎{ package.releases.branch_names }}` (for branch).
+    `${‎{ package.releases.package_versions }}$` (for version) or
+    `${‎{ package.releases.branch_names }}$` (for branch).
     It makes sense to add version to forms that concern an issue with the package,
     and branch to forms for package-independent issues.
     When branch is set, {{ ccc.name }} parses the the user input

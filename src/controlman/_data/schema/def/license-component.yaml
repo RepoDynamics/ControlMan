@@ -22,7 +22,7 @@ properties:
       text_plain:
         type: string
         pattern: ^(OFL|PATENTS|((LICENSE|COPYING)(-[a-zA-Z0-9-.]+)?))(?i:.(txt|md|rst))?$
-        default: LICENSE-${{ .id }}.md
+        default: LICENSE-${{ .id }}$.md
         examples:
           - OFL
           - PATENTS
@@ -36,7 +36,7 @@ properties:
           - LICENSE-MIT.md
       header_plain:
         type: string
-        default: COPYRIGHT-${{ .id }}.md
+        default: COPYRIGHT-${{ .id }}$.md
   id:
     type: string
   name:
@@ -92,7 +92,7 @@ properties:
         title: URL
         description: |
           URL to the repository's license file.
-        default: ${{ repo.url.blob }}/${{ .path.text_plain }}
+        default: ${{ repo.url.blob }}$/${{ .path.text_plain }}$
         examples:
           - "https://github.com/RepoDynamics/PyPackIT/blob/main/LICENSE"
         $ref: https://jsonschemata.repodynamics.com/url/https
@@ -100,7 +100,7 @@ properties:
         title: URL
         description: |
           URL to the repository's license header file.
-        default: ${{ repo.url.blob }}/${{ .path.header_plain }}
+        default: ${{ repo.url.blob }}$/${{ .path.header_plain }}$
       cross_refs:
         type: array
         items:
