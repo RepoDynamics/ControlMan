@@ -72,9 +72,10 @@ properties:
         return repo_name.replace("-", " ")
       }}#
     examples:
+      - ${{ repo.name }}$
       - MyProject
       - My Project
-      - My-New-Project
+      - My-Project
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
     title: Title
@@ -252,7 +253,7 @@ properties:
           - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
           - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
           - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
-        $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       component:
         type: object
         patternProperties:
@@ -324,6 +325,15 @@ properties:
       - If repository creation year is the same as the current year, 
         the period is set to the current year, e.g., `2024`.
       - Otherwise, the period is set to the repository creation year and the current year, e.g., `2024–2026`.
+  language:
+    title: Language
+    description: |
+      [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
+      or 639-3 code of the primary natural language of the work.
+    type: string
+    default: eng
+    examples:
+      - eng
   role:
     title: Roles
     description: |
@@ -406,11 +416,11 @@ properties:
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
           in the GitHub API (cf. [`Entity`](#ccc-defs-entity)).
-        $ref: https://controlman.repodynamics.com/schema/entity
+        $ref: https://controlman.repodynamics.com/schema/entity-def
     additionalProperties:
       title: Person
       description: A natural person or entity involved in the project.
-      $ref: https://controlman.repodynamics.com/schema/entity
+      $ref: https://controlman.repodynamics.com/schema/entity-def
   maintainer:
     title: Maintainers
     description: |
@@ -494,7 +504,7 @@ properties:
                   examples:
                     - [ owner ]
                     - [ owner, a_maintainer ]
-                  $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+                  $ref: https://controlman.repodynamics.com/schema/member-ids
           path:
             title: File Path
               Path to the
@@ -550,11 +560,11 @@ properties:
             ticket:
               title: Issue Assignees
               description: Assignees of project issues.
-              $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+              $ref: https://controlman.repodynamics.com/schema/member-ids
             pull:
               title: Pull Request Assignees
               description: Assignees of project pull requests.
-              $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+              $ref: https://controlman.repodynamics.com/schema/member-ids
       discussion:
         title: Discussion Moderators
         description: |
@@ -581,11 +591,11 @@ properties:
         additionalProperties:
           title: Category Moderators
           description: Moderators of a specific discussion category.
-          $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+          $ref: https://controlman.repodynamics.com/schema/member-ids
       security:
         title: Security Adviser
         description: Project's security adviser and contact person.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        $ref: https://controlman.repodynamics.com/schema/member-id
         default: owner
         examples:
           - owner
@@ -593,7 +603,7 @@ properties:
       code_of_conduct:
         title: Code of Conduct Supervisor
         description: Project's code of conduct supervisor and contact person.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        $ref: https://controlman.repodynamics.com/schema/member-id
         default: owner
         examples:
           - owner
@@ -601,7 +611,7 @@ properties:
       support:
         title: Support Contact
         description: Project's support contact person.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        $ref: https://controlman.repodynamics.com/schema/member-id
         default: owner
         examples:
           - owner
@@ -639,6 +649,19 @@ properties:
     additionalProperties: false
     required: [ title, authors, message ]
     properties:
+      message:
+        title: Message
+        description: |
+          A message to include in the citation file.
+          On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
+          on the repository's main page.
+        examples:
+          - If you use this software, please cite both the article from preferred-citation and the software itself.
+          - If you use this software, please cite it using the metadata from this file.
+          - Please cite this software using these metadata.
+          - Please cite this software using the metadata from 'preferred-citation'.
+        default: If you use ${{ name }}$, please cite it using this reference.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       title:
         title: Title
         description: |
@@ -667,7 +690,7 @@ properties:
           key of the `pyproject.toml` file).
           :::
         default: [ owner ]
-        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+        $ref: https://controlman.repodynamics.com/schema/member-ids
         examples:
           - [ owner, some_author_id ]
       contacts:
@@ -679,26 +702,113 @@ properties:
         default: [ owner ]
         examples:
           - [ owner, some_author_id ]
-        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-      message:
-        title: Message
+        $ref: https://controlman.repodynamics.com/schema/member-ids
+      abstract:
+        title: Abstract
         description: |
-          A message to include in the citation file.
-          On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
-          on the repository's main page.
-        examples:
-          - If you use this software, please cite both the article from preferred-citation and the software itself.
-          - If you use this software, please cite it using the metadata from this file.
-          - Please cite this software using these metadata.
-          - Please cite this software using the metadata from 'preferred-citation'.
-        default: If you use ${{ name }}$, please cite it using this reference.
+          A brief description of the project.
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        default: ${{ abstract }}$
+        examples:
+          - |
+            A custom description of the project
+            that can span multiple lines.
+      keywords:
+        title: Keywords
+        description: Keywords categorizing the project.
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+        default: ${{ keywords }}$
+        examples:
+          - [ A Custom Keyword, Another Custom Keyword ]
+      license:
+        title: License
+        description: |
+          SPDX [license ID](#ccc-license-id) of the project.
+        default: |
+          #{{
+            import licenseman
+          
+            license_expression = "${{ license.expression }}$"
+            spdx_license_ids, _ = licenseman.spdx.expression.license_ids(license_expression)
+            return spdx_license_ids
+          }}#
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+      license_url:
+        title: License URL
+        description: The URL of the project's license (only required for non-SPDX licenses).
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      repository:
+        title: Repository
+        description: |
+          URLs of the project's repositories.
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          build:
+            title: Build
+            description: |
+              URL of the project in a build artifact/binary repository.
+              This is equivalent to `repository-artifact` in CFF.
+            default: ${{ pkg.pypi.url.home }}$
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          source:
+            title: Source
+            description: |
+              URL of the project in a source code repository.
+              This is equivalent to `repository-code` in CFF.
+            default: ${{ repo.url.home }}$
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          other:
+            title: Other
+            description: |
+              URL of the project in another type of repository.
+              This is equivalent to `repository` in CFF.
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      url:
+        title: URL
+        description: URL of the project's landing (home) page.
+        default: ${{ web.url.home }}$
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      type:
+        title: Type
+        description: Type of the work. This can be either `dataset` or `software`.
+        type: string
+        enum: [ dataset, software ]
+        default: software
+      identifiers:
+        title: Identifiers
+        description: |
+          List of identifiers for the project.
+          These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: Identifier
+          description: An identifier for the project.
+          $ref: https://controlman.repodynamics.com/schema/identifier
       preferred_citation:
         title: Preferred Citation
         description: |
           A reference to another work that should be cited
           instead of the software itself.
         $ref: https://controlman.repodynamics.com/schema/reference
+      references:
+        title: References
+        description: |
+          Reference(s) to other creative works related to, or used/referenced by, the project.
+        type: array
+        uniqueItems: true
+        items:
+          title: Reference
+          description: A reference to another work.
+          $ref: https://controlman.repodynamics.com/schema/reference
+
       grant_ids:
         title: Grant IDs
         description: |
@@ -716,97 +826,13 @@ properties:
         examples:
           - [ ecfunded ]
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-      references:
-        title: References
-        description: |
-          Reference(s) to other creative works related to, or used/referenced by, the project.
-        type: array
-        uniqueItems: true
-        items:
-          title: Reference
-          description: A reference to another work.
-          $ref: https://controlman.repodynamics.com/schema/reference
-      identifiers:
-        title: Identifiers
-        description: |
-          List of identifiers for the project.
-          These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
-        type: array
-        uniqueItems: true
-        minItems: 1
-        items:
-          title: Identifier
-          description: An identifier for the project.
-          $ref: https://controlman.repodynamics.com/schema/identifier
-      language:
-        title: Language
-        description: |
-          [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
-          or 639-3 code of the primary natural language of the work.
-        type: string
-        default: eng
-        examples:
-          - eng
-      abstract:
-        title: Abstract
-        description: |
-          A brief description of the project.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: ${{ abstract }}$
-        examples:
-          - |
-            A custom description of the project
-            that can span multiple lines.
-      license:
-        title: License
-        description: |
-          SPDX [license ID](#ccc-license-id) of the project.
-        default: ${{ license.expression }}$
-        $ref: https://jsonschemata.repodynamics.com/id/spdx-license
-      license_url:
-        title: License URL
-        description: The URL of the project's license (only required for non-SPDX licenses).
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      keywords:
-        title: Keywords
-        description: Keywords categorizing the project.
-        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-        default: ${{ keywords }}$
-        examples:
-          - [ A Custom Keyword, Another Custom Keyword ]
-      repository:
-        title: Repository
-        description: |
-          URLs of the project's repositories.
-        type: object
-        default: { }
-        additionalProperties: false
-        properties:
-          build:
-            title: Build
-            description: URL of the project in a build artifact/binary repository.
-            default: ${{ pkg.pypi.url.home }}$
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-          source:
-            title: Source
-            description: URL of the project in a source code repository.
-            default: ${{ repo.url.home }}$
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-          other:
-            title: Other
-            description: URL of the project in another type of repository.
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      url:
-        title: URL
-        description: URL of the project's landing (home) page.
-        default: ${{ web.url.home }}$
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      type:
-        title: Type
-        description: Type of the work. This can be either `dataset` or `software`.
-        type: string
-        enum: [ dataset, software ]
-        default: software
+
+
+
+
+
+
+
   funding:
     title: Funding
     description: |
