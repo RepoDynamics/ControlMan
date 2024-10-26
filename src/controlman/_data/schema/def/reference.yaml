@@ -9,168 +9,161 @@ properties:
   abbreviation:
     title: Abbreviation
     description: The abbreviation of a work.
-    $ref: nonempty_string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   abstract:
     title: Abstract
     description: The abstract of a work.
-    $ref: nonempty_string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   authors:
     title: Authors
-    description: The author(s) of the work.
-    type: array
-    uniqueItems: true
-    minItems: 1
-    items:
-      title: An author of the work.
-      examples:
-        - '${{ team.owner }}$'
-        - ${{ team.some_author_id }}$
-        - name:
-            first: John
-            last: Doe
-            suffix: Jr.
-      $ref: proj-entity
+    description: |
+      The author(s) of the work.
+    $ref: https://controlman.repodynamics.com/schema/entities
   collection-doi:
-    $ref: https://jsonschemata.repodynamics.com/id/doi
+    title: Collection DOI
     description: The DOI of a collection containing the work.
-  collection-title:
-    description: The title of a collection or proceedings.
-    minLength: 1
-    type: string
-  collection-type:
-    description: The type of a collection.
-    minLength: 1
-    type: string
-  commit:
-    title: Commit hash (e.g., Git) or revision number (e.g., Subversion) of the work.
-    $ref: nonempty_string
-  conference:
-    $ref: proj-entity
-    description: The conference where the work was presented.
-  contact:
-    description: The contact person, group, company, etc. for a work.
-    items:
-      $ref: proj-entity
-    minItems: 1
-    type: array
-    uniqueItems: true
-  copyright:
-    description: The copyright information pertaining to the work.
-    minLength: 1
-    type: string
-  data-type:
-    description: The data type of a data set.
-    minLength: 1
-    type: string
-  database:
-    description: The name of the database where a work was accessed/is stored.
-    minLength: 1
-    type: string
-  database-provider:
-    $ref: proj-entity
-    description: The provider of the database where a work was accessed/is stored.
-  date-accessed:
-    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-    description: The date the work was accessed.
-  date-downloaded:
-    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-    description: The date the work has been downloaded.
-  date-published:
-    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-    description: The date the work has been published.
-  date-released:
-    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-    description: The date the work has been released.
-  department:
-    description: The department where a work has been produced.
-    minLength: 1
-    type: string
-  doi:
     $ref: https://jsonschemata.repodynamics.com/id/doi
+  collection-title:
+    title: Collection Title
+    description: The title of a collection or proceedings.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  collection-type:
+    title: Collection Type
+    description: The type of a collection.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  commit:
+    title: Commit ID
+    description: Commit hash (e.g., Git) or revision number (e.g., Subversion) of the work.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  conference:
+    title: Conference
+    description: The conference where the work was presented.
+    $ref: https://controlman.repodynamics.com/schema/entity
+  contacts:
+    title: Contacts
+    description: |
+      Contact persons for the work.
+    $ref: https://controlman.repodynamics.com/schema/entities
+  copyright:
+    title: Copyright
+    description: The copyright information pertaining to the work.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  data-type:
+    title: Data Type
+    description: The data type of a data set.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  database:
+    title: Database
+    description: The name of the database where a work was accessed/is stored.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  database-provider:
+    title: Database Provider
+    description: The provider of the database where a work was accessed/is stored.
+    oneOf:
+      - $ref: https://controlman.repodynamics.com/schema/entity
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  date-accessed:
+    title: Access Date
+    description: The date the work was accessed.
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+  date-downloaded:
+    title: Download Date
+    description: The date the work has been downloaded.
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+  date-published:
+    title: Publication Date
+    description: The date the work has been published.
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+  date-released:
+    title: Release Date
+    description: The date the work has been released.
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+  department:
+    title: Department
+    description: The department where a work has been produced.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  doi:
+    title: DOI
     description: The DOI of the work.
+    $ref: https://jsonschemata.repodynamics.com/id/doi
   edition:
+    title: Edition
     description: The edition of the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   editors:
+    title: Editors
     description: The editor(s) of a work.
-    items:
-      $ref: proj-entity
-    minItems: 1
-    type: array
-    uniqueItems: true
+    $ref: https://controlman.repodynamics.com/schema/entities
   editors-series:
+    title: Series Editors
     description: The editor(s) of a series in which a work has been published.
-    items:
-      $ref: proj-entity
-    minItems: 1
-    type: array
-    uniqueItems: true
+    $ref: https://controlman.repodynamics.com/schema/entities
   end:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: End Page
     description: The end page of the work.
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
   entry:
+    title: Entry
     description: An entry in the collection that constitutes the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   filename:
+    title: Filename
     description: The name of the electronic file containing the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   format:
+    title: Format
     description: The format in which a work is represented.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   identifiers:
+    title: Identifiers
     description: The identifier(s) of the work.
-    items:
-      $ref: proj-identifier
-    minItems: 1
     type: array
     uniqueItems: true
+    minItems: 1
+    items:
+      title: Identifier
+      description: An identifier.
+      $ref: https://controlman.repodynamics.com/schema/identifier
   institution:
-    $ref: proj-entity
+    title: Institution
     description: The institution where a work has been produced or published.
+    $ref: https://controlman.repodynamics.com/schema/entity
   isbn:
+    title: ISBN
     description: The ISBN of the work.
     pattern: ^[0-9\- ]{10,17}X?$
     type: string
   issn:
+    title: ISSN
     description: The ISSN of the work.
     pattern: ^\d{4}-\d{3}[\dxX]$
     type: string
   issue:
-    anyOf:
-      - minLength: 1
-        type: string
-      - type: number
+    title: Issue
     description: The issue of a periodical in which a work appeared.
+    anyOf:
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
   issue-date:
+    title: Issue Date
     description: The publication date of the issue of a periodical in which a
       work appeared.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
   issue-title:
+    title: Issue Title
     description: The name of the issue of a periodical in which the work appeared.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   journal:
+    title: Journal
     description: The name of the journal/magazine/newspaper/periodical where the
       work was published.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   keywords:
+    title: Keywords
     description: Keywords pertaining to the work.
-    items:
-      minLength: 1
-      type: string
-    minItems: 1
-    type: array
-    uniqueItems: true
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   languages:
+    title: Languages
     description: The language identifier(s) of the work according to ISO 639 language
       strings.
     items:
@@ -182,119 +175,135 @@ properties:
     type: array
     uniqueItems: true
   license:
+    title: License
+    description: The SPDX license ID under which the work is licensed.
     $ref: https://jsonschemata.repodynamics.com/id/spdx-license
   license-url:
-    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    title: License URL
     description: The URL of the license text under which the work is licensed
       (only for non-standard licenses not included in the SPDX License List).
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   loc-end:
+    title: End Line
     anyOf:
       - type: integer
       - minLength: 1
         type: string
     description: The line of code in the file where the work ends.
   loc-start:
+    title: Start Line
     anyOf:
       - type: integer
       - minLength: 1
         type: string
     description: The line of code in the file where the work starts.
   location:
-    $ref: proj-entity
+    title: Location
     description: The location of the work.
+    $ref: https://controlman.repodynamics.com/schema/entity
   medium:
+    title: Medium
     description: The medium of the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   month:
+    title: Month
+    description: The month in which a work has been published.
     maximum: 12
     minimum: 1
     type: integer
-    description: The month in which a work has been published.
   nihmsid:
+    title: NIHMSID
     description: The NIHMSID of a work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   notes:
+    title: Notes
     description: Notes pertaining to the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   number:
-    anyOf:
-      - minLength: 1
-        type: string
-      - type: number
+    title: Accession Number
     description: The accession number for a work.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
   number-volumes:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Number of Volumes
     description: The number of volumes making up the collection in which the work
       has been published.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
   pages:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Pages
     description: The number of pages of the work.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
   patent-states:
+    title: Patent States
     description: The states for which a patent is granted.
-    items:
-      minLength: 1
-      type: string
-    minItems: 1
-    type: array
-    uniqueItems: true
+    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   pmcid:
+    title: PMC ID
     description: The PMCID of a work.
     pattern: ^PMC[0-9]{7}$
     type: string
   publisher:
-    $ref: proj-entity
+    title: Publisher
     description: The publisher who has published the work.
+    $ref: https://controlman.repodynamics.com/schema/entity
   recipients:
+    title: Recipients
     description: The recipient(s) of a personal communication.
-    minItems: 1
-    type: array
-    uniqueItems: true
-    items:
-      $ref: proj-entity
+    $ref: https://controlman.repodynamics.com/schema/entities
   repository:
-    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-    description: The URL of the work in a repository (when the repository is neither
-      a source code repository nor a build artifact repository).
-  repository-artifact:
-    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-    description: The URL of the work in a build artifact/binary repository.
-  repository-code:
-    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-    description: The URL of the work in a source code repository.
+    title: Repository
+    description: |
+      URLs of the work's repositories.
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      build:
+        title: Build
+        description: |
+          URL of the work in a build artifact/binary repository.
+          This is equivalent to `repository-artifact` in CFF.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      source:
+        title: Source
+        description: |
+          URL of the work in a source code repository.
+          This is equivalent to `repository-code` in CFF.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      other:
+        title: Other
+        description: |
+          URL of the work in another type of repository.
+          This is equivalent to `repository` in CFF.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   scope:
+    title: Scope
     description: The scope of the reference, e.g., the section of the work it
       adheres to.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   section:
-    anyOf:
-      - minLength: 1
-        type: string
-      - type: number
+    title: Section
     description: The section of a work that is referenced.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
   senders:
+    title: Senders
     description: The sender(s) of a personal communication.
-    minItems: 1
-    type: array
-    uniqueItems: true
-    items:
-      $ref: proj-entity
+    $ref: https://controlman.repodynamics.com/schema/entities
   start:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Start Page
     description: The start page of the work.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
   status:
+    title: Status
     description: The publication status of the work.
     enum:
       - abstract
@@ -305,25 +314,23 @@ properties:
       - submitted
     type: string
   term:
+    title: Term
     description: The term being referenced if the work is a dictionary or encyclopedia.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   thesis-type:
+    title: Thesis Type
     description: The type of the thesis that is the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   title:
+    title: Title
     description: The title of the work.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   translators:
+    title: Translators
     description: The translator(s) of a work.
-    minItems: 1
-    type: array
-    uniqueItems: true
-    items:
-      $ref: proj-entity
+    $ref: https://controlman.repodynamics.com/schema/entities
   type:
+    title: Type
     description: The type of the work.
     enum:
       - art
@@ -375,30 +382,32 @@ properties:
       - website
     type: string
   url:
-    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    title: URL
     description: The URL of the work.
+    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   version:
-    title: The version of the work.
-    $ref: nonempty_string
+    title: Version
+    description: The version of the work.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   volume:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Volume
     description: The volume of the periodical in which a work appeared.
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      - $ref: https://jsonschemata.repodynamics.com/number/non-negative
   volume-title:
+    title: Volume Title
     description: The title of the volume in which the work appeared.
-    minLength: 1
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   year:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Year
     description: The year in which a work has been published.
+    type: integer
+    minimum: 1800
+    maximum: 2030
   year-original:
-    anyOf:
-      - type: integer
-      - minLength: 1
-        type: string
+    title: Original Year
     description: The year of the original publication.
+    type: integer
+    minimum: 1800
+    maximum: 2030
