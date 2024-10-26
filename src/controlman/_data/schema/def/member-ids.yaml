@@ -1,0 +1,14 @@
+$id: https://controlman.repodynamics.com/schema/member-ids
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Team Member IDs
+description: |
+  A list of keys defined in [`$.team`](#ccc-team).
+type: array
+uniqueItems: true
+minItems: 1
+items:
+  title: A team member ID.
+  examples:
+    - owner
+    - some_author_id
+  $ref: https://controlman.repodynamics.com/schema/member-id
