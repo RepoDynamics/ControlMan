@@ -400,6 +400,17 @@ class ConfigFileGenerator:
 
     def citation(self) -> list[DynamicFile]:
 
+        def create_repository(repo: dict):
+            out = {}
+            for in_key, out_key in (
+                ("build", "repository-artifact"),
+                ("source", "repository-code"),
+                ("other", "repository"),
+            ):
+                if in_key in repo:
+                    out[out_key] = repo[in_key]
+            return out
+
         def create_person(entity: str | dict):
             if isinstance(entity, str):
                 entity = self._data["team"].get(entity)
@@ -445,19 +456,27 @@ class ConfigFileGenerator:
             return _out
 
         def create_reference(ref: dict):
-            #TODO: Complete this function
-            out = {}
-            for key in (
-                "abbreviation",
-                "abstract",
-            ):
-                if ref.get(key):
-                    out[key] = ref[key]
-            out["authors"] = [create_person(entity=entity) for entity in ref["authors"]]
+            entity_list_keys = [
+                "authors", "contacts", "editors", "editors-series", "recipients", "senders", "translators"
+            ]
+            entity_keys = ["conference", "database-provider", "institution", "location", "publisher"]
+            out = {
+                k: v for k, v in ref.items() if k not in ["repository"] + entity_list_keys + entity_keys
+            }
+            for entity_list_key in entity_list_keys:
+                if entity_list_key not in ref:
+                    continue
+                if entity_list_key == "contacts":
+                    out_key = "contact"
+                else:
+                    out_key = entity_list_key
+                out[out_key] = [create_person(entity=entity) for entity in ref[entity_list_key]]
+            for entity_key in entity_keys:
+                if entity_key in ref:
+                    out[entity_key] = create_person(entity=ref[entity_key])
+            if "repository" in ref:
+                out |= create_repository(ref["repository"])
             return out
-
-        def get_commit() -> str:
-            return ""
 
         if not (self._data.get("citation") or self._data_before.get("citation")):
             return []
@@ -478,19 +497,13 @@ class ConfigFileGenerator:
             "version": cite_old.get("version", ""),
             "date-released": cite_old.get("date-released", ""),
             "doi": cite_old.get("doi", ""),
-            "commit": cite_old.get("commit") or get_commit(),
+            "commit": cite_old.get("commit", ""),
         }
         for key in ("license", "license_url", "url"):
             if cite.get(key):
                 out[key.replace('_', "-")] = cite[key]
         if cite.get("repository"):
-            for in_key, out_key in (
-                ("build", "repository-artifact"),
-                ("source", "repository-code"),
-                ("other", "repository"),
-            ):
-                if cite["repository"].get(in_key):
-                    out[out_key] = cite["repository"][in_key]
+            out |= create_repository(cite["repository"])
         for key in ["identifiers", "type", "keywords", "abstract"]:
             if cite.get(key):
                 out[key] = cite[key]
