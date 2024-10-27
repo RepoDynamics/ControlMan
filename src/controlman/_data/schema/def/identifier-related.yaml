@@ -1,0 +1,139 @@
+$id: https://controlman.repodynamics.com/schema/identifier-related
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Related Identifier
+description: An identifier related to the work.
+type: object
+additionalProperties: false
+required: [ value, relation, resource_type ]
+properties:
+  value:
+    title: Value
+    description: |
+      The value of the identifier.
+      Supported identifiers include:
+      DOI, Handle, ARK, PURL, ISSN, ISBN, PubMed ID, PubMed Central ID, ADS Bibliographic Code,
+      arXiv, Life Science Identifiers (LSID), EAN-13, ISTC, URNs and URLs.
+    examples:
+      - 10.5281/zenodo.1003150
+      - https://example.com
+  relation:
+    title: Relation
+    description: |
+      The relation of the identifier to the work.
+    type: string
+    enum:
+      - isCitedBy
+      - cites
+      - isSupplementTo
+      - isSupplementedBy
+      - isContinuedBy
+      - continues
+      - isDescribedBy
+      - describes
+      - hasMetadata
+      - isMetadataFor
+      - isNewVersionOf
+      - isPreviousVersionOf
+      - isPartOf
+      - hasPart
+      - isReferencedBy
+      - references
+      - isDocumentedBy
+      - documents
+      - isCompiledBy
+      - compiles
+      - isVariantFormOf
+      - isOriginalFormof
+      - isIdenticalTo
+      - isAlternateIdentifier
+      - isReviewedBy
+      - reviews
+      - isDerivedFrom
+      - isSourceOf
+      - requires
+      - isRequiredBy
+      - isObsoletedBy
+      - obsoletes
+  resource_type:
+    title: Resource Type
+    description: |
+      The type of the resource identified by the identifier.
+    type: string
+    enum:
+      - software
+      - poster
+      - presentation
+      - dataset
+      - video
+      - lesson
+      - physicalobject
+      - other
+      - image-figure
+      - image-plot
+      - image-drawing
+      - image-diagram
+      - image-photo
+      - image-other
+      - publication-annotationcollection
+      - publication-book
+      - publication-section
+      - publication-conferencepaper
+      - publication-datamanagementplan
+      - publication-article
+      - publication-patent
+      - publication-preprint
+      - publication-deliverable
+      - publication-milestone
+      - publication-proposal
+      - publication-report
+      - publication-softwaredocumentation
+      - publication-taxonomictreatment
+      - publication-technicalnote
+      - publication-thesis
+      - publication-workingpaper
+      - publication-other
+  description:
+    title: Description
+    description: A description for the identifier value.
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+    examples:
+      - The version DOI for this version, which has a relation childOf with the concept
+        DOI specified in the doi field in the root of this file.
+      - The identifier provided by Archival Repository, which points to this version
+        of the software.
+allOf:
+  - if:
+      properties:
+        type:
+          const: doi
+    then:
+      properties:
+        value:
+          $ref: https://jsonschemata.repodynamics.com/id/doi
+  - if:
+      properties:
+        type:
+          const: url
+    then:
+      properties:
+        value:
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  - if:
+      properties:
+        type:
+          const: swh
+    then:
+      properties:
+        value:
+          description: |
+            [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html)
+            without further qualifiers, such as origin, visit, anchor, and path.
+          type: string
+          format: swh
+          pattern: ^swh:1:(snp|rel|rev|dir|cnt):[0-9a-fA-F]{40}$
+          examples:
+            - swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2
+            - swh:1:dir:d198bc9d7a6bcf6db04f476d29314f157507d505
+            - swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d
+            - swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f
+            - swh:1:snp:c7c108084bc0bf3d81436bf980b46e98bd338453
