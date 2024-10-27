@@ -249,8 +249,8 @@ class PythonPackageFileGenerator:
             "classifiers": ("array", self._pkg["classifiers"]),
             "license": ("inline_table", license),
             "urls": ("table", self._pkg["urls"]),
-            "authors": ("array_of_inline_tables", self.pyproject_project_authors),
-            "maintainers": ("array_of_inline_tables", self.pyproject_project_maintainers),
+            "authors": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("authors", [])]),
+            "maintainers": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("maintainers", [])]),
             "readme": ("str", readme),
             "requires-python": ("str", self._pkg["python.version.spec"]),
             "dependencies": ("array", self.pyproject_project_dependencies),
@@ -266,49 +266,12 @@ class PythonPackageFileGenerator:
                 project[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
         return project
 
-    @property
-    def pyproject_project_authors(self) -> list[dict[str, str]]:
-        return [self._make_person_entry(author_id) for author_id in self._pkg.get("authors", [])]
-
     def _make_person_entry(self, person_id: str) -> dict[str, str]:
         person = self._data["team"][person_id]
         person_entry = {"name": person["name"]["full"]}
         if "email" in person:
             person_entry["email"] = person["email"]["id"]
         return person_entry
-
-    @property
-    def pyproject_project_maintainers(self) -> list[dict[str, str]]:
-        if self._pkg["maintainers"]:
-            return [self._make_person_entry(maintainer_id) for maintainer_id in self._pkg["maintainers"]]
-
-        maintainer_rank = {}
-        for code_owners_entry in self._data.get("maintainer.code_owners.entries", []):
-            for code_owner in code_owners_entry["owners"]:
-                maintainer_rank[code_owner] = maintainer_rank.get(code_owner, 0) + 1
-        for issue_maintainer_data in self._data.get(f"maintainer.issue", {}).values():
-            for maintainers in issue_maintainer_data.values():
-                for maintainer in maintainers:
-                    maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
-        for discussion_maintainer_data in self._data.get(f"maintainer.discussion", {}).values():
-            for maintainer in discussion_maintainer_data:
-                maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
-        for maintainer_type in ("security", "code_of_conduct", "support"):
-            maintainer = self._data.get(f"maintainer.{maintainer_type}")
-            if maintainer:
-                maintainer_rank[maintainer] = maintainer_rank.get(maintainer, 0) + 1
-
-        ranked_maintainers = {}
-        for maintainer, rank in maintainer_rank.items():
-            ranked_maintainers.setdefault(rank, []).append(maintainer)
-
-        out = []
-        for _, maintainers in sorted(ranked_maintainers.items(), key=lambda x: x[0], reverse=True):
-            maintainers_list = [
-                self._make_person_entry(maintainer_id) for maintainer_id in maintainers
-            ]
-            out.extend(sorted(maintainers_list, key=lambda x: x["name"]))
-        return out
 
     @property
     def pyproject_project_dependencies(self):
