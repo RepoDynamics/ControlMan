@@ -383,15 +383,6 @@ class DataValidator:
                 suffixes.append(suffix)
         return
 
-    def maintainers(self):
-        issue_ids = [issue["id"] for issue in self._data.issue__forms]
-        for issue_id in self._data.maintainer__issue.keys():
-            if issue_id not in issue_ids:
-                _logger.critical(
-                    f"Issue ID '{issue_id}' defined in 'maintainer.issue' but not found in 'issue.forms'."
-                )
-        return
-
 
 def modify_schema(schema: dict) -> dict:
     schema.pop("$schema", None)  # see: https://github.com/python-jsonschema/jsonschema/issues/1295
