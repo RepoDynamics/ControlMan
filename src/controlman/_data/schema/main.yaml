@@ -348,24 +348,6 @@ properties:
       You can attribute roles to [team members](#ccc-defs-entity-roles),
       which will then be displayed on the project's website and citation data.
       :::
-    type: object
-    additionalProperties:
-      title: Role
-      description: A role in the project.
-      examples:
-        - concept:
-            title: Conceptualization
-            description: Formulation and evolution of overarching project goals and aims.
-            abbreviation: CNP
-        - dev:
-            title: Software Development
-            description: Implementation of the software.
-            abbreviation: DEV
-        - manage:
-            title: Management
-            description: Project administration and coordination.
-            abbreviation: MAN
-      $ref: https://controlman.repodynamics.com/schema/role
     examples:
       - concept:
           title: Conceptualization
@@ -383,6 +365,19 @@ properties:
           title: Maintenance
           description: Maintenance of the software and development workflows.
           abbreviation: MNT
+    type: object
+    properties:
+      author:
+        title: Author
+        description: |
+          Author of the project.
+        $ref: https://controlman.repodynamics.com/schema/role
+        default:
+            title: Author
+            description: Author of the project.
+            abbreviation: AUT
+    additionalProperties:
+      $ref: https://controlman.repodynamics.com/schema/role
   team:
     title: Team
     description: |
@@ -421,201 +416,6 @@ properties:
       title: Person
       description: A natural person or entity involved in the project.
       $ref: https://controlman.repodynamics.com/schema/entity-def
-  maintainer:
-    title: Maintainers
-    description: |
-      Maintainers for different parts of the project,
-      such as pull request reviewers, issue assignees, and discussion moderators.
-      Maintainers are defined by their [team](#ccc-team)-member ID.
-      
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      Maintainers are automatically assigned to corresponding tasks (e.g., issues, pull requests, discussions)
-      and their information is by default added to the project's documentation,
-      website, citation, README, and community files, as well as package metadata.
-      :::
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      code_owners:
-        title: Code Owners
-        description: |
-          Pull request reviewers for different parts of the project.
-          This is used to automatically maintain the
-          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
-          which will then be used to automatically assign reviewers to pull requests
-          based on the glob pattern of the modified files.
-        type: object
-        additionalProperties: false
-        required: [ entries, path ]
-        properties:
-          entries:
-            title: Owners Definitions
-            description: |
-              Code owner definitions for different parts of the project.
-              For each filepath or glob pattern, add a key-value pair,
-              where the key is the path or glob pattern,
-              and the value is an array of [`team`](#ccc-defs-entities)-member IDs.
-              
-              :::{admonition} Order of Entries
-              :class: dropdown important
-              
-              Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
-              the last matching pattern takes the most precedence.
-              :::
-            type: array
-            minItems: 1
-            uniqueItems: true
-            examples:
-              - - "*": [ owner ]  # Default owners for all unassigned files.
-                - "/*": [ a_maintainer ]  # All files directly under root directory.
-                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
-            items:
-              title: Owners Definition
-              description: Code owners defined for a specific path or glob pattern.
-              type: object
-              additionalProperties: false
-              required: [ glob, owners ]
-              properties:
-                description:
-                  title: Description
-                  description: Description of the path or glob pattern.
-                  type: string
-                  minLength: 1
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                glob:
-                  title: Glob Pattern
-                  description: Glob pattern to match the files.
-                  type: string
-                  minLength: 1
-                  examples:
-                      - "*"
-                      - "/*"
-                      - "/.github/"
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                owners:
-                  title: Owners
-                  description: |
-                    Code owners of the path or glob pattern,
-                    defined by their [`team`](#ccc-defs-entities)-member IDs.
-                  examples:
-                    - [ owner ]
-                    - [ owner, a_maintainer ]
-                  $ref: https://controlman.repodynamics.com/schema/member-ids
-          path:
-            title: File Path
-              Path to the
-              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-            type: string
-            default: .github/CODEOWNERS
-            pattern: ^(?:|.github/|docs/)CODEOWNERS$
-            examples:
-              - CODEOWNERS
-              - .github/CODEOWNERS
-              - docs/CODEOWNERS
-          url:
-            title: URL
-            description: URL of the repository's `CODEOWNERS` file.
-            default: ${{ repo.url.blob }}$/${{ maintainer.code_owners.path }}$
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-            $ref: https://jsonschemata.repodynamics.com/url/https
-      issue:
-        title: Issue Assignees
-        description: |
-          Assignees of project issues.
-          For each issue form defined in [`$.issue.forms`](#ccc-issue-forms),
-          add a key-value pair where the key is the issue form's [`id`](#ccc-issue-forms--wildcard--id).
-        examples:
-          - app_bug_api: [ owner ]
-            app_bug_cli: [ owner, a_maintainer ]
-        type: object
-        default: |
-          #{{
-            issue_forms_matches = $[[ issue.forms ]]$
-            if not issue_forms_matches:
-              return {}
-            issue_forms = issue_forms_matches[0]
-            issue_maintainers = {}
-            for issue_form in issue_forms:
-              issue_maintainers[issue_form["id"]] = {"ticket": ["owner"], "pull": ["owner"]}
-            return issue_maintainers
-          }}#
-        additionalProperties:
-          title: Form Assignees
-          description: |
-            Assignees of a specific issue form.
-            This can be either an array of [`team`](#ccc-defs-entities)-member IDs,
-            or a mapping with keys `ticket` and `pull` for issue and pull request assignees, respectively.
-          type: object
-          required: [ ticket, pull ]
-          additionalProperties: false
-          properties:
-            ticket:
-              title: Issue Assignees
-              description: Assignees of project issues.
-              $ref: https://controlman.repodynamics.com/schema/member-ids
-            pull:
-              title: Pull Request Assignees
-              description: Assignees of project pull requests.
-              $ref: https://controlman.repodynamics.com/schema/member-ids
-      discussion:
-        title: Discussion Moderators
-        description: |
-          Moderators of project discussions.
-          For each discussion category form defined in
-          [`$.discussion.category.*.form`](#ccc-discussion-category--wildcard--form),
-          add a key-value pair where the key is the category's [`slug`](#ccc-discussion-category),
-          and the value is an array of assignees, i.e., [`Entities`](#ccc-defs-entities).
-        examples:
-          - announcements: [ some_maintainer_id, some-other-maintainer-id ]
-            questions: [ team.a_maintainer ]
-        type: object
-        default: |
-          #{{
-            discussion_categories_matches = $[[ discussion.category ]]$
-            if not discussion_categories_matches:
-              return {}
-            discussion_categories = discussion_categories_matches[0]
-            discussion_maintainers = {}
-            for category_slug in discussion_categories.keys():
-              discussion_maintainers[category_slug] = ["owner"]
-            return discussion_maintainers
-          }}#
-        additionalProperties:
-          title: Category Moderators
-          description: Moderators of a specific discussion category.
-          $ref: https://controlman.repodynamics.com/schema/member-ids
-      security:
-        title: Security Adviser
-        description: Project's security adviser and contact person.
-        $ref: https://controlman.repodynamics.com/schema/member-id
-        default: owner
-        examples:
-          - owner
-          - some_maintainer_id
-      code_of_conduct:
-        title: Code of Conduct Supervisor
-        description: Project's code of conduct supervisor and contact person.
-        $ref: https://controlman.repodynamics.com/schema/member-id
-        default: owner
-        examples:
-          - owner
-          - some_maintainer_id
-      support:
-        title: Support Contact
-        description: Project's support contact person.
-        $ref: https://controlman.repodynamics.com/schema/member-id
-        default: owner
-        examples:
-          - owner
-          - some_maintainer_id
   citation:
     title: Citation
     description: |
@@ -647,7 +447,7 @@ properties:
       :::
     type: object
     additionalProperties: false
-    required: [ title, authors, message ]
+    required: [ title, authors, message, type ]
     properties:
       message:
         title: Message
@@ -689,7 +489,17 @@ properties:
           the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
           key of the `pyproject.toml` file).
           :::
-        default: [ owner ]
+        default: |
+          #{{
+              return [
+                member["id"] for member in team_members_with_role_type(
+                  "Author",
+                  ${{ team }}$,
+                  ${{ role }}$,
+                  active_only=True
+                )
+              ]
+          }}#
         $ref: https://controlman.repodynamics.com/schema/member-ids
         examples:
           - [ owner, some_author_id ]
@@ -699,10 +509,50 @@ properties:
           Project's contact persons.
           It is recommended to define the persons in 
           [`$.team`](#ccc-team) and reference them here using templating.
-        default: [ owner ]
+        default: |
+          #{{
+              return [
+                member["id"] for member in team_members_with_role_type(
+                  "ContactPerson",
+                  ${{ team }}$,
+                  ${{ role }}$,
+                  active_only=True
+                )
+              ]
+          }}#
         examples:
           - [ owner, some_author_id ]
         $ref: https://controlman.repodynamics.com/schema/member-ids
+      contributors:
+        title: Contributors
+        description: |
+          Other contributors of the project, ordered by contribution (highest first).
+
+          :::{admonition} Usage
+          :class: dropdown note
+
+          These are automatically displayed on the project's website,
+          the front page of the project's PDF documentation,
+          and the project's PyPI and TestPyPI pages
+          (by being added to package metadata, i.e.,
+          the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+          key of the `pyproject.toml` file).
+          :::
+        default: |
+          #{{
+              return [
+                member["id"] for member in team_members_without_role_types(
+                  "Author",
+                  ${{ team }}$,
+                  ${{ role }}$,
+                  include_other_roles=True,
+                  active_only=True,
+                )
+              ]
+          }}#
+        $ref: https://controlman.repodynamics.com/schema/member-ids
+        examples:
+          - [ owner, some_author_id ]
       abstract:
         title: Abstract
         description: |
@@ -720,6 +570,41 @@ properties:
         default: ${{ keywords }}$
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
+      subjects:
+        title: Subjects
+        description: |
+          Project subjects from a taxonomy or controlled vocabulary.
+        examples:
+          - - term: Astronomy
+              id: http://id.loc.gov/authorities/subjects/sh85009003
+              scheme: url
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: Subject
+          description: A subject from a taxonomy or controlled vocabulary.
+          type: object
+          additionalProperties: false
+          properties:
+            term:
+              title: Term
+              description: Term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            id:
+              title: ID
+              description: ID of the term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            scheme:
+              title: Scheme
+              description: Scheme of the term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
       license:
         title: License
         description: |
@@ -808,15 +693,52 @@ properties:
           title: Reference
           description: A reference to another work.
           $ref: https://controlman.repodynamics.com/schema/reference
-
-      grant_ids:
-        title: Grant IDs
+      # Zenodo
+      access_right:
+        title: Access Right
+        description: |
+          Access rights for the project.
+        type: string
+        enum: [ open, embargoed, restricted, closed ]
+        default: open
+      access_conditions:
+        title: Access Conditions
+        description: |
+          Conditions for accessing the project.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      notes:
+        title: Notes
+        description: |
+          Additional notes about the citation.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      related_identifiers:
+        title: Related Identifiers
+        description: |
+          List of related identifiers for the project.
+        type: array
+        uniqueItems: true
+        items:
+          title: Related Identifier
+          description: A related identifier for the project.
+          $ref: https://controlman.repodynamics.com/schema/identifier-related
+      grants:
+        title: Grants
         description: |
           List of OpenAIRE-supported grants funding the research for this project.
-          These can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
         examples:
-          - [ '10.13039/501100000780::283595', 283595 ]
-        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+          - - id: '10.13039/501100000780::283595'
+            - id: 283595
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              title: ID
+              description: |
+                Grant ID; can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
       zenodo_communities:
         title: Zenodo Communities
         description: |
@@ -826,13 +748,6 @@ properties:
         examples:
           - [ ecfunded ]
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-
-
-
-
-
-
-
   funding:
     title: Funding
     description: |
@@ -1226,6 +1141,10 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
+              assignees:
+                title: Security Advisers
+                description: Project's security advisers and contact persons.
+                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: |
                   Path to the
@@ -1260,6 +1179,10 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
+              assignees:
+                title: Support Contacts
+                description: Project's support contact persons.
+                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: Support Policy
                 description: |
@@ -1298,6 +1221,10 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
+              assignees:
+                title: Code of Conduct Supervisors
+                description: Project's code of conduct supervisors and contact persons.
+                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: |
                   Path to the
@@ -1835,6 +1762,34 @@ properties:
         additionalProperties: false
         required: [ maintain, sync ]
         properties:
+          dev_branch_creation:
+            title: Development Branch Creation
+            description: |
+              Automatic creation of development branches.
+            default:
+              type: init
+              scope: dev
+              description: >-
+                Create development branch for issue #{{ issue.number }}.
+              body: |
+                Head branch name: {{ head.name }}
+                Base branch name: {{ base.name }}
+                Base branch SHA:  {{ base.sha }}
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
+          changelog_init:
+            title: Changelog Initialization
+            description: |
+              Automatic initialization of a new changelog entry.
+            default:
+              type: sync
+              scope: changelog
+              description: >-
+                Initialize new changelog entry.
+              body: |
+                Issue #{{ issue.number }}
+                Pull #{{ pull.number }}
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
+
           maintain:
             title: Maintain
             description: |
@@ -2240,9 +2195,6 @@ properties:
               description: URL to the external link
               type: string
               format: uri
-      form_element:
-        type: object
-        additionalProperties: true
       forms:
         title: Issue form definitions and configurations.
         type: array
@@ -2257,7 +2209,6 @@ properties:
               title: Unique identifier of the issue form.
               description: |
                 This is used to reference the form in other places
-                (e.g. as a key of the `maintainer.issue` object, to assign the issue to a maintainer),
                 and to generate the filename of the issue template's YAML file.
                 The ID must start with an alphanumeric character,
                 and can only contain alphanumeric characters, underscores, and hyphens.
@@ -2292,6 +2243,27 @@ properties:
                 It also helps maintainers and users
                 differentiate between issues with the same primary type.
               type: string
+            assignees:
+              title: Form Assignees
+              description: |
+                Assignees of a specific issue type.
+                This can be either an array of [`team`](#ccc-defs-entities)-member IDs,
+                or a mapping with keys `ticket` and `pull` for issue and pull request assignees, respectively.
+              type: object
+              additionalProperties: false
+              properties:
+                ticket:
+                  title: Issue Assignees
+                  description: Assignees of project issues.
+                  $ref: https://controlman.repodynamics.com/schema/member-ids
+                pull:
+                  title: Pull Request Assignees
+                  description: Assignees of project pull requests.
+                  $ref: https://controlman.repodynamics.com/schema/member-ids
+                review:
+                  title: Review Assignees
+                  description: Assignees of project pull request reviews.
+                  $ref: https://controlman.repodynamics.com/schema/member-ids
             pre_process:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
@@ -2618,13 +2590,13 @@ properties:
 
                 {%- macro make_description() -%}
                   {%- if action == "assigned" -%}
-                    Assigned to {{ make_user(payload.assignee) }}.
+                    Assigned to {{ make_user(assignee) }}.
                   {%- elif action == "unassigned" -%}
-                    Unassigned from {{ make_user(payload.assignee) }}.
+                    Unassigned from {{ make_user(assignee) }}.
                   {%- elif action == "review_requested" -%}
-                    Assigned to {{ make_user(payload.requested_reviewer) }} for review.
+                    Assigned to {{ make_user(requested_reviewer) }} for review.
                   {%- elif action == "review_request_removed" -%}
-                    Unassigned from {{ make_user(payload.requested_reviewer) }} for review.
+                    Unassigned from {{ make_user(requested_reviewer) }} for review.
                   {%- elif action == "synchronize" -%}
                     New commits pushed to [{{ head.name }}]({{ head.url }}) (CI [{{ context.run_id }}]({{ workflow_url }})).
                   {%- elif action == "labeled" -%}
@@ -2671,9 +2643,9 @@ properties:
                     {%- endif -%}
                   {%- elif action == "opened" -%}
                     {%- if event == "issues" -%}
-                      Issue ticket #{{ payload.issue.number }} submitted by {{ make_user(payload.issue.user) }}.
+                      Issue ticket #{{ payload.issue.number }} submitted by {{ make_user(creator) }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request #{{ payload.pull_request.number }} opened by {{ make_user(payload.pull_request.user) }}.
+                      Pull request #{{ payload.pull_request.number }} opened by {{ make_user(creator) }}.
                     {%- endif -%}
                   {%- endif -%}
                 {%- endmacro %}
@@ -2813,6 +2785,93 @@ properties:
     type: object
     additionalProperties: false
     properties:
+      code_owners:
+        title: Code Owners
+        description: |
+          Pull request reviewers for different parts of the project.
+          This is used to automatically maintain the
+          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
+          which will then be used to automatically assign reviewers to pull requests
+          based on the glob pattern of the modified files.
+        type: object
+        additionalProperties: false
+        required: [ entries, path ]
+        properties:
+          entries:
+            title: Owners Definitions
+            description: |
+              Code owner definitions for different parts of the project.
+              For each filepath or glob pattern, add a key-value pair,
+              where the key is the path or glob pattern,
+              and the value is an array of [`team`](#ccc-defs-entities)-member IDs.
+
+              :::{admonition} Order of Entries
+              :class: dropdown important
+
+              Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
+              the last matching pattern takes the most precedence.
+              :::
+            type: array
+            minItems: 1
+            uniqueItems: true
+            examples:
+              - - "*": [ owner ]  # Default owners for all unassigned files.
+                - "/*": [ a_maintainer ]  # All files directly under root directory.
+                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
+            items:
+              title: Owners Definition
+              description: Code owners defined for a specific path or glob pattern.
+              type: object
+              additionalProperties: false
+              required: [ glob, owners ]
+              properties:
+                description:
+                  title: Description
+                  description: Description of the path or glob pattern.
+                  type: string
+                  minLength: 1
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                glob:
+                  title: Glob Pattern
+                  description: Glob pattern to match the files.
+                  type: string
+                  minLength: 1
+                  examples:
+                    - "*"
+                    - "/*"
+                    - "/.github/"
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                owners:
+                  title: Owners
+                  description: |
+                    Code owners of the path or glob pattern,
+                    defined by their [`team`](#ccc-defs-entities)-member IDs.
+                  examples:
+                    - [ owner ]
+                    - [ owner, a_maintainer ]
+                  $ref: https://controlman.repodynamics.com/schema/member-ids
+          path:
+            title: File Path
+              Path to the
+              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository.
+            type: string
+            default: .github/CODEOWNERS
+            pattern: ^(?:|.github/|docs/)CODEOWNERS$
+            examples:
+              - CODEOWNERS
+              - .github/CODEOWNERS
+              - docs/CODEOWNERS
+          url:
+            title: URL
+            description: URL of the repository's `CODEOWNERS` file.
+            default: ${{ repo.url.blob }}$/${{ .path }}$
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+            $ref: https://jsonschemata.repodynamics.com/url/https
       template:
         title: Templates
         description: |
@@ -2901,6 +2960,10 @@ properties:
                 This is automatically fetched from the 
                 [GitHub API](https://docs.github.com/en/graphql/reference/objects#discussioncategory).
               type: string
+            assignees:
+              title: Category Moderators
+              description: Moderators of a specific discussion category.
+              $ref: https://controlman.repodynamics.com/schema/member-ids
             form:
               title: Category Form
               description: |
@@ -3918,31 +3981,6 @@ properties:
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: .local/report
   # Auto
-  slug:
-    title: Slugs of the project.
-    description: |
-      These are the automatically generated
-      slugified versions of the project's descriptors,
-      such as name, repository name, and keywords.
-      They can be used in places where only slugs are accepted.
-
-      Slugs are generated by removing non-ASCII characters from the input string,
-      converting it to lowercase,
-      replacing all non-alphanumeric characters with hyphens,
-      and removing leading and trailing hyphens.
-    type: object
-    properties:
-      name:
-        title: Slug of the project's name.
-        type: string
-      repo_name:
-        title: Slug of the project's repository name.
-        type: string
-      keywords:
-        title: Slugs of the project's keywords.
-        type: array
-        items:
-          type: string
   project:
     type: object
     additionalProperties: true
