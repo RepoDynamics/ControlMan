@@ -58,7 +58,7 @@ class ConfigFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        key = "maintainer.code_owners"
+        key = "pull.code_owners"
         if self._is_disabled(key):
             return []
         codeowners_files = {
@@ -400,6 +400,11 @@ class ConfigFileGenerator:
 
     def citation(self) -> list[DynamicFile]:
 
+        def create_identifier(ident: dict):
+            return {
+                k: v for k, v in ident if k not in ("relation", "resource_type")
+            }
+
         def create_repository(repo: dict):
             out = {}
             for in_key, out_key in (
@@ -461,7 +466,7 @@ class ConfigFileGenerator:
             ]
             entity_keys = ["conference", "database-provider", "institution", "location", "publisher"]
             out = {
-                k: v for k, v in ref.items() if k not in ["repository"] + entity_list_keys + entity_keys
+                k: v for k, v in ref.items() if k not in ["repository", "identifiers"] + entity_list_keys + entity_keys
             }
             for entity_list_key in entity_list_keys:
                 if entity_list_key not in ref:
@@ -476,6 +481,8 @@ class ConfigFileGenerator:
                     out[entity_key] = create_person(entity=ref[entity_key])
             if "repository" in ref:
                 out |= create_repository(ref["repository"])
+            if "identifiers" in ref:
+                out["identifiers"] = [create_identifier(ident) for ident in ref["identifiers"]]
             return out
 
         if not (self._data.get("citation") or self._data_before.get("citation")):
@@ -504,9 +511,11 @@ class ConfigFileGenerator:
                 out[key.replace('_', "-")] = cite[key]
         if cite.get("repository"):
             out |= create_repository(cite["repository"])
-        for key in ["identifiers", "type", "keywords", "abstract"]:
+        for key in ["type", "keywords", "abstract"]:
             if cite.get(key):
                 out[key] = cite[key]
+        if cite.get("identifiers"):
+            out["identifiers"] = [create_identifier(ident) for ident in cite["identifiers"]]
         if cite.get("contacts"):
             out["contact"] = [create_person(entity=entity) for entity in cite["contacts"]]
         out["authors"] = [create_person(entity=entity) for entity in cite["authors"]]
