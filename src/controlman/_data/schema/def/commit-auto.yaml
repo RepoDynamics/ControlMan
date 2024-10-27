@@ -4,10 +4,24 @@ title: Automatic Commit
 description: Automatic commit type
 type: object
 additionalProperties: false
-required: [ type ]
+required: [ type, description ]
 properties:
   type:
     type: string
+    minLength: 1
+    pattern: ^[a-zA-Z0-9_-]+$
+  scope:
+    type: string
+    pattern: ^[a-zA-Z0-9_-]+$
+  description:
+    type: string
+    minLength: 1
+  body:
+    type: string
+    minLength: 1
+  footer:
+    type: string
+    minLength: 1
   changelog_id:
     type: string
   changelog_section_id:
