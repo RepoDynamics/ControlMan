@@ -11,7 +11,7 @@ import pyserials as _ps
 import mdit as _mdit
 from licenseman import spdx as _spdx
 
-from controlman import _file_util
+from controlman import data_helper as _helper
 from controlman.cache_manager import CacheManager
 from controlman import exception as _exception
 
@@ -96,7 +96,11 @@ class MainDataGenerator:
     def _team(self) -> None:
         self._data.fill("team")
         for person_id in self._data["team"].keys():
-            self.fill_entity(self._data[f"team.{person_id}"])
+            _helper.fill_entity(
+                entity=self._data[f"team.{person_id}"],
+                github_api=self._gh_api,
+                cache_manager=self._cache,
+            )
         return
 
     def _license(self):
@@ -198,129 +202,6 @@ class MainDataGenerator:
             category_obj["id"] = category["id"]
             category_obj["name"] = category["name"]
         return
-
-    def fill_entity(self, data: dict) -> None:
-        """Fill all missing information in an `entity` object."""
-
-        def make_name():
-            if not user_info.get("name"):
-                _logger.warning(
-                    f"GitHub user {gh_username} has no name",
-                    f"Setting entity to legal person",
-                )
-                return {"legal": gh_username}
-            if user_info["type"] != "User":
-                return {"legal": user_info["name"]}
-            name_parts = user_info["name"].split(" ")
-            if len(name_parts) != 2:
-                _logger.warning(
-                    f"GitHub user {gh_username} has a non-standard name",
-                    f"Setting entity to legal person with name {user_info['name']}",
-                )
-                return {"legal": user_info["name"]}
-            return {"first": name_parts[0], "last": name_parts[1]}
-
-        gh_username = data.get("github", {}).get("id")
-        if gh_username:
-            user_info = self._get_github_user(gh_username)
-            for key_self, key_gh in (
-                ("rest_id", "id"),
-                ("node_id", "node_id"),
-                ("url", "html_url"),
-            ):
-                data["github"][key_self] = user_info[key_gh]
-            if "name" not in data:
-                data["name"] = make_name()
-            for key_self, key_gh in (
-                ("affiliation", "company"),
-                ("bio", "bio"),
-                ("avatar", "avatar_url"),
-                ("website", "blog"),
-                ("city", "location")
-            ):
-                if not data.get(key_self) and user_info.get(key_gh):
-                    data[key_self] = user_info[key_gh]
-            if not data.get("email", {}).get("id") and user_info.get("email"):
-                email = data.setdefault("email", {})
-                email["id"] = user_info["email"]
-            for social_name, social_data in user_info["socials"].items():
-                if social_name in ("orcid", "researchgate", "linkedin", "twitter") and social_name not in data:
-                    data[social_name] = social_data
-        # for social_name, social_base_url in self._SOCIAL_URL.items():
-        #     if social_name in data and not data[social_name].get("url"):
-        #         data[social_name]["url"] = f"https://{social_base_url}{data[social_name]['user']}"
-        # if "email" in data and not data["email"].get("url"):
-        #     data["email"]["url"] = f"mailto:{data['email']['user']}"
-        if "legal" in data["name"]:
-            data["name"]["full"] = data["name"]["legal"]
-        else:
-            full_name = data['name']['first']
-            if "particle" in data["name"]:
-                full_name += f' {data["name"]["particle"]}'
-            full_name += f' {data["name"]["last"]}'
-            if "suffix" in data["name"]:
-                full_name += f', {data["name"]["suffix"]}'
-            data["name"]["full"] = full_name
-        if "orcid" in data and data["orcid"].get("get_pubs"):
-            data["orcid"]["pubs"] = self._get_orcid_publications(orcid_id=data["orcid"]["user"])
-        return
-
-    def _get_github_user(self, username: str) -> dict:
-
-        def add_social(name, user, url):
-            socials[name] = {"id": user, "url": url}
-            return
-
-        user_info = self._cache.get("user", username)
-        if user_info:
-            _logger.section_end()
-            return user_info
-        user = self._gh_api.user(username=username)
-        user_info = user.info
-        if user_info["blog"] and "://" not in user_info["blog"]:
-            user_info["blog"] = f"https://{user_info['blog']}"
-        social_accounts_info = user.social_accounts
-        socials = {}
-        user_info["socials"] = socials
-        for account in social_accounts_info:
-            for provider, base_pattern, id_pattern in (
-                ("orcid", r'orcid.org/', r'([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]{1})(.*)'),
-                ("researchgate", r'researchgate.net/profile/', r'([a-zA-Z0-9_-]+)(.*)'),
-                ("linkedin", r'linkedin.com/in/', r'([a-zA-Z0-9_-]+)(.*)'),
-                ("twitter", r'twitter.com/', r'([a-zA-Z0-9_-]+)(.*)'),
-                ("twitter", r'x.com/', r'([a-zA-Z0-9_-]+)(.*)'),
-            ):
-                match = _re.search(rf"{base_pattern}{id_pattern}", account["url"])
-                if match:
-                    add_social(
-                        provider,
-                        match.group(1),
-                        f"https://{base_pattern}{match.group(1)}{match.group(2)}"
-                    )
-                    break
-            else:
-                if account["provider"] != "generic":
-                    add_social(account["provider"], None, account["url"])
-                else:
-                    generics = socials.setdefault("generics", [])
-                    generics.append(account["url"])
-                    _logger.info(f"Unknown account", account['url'])
-        self._cache.set("user", username, user_info)
-        return user_info
-
-    def _get_orcid_publications(self, orcid_id: str) -> list[dict]:
-        dois = self._cache.get("orcid", orcid_id)
-        if not dois:
-            dois = pylinks.api.orcid(orcid_id=orcid_id).doi
-            self._cache.set("orcid", orcid_id, dois)
-        publications = []
-        for doi in dois:
-            publication_data = self._cache.get("doi", doi)
-            if not publication_data:
-                publication_data = pylinks.api.doi(doi=doi).curated
-                self._cache.set("doi", doi, publication_data)
-            publications.append(publication_data)
-        return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
 
 def normalize_license_filename(filename: str) -> str:
