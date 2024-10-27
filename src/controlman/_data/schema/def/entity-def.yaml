@@ -26,6 +26,14 @@ description: |
 type: object
 additionalProperties: false
 properties:
+  active:
+    title: Active
+    description: |
+      Whether the entity is active in the project.
+      
+      If not provided, it is automatically set to `true`.
+    type: boolean
+    default: true
   github:
     title: GitHub Account
     description: GitHub account information of the entity.
@@ -116,6 +124,50 @@ properties:
           (`particle ` and `, suffix` are only added when provided)
           for natural persons, and to `legal` for legal persons.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
+        default: |
+          #{{
+            legal = ${{ .legal }}$
+            if legal:
+              return legal
+            
+            first = ${{ .first }}$
+            last = ${{ .last }}$
+            particle = ${{ .particle }}$
+            suffix = ${{ .suffix }}$
+            full = first
+            if particle:
+              full += f" {particle}"
+            full += f" {last}"
+            if suffix:
+              full += f", {suffix}"
+            return full
+          }}#
+      full_inverted:
+        title: Full Name Inverted
+        description: |
+          The person's full name in inverted order.
+          
+          If not provided, it is automatically set to
+          `particle last, first, suffix`
+          (`particle ` and `, suffix` are only added when provided)
+          for natural persons, and to `legal` for legal persons.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        default: |
+          #{{
+            legal = ${{ .legal }}$
+            if legal:
+              return legal
+            
+            first = ${{ .first }}$
+            last = ${{ .last }}$
+            particle = ${{ .particle }}$
+            suffix = ${{ .suffix }}$
+            full = f"{particle} " if particle else "" 
+            full += f"{last}, {first}"
+            if suffix:
+              full += f", {suffix}"
+            return full
+          }}#
     oneOf:
       - required: [ first, last ]
       - required: [ legal ]
@@ -123,15 +175,15 @@ properties:
     title: Roles of the person in the project.
     description: |
       Define all roles in the project in [`role`](#ccc-role),
-      and use them here with templating.
+      and use their ID here.
     examples:
-      - [ '${{ role.concept }}$' ]
-      - [ '${{ role.concept }}$', '${{ role.dev }}$' ]
+      - [ concept ]
+      - [ concept, dev ]
     type: array
     uniqueItems: true
     items:
-      title: A role definition for the person.
-      $ref: https://controlman.repodynamics.com/schema/role
+      title: A role ID.
+      $ref: https://jsonschemata.repodynamics.com/string/nonempty
   affiliation:
     title: Affiliation
     description: |
@@ -232,6 +284,17 @@ properties:
         type: array
         items:
           type: object
+  gnd:
+    title: GND ID
+    description: |
+      The entity's Integrated Authority File [GND](https://gnd.network/) ID information.
+    type: object
+    additionalProperties: false
+    required: [ id ]
+    properties:
+      id:
+        title: GND ID
+        type: string
   researchgate:
     title: ResearchGate
     description: |
