@@ -9,11 +9,11 @@ examples:
     abbreviation: CNP
 type: object
 additionalProperties: false
-required: [ title, description, abbreviation ]
+required: [ title, description, abbreviation, zenodo_type ]
 properties:
   title:
     title: Name of the role.
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
     examples:
       - Conceptualization
       - Software Development
@@ -32,3 +32,31 @@ properties:
       - CNP
       - DEV
       - MAN
+  type:
+    title: Zenodo Type
+    description: |
+      The type of the Zenodo record that corresponds to this role.
+    default: ProjectMember
+    enum:
+      - Author
+      - ContactPerson
+      - DataCollector
+      - DataCurator
+      - DataManager
+      - Distributor
+      - Editor
+      - HostingInstitution
+      - Producer
+      - ProjectLeader
+      - ProjectManager
+      - ProjectMember
+      - RegistrationAgency
+      - RegistrationAuthority
+      - RelatedPerson
+      - Researcher
+      - ResearchGroup
+      - RightsHolder
+      - Supervisor
+      - Sponsor
+      - WorkPackageLeader
+      - Other
