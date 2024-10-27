@@ -1,5 +1,6 @@
 from pathlib import Path as _Path
 import shutil as _shutil
+import functools as _functools
 
 from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
 import pylinks as _pylinks
@@ -21,6 +22,7 @@ from controlman import file_gen as _file_gen
 from controlman import data_loader as _data_loader
 from controlman import data_validator as _data_validator
 from controlman.reporter import ControlCenterReporter as _ControlCenterReporter
+from controlman import data_helper as _helper
 
 
 class CenterManager:
@@ -72,7 +74,15 @@ class CenterManager:
             )
         with _logger.sectioning("Post-Load Data Validation"):
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
-        self._data_raw = _ps.NestedDict(full_data, relative_template_keys=const.RELATIVE_TEMPLATE_KEYS)
+        self._data_raw = _ps.NestedDict(
+            full_data,
+            code_context={
+                "team_members_with_role_types": _helper.team_members_with_role_types,
+                "team_members_without_role_types": _helper.team_members_without_role_types,
+                "fill_entity": _functools.partial(_helper.fill_entity, github_api=self._github_api, cache_manager=self._cache_manager),
+            },
+            relative_template_keys=const.RELATIVE_TEMPLATE_KEYS
+        )
         return self._data_raw
 
     def generate_data(self) -> _ps.NestedDict:
