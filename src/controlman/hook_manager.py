@@ -13,10 +13,59 @@ class HookManager:
     def __init__(
         self,
         dir_path: _Path,
-        module_name: str = _const.FILENAME_CC_HOOK_MODULE,
+        module_name_staged: str = _const.FILENAME_CC_HOOK_STAGED,
+        module_name_inline: str = _const.FILENAME_CC_HOOK_INLINE,
         filename_env: str = _const.FILENAME_CC_HOOK_REQUIREMENTS,
     ):
-        self._generator = None
+
+        def load_module(module_filename: str):
+            module_filepath = dir_path / module_filename
+            module_filepath_md = _mdit.element.code_span(str(module_filepath))
+            module_name = module_filename.removesuffix(".py")
+            if not module_filepath.is_file():
+                _logger.notice(
+                    log_title,
+                    _mdit.inline_container(
+                        f"No {module_name} hooks module found at",
+                        module_filepath_md,
+                        ".",
+                    ),
+                )
+                return
+            try:
+                module = _pkgdata.import_module_from_path(path=module_filepath)
+            except _pkgdata.exception.PkgDataModuleImportError as e:
+                msg = _mdit.inline_container(
+                    f"Failed to import the {module_name} hooks module at ",
+                    module_filepath_md,
+                    "."
+                )
+                error_traceback = _mdit.element.admonition(
+                    title="Error Traceback",
+                    body=_logger.traceback(),
+                    opened=True,
+                    type="error",
+                )
+                _logger.critical(
+                    log_title,
+                    msg,
+                    error_traceback,
+                    env_md,
+                )
+                raise _exception.data_gen.ControlManHookError(
+                    problem=msg,
+                    details=[error_traceback, env_md],
+                ) from None
+            _logger.success(
+                log_title,
+                _mdit.inline_container(
+                    f"Successfully imported the {module_name} hooks module at ",
+                    module_filepath_md,
+                ),
+                env_md,
+            )
+            return module
+
         log_title = "User Hook Initialization"
         dir_path_md = _mdit.element.code_span(str(dir_path))
         if not dir_path.is_dir():
@@ -25,22 +74,6 @@ class HookManager:
                 _mdit.inline_container("No hook directory found at ", dir_path_md),
             )
             return
-        module_filepath = dir_path / module_name
-        module_filepath_md = _mdit.element.code_span(str(module_filepath))
-        if not module_filepath.is_file():
-            _logger.notice(
-                log_title,
-                _mdit.inline_container(
-                    "The hook directory at ",
-                    dir_path_md,
-                    " does not contain a ",
-                    _mdit.element.code_span(module_name),
-                    " hook file. ",
-                    "No user hook will be executed.",
-                ),
-            )
-            return
-
         env_filepath = dir_path / filename_env
         env_filepath_md = _mdit.element.code_span(str(env_filepath))
         if not env_filepath.is_file():
@@ -76,38 +109,8 @@ class HookManager:
             opened=True,
             type=env_log_type,
         )
-        try:
-            self._generator = _pkgdata.import_module_from_path(path=module_filepath)
-        except _pkgdata.exception.PkgDataModuleImportError as e:
-            msg = _mdit.inline_container(
-                "Failed to import the user hook module at ",
-                module_filepath_md,
-                "."
-            )
-            error_traceback = _mdit.element.admonition(
-                title="Error Traceback",
-                body=_logger.traceback(),
-                opened=True,
-                type="error",
-            )
-            _logger.critical(
-                log_title,
-                msg,
-                error_traceback,
-                env_md,
-            )
-            raise _exception.data_gen.ControlManHookError(
-                problem=msg,
-                details=[error_traceback, env_md],
-            ) from None
-        _logger.success(
-            log_title,
-            _mdit.inline_container(
-                "Successfully imported the user hook module at ",
-                module_filepath_md,
-            ),
-            env_md,
-        )
+        self._generator = load_module(module_name_staged)
+        self.inline_hooks = load_module(module_name_inline)
         return
 
     def generate(self, func_name: str, *args, **kwargs):

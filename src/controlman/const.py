@@ -17,7 +17,8 @@ FILEPATH_LOCAL_CONFIG = ".github/.control/local_config.yaml"
 DIRNAME_CC_HOOK = "hook"
 
 FILENAME_CC_HOOK_REQUIREMENTS = "requirements.txt"
-FILENAME_CC_HOOK_MODULE = "main.py"
+FILENAME_CC_HOOK_STAGED = "staged.py"
+FILENAME_CC_HOOK_INLINE = "inline.py"
 
 FUNCNAME_CC_HOOK_POST_LOAD = "post_load"
 FUNCNAME_CC_HOOK_POST_DATA = "post_data"

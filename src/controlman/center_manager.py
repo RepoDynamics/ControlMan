@@ -77,6 +77,7 @@ class CenterManager:
         self._data_raw = _ps.NestedDict(
             full_data,
             code_context={
+                "hook": self._hook_manager.inline_hooks,
                 "team_members_with_role_types": _helper.team_members_with_role_types,
                 "team_members_without_role_types": _helper.team_members_without_role_types,
                 "fill_entity": _functools.partial(_helper.fill_entity, github_api=self._github_api, cache_manager=self._cache_manager),
