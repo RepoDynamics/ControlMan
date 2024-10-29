@@ -473,7 +473,11 @@ properties:
     additionalProperties:
       title: Person
       description: A natural person or entity involved in the project.
-      $ref: https://controlman.repodynamics.com/schema/entity-def
+      allOf:
+        - $ref: https://controlman.repodynamics.com/schema/entity-def
+        - anyOf:
+            - required: [ github ]
+            - required: [ name ]
   citation:
     title: Citation
     description: |
@@ -1583,7 +1587,7 @@ properties:
             import pyserials as ps
         
             path = root_path / (ccc["web.path.source"] or "${{ web.path.source }}$")
-            url_home = "${{ web.url.home }}"
+            url_home = "${{ web.url.home }}$"
         
             pages = {}
             blog = {}
@@ -1624,8 +1628,6 @@ properties:
                     blog.setdefault(key, []).extend(val)
             if "blog" not in pages:
                 return pages
-            custom_blog_path = $[[ web.extension.ablog.config.blog_path ]]$
-            blog_path = custom_blog_path[0] if custom_blog_path else "blog"
             for key, values in blog.items():
                 for value in set(values):
                     value_slug = pl.string.to_slug(value)
@@ -1641,7 +1643,7 @@ properties:
                             f"for page '{pages[final_key]['path']}'. "
                             "Please do not use `ccid` values that start with 'blog_'."
                         )
-                    blog_group_path = f"{blog_path}/{key_singular}/{value_slug}"
+                    blog_group_path = f"{pages["blog"]["path"]}/{key_singular}/{value_slug}"
                     pages[final_key] = {
                         "title": value,
                         "path": blog_group_path,
@@ -1774,103 +1776,12 @@ properties:
       Configurations of the project's test suite.
     $ref: https://controlman.repodynamics.com/schema/pkg
   # ITS
-  changelog:
-    title: Changelog Configurations
-    description: |
-      Configurations for different changelog files.
-      Project's changelog templates and paths.
-      Configurations and templates for your project's changelogs and release notes.
-    type: object
-    additionalProperties:
-      title: Changelog
-      description: |
-        Configurations for a changelog file.
-        For each changelog, add a key-value pair,
-        where the key is the ID of the changelog, to reference in other places.
-      type: object
-      additionalProperties: false
-      required: [ name, title, path, intro, entry, sections ]
-      properties:
-        name:
-          title: Name
-          description: Name of the changelog.
-          $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          examples:
-            - Public API
-        path:
-          title: Path
-          description: Path to the changelog file, relative to the root of the repository.
-          $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-          examples:
-            - CHANGELOG.md
-        title:
-          title: Title
-          description: Title of the changelog document.
-          $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          examples:
-            - ${{ name }}$ Changelog (Public API)
-        intro:
-          title: Introduction
-          description: Introduction text of the changelog.
-          $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          examples: |
-            All notable changes to this project will be documented in this file.
-
-            The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-            and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-        entry:
-          title: Entry
-          description: Configurations for the entries in the changelog.
-          type: object
-          default: { }
-          additionalProperties: false
-          required: [ title, intro ]
-          properties:
-            title:
-              title: Title
-              description: Title of the entry.
-              type: string
-              minLength: 1
-              default: "[{ver_dist}] – {date}"
-            intro:
-              title: Introduction
-              description: Introduction text of the entry.
-              type: string
-              minLength: 1
-              default: |
-                - Commit Type: {commit_type}
-                - Commit Title: {commit_title}
-                - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
-        sections:
-          title: Sections
-          description: Sections of each entry in the changelog.
-          type: array
-          minItems: 1
-          items:
-            title: Section
-            description: Section of the changelog.
-            type: object
-            additionalProperties: false
-            required: [ id, title, description ]
-            properties:
-              id:
-                title: ID
-                description: ID of the section, to reference in other places.
-                type: string
-              title:
-                title: Title
-                description: Title of the section.
-                type: string
-              description:
-                title: Description
-                description: Description of the section.
-                type: string
   commit:
     title: Configurations for different types of commits in your repository.
     description: Commit types, sub-types and descriptions
     type: object
     additionalProperties: false
-    required: [ primary, secondary ]
+    required: [ auto ]
     default: { }
     properties:
       auto:
@@ -1879,7 +1790,7 @@ properties:
         type: object
         default: { }
         additionalProperties: false
-        required: [ maintain, sync ]
+        required: [ dev_branch_creation, changelog_init, config_sync, refactor ]
         properties:
           dev_branch_creation:
             title: Development Branch Creation
@@ -1908,20 +1819,25 @@ properties:
                 Issue #{{ issue.number }}
                 Pull #{{ pull.number }}
             $ref: https://controlman.repodynamics.com/schema/commit-auto
-
-          maintain:
-            title: Maintain
+          config_sync:
+            title: Configuration Synchronization
             description: |
-              Continuous maintenance and refactoring tasks.
+              Automatic synchronization of configuration files.
             default:
-              type: auto-maintain
+              type: sync
+              scope: config
+              description: >-
+                Synchronize configuration files.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
-          sync:
-            title: Sync
+          refactor:
+            title: Refactor
             description: |
-              Continuous configuration automation and synchronization of dynamic files.
+              Continuous refactoring tasks.
             default:
-              type: auto-sync
+              type: refactor
+              scope: auto
+              description: >-
+                Refactor code.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
       primary:
         title: Primary Commits
@@ -1975,7 +1891,7 @@ properties:
         type: object
         default: { }
         additionalProperties: false
-        required: [ prefix, color, label ]
+        required: [ prefix, label ]
         properties:
           prefix:
             title: Prefix
@@ -2135,15 +2051,15 @@ properties:
         description: Branch labels. This is an automatic label group.
         default:
           prefix: 'branch: '
-          description: Related to this specific branch of the repository.
+          description: Related to the {{ branch }} branch of the repository.
           color: '#0366d6'
         $ref: https://controlman.repodynamics.com/schema/label-auto
       version:
         title: Version
         description: Version labels. This is an automatic label group.
         default:
-          prefix: 'Version: '
-          description: Related to this specific version of the package.
+          prefix: 'version: '
+          description: Related to version {{ version }} of the project.
           color: '#0366d6'
         $ref: https://controlman.repodynamics.com/schema/label-auto
       custom:
@@ -2181,11 +2097,6 @@ properties:
               title: Label Group
               description: A group of labels.
               $ref: https://controlman.repodynamics.com/schema/label-group
-      all:
-        title: All labels
-        type: array
-        items:
-          type: object
   issue:
     title: Issues
     description: |
@@ -2276,13 +2187,15 @@ properties:
               title: Action
               description: |
                 Action to be performed when the corresponding pull request is merged.
-              type: [ string, "null" ]
+              oneOf:
+                - type: "null"
+                - type: string
+                  enum:
+                    - post
+                    - patch
+                    - minor
+                    - major
               default: null
-              enum:
-                - post
-                - patch
-                - minor
-                - major
             type:
               title: Primary type of the issue.
               description: |
@@ -2524,6 +2437,103 @@ properties:
     default: { }
     additionalProperties: false
     properties:
+      changelog:
+        title: Changelog Configurations
+        description: |
+          Configurations for different changelog files.
+          Project's changelog templates and paths.
+          Configurations and templates for your project's changelogs and release notes.
+        type: object
+        properties:
+          path:
+            title: Path
+            description: Path to the changelog file, relative to the root of the repository.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: docs/changelog.json
+        additionalProperties:
+          title: Changelog
+          description: |
+            Configurations for a changelog file.
+            For each changelog, add a key-value pair,
+            where the key is the ID of the changelog, to reference in other places.
+          type: object
+          additionalProperties: false
+          required: [ name, title, path, intro, entry, sections ]
+          properties:
+            name:
+              title: Name
+              description: Name of the changelog.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+              examples:
+                - Public API
+            path:
+              title: Path
+              description: Path to the changelog file, relative to the root of the repository.
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+              examples:
+                - CHANGELOG.md
+            title:
+              title: Title
+              description: Title of the changelog document.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+              examples:
+                - ${{ name }}$ Changelog (Public API)
+            intro:
+              title: Introduction
+              description: Introduction text of the changelog.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+              examples: |
+                All notable changes to this project will be documented in this file.
+
+                The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+                and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+            entry:
+              title: Entry
+              description: Configurations for the entries in the changelog.
+              type: object
+              default: { }
+              additionalProperties: false
+              required: [ title, intro ]
+              properties:
+                title:
+                  title: Title
+                  description: Title of the entry.
+                  type: string
+                  minLength: 1
+                  default: "[{ver_dist}] – {date}"
+                intro:
+                  title: Introduction
+                  description: Introduction text of the entry.
+                  type: string
+                  minLength: 1
+                  default: |
+                    - Commit Type: {commit_type}
+                    - Commit Title: {commit_title}
+                    - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
+            sections:
+              title: Sections
+              description: Sections of each entry in the changelog.
+              type: array
+              minItems: 1
+              items:
+                title: Section
+                description: Section of the changelog.
+                type: object
+                additionalProperties: false
+                required: [ id, title, description ]
+                properties:
+                  id:
+                    title: ID
+                    description: ID of the section, to reference in other places.
+                    type: string
+                  title:
+                    title: Title
+                    description: Title of the section.
+                    type: string
+                  description:
+                    title: Description
+                    description: Description of the section.
+                    type: string
       prerelease_temp_path:
         description: >-
           Path to the file relative to the repository root
@@ -2844,7 +2854,7 @@ properties:
           url:
             title: URL to the announcement banner file.
             $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-            default: ${{ repo.url.raw }}$/${{ announcement.path }}$
+            default: ${{ repo.url.raw }}$/${{ .path }}$
   pull:
     title: Pull Requests
     description: GitHub pull request settings for the project
@@ -3481,12 +3491,14 @@ properties:
     type: object
     default: { }
     additionalProperties: false
+    required: [ version ]
     properties:
       version:
         title: Configurations for version tags.
         type: object
         default: { }
         additionalProperties: false
+        required: [ prefix, message ]
         properties:
           prefix:
             title: Prefix of version tags.
@@ -3501,8 +3513,15 @@ properties:
               - ver/
               - v/
               - v
-        required: [ prefix ]
-    required: [ version ]
+          message:
+            title: Message
+            description: |
+              Jinja template for the message of the version tag.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: "Release Version {{ version }}"
+            examples:
+              - "Release {{ version }}"
+              - "v{{ version }}"
   file:
     type: object
     additionalProperties: false
@@ -3624,28 +3643,31 @@ properties:
         title: URL of the project's configuration file.
         default: ${{ repo.url.raw }}$/.github/.control/.metadata.json
         $ref: https://jsonschemata.repodynamics.com/url/https
-  schedule:
-    title: Configurations for scheduled workflow jobs.
-    description: |
-      These are the Continuous pipelines
-      triggered by GitHub Actions'
-      [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
-      event.
+  workflow:
     type: object
-    additionalProperties: false
     properties:
-      update:
-        title: Updating jobs.
+      schedule:
+        title: Configurations for scheduled workflow jobs.
         description: |
-          Configurations for scheduled jobs that may result in updates to repository files and settings.
-          These include Continuous Configuration Automation (CCA) to synchronize project configurations,
-          as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
-        $ref: https://controlman.repodynamics.com/schema/job-scheduled
-      test:
-        title: Testing jobs.
-        description: |
-          Configurations for the Continuous Testing (CT) pipeline of the package.
-        $ref: https://controlman.repodynamics.com/schema/job-scheduled
+          These are the Continuous pipelines
+          triggered by GitHub Actions'
+          [`schedule`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
+          event.
+        type: object
+        additionalProperties: false
+        properties:
+          update:
+            title: Updating jobs.
+            description: |
+              Configurations for scheduled jobs that may result in updates to repository files and settings.
+              These include Continuous Configuration Automation (CCA) to synchronize project configurations,
+              as well as various Continuous Maintenance (CM) and Refactoring (CR) tasks.
+            $ref: https://controlman.repodynamics.com/schema/job-scheduled
+          test:
+            title: Testing jobs.
+            description: |
+              Configurations for the Continuous Testing (CT) pipeline of the package.
+            $ref: https://controlman.repodynamics.com/schema/job-scheduled
   tool:
     title: Configurations for tools used in the development workflow.
     description: |
