@@ -13,7 +13,7 @@ properties:
     properties:
       name:
         title: Name of the environment.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - ${{ repo.name }}$-dev
           - ${{ repo.name }}$-web
@@ -35,7 +35,7 @@ properties:
     properties:
       path:
         title: Path to the environment file.
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         examples:
           - ${{ dir.pkg.root }}$/requirements.txt
           - ${{ dir.web.root }}$/requirements.txt
