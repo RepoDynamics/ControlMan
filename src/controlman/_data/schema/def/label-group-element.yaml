@@ -17,3 +17,10 @@ properties:
     title: Description
     description: Description of the label.
     $ref: https://jsonschemata.repodynamics.com/config/github/label/description
+  name:
+    title: Name
+    description: |
+      Full name of the label.
+      This is automatically generated from the prefix and suffix.
+    default: '${{ ...prefix }}${{ .suffix }}'
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
