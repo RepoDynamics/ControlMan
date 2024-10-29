@@ -1,5 +1,6 @@
 import re as _re
 
+import jinja2 as _jinja2
 from gittidy import Git as _Git
 from versionman import pep440_semver as _ver
 from loggerman import logger as _logger
@@ -183,69 +184,21 @@ class RepoDataGenerator:
         return
 
     def _repo_labels(self) -> None:
-        out = []
-        for label_type in ("type", "subtype", "status"):
-            group = self._data.get(f"label.{label_type}", {})
-            if not group:
-                continue
-            prefix = group["prefix"]
-            color = group["color"]
-            for label_id, label in self._data.get(f"label.{label_type}.label", {}).items():
-                out.append(
-                    {
-                        "type": "defined",
-                        "group_name": label_type,
-                        "id": label_id,
-                        "name": f"{prefix}{label['suffix']}",
-                        "description": label["description"],
-                        "color": color,
-                        "prefix": prefix,
-                    }
-                )
-        for group_name, group in self._data.get("label.custom.group", {}).items():
-            prefix = group["prefix"]
-            color = group["color"]
-            for label_id, label in group.get("label", {}).items():
-                out.append(
-                    {
-                        "type": "custom_group",
-                        "group_name": group_name,
-                        "id": label_id,
-                        "name": f"{prefix}{label['suffix']}",
-                        "description": label["description"],
-                        "color": color,
-                        "prefix": prefix,
-                    }
-                )
-        for label_id, label_data in self._data.get("label.custom.single", {}).items():
-            out.append(
-                {
-                    "type": "custom_single",
-                    "group_name": None,
-                    "id": label_id,
-                    "name": label_data["name"],
-                    "description": label_data["description"],
-                    "color": label_data["color"],
-                    "prefix": "",
-                }
-            )
         for autogroup_name, release_key in (("version", "versions"), ("branch", "branches")):
             label_data = self._data[f"label.{autogroup_name}"]
             if not label_data:
                 continue
             entries = self._data.get(f"project.{release_key}", [])
+            labels = label_data["labels"] = []
+            prefix = label_data['prefix']
             for entry in entries:
-                prefix = label_data['prefix']
-                out.append(
+                labels.append(
                     {
-                        "type": "auto",
-                        "group_name": autogroup_name,
-                        "id": entry,
+                        "suffix": entry,
                         "name": f"{prefix}{entry}",
-                        "description": label_data["description"],
-                        "color": label_data["color"],
-                        "prefix": prefix,
+                        "description": _jinja2.Template(label_data["description"]).render(
+                            {autogroup_name: entry}
+                        ),
                     }
                 )
-        self._data["label.all"] = out
         return
