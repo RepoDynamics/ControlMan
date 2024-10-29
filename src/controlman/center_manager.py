@@ -78,6 +78,8 @@ class CenterManager:
             full_data,
             code_context={
                 "hook": self._hook_manager.inline_hooks,
+                "root_path": self._path_root,
+                "ccc": self._data_before,
                 "team_members_with_role_types": _helper.team_members_with_role_types,
                 "team_members_without_role_types": _helper.team_members_without_role_types,
                 "fill_entity": _functools.partial(_helper.fill_entity, github_api=self._github_api, cache_manager=self._cache_manager),
