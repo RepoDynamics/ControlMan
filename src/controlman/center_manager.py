@@ -82,6 +82,7 @@ class CenterManager:
                 "ccc": self._data_before,
                 "team_members_with_role_types": _helper.team_members_with_role_types,
                 "team_members_without_role_types": _helper.team_members_without_role_types,
+                "team_members_with_role_ids": _helper.team_members_with_role_ids,
                 "fill_entity": _functools.partial(_helper.fill_entity, github_api=self._github_api, cache_manager=self._cache_manager),
             },
             relative_template_keys=const.RELATIVE_TEMPLATE_KEYS
