@@ -66,6 +66,8 @@ class HookManager:
             )
             return module
 
+        self._generator = None
+        self.inline_hooks = None
         log_title = "User Hook Initialization"
         dir_path_md = _mdit.element.code_span(str(dir_path))
         if not dir_path.is_dir():
