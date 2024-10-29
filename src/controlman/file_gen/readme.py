@@ -27,6 +27,8 @@ def generate(data: _ps.NestedDict, data_before: _ps.NestedDict, repo_path: _Path
             ("health", DynamicFileType.HEALTH)
         ):
             for readme_id, readme_file_data in data.get(readme_key, {}).items():
+                if readme_id == "code_owners":
+                    continue
                 file = _generate_file(
                     filetype=readme_type,
                     subtype=(readme_id, readme_id),
