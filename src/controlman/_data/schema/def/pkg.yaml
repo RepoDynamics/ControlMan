@@ -259,7 +259,7 @@ properties:
     default: |
       #{{
           return [
-            member["id"] for member in team_members_with_role_type(
+            member["id"] for member in team_members_with_role_types(
               "Author",
               ${{ team }}$,
               ${{ role }}$,
@@ -289,39 +289,14 @@ properties:
     description_default: All maintainers defined in `$.maintainers`.
     default: |
       #{{
-          maintainer_rank = {}
-          
-          issues = $[[ issue.forms ]]$
-          if issues:
-            for issue in issues[0]:
-              for maintainer_ids in issue.get("assignees", {}).values():
-                for maintainer_id in maintainer_ids:
-                  maintainer_rank[maintainer_id] = maintainer_rank.get(maintainer_id, 0) + 1
-          code_owners = $[[ pull.code_owners.entries ]]$
-          if code_owners:
-            for code_owner_entry in code_owners[0]:
-              for code_owner_id in code_owner_entry["owners"]:
-                maintainer_rank[code_owner_id] = maintainer_rank.get(code_owner_id, 0) + 1
-          discussions = $[[ discussion.category ]]$
-          if discussions:
-            for discussion in discussions[0].values():
-              for moderator_id in discussion.get("assignees", []):
-                maintainer_rank[moderator_id] = maintainer_rank.get(moderator_id, 0) + 1
-          health = $[[ health ]]$
-          if health:
-            for maintenance_type in ("security", "support", "code_of_conduct"):
-              assignees = health[0].get(maintenance_type, {}).get("assignees", [])
-              for maintainer_id in assignees:
-                  maintainer_rank[maintainer_id] = maintainer_rank.get(maintainer_id, 0) + 1
-          
-          ranked_maintainers = {}
-          for maintainer_id, rank in maintainer_rank.items():
-              ranked_maintainers.setdefault(rank, []).append(maintainer_id)
-  
-          out = []
-          for _, maintainer_ids in sorted(ranked_maintainers.items(), key=lambda x: x[0], reverse=True):
-              out.extend(sorted(maintainer_ids))
-          return out
+          return [
+            member["id"] for member in team_members_with_role_types(
+              ["ContactPerson", "ProjectManager", "DataManager", "ProjectLeader", "Supervisor"],
+              ${{ team }}$,
+              ${{ role }}$,
+              active_only=True
+            )
+          ]
       }}#
     examples:
       - ${{ citation.authors }}$
