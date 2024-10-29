@@ -43,11 +43,48 @@ def team_members_with_role_types(
     for member_id, member_data in team_data.items():
         if active_only and not member_data["active"]:
             continue
-        for role_id in member_data.get("roles", []):
-            if role_data[role_id]["type"] in role_types:
-                out.append(member_data | {"id": member_id})
+        for role_id, member_priority in member_data.get("role", {}).items():
+            member_role_type = role_data[role_id]["type"]
+            if member_role_type in role_types:
+                out.append((member_data | {"id": member_id}, role_types.index(member_role_type), member_priority))
                 break
-    return out
+    return [member_data for member_data, _, _ in sorted(out, key=lambda i: (i[1], i[2]), reverse=True)]
+
+
+def team_members_with_role_ids(
+    role_ids: str | Sequence[str],
+    team_data: dict[str, dict],
+    active_only: bool = True,
+) -> list[dict]:
+    """Get team members with a specific role ID.
+
+    Parameters
+    ----------
+    role_ids
+        The role ID(s) to filter for.
+    team_data
+        The team data.
+    active_only
+        Whether to filter for active team members only.
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries, each representing a team member.
+    """
+    out = []
+    if isinstance(role_ids, str):
+        role_ids = [role_ids]
+    for member_id, member_data in team_data.items():
+        if active_only and not member_data["active"]:
+            continue
+        for role_id, member_priority in member_data.get("role", {}).items():
+            if role_id in role_ids:
+                out.append(
+                    (member_data | {"id": member_id}, role_ids.index(role_id), member_priority)
+                )
+                break
+    return [member_data for member_data, _, _ in sorted(out, key=lambda i: (i[1], i[2]), reverse=True)]
 
 
 def team_members_without_role_types(
@@ -86,7 +123,7 @@ def team_members_without_role_types(
         if active_only and not member_data["active"]:
             continue
         member_role_types = set(
-            role_data[role_id]["type"] for role_id in member_data.get("roles", [])
+            role_data[role_id]["type"] for role_id in member_data.get("role", {}).keys()
         )
         if not excluded_role_types.intersection(member_role_types):
             out.append(member_data | {"id": member_id})
