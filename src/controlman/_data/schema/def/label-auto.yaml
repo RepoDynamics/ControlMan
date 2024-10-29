@@ -17,3 +17,11 @@ properties:
     title: Description
     description: Description of the label.
     $ref: https://jsonschemata.repodynamics.com/config/github/label/description
+  labels:
+    title: Labels
+    description: Labels for the group.
+    type: array
+    items:
+      title: Label
+      description: A label in the group.
+      $ref: https://controlman.repodynamics.com/schema/label-group-element
