@@ -256,8 +256,8 @@ class PythonPackageFileGenerator:
             "dependencies": ("array", self.pyproject_project_dependencies),
             "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),
             "entry-points": ("table_of_tables", self.pyproject_project_entry_points),
-            "gui-scripts": ("table", self.pyproject_project_gui_scripts),
-            "scripts": ("table", self.pyproject_project_scripts),
+            "gui-scripts": ("table", self._scripts(typ="gui")),
+            "scripts": ("table", self._scripts(typ="cli")),
             "dynamic": ("array", ["version"]),
         }
         project = {}
@@ -288,14 +288,6 @@ class PythonPackageFileGenerator:
         for opt_dep_group in self._pkg.get("dependency.optional", {}).values():
             opt_deps[opt_dep_group["name"]] = [dep["pip"]["spec"] for dep in opt_dep_group["package"].values()]
         return opt_deps
-
-    @property
-    def pyproject_project_scripts(self):
-        return self._scripts(typ="cli")
-
-    @property
-    def pyproject_project_gui_scripts(self):
-        return self._scripts(typ="gui")
 
     @property
     def pyproject_project_entry_points(self):
