@@ -340,44 +340,102 @@ properties:
       Role definitions for project members.
       For each role, add a key-value pair
       where the key is an ID for the role,
-      and the value is a [`Role`](#ccc-defs-role) object.
-
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      You can attribute roles to [team members](#ccc-defs-entity-roles),
-      which will then be displayed on the project's website and citation data.
-      :::
-    examples:
-      - concept:
-          title: Conceptualization
-          description: Formulation and evolution of overarching project goals and aims.
-          abbreviation: CNP
-        dev:
-          title: Software Development
-          description: Implementation of the software.
-          abbreviation: DEV
-        manage:
-          title: Management
-          description: Project administration and coordination.
-          abbreviation: MAN
-        maint:
-          title: Maintenance
-          description: Maintenance of the software and development workflows.
-          abbreviation: MNT
+      which can then be referenced in [team member roles](#ccc-defs-entity-roles).
     type: object
-    properties:
-      author:
-        title: Author
-        description: |
-          Author of the project.
-        $ref: https://controlman.repodynamics.com/schema/role
-        default:
-            title: Author
-            description: Author of the project.
-            abbreviation: AUT
     additionalProperties:
-      $ref: https://controlman.repodynamics.com/schema/role
+      title: Role
+      description: |
+        Definition of a role in the project.
+      type: object
+      additionalProperties: false
+      required: [ title, description, abbreviation, type ]
+      properties:
+        title:
+          title: Name of the role.
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          examples:
+            - Conceptualization
+            - Software Development
+            - Management
+        description:
+          title: A short description of the role.
+          type: string
+          examples:
+            - Formulation and evolution of overarching project goals and aims.
+            - Implementation of the software.
+            - Project administration and coordination.
+        abbreviation:
+          title: Abbreviation of the role title.
+          type: string
+          examples:
+            - CNP
+            - DEV
+            - MAN
+        type:
+          title: Zenodo Type
+          description: |
+            The type of the Zenodo record that corresponds to this role.
+          default: ProjectMember
+          enum:
+            - Author
+            - ContactPerson
+            - DataCollector
+            - DataCurator
+            - DataManager
+            - Distributor
+            - Editor
+            - HostingInstitution
+            - Producer
+            - ProjectLeader
+            - ProjectManager
+            - ProjectMember
+            - RegistrationAgency
+            - RegistrationAuthority
+            - RelatedPerson
+            - Researcher
+            - ResearchGroup
+            - RightsHolder
+            - Supervisor
+            - Sponsor
+            - WorkPackageLeader
+            - Other
+        assignment:
+          title: Assignments
+          description: |
+            Assignment of development and maintenance tasks to the role.
+          type: object
+          minProperties: 1
+          additionalProperties: false
+          properties:
+            issue:
+              title: Issues
+              description: |
+                Issues assigned to the role,
+                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+              type: string
+            pull:
+              title: Pull Requests
+              description: |
+                Pull requests assigned to the role,
+                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+              type: string
+            review:
+              title: Pull Request Reviews
+              description: |
+                Pull request reviews assigned to the role,
+                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+              type: string
+            discussion:
+              title: Discussion Categories
+              description: |
+                Discussion categories assigned to the role,
+                defined by a RegEx pattern matching [discussion form slugs](#ccc-discussion-category).
+              type: string
+        ownership:
+          title: Ownership
+          description: |
+            Ownership of different parts of the project.
+          $ref: https://controlman.repodynamics.com/schema/code-owner
   team:
     title: Team
     description: |
@@ -447,7 +505,7 @@ properties:
       :::
     type: object
     additionalProperties: false
-    required: [ title, authors, message, type ]
+    required: [ message, title, authors, type ]
     properties:
       message:
         title: Message
@@ -468,6 +526,7 @@ properties:
           Title of the citation.
           This can be your project's [name](#ccc-name), [title](#ccc-title),
           a combination of both, or any other custom title.
+        default: '${{ name }}$: ${{ title }}$'
         examples:
           - '${{ name }}$: ${{ title }}$'
           - ${{ name }}$
@@ -492,7 +551,7 @@ properties:
         default: |
           #{{
               return [
-                member["id"] for member in team_members_with_role_type(
+                member["id"] for member in team_members_with_role_types(
                   "Author",
                   ${{ team }}$,
                   ${{ role }}$,
@@ -512,7 +571,7 @@ properties:
         default: |
           #{{
               return [
-                member["id"] for member in team_members_with_role_type(
+                member["id"] for member in team_members_with_role_types(
                   "ContactPerson",
                   ${{ team }}$,
                   ${{ role }}$,
@@ -876,22 +935,6 @@ properties:
     type: object
     additionalProperties: false
     properties:
-#      path:
-#        title: Path
-#        description: |
-#          Path to the directory containing the project's media files.
-#
-#          :::{admonition} Usage
-#          :class: dropdown note
-#
-#          The media directory is used to store images, logos, and other media files
-#          that are displayed on the project's website and documentation files.
-#          By default, they are included in the website builds
-#          (see [`$.web.sphinx.config.html_static_path`](#ccc-web-sphinx-config-html_static_path))
-#          and thus can be directly used in the website, and linked to in the documentation.
-#          :::
-#        default: ${{ web.path.root }}$/${{ web.path.source }}$/_media
-#        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
       color:
         title: Colors
         description: |
@@ -1141,10 +1184,6 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
-              assignees:
-                title: Security Advisers
-                description: Project's security advisers and contact persons.
-                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: |
                   Path to the
@@ -1179,10 +1218,6 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
-              assignees:
-                title: Support Contacts
-                description: Project's support contact persons.
-                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: Support Policy
                 description: |
@@ -1221,10 +1256,6 @@ properties:
         allOf:
           - $ref: https://controlman.repodynamics.com/schema/docfile
           - properties:
-              assignees:
-                title: Code of Conduct Supervisors
-                description: Project's code of conduct supervisors and contact persons.
-                $ref: https://controlman.repodynamics.com/schema/member-ids
               path:
                 title: |
                   Path to the
@@ -1243,10 +1274,45 @@ properties:
                   - CODE_OF_CONDUCT.md
                   - docs/CODE_OF_CONDUCT.txt
                   - .github/CODE_OF_CONDUCT.MD
+      code_owners:
+        title: Code Owners
+        description: |
+          Pull request reviewers for different parts of the project.
+          This is used to automatically maintain the
+          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
+          which will then be used to automatically assign reviewers to pull requests
+          based on the glob pattern of the modified files.
+        type: object
+        additionalProperties: false
+        required: [ path ]
+        properties:
+          path:
+            title: File Path
+              Path to the
+              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
+              and placed either in the `.github` directory, the `docs` directory,
+              or the root of the repository.
+            type: string
+            default: .github/CODEOWNERS
+            pattern: ^(?:|.github/|docs/)CODEOWNERS$
+            examples:
+              - CODEOWNERS
+              - .github/CODEOWNERS
+              - docs/CODEOWNERS
+          url:
+            title: URL
+            description: URL of the repository's `CODEOWNERS` file.
+            default: ${{ repo.url.blob }}$/${{ .path }}$
+            examples:
+              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+            $ref: https://jsonschemata.repodynamics.com/url/https
   web:
     title: Configurations for the project's website.
     type: object
     additionalProperties: false
+    required: [ path, sphinx ]
     properties:
       toc:
         type: object
@@ -1509,7 +1575,80 @@ properties:
         description:
           All paths must be relative to the root of the website directory, without suffix.
         type: object
-        default: { }
+        default: |
+          #{{
+            from loggerman import logger
+            import mdit
+            import pylinks as pl
+            import pyserials as ps
+        
+            path = root_path / (ccc["web.path.source"] or "${{ web.path.source }}$")
+            url_home = "${{ web.url.home }}"
+        
+            pages = {}
+            blog = {}
+            for md_filepath in path.rglob("*.md", case_sensitive=False):
+                if not md_filepath.is_file():
+                    continue
+                rel_path = md_filepath.relative_to(path)
+                dirhtml_path = str(rel_path.with_suffix("")).removesuffix("/index")
+                text = md_filepath.read_text()
+                frontmatter = mdit.parse.frontmatter(text) or {}
+                if "ccid" in frontmatter:
+                    pages[pl.string.to_slug(frontmatter["ccid"])] = {
+                        "title": mdit.parse.title(text),
+                        "path": dirhtml_path,
+                        "url": f"{url_home}/{dirhtml_path}",
+                    }
+                for key in ["category", "tags"]:
+                    val = frontmatter.get(key)
+                    if not val:
+                        continue
+                    if isinstance(val, str):
+                        val = [item.strip() for item in val.split(",")]
+                    if not isinstance(val, list):
+                        logger.warning(
+                            mdit.inline_container(
+                                "Invalid webpage frontmatter: ",
+                                mdit.element.code_span(str(rel_path)),
+                            ),
+                            mdit.inline_container(
+                                "Invalid frontmatter value for ",
+                                mdit.element.code_span(key),
+                                " :"),
+                            mdit.element.code_block(
+                                ps.write.to_yaml_string(val, end_of_file_newline=False),
+                                language="yaml",
+                            ),
+                        )
+                    blog.setdefault(key, []).extend(val)
+            if "blog" not in pages:
+                return pages
+            custom_blog_path = $[[ web.extension.ablog.config.blog_path ]]$
+            blog_path = custom_blog_path[0] if custom_blog_path else "blog"
+            for key, values in blog.items():
+                for value in set(values):
+                    value_slug = pl.string.to_slug(value)
+                    key_singular = key.removesuffix('s')
+                    final_key = f"blog_{key_singular}_{value_slug}"
+                    if final_key in pages:
+                        logger.error(
+                            mdit.inline_container(
+                                "Duplicate webpage ID ",
+                                mdit.element.code_span(final_key)
+                            ),
+                            f"Generated ID '{final_key}' already exists "
+                            f"for page '{pages[final_key]['path']}'. "
+                            "Please do not use `ccid` values that start with 'blog_'."
+                        )
+                    blog_group_path = f"{blog_path}/{key_singular}/{value_slug}"
+                    pages[final_key] = {
+                        "title": value,
+                        "path": blog_group_path,
+                        "url": f"{url_home}/{blog_group_path}",
+                    }
+            return pages
+          }}#
         additionalProperties:
           title: Relative path to the page.
           type: object
@@ -1623,26 +1762,6 @@ properties:
             links:
               title: Links
               type: array
-    required: [ path, sphinx ]
-  announcement:
-    title: Configurations of project announcements.
-    type: object
-    required: [ path, retention_days, url ]
-    properties:
-      path:
-        title: Path to the announcement banner file.
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: ${{ web.path.root }}$/announcement.html
-        examples:
-          - docs/announcement.html
-      retention_days:
-        title: Number of days to keep an announcement.
-        default: 30
-        $ref: https://jsonschemata.repodynamics.com/number/non-negative
-      url:
-        title: URL to the announcement banner file.
-        $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-        default: ${{ repo.url.raw }}$/${{ announcement.path }}$
   # Package
   pkg:
     title: Package
@@ -1808,7 +1927,6 @@ properties:
         title: Primary Commits
         description: Primary action commit types
         type: object
-        default: { }
         additionalProperties:
           title: Custom Primary Commit
           description: |
@@ -1816,35 +1934,6 @@ properties:
             For each custom commit type, a key-value pair must be added,
             where the key is the ID of the commit type, to reference in other places.
           $ref: https://controlman.repodynamics.com/schema/commit-primary
-        properties:
-          major:
-            title: Major Release
-            description: Configurations for a major release commit type.
-            default:
-              type: major
-              description: New major release containing breaking changes.
-            $ref: https://controlman.repodynamics.com/schema/commit-primary
-          minor:
-            title: Minor Release
-            description: Configurations for a minor release commit type.
-            default:
-              type: minor
-              description: New minor release containing backward-compatible new features and improvements.
-            $ref: https://controlman.repodynamics.com/schema/commit-primary
-          patch:
-            title: Patch Release
-            description: Configurations for a patch release commit type.
-            default:
-              type: patch
-              description: New patch release containing backward-compatible bug fixes.
-            $ref: https://controlman.repodynamics.com/schema/commit-primary
-          post:
-            title: Post-release
-            description: Configurations for a post-release commit type.
-            default:
-              type: post
-              description: New post-release containing non-API related changes.
-            $ref: https://controlman.repodynamics.com/schema/commit-primary
       secondary:
         title: Secondary Commits
         description: |
@@ -1858,20 +1947,19 @@ properties:
           title: Custom Secondary Commit
           description: Configurations for a secondary commit type.
           type: object
-          additionalProperties: false
+          required: [ type, description ]
           properties:
+            type:
+              type: string
+              minLength: 1
+              pattern: ^[a-zA-Z0-9_-]+$
+            scope:
+              type: string
+              pattern: ^[a-zA-Z0-9_-]+$
             description:
               title: Description
               description: Description of the commit type.
-              type: string
-            changelog_id:
-              title: Changelog ID
-              description: ID of the changelog to which the commit will be added.
-              type: string
-            changelog_section_id:
-              title: Changelog Section ID
-              description: ID of the section of the changelog to which the commit will be added.
-              type: string
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
   label:
     title: GitHub labels settings for the project
     description: |
@@ -1908,37 +1996,7 @@ properties:
               title: Custom Primary Labels
               description: Custom primary labels.
               $ref: https://controlman.repodynamics.com/schema/label-group-element
-            required: [ major, minor, patch, post ]
-            properties:
-              major:
-                title: Major Release
-                description: Label for major release.
-                default:
-                  suffix: Major Release
-                  description: ${{ commit.primary.major.description }}$
-                $ref: https://controlman.repodynamics.com/schema/label-group-element
-              minor:
-                title: Minor Release
-                description: Label for minor release.
-                default:
-                  suffix: Minor Release
-                  description: ${{ commit.primary.minor.description }}$
-                $ref: https://controlman.repodynamics.com/schema/label-group-element
-              patch:
-                title: Patch Release
-                description: Label for patch release.
-                default:
-                  suffix: Patch Release
-                  description: ${{ commit.primary.patch.description }}$
-                $ref: https://controlman.repodynamics.com/schema/label-group-element
-              post:
-                title: Post Release
-                description: Label for post release.
-                default:
-                  suffix: Post Release
-                  description: ${{ commit.primary.post.description }}$
-                $ref: https://controlman.repodynamics.com/schema/label-group-element
-      subtype:
+      scope:
         title: Secondary Type Labels
         description: Issue sub types
         $ref: https://controlman.repodynamics.com/schema/label-group
@@ -2203,7 +2261,7 @@ properties:
         items:
           type: object
           additionalProperties: false
-          required: [ id, type, name, description, body ]
+          required: [ id, action, type, name, description, body ]
           properties:
             id:
               title: Unique identifier of the issue form.
@@ -2214,6 +2272,17 @@ properties:
                 and can only contain alphanumeric characters, underscores, and hyphens.
               type: string
               pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+            action:
+              title: Action
+              description: |
+                Action to be performed when the corresponding pull request is merged.
+              type: [ string, "null" ]
+              default: null
+              enum:
+                - post
+                - patch
+                - minor
+                - major
             type:
               title: Primary type of the issue.
               description: |
@@ -2230,8 +2299,8 @@ properties:
                 and then ascertains the corresponding primary commit type from the issue's primary type label,
                 in order to decide which actions to perform on the release branch.
               type: string
-            subtype:
-              title: Subtype of the issue.
+            scope:
+              title: Scope of the issue.
               description: |
                 If two or more forms are assigned the same [primary type](#primary-type),
                 they must each define a unique subtype.
@@ -2243,27 +2312,6 @@ properties:
                 It also helps maintainers and users
                 differentiate between issues with the same primary type.
               type: string
-            assignees:
-              title: Form Assignees
-              description: |
-                Assignees of a specific issue type.
-                This can be either an array of [`team`](#ccc-defs-entities)-member IDs,
-                or a mapping with keys `ticket` and `pull` for issue and pull request assignees, respectively.
-              type: object
-              additionalProperties: false
-              properties:
-                ticket:
-                  title: Issue Assignees
-                  description: Assignees of project issues.
-                  $ref: https://controlman.repodynamics.com/schema/member-ids
-                pull:
-                  title: Pull Request Assignees
-                  description: Assignees of project pull requests.
-                  $ref: https://controlman.repodynamics.com/schema/member-ids
-                review:
-                  title: Review Assignees
-                  description: Assignees of project pull request reviews.
-                  $ref: https://controlman.repodynamics.com/schema/member-ids
             pre_process:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
@@ -2475,7 +2523,6 @@ properties:
     type: object
     default: { }
     additionalProperties: false
-    required: [ prerelease_temp_path, protocol ]
     properties:
       prerelease_temp_path:
         description: >-
@@ -2779,99 +2826,31 @@ properties:
           as_comment:
             type: boolean
             default: false
+      announcement:
+        title: Configurations of project announcements.
+        type: object
+        required: [ path, retention_days, url ]
+        properties:
+          path:
+            title: Path to the announcement banner file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ web.path.root }}$/announcement.html
+            examples:
+              - docs/announcement.html
+          retention_days:
+            title: Number of days to keep an announcement.
+            default: 30
+            $ref: https://jsonschemata.repodynamics.com/number/non-negative
+          url:
+            title: URL to the announcement banner file.
+            $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+            default: ${{ repo.url.raw }}$/${{ announcement.path }}$
   pull:
     title: Pull Requests
     description: GitHub pull request settings for the project
     type: object
     additionalProperties: false
     properties:
-      code_owners:
-        title: Code Owners
-        description: |
-          Pull request reviewers for different parts of the project.
-          This is used to automatically maintain the
-          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
-          which will then be used to automatically assign reviewers to pull requests
-          based on the glob pattern of the modified files.
-        type: object
-        additionalProperties: false
-        required: [ entries, path ]
-        properties:
-          entries:
-            title: Owners Definitions
-            description: |
-              Code owner definitions for different parts of the project.
-              For each filepath or glob pattern, add a key-value pair,
-              where the key is the path or glob pattern,
-              and the value is an array of [`team`](#ccc-defs-entities)-member IDs.
-
-              :::{admonition} Order of Entries
-              :class: dropdown important
-
-              Note that the [order of entries is important](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file);
-              the last matching pattern takes the most precedence.
-              :::
-            type: array
-            minItems: 1
-            uniqueItems: true
-            examples:
-              - - "*": [ owner ]  # Default owners for all unassigned files.
-                - "/*": [ a_maintainer ]  # All files directly under root directory.
-                - "/.github/": [ a_maintainer, another_maintainer ]  # All files in `.github` directory.
-            items:
-              title: Owners Definition
-              description: Code owners defined for a specific path or glob pattern.
-              type: object
-              additionalProperties: false
-              required: [ glob, owners ]
-              properties:
-                description:
-                  title: Description
-                  description: Description of the path or glob pattern.
-                  type: string
-                  minLength: 1
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                glob:
-                  title: Glob Pattern
-                  description: Glob pattern to match the files.
-                  type: string
-                  minLength: 1
-                  examples:
-                    - "*"
-                    - "/*"
-                    - "/.github/"
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                owners:
-                  title: Owners
-                  description: |
-                    Code owners of the path or glob pattern,
-                    defined by their [`team`](#ccc-defs-entities)-member IDs.
-                  examples:
-                    - [ owner ]
-                    - [ owner, a_maintainer ]
-                  $ref: https://controlman.repodynamics.com/schema/member-ids
-          path:
-            title: File Path
-              Path to the
-              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-            type: string
-            default: .github/CODEOWNERS
-            pattern: ^(?:|.github/|docs/)CODEOWNERS$
-            examples:
-              - CODEOWNERS
-              - .github/CODEOWNERS
-              - docs/CODEOWNERS
-          url:
-            title: URL
-            description: URL of the repository's `CODEOWNERS` file.
-            default: ${{ repo.url.blob }}$/${{ .path }}$
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-            $ref: https://jsonschemata.repodynamics.com/url/https
       template:
         title: Templates
         description: |
@@ -2960,10 +2939,6 @@ properties:
                 This is automatically fetched from the 
                 [GitHub API](https://docs.github.com/en/graphql/reference/objects#discussioncategory).
               type: string
-            assignees:
-              title: Category Moderators
-              description: Moderators of a specific discussion category.
-              $ref: https://controlman.repodynamics.com/schema/member-ids
             form:
               title: Category Form
               description: |
