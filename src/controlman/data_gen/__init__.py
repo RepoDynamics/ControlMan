@@ -7,7 +7,6 @@ from controlman import const as _const
 from controlman.cache_manager import CacheManager as _CacheManager
 from controlman.data_gen.main import MainDataGenerator as _MainDataGenerator
 from controlman.data_gen.python import PythonDataGenerator as _PythonDataGenerator
-from controlman.data_gen.web import WebDataGenerator as _WebDataGenerator
 from controlman.data_gen.repo import RepoDataGenerator as _RepoDataGenerator
 
 
@@ -47,12 +46,6 @@ def generate(
             git_manager=git_manager,
             cache=cache_manager,
             github_api=github_api,
-        ).generate()
-    if data.get("web"):
-        web_path_source = data_before["web.path.source"] or data.fill("web.path.source")
-        _WebDataGenerator(
-            data=data,
-            source_path=git_manager.repo_path / web_path_source,
         ).generate()
     _RepoDataGenerator(
         data=data,
