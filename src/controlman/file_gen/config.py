@@ -58,29 +58,47 @@ class ConfigFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        key = "pull.code_owners"
-        if self._is_disabled(key):
+        path_key = "health.code_owners.path"
+        if self._is_disabled(path_key):
             return []
         codeowners_files = {
             "type": DynamicFileType.CONFIG,
             "subtype": ("codeowners", "Code Owners"),
-            "path": self._data[f"{key}.path"],
-            "path_before": self._data_before[f"{key}.path"],
+            "path": self._data[path_key],
+            "path_before": self._data_before[path_key],
         }
-        codeowners = self._data[f"{key}.entries"]
-        if not codeowners:
+        data: dict[int, dict[str, list[str]]] = {}
+        pattern_description: dict[str, str] = {}
+        for member in self._data["team"].values():
+            for glob_def in member.get("ownership", []):
+                data.setdefault(glob_def["priority"], {}).setdefault(glob_def["glob"], []).append(
+                    member["github"]["id"]
+                )
+                if glob_def.get("description"):
+                    pattern_description[glob_def["glob"]] = glob_def["description"]
+            for member_role in member.get("roles", []):
+                for glob_def in self._data["role"][member_role].get("ownership", []):
+                    data.setdefault(glob_def["priority"], {}).setdefault(glob_def["glob"], []).append(
+                        member["github"]["id"]
+                    )
+                    if glob_def.get("description"):
+                        pattern_description[glob_def["glob"]] = glob_def["description"]
+        if not data:
             return [DynamicFile(**codeowners_files)]
         # Get the maximum length of patterns to align the columns when writing the file
-        max_len = max([len(codeowner_dic["glob"]) for codeowner_dic in codeowners])
+        max_len = max(
+            [len(glob_pattern) for priority_dic in data.values() for glob_pattern in priority_dic.keys()]
+        )
         lines = []
-        for entry in codeowners:
-            comment = entry.get("description", "")
-            for comment_line in comment.splitlines():
-                lines.append(f"# {comment_line}")
-            pattern = entry["glob"]
-            reviewers_list = entry["owners"]
-            reviewers = " ".join([f"@{self._data["team"][reviewer]["github"]["id"]}" for reviewer in reviewers_list])
-            lines.append(f"{pattern: <{max_len}}   {reviewers}{"\n" if comment else ''}")
+        for priority_defs in [defs for priority, defs in sorted(data.items())]:
+            for pattern, reviewers_list in sorted(priority_defs.items()):
+                comment = pattern_description.get(pattern, "")
+                for comment_line in comment.splitlines():
+                    lines.append(f"# {comment_line}")
+                reviewers = " ".join(
+                    [f"@{reviewer_id}" for reviewer_id in sorted(set(reviewers_list))]
+                )
+                lines.append(f"{pattern: <{max_len}}   {reviewers}{"\n" if comment else ''}")
         return [DynamicFile(content="\n".join(lines), **codeowners_files)]
 
     def _generate_license(self) -> list[DynamicFile]:
@@ -499,21 +517,18 @@ class ConfigFileGenerator:
         filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
         cite_old = _ps.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
         out = {
-            "message": cite["message"],
-            "title": cite["title"],
-            "version": cite_old.get("version", ""),
-            "date-released": cite_old.get("date-released", ""),
-            "doi": cite_old.get("doi", ""),
-            "commit": cite_old.get("commit", ""),
+            k: v for k, v in cite.items() if k in [
+                "message", "title", "license", "url", "type", "keywords", "abstract"
+            ]
         }
-        for key in ("license", "license_url", "url"):
+        for key in ("version", "date-released", "doi", "commit"):
+            if cite_old.get(key):
+                out[key] = cite_old[key]
+        for key in ("license_url",):
             if cite.get(key):
                 out[key.replace('_', "-")] = cite[key]
         if cite.get("repository"):
             out |= create_repository(cite["repository"])
-        for key in ["type", "keywords", "abstract"]:
-            if cite.get(key):
-                out[key] = cite[key]
         if cite.get("identifiers"):
             out["identifiers"] = [create_identifier(ident) for ident in cite["identifiers"]]
         if cite.get("contacts"):
