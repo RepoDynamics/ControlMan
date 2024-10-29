@@ -142,11 +142,18 @@ class PythonDataGenerator:
                 return [template.format("OS Independent")]
             return [template.format(postfix[os_name]) for os_name in postfix.keys() if os_name in data_os]
 
+        def license():
+            troves = []
+            for component in self._data.get("license.component", {}).values():
+                trove = component.get("trove_classifier")
+                if trove:
+                    troves.append(trove)
+            return troves
+
         common_classifiers = programming_language()
         common_classifiers.extend(operating_system())
-        if self._data["license.trove"]:
-            common_classifiers.append(self._data["license.trove"])
-        # common_classifiers.append(self._package_development_status())
+        common_classifiers.extend(license())
+        # Development status is added in `data_gen.python`
         if self._data["pkg.typed"]:
             common_classifiers.append("Typing :: Typed")
         for common_classifier in common_classifiers:
@@ -167,5 +174,5 @@ class PythonDataGenerator:
                         data=self._data(),
                     )
             classifiers.extend(common_classifiers)
-            self._data[f"{path}.classifiers"] = sorted(classifiers)
+            self._data[f"{path}.classifiers"] = sorted(set(classifiers))
         return
