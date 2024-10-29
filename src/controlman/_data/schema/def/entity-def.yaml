@@ -22,7 +22,6 @@ description: |
   - [`github.rest_id`](#ccc-defs-entity-github-rest_id)
   - [`github.node_id`](#ccc-defs-entity-github-node_id)
   - [`github.url`](#ccc-defs-entity-github-url)
-
 type: object
 additionalProperties: false
 properties:
@@ -39,6 +38,7 @@ properties:
     description: GitHub account information of the entity.
     type: object
     additionalProperties: false
+    required: [ id ]
     properties:
       id:
         title: GitHub Username
@@ -52,7 +52,6 @@ properties:
       url:
         title: GitHub Account URL
         $ref: https://jsonschemata.repodynamics.com/url/github/user
-    required: [ id ]
   name:
     title: Name
     description: |
@@ -84,6 +83,9 @@ properties:
       :::
     type: object
     additionalProperties: false
+    oneOf:
+      - required: [ first, last ]
+      - required: [ legal ]
     properties:
       legal:
         title: Legal Name
@@ -126,20 +128,20 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         default: |
           #{{
-            legal = ${{ .legal }}$
+            legal = $[[ .legal ]]$
             if legal:
-              return legal
+              return legal[0]
             
-            first = ${{ .first }}$
-            last = ${{ .last }}$
-            particle = ${{ .particle }}$
-            suffix = ${{ .suffix }}$
+            first = $[[ .first ]]$[0]
+            last = $[[ .last ]]$[0]
+            particle = $[[ .particle ]]$
+            suffix = $[[ .suffix ]]$
             full = first
             if particle:
-              full += f" {particle}"
+              full += f" {particle[0]}"
             full += f" {last}"
             if suffix:
-              full += f", {suffix}"
+              full += f", {suffix[0]}"
             return full
           }}#
       full_inverted:
@@ -154,23 +156,20 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         default: |
           #{{
-            legal = ${{ .legal }}$
+            legal = $[[ .legal ]]$
             if legal:
-              return legal
+              return legal[0]
             
-            first = ${{ .first }}$
-            last = ${{ .last }}$
-            particle = ${{ .particle }}$
-            suffix = ${{ .suffix }}$
-            full = f"{particle} " if particle else "" 
+            first = $[[ .first ]]$[0]
+            last = $[[ .last ]]$[0]
+            particle = $[[ .particle ]]$
+            suffix = $[[ .suffix ]]$
+            full = f"{particle[0]} " if particle else "" 
             full += f"{last}, {first}"
             if suffix:
-              full += f", {suffix}"
+              full += f", {suffix[0]}"
             return full
           }}#
-    oneOf:
-      - required: [ first, last ]
-      - required: [ legal ]
   role:
     title: Roles of the person in the project.
     description: |
@@ -674,6 +673,3 @@ properties:
 
       This is only used when the entity is a legal person,
       i.e., when `name.legal` is set.
-anyOf:
-  - required: [ github ]
-  - required: [ name ]
