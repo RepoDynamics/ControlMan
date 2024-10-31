@@ -1827,7 +1827,7 @@ properties:
               type: sync
               scope: config
               description: >-
-                Synchronize configuration files.
+                Synchronize dynamic files with control center configurations.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
           refactor:
             title: Refactor
