@@ -2711,7 +2711,7 @@ properties:
                     {%- if event == "issues" -%}
                       Issue ticket #{{ issue.number }} submitted by {{ make_user(issue.user) }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request #{{ pull_request.number }} opened from branch {{  by {{ make_user(pull_request.user) }}.
+                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.ref }}]({{ pull_request.head.url }}) to branch [{{ pull_request.base.ref }}]({{ pull_request.base.url }}) by {{ make_user(pull_request.user) }}.
                     {%- endif -%}
                   {%- endif -%}
                 {%- endmacro %}
