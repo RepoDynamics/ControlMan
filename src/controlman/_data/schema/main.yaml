@@ -1817,7 +1817,7 @@ properties:
                 Initialize new changelog entry.
               body: |
                 Issue #{{ issue.number }}
-                Pull #{{ pull.number }}
+                Pull #{{ pull_request.number }}
             $ref: https://controlman.repodynamics.com/schema/commit-auto
           config_sync:
             title: Configuration Synchronization
@@ -1837,7 +1837,7 @@ properties:
               type: refactor
               scope: auto
               description: >-
-                Refactor code.
+                Apply automatic formatting and refactoring.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
       primary:
         title: Primary Commits
@@ -2444,6 +2444,7 @@ properties:
           Project's changelog templates and paths.
           Configurations and templates for your project's changelogs and release notes.
         type: object
+        default: { }
         properties:
           path:
             title: Path
@@ -2550,10 +2551,10 @@ properties:
             type: string
             default: |
               {%- macro make_user(user) -%}
-                {%- if user.name -%}
-                  {{ user.name }} (@{{ user.login }})
+                {%- if user.name.full != user.github.id -%}
+                  {{ user.name.full }} (@{{ user.github.id }})
                 {%- else -%}
-                  @{{ user.login }}
+                  @{{ user.github.id }}
                 {%- endif -%}
               {%- endmacro -%}
               
@@ -2638,30 +2639,38 @@ properties:
                 {%- endmacro -%}
 
                 {%- macro make_user(user) -%}
-                  {%- if user.name -%}
-                    {{ user.name }} (@{{ user.login }})
+                  {%- if user.name.full != user.github.id -%}
+                    {{ user.name.full }} (@{{ user.github.id }})
                   {%- else -%}
-                    @{{ user.login }}
+                    @{{ user.github.id }}
                   {%- endif -%}
                 {%- endmacro -%}
 
                 {%- macro make_description() -%}
                   {%- if action == "assigned" -%}
-                    Assigned to {{ make_user(assignee) }}.
+                    {%- if event == "issues" -%}
+                      Issue assigned to {{ make_user(assignee) }}.
+                    {%- elif event == "pull_request" -%}
+                      Pull request assigned to {{ make_user(assignee) }}.
+                    {%- endif -%}
                   {%- elif action == "unassigned" -%}
-                    Unassigned from {{ make_user(assignee) }}.
+                    {%- if event == "issues" -%}
+                      Issue unassigned from {{ make_user(assignee) }}.
+                    {%- elif event == "pull_request" -%}
+                      Pull request unassigned from {{ make_user(assignee) }}.
+                    {%- endif -%}
                   {%- elif action == "review_requested" -%}
-                    Assigned to {{ make_user(requested_reviewer) }} for review.
+                    Review assigned to {{ make_user(requested_reviewer) }}.
                   {%- elif action == "review_request_removed" -%}
-                    Unassigned from {{ make_user(requested_reviewer) }} for review.
+                    Review unassigned from {{ make_user(requested_reviewer) }}.
                   {%- elif action == "synchronize" -%}
                     New commits pushed to [{{ head.name }}]({{ head.url }}) (CI [{{ context.run_id }}]({{ workflow_url }})).
                   {%- elif action == "labeled" -%}
                     {%- set category = label.category -%}
                     {%- if category == "type" -%}
                         Type set to `{{ label.suffix }}`.
-                    {%- elif category == "subtype" -%}
-                        Subtype set to `{{ label.suffix }}`.
+                    {%- elif category == "scope" -%}
+                        Scope set to `{{ label.suffix }}`.
                     {%- elif category == "version" -%}
                           Target version set to `{{ label.suffix }}`.
                     {%- elif category == "branch" -%}
@@ -2700,13 +2709,13 @@ properties:
                     {%- endif -%}
                   {%- elif action == "opened" -%}
                     {%- if event == "issues" -%}
-                      Issue ticket #{{ payload.issue.number }} submitted by {{ make_user(creator) }}.
+                      Issue ticket #{{ issue.number }} submitted by {{ make_user(issue.user) }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request #{{ payload.pull_request.number }} opened by {{ make_user(creator) }}.
+                      Pull request #{{ pull_request.number }} opened from branch {{  by {{ make_user(pull_request.user) }}.
                     {%- endif -%}
                   {%- endif -%}
                 {%- endmacro %}
-                {{ make_entry(make_user(payload.sender), make_description()) -}}
+                {{ make_entry(make_user(sender), make_description()) -}}
           references:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
             default:
@@ -3593,55 +3602,10 @@ properties:
               After the specified duration,
               the cached data is considered stale
               and will be automatically synced with the source.
-            type: object
-            additionalProperties: false
-            default: { }
-            required: [ extension, repo, user, orcid, doi, python ]
-            properties:
-              extension:
-                title: Configuration extensions retrieved from external URLs.
-                description: |
-                  These are extended data in control center configuration files
-                  defined with the `!ext` tag.
-                default: 0
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
-              repo:
-                title: Repository data retrieved from GitHub API.
-                description: |
-                  This includes general repository settings,
-                  as well as details about discussion categories,
-                  which are used for the website's blog.
-                default: 1
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
-              user:
-                title: Team member data retrieved from GitHub API.
-                description: |
-                  This includes GitHub user data such as
-                  name, email, avatar, bio, and other profile information.
-                default: 24
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
-              orcid:
-                title: Publications data retrieved from ORCID API.
-                description: |
-                  This includes a list of all publication DOIs associated with an ORCID ID.
-                default: 240
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
-              doi:
-                title: Publication data retrieved from DOI API.
-                description: |
-                  This corresponds to citation details associated with a specific DOI.
-                default: 1000
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
-              python:
-                title: Python version data retrieved from the Python GitHub repository.
-                description: |
-                  This is a list of currently available Python versions,
-                  used to update workflow configurations such as CI/CD/CT pipelines.
-                default: 500
-                $ref: https://jsonschemata.repodynamics.com/number/non-negative
+            $ref: https://controlman.repodynamics.com/schema/cache-retention-hours
       url:
         title: URL of the project's configuration file.
-        default: ${{ repo.url.raw }}$/.github/.control/.metadata.json
+        default: ${{ repo.url.raw }}$/.github/.repodynamics/metadata.json
         $ref: https://jsonschemata.repodynamics.com/url/https
   workflow:
     type: object

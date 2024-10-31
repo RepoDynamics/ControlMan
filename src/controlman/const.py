@@ -10,9 +10,9 @@ DIRPATH_CC_DEFAULT = ".control"
 DIRNAME_LOCAL_REPORT = "reports"
 DIRNAME_LOCAL_REPODYNAMICS = "RepoDynamics"
 
-FILEPATH_METADATA = ".github/.control/.metadata.json"
+FILEPATH_METADATA = ".github/.repodynamics/metadata.json"
 FILENAME_METADATA_CACHE = ".metadata_cache.yaml"
-FILEPATH_LOCAL_CONFIG = ".github/.control/local_config.yaml"
+FILENAME_LOCAL_CONFIG = "config.yaml"
 
 DIRNAME_CC_HOOK = "hook"
 

@@ -17,6 +17,7 @@ from controlman.datatype import (
     DynamicDir as _DynamicDir,
 )
 from controlman import const
+from controlman.exception import load as _load_exception
 from controlman.cache_manager import CacheManager
 from controlman import file_gen as _file_gen
 from controlman import data_loader as _data_loader
@@ -45,12 +46,24 @@ class CenterManager:
 
         self._path_root = self._git.repo_path
         self._hook_manager = _HookManager(dir_path=self._path_cc / const.DIRNAME_CC_HOOK)
-        local_cache_path = self._data_before.get("local.cache.path")
+        relpath_local_cache = self._data_before.get("local.cache.path")
+        path_local_cache = None
+        retention_hours = self._data_before.get("control.cache.retention_hours", {})
+        if relpath_local_cache:
+            path_local_cache = self._path_root / relpath_local_cache
+            path_local_config = path_local_cache / const.FILENAME_LOCAL_CONFIG
+            if path_local_config.is_file():
+                with _logger.sectioning("Local Cache Configuration"):
+                    try:
+                        local_config = _ps.read.yaml_from_file(path=path_local_config, safe=True)
+                    except _ps.exception.read.PySerialsInvalidDataError as e:
+                        raise _load_exception.ControlManInvalidConfigFileDataError(cause=e) from None
+                    _data_validator.validate(data=local_config, schema="local")
+                    retention_hours = local_config.get("retention_hours", {})
         self._cache_manager: CacheManager = CacheManager(
-            path_local_cache=self._path_root / local_cache_path if local_cache_path else None,
-            retention_hours=self._data_before.get("control.cache.retention_hours", {}),
+            path_local_cache=path_local_cache,
+            retention_hours=retention_hours,
         )
-
         self._data_raw: _ps.NestedDict | None = None
         self._data: _ps.NestedDict | None = None
         self._files: list[_GeneratedFile] = []

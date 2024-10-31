@@ -18,16 +18,13 @@ description: |
   This allows you to easily maintain your own local configurations 
   without affecting the remote repository.
   :::
-examples:
-  - control:
-      cache:
-        retention_hours:
-          api: 1
-          extensions: 1
 type: object
 additionalProperties: false
 properties:
-  control:
-    title: Control Center
-    description: Configurations for the project's control center.
-    $ref: user/ci.yaml#/properties/control
+  retention_hours:
+    title: Number of hours to keep different cached data.
+    description: |
+      After the specified duration,
+      the cached data is considered stale
+      and will be automatically synced with the source.
+    $ref: https://controlman.repodynamics.com/schema/cache-retention-hours

@@ -1,0 +1,53 @@
+$id: https://controlman.repodynamics.com/schema/cache-retention-hours
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Number of hours to keep different cached data.
+description: |
+  After the specified duration,
+  the cached data is considered stale
+  and will be automatically synced with the source.
+type: object
+additionalProperties: false
+default: { }
+required: [ extension, repo, user, orcid, doi, python ]
+properties:
+  extension:
+    title: Configuration extensions retrieved from external URLs.
+    description: |
+      These are extended data in control center configuration files
+      defined with the `!ext` tag.
+    default: 0
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  repo:
+    title: Repository data retrieved from GitHub API.
+    description: |
+      This includes general repository settings,
+      as well as details about discussion categories,
+      which are used for the website's blog.
+    default: 1
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  user:
+    title: Team member data retrieved from GitHub API.
+    description: |
+      This includes GitHub user data such as
+      name, email, avatar, bio, and other profile information.
+    default: 24
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  orcid:
+    title: Publications data retrieved from ORCID API.
+    description: |
+      This includes a list of all publication DOIs associated with an ORCID ID.
+    default: 240
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  doi:
+    title: Publication data retrieved from DOI API.
+    description: |
+      This corresponds to citation details associated with a specific DOI.
+    default: 1000
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  python:
+    title: Python version data retrieved from the Python GitHub repository.
+    description: |
+      This is a list of currently available Python versions,
+      used to update workflow configurations such as CI/CD/CT pipelines.
+    default: 500
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
