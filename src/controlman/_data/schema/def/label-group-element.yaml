@@ -22,5 +22,5 @@ properties:
     description: |
       Full name of the label.
       This is automatically generated from the prefix and suffix.
-    default: '${{ ...prefix }}${{ .suffix }}'
+    default: '${{ ...prefix }}$${{ .suffix }}$'
     $ref: https://jsonschemata.repodynamics.com/string/oneline
