@@ -4,7 +4,7 @@ jsonschema >= 4.23, < 5
 referencing == 0.35.1
 jsonpath-ng == 1.6.1
 ruamel.yaml == 0.17.40
-Jinja2 == 3.0.2
+Jinja2 >= 3, < 4
 PyLinks == 0.0.0.dev42
 LoggerMan == 0.0.0.dev58
 PySerials == 0.0.0.dev32
