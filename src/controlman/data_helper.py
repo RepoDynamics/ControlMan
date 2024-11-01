@@ -9,14 +9,13 @@ from loggerman import logger as _logger
 import pylinks as _pl
 
 if _TYPE_CHECKING:
-    from typing import Sequence
+    from typing import Sequence, Callable
     from controlman.cache_manager import CacheManager
 
 
 def team_members_with_role_types(
+    get: Callable,
     role_types: str | Sequence[str],
-    team_data: dict[str, dict],
-    role_data: dict[str, dict],
     active_only: bool = True,
 ) -> list[dict]:
     """Get team members with a specific role type.
@@ -25,10 +24,6 @@ def team_members_with_role_types(
     ----------
     role_types
         The role type(s) to filter for.
-    team_data
-        The team data.
-    role_data
-        The role data.
     active_only
         Whether to filter for active team members only.
 
@@ -37,6 +32,8 @@ def team_members_with_role_types(
     list[dict]
         A list of dictionaries, each representing a team member.
     """
+    team_data = get("team")
+    role_data = get("role")
     out = []
     if isinstance(role_types, str):
         role_types = [role_types]
@@ -52,8 +49,8 @@ def team_members_with_role_types(
 
 
 def team_members_with_role_ids(
+    get: Callable,
     role_ids: str | Sequence[str],
-    team_data: dict[str, dict],
     active_only: bool = True,
 ) -> list[dict]:
     """Get team members with a specific role ID.
@@ -62,8 +59,6 @@ def team_members_with_role_ids(
     ----------
     role_ids
         The role ID(s) to filter for.
-    team_data
-        The team data.
     active_only
         Whether to filter for active team members only.
 
@@ -72,6 +67,7 @@ def team_members_with_role_ids(
     list[dict]
         A list of dictionaries, each representing a team member.
     """
+    team_data = get("team")
     out = []
     if isinstance(role_ids, str):
         role_ids = [role_ids]
@@ -88,9 +84,8 @@ def team_members_with_role_ids(
 
 
 def team_members_without_role_types(
+    get: Callable,
     role_types: str | Sequence[str],
-    team_data: dict[str, dict],
-    role_data: dict[str, dict],
     include_other_roles: bool = True,
     active_only: bool = True,
 ) -> list[dict]:
@@ -100,10 +95,6 @@ def team_members_without_role_types(
     ----------
     role_types
         The role type(s) to filter out.
-    team_data
-        The team data.
-    role_data
-        The role data.
     include_other_roles
         Whether to include team members that have roles
         other than the excluded role types.
@@ -115,6 +106,8 @@ def team_members_without_role_types(
     list[dict]
         A list of dictionaries, each representing a team member.
     """
+    team_data = get("team")
+    role_data = get("role")
     out = []
     if isinstance(role_types, str):
         role_types = [role_types]

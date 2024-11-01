@@ -438,8 +438,12 @@ def _make_registry():
 
 
 def _add_custom_keys(schema: dict):
-    _js.edit.add_property(schema, "__custom__", {})
-    _js.edit.add_property(schema, "__custom_template__", {})
+    def conditioner(subschema, path):
+        if "additionalProperties" in subschema:
+            return not bool(subschema["additionalProperties"])
+        return True
+    _js.edit.add_property(schema, "__custom__", {}, conditioner=conditioner)
+    _js.edit.add_property(schema, "__custom_template__", {}, conditioner=conditioner)
     return
 
 

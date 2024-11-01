@@ -40,8 +40,6 @@ properties:
     title: Name
     description: |
       Name of the project.
-      If not provided (recommended), it is automatically derived from the repository name
-      by replacing all hyphens with spaces.
 
       :::{admonition} Usage
       :class: dropdown note
@@ -64,13 +62,11 @@ properties:
       that is as similar as possible to the distribution and import name of the package**.
       This helps to avoid confusion and makes it easier for others to find, install, and use your package.
       :::
-    description_default: Repository name (hyphens replaced with spaces)
-    required_stage: post-load
+    description_default: |
+      If not provided (recommended), the default value is the following template,
+      which generates the name from the repository name by replacing all hyphens with spaces.
     default: |
-      #{{
-        repo_name = "${{ repo.name }}$"
-        return repo_name.replace("-", " ")
-      }}#
+      #{{ return get("repo.name").replace("-", " ") }}#
     examples:
       - ${{ repo.name }}$
       - MyProject
@@ -312,12 +308,10 @@ properties:
       #{{
         from datetime import datetime
         
-        repo_creation_date = "${{ repo.created_at }}$"
-        owner = """${{ team.owner.name.full }}$"""
-        start_year = datetime.strptime(repo_creation_date, "%Y-%m-%d").year
+        start_year = datetime.strptime(get("repo.created_at"), "%Y-%m-%d").year
         current_year = datetime.today().year
-        period = f"{start_year}–{current_year}" if start_year < current_year else f"{current_year}"
-        return f"© {period} {owner}"
+        period = f"{start_year}–{current_year}" if start_year < current_year else current_year
+        return f"© {period} {get("team.owner.name.full")}"
       }}#
     description_default: |
       Set to `© {period} {owner}`, where `{owner}` is the repository owner's name
@@ -556,10 +550,8 @@ properties:
           #{{
               return [
                 member["id"] for member in team_members_with_role_types(
-                  "Author",
-                  ${{ team }}$,
-                  ${{ role }}$,
-                  active_only=True
+                  "Author", 
+                  active_only=True,
                 )
               ]
           }}#
@@ -577,9 +569,7 @@ properties:
               return [
                 member["id"] for member in team_members_with_role_types(
                   "ContactPerson",
-                  ${{ team }}$,
-                  ${{ role }}$,
-                  active_only=True
+                  active_only=True,
                 )
               ]
           }}#
@@ -606,8 +596,6 @@ properties:
               return [
                 member["id"] for member in team_members_without_role_types(
                   "Author",
-                  ${{ team }}$,
-                  ${{ role }}$,
                   include_other_roles=True,
                   active_only=True,
                 )
@@ -676,8 +664,7 @@ properties:
           #{{
             import licenseman
           
-            license_expression = "${{ license.expression }}$"
-            spdx_license_ids, _ = licenseman.spdx.expression.license_ids(license_expression)
+            spdx_license_ids, _ = licenseman.spdx.expression.license_ids(get("license.expression"))
             return spdx_license_ids
           }}#
         type: array
@@ -1586,8 +1573,8 @@ properties:
             import pylinks as pl
             import pyserials as ps
         
-            path = root_path / (ccc["web.path.source"] or "${{ web.path.source }}$")
-            url_home = "${{ web.url.home }}$"
+            path = root_path / (ccc["web.path.source"] or get("web.path.source"))
+            url_home = get("web.url.home")
         
             pages = {}
             blog = {}
@@ -1720,14 +1707,13 @@ properties:
             $ref: https://jsonschemata.repodynamics.com/url/http-explicit
             default: |
               #{{
-                custom_domain_matches = $[[ web.url.custom ]]$
-                if custom_domain_matches:
-                  custom_domain = custom_domain_matches[0]
+                custom_domain = get("web.url.custom")
+                if custom_domain:
                   protocol = "https" if custom_domain["enforce_https"] else "http"
                   domain = custom_domain["name"]
                   return f"{protocol}://{domain}"
-                repo_name = "${{ repo.name }}$"
-                owner_github_username = "${{ team.owner.github.id }}$"
+                repo_name = get("repo.name")
+                owner_github_username = get("team.owner.github.id")
                 if repo_name == f"{owner_github_username}.github.io":
                   return f"https://{owner_github_username}.github.io"
                 return f"https://{owner_github_username}.github.io/{repo_name}"
@@ -3082,12 +3068,7 @@ properties:
           project findability and visibility.
         type: string
         default: |
-          #{{
-            project_title_matches = $[[ title ]]$
-            if not project_title_matches:
-                return ""
-            return project_title_matches[0]
-          }}#
+          #{{ return get("title", "") }}#
         description_default: Project [title](#ccc-title).
         examples:
           - ${{ title }}$
@@ -3108,13 +3089,9 @@ properties:
           #{{
             import pylinks
             
-            project_keywords_matches = $[[ keywords ]]$
-            if not project_keywords_matches:
-                return []
-            project_keywords = project_keywords_matches[0]
             return [
               pylinks.string.to_slug(keyword)
-              for keyword in project_keywords if len(keyword) <= 50
+              for keyword in get("keywords", []) if len(keyword) <= 50
             ][:20]
           }}#
         items:
@@ -3356,13 +3333,10 @@ properties:
                 type: object
                 default: |
                   #{{
-                    issue_forms_matches = $[[ issue.forms ]]$
-                    if not issue_forms_matches:
-                      return { }
-                    issue_forms = issue_forms_matches[0]
+                    issues_home_url = get("repo.url.issues.home")
                     return {
-                      form["id"]: f"${{ repo.url.issues.home }}$/new?template={idx + 1:02}_{form["id"]}.yaml"
-                      for idx, form in enumerate(issue_forms)
+                      form["id"]: f"{issues_home_url}/new?template={idx + 1:02}_{form["id"]}.yaml"
+                      for idx, form in enumerate(get("issue.forms", []))
                     }
                   }}#
                 additionalProperties:
@@ -3401,13 +3375,9 @@ properties:
                 type: object
                 default: |
                   #{{
-                    discussion_categories_matches = $[[ discussion.category ]]$
-                    if not discussion_categories_matches:
-                      return { }
-                    discussion_categories = discussion_categories_matches[0]
                     return {
                       slug: f"${{ repo.url.discussions.home }}$/new?category={slug}"
-                      for slug in discussion_categories.keys()
+                      for slug in get("discussion.category", {}).keys()
                     }
                   }}#
                 additionalProperties:

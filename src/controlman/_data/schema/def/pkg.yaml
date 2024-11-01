@@ -107,7 +107,7 @@ properties:
       #{{
         import re
         
-        project_name = "${{ name }}$"
+        project_name = get("name")
         project_name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", project_name)
         return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", project_name_normalized)
       }}#
@@ -145,7 +145,7 @@ properties:
       #{{
         import re
         
-        pkg_name = "${{ .name }}$"
+        pkg_name = get(".name")
         import_name_raw = re.sub(r"[^a-zA-Z0-9]", "_", pkg_name.lower())
         return re.sub(r"^[0-9]+", "", import_name_raw)
       }}#
@@ -261,9 +261,7 @@ properties:
           return [
             member["id"] for member in team_members_with_role_types(
               "Author",
-              ${{ team }}$,
-              ${{ role }}$,
-              active_only=True
+              active_only=True,
             )
           ]
       }}#
@@ -292,9 +290,7 @@ properties:
           return [
             member["id"] for member in team_members_with_role_types(
               ["ContactPerson", "ProjectManager", "DataManager", "ProjectLeader", "Supervisor"],
-              ${{ team }}$,
-              ${{ role }}$,
-              active_only=True
+              active_only=True,
             )
           ]
       }}#
@@ -388,11 +384,7 @@ properties:
   os_independent:
     type: boolean
     default: |
-      #{{
-        os_data = ${{ .os }}$
-        pure_python = ${{ .python.pure }}$
-        return pure_python and len(os_data) == 3
-      }}#
+      #{{ return get(".python.pure") and len(get(".os")) == 3 }}#
   python:
     title: Python configurations for the package.
     description: |
@@ -475,10 +467,7 @@ properties:
       pure:
         type: boolean
         default: |
-          #{{
-            os_data = ${{ ..os }}$
-            return not any("ci_build" in os for os in os_data.values())
-          }}#
+          #{{ return not any("ci_build" in os for os in get("..os").values()) }}#
       implementation:
         type: string
         enum:

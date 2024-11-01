@@ -128,20 +128,17 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         default: |
           #{{
-            legal = $[[ .legal ]]$
+            legal = get(".legal")
             if legal:
-              return legal[0]
-            
-            first = $[[ .first ]]$[0]
-            last = $[[ .last ]]$[0]
-            particle = $[[ .particle ]]$
-            suffix = $[[ .suffix ]]$
-            full = first
+              return legal
+            full = get(".first")
+            particle = get(".particle")
             if particle:
-              full += f" {particle[0]}"
-            full += f" {last}"
+              full += f" {particle}"
+            full += f" {get(".last")}"
+            suffix = get(".suffix")
             if suffix:
-              full += f", {suffix[0]}"
+              full += f", {suffix}"
             return full
           }}#
       full_inverted:
@@ -156,18 +153,16 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         default: |
           #{{
-            legal = $[[ .legal ]]$
+            legal = get(".legal")
             if legal:
-              return legal[0]
+              return legal
             
-            first = $[[ .first ]]$[0]
-            last = $[[ .last ]]$[0]
-            particle = $[[ .particle ]]$
-            suffix = $[[ .suffix ]]$
-            full = f"{particle[0]} " if particle else "" 
-            full += f"{last}, {first}"
+            particle = get(".particle")
+            full = f"{particle} " if particle else "" 
+            full += f"{get(".last")}, {get(".first")}"
+            suffix = get(".suffix")
             if suffix:
-              full += f", {suffix[0]}"
+              full += f", {suffix}"
             return full
           }}#
   role:
