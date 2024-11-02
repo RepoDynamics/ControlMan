@@ -11,7 +11,7 @@ PySerials == 0.0.0.dev33
 GitTidy == 0.0.0.dev56
 PkgData == 0.0.0.dev5
 PyShellMan == 0.0.0.dev20
-PySyntax == 0.0.0.dev4
+PySyntax == 0.0.0.dev5
 ExceptionMan == 0.0.0.dev30
 MDit == 0.0.0.dev30
 JSONSchemata == 0.0.0.dev29

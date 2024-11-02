@@ -4,6 +4,7 @@
 from typing import Literal
 import textwrap
 from pathlib import Path as _Path
+import re as _re
 
 # Non-standard libraries
 import pyserials as _ps
@@ -130,9 +131,9 @@ class PythonPackageFileGenerator:
         # Get all file glob matches
         path_to_globs_map = {}
         abs_path = self._path_repo / (self._path_import_before or self._path_import)
-        for file_glob, file_config in self._pkg.get("file", {}).items():
-            for filepath_match in abs_path.glob(file_glob):
-                path_to_globs_map.setdefault(filepath_match, []).append((file_glob, file_config))
+        for config_id, file_config in self._pkg.get("file", {}).items():
+            for filepath_match in abs_path.glob(file_config["glob"]):
+                path_to_globs_map.setdefault(filepath_match, []).append((config_id, file_config))
         if not (mapping or path_to_globs_map):
             return []
         # Process each file
@@ -140,16 +141,24 @@ class PythonPackageFileGenerator:
         for filepath in abs_path.glob("**/*.py"):
             file_content = filepath.read_text()
             if mapping:
-                file_content = _pysyntax.modify.rename_imports(module_content=file_content, mapping=mapping)
+                file_content = _pysyntax.modify.imports(module_content=file_content, mapping=mapping)
             if filepath in path_to_globs_map:
-                for matched_glob, file_config in path_to_globs_map[filepath]:
+                for config_id, file_config in path_to_globs_map[filepath]:
                     if "docstring" in file_config:
-                        docstring_before = self._pkg_before.get("file", {}).get(matched_glob, {}).get("docstring")
+                        docstring_before = self._pkg_before.get("file", {}).get(config_id, {}).get("docstring")
                         if docstring_before != file_config["docstring"]:
                             file_content = self._update_docstring(
                                 file_content,
                                 file_config["docstring"],
                                 docstring_before,
+                            )
+                    if "header_comments" in file_config:
+                        header_commens_before = self._pkg_before.get("file", {}).get(config_id, {}).get("header_comments")
+                        if header_commens_before != file_config["header_comments"]:
+                            file_content = self._update_header_comments(
+                                file_content,
+                                file_config["header_comments"],
+                                header_commens_before,
                             )
             subtype = filepath.relative_to(self._path_repo / self._path_src)
             subtype_display = str(subtype.with_suffix("")).replace("/", ".")
@@ -165,26 +174,85 @@ class PythonPackageFileGenerator:
             )
         return out
 
-    def _update_docstring(self, file_content: str, template: str, template_before: str) -> str:
+    def _update_docstring(self, file_content: str, template: dict, template_before: dict) -> str:
 
-        def get_wrapped_docstring(string):
+        def get_wrapped_docstring(templ: dict) -> str:
+            max_line_length = templ.get("max_line_length")
+            if not max_line_length:
+                return templ["content"]
             lines = []
-            for line in string.strip().splitlines():
-                line_parts = textwrap.wrap(line, width=80)
+            for line in templ["content"].splitlines():
+                line_parts = textwrap.wrap(line, width=max_line_length, subsequent_indent=self._get_whitespace(line, leading=True))
                 lines.append('') if not line_parts else lines.extend(line_parts)
-            return "\n".join(lines), lines
+            wrapped_docstring = "\n".join(lines)
+            return f"{wrapped_docstring}{self._get_whitespace(templ['content'], leading=False)}"
 
-        docstring_text, docstring_lines = get_wrapped_docstring(template)
+        docstring_text = get_wrapped_docstring(template)
         docstring_before = _pysyntax.parse.docstring(file_content)
-        if docstring_before is None:
-            ending = '\n' if len(docstring_lines) > 1 else ''
-            docstring_replacement = f'{docstring_text}{ending}'
+        if template["mode"] == "replace" or docstring_before is None:
+            docstring_replacement = docstring_text
         elif not template_before:
-            docstring_replacement = f"{docstring_before.strip()}\n\n{docstring_text}\n"
+            if template["mode"] == "prepend":
+                docstring_replacement = f"{docstring_text}{docstring_before}"
+            else:
+                docstring_replacement = f"{docstring_before}{docstring_text}"
         else:
-            template_before_wrapped, _ = get_wrapped_docstring(template_before)
-            docstring_replacement = docstring_before.replace(template_before_wrapped, docstring_text, 1)
-        return _pysyntax.modify.update_docstring(file_content, docstring_replacement)
+            template_before_wrapped = get_wrapped_docstring(template_before)
+            docstring_replacement = docstring_before.replace(template_before_wrapped, "", 1)
+            if template["mode"] == "prepend":
+                docstring_replacement = f"{docstring_text}{docstring_replacement}"
+            else:
+                docstring_replacement = f"{docstring_replacement}{docstring_text}"
+        return _pysyntax.modify.docstring(file_content, docstring_replacement)
+
+
+    def _update_header_comments(self, file_content: str, template: dict, template_before: dict) -> str:
+
+        def get_wrapped_header_comments(templ: dict) -> str:
+            max_line_length = templ.get("max_line_length")
+            lines = []
+            current_newlines = 0
+            for line in templ["content"].splitlines():
+                if not line:
+                    current_newlines += 1
+                    continue
+                if current_newlines:
+                    if current_newlines == 2:
+                        lines.append('#')
+                    elif current_newlines > 2:
+                        lines.append('')
+                    current_newlines = 0
+                if max_line_length:
+                    line_indent = self._get_whitespace(line, leading=True)
+                    line_parts = textwrap.wrap(
+                        line,
+                        width=max_line_length,
+                        initial_indent=f"# {line_indent}",
+                        subsequent_indent=f"# {line_indent}{templ['line_continuation_indent'] * " "}",
+                    )
+                else:
+                    line_parts = [f"# {line}"]
+                lines.extend(line_parts)
+            return "\n".join(lines)
+
+        header_comments_text = get_wrapped_header_comments(template)
+        header_comments_before = "\n".join(_pysyntax.parse.header_comments(file_content))
+        newlines = "\n" * (template["empty_lines"] + 1)
+        if template["mode"] == "replace" or header_comments_before is None:
+            header_comments_replacement = header_comments_text
+        elif not template_before:
+            if template["mode"] == "prepend":
+                header_comments_replacement = f"{header_comments_text}{newlines}{header_comments_before.strip()}"
+            else:
+                header_comments_replacement = f"{header_comments_before.strip()}{newlines}{header_comments_text}"
+        else:
+            template_before_wrapped = get_wrapped_header_comments(template_before)
+            header_comments_replacement = header_comments_before.replace(template_before_wrapped, "", 1)
+            if template["mode"] == "prepend":
+                header_comments_replacement = f"{header_comments_text}{newlines}{header_comments_replacement.strip()}"
+            else:
+                header_comments_replacement = f"{header_comments_replacement.strip()}{newlines}{header_comments_text}"
+        return _pysyntax.modify.header_comments(file_content, header_comments_replacement)
 
     def manifest(self) -> list[DynamicFile]:
         if self.is_disabled("manifest"):
@@ -304,3 +372,8 @@ class PythonPackageFileGenerator:
         for entry in self._data.get(f"{self._type}.entry.{typ}", {}).values():
             scripts[entry["name"]] = entry["ref"]
         return scripts
+
+    @staticmethod
+    def _get_whitespace(string: str, leading: bool) -> str:
+        match = _re.match(r"^\s*", string) if leading else _re.search(r"\s*$", string)
+        return match.group() if match else ""

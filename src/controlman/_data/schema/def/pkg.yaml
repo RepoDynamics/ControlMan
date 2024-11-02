@@ -554,13 +554,81 @@ properties:
           pip:
             path: ${{ ....path.root }}$/requirements.txt
   file:
-    title: Package documentation settings
+    description: |
+      Configurations for Python source files.
     type: object
     additionalProperties:
+      title: File Configurations
+      description: |
+        Configurations for a set of Python source files defined by a glob pattern.
       type: object
+      additionalProperties: false
+      required: [ glob ]
+      anyOf:
+        - required: [ docstring ]
+        - required: [ header_comments ]
       properties:
+        glob:
+          description: |
+            Glob pattern to match source files.
+            The pattern is relative to the [import package directory](#cccdef-pkg-path-import).
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
         docstring:
-          type: string
+          description: |
+            Docstring configurations for the source files.
+          type: object
+          additionalProperties: false
+          required: [ mode, content ]
+          properties:
+            content:
+              description: |
+                Content of the docstring.
+              type: string
+            mode:
+              description: |
+                Mode of the docstring.
+              type: string
+              enum: [ append, prepend, replace ]
+              default: append
+            max_line_length:
+              description: |
+                Maximum line length of the docstring.
+              type: integer
+              minimum: 0
+        header_comments:
+          description: |
+              Header comments for the source files.
+          type: object
+          additionalProperties: false
+          required: [ mode, content ]
+          properties:
+            mode:
+              description: |
+                Mode of the header comments.
+              type: string
+              enum: [ append, prepend, replace ]
+              default: append
+            content:
+              description: |
+                  Content of the header comments.
+              type: string
+            max_line_length:
+              description: |
+                Maximum line length of the comments.
+              type: integer
+              minimum: 0
+            line_continuation_indent:
+              description: |
+                Indentation of line continuation.
+              type: integer
+              minimum: 0
+              default: 0
+            empty_lines:
+              description: |
+                Number of empty lines between comments.
+              type: integer
+              minimum: 0
+              default: 1
   manifest:
     title: MANIFEST.in configurations.
     description: |

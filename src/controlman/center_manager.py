@@ -208,18 +208,24 @@ class CenterManager:
 
         for duplicate in self._data_before.get("file.duplicate", {}).values():
             if "source" in duplicate:
-                self._path_root.joinpath(duplicate["destination"]).unlink(missing_ok=True)
+                for destination in duplicate["destinations"]:
+                    self._path_root.joinpath(destination).unlink(missing_ok=True)
             else:
-                for source in duplicate["sources"]:
-                    self._path_root.joinpath(duplicate["destination"]).joinpath(_Path(source).stem).unlink(missing_ok=True)
+                for source_glob in duplicate["sources"]:
+                    for source in self._path_root.glob(source_glob):
+                        for destination in duplicate["destinations"]:
+                            self._path_root.joinpath(destination).joinpath(_Path(source).stem).unlink(missing_ok=True)
         for duplicate in self._data.get("file.duplicate", {}).values():
             if "source" in duplicate:
-                _shutil.copy2(self._path_root.joinpath(duplicate["source"]), self._path_root.joinpath(duplicate["destination"]))
+                for destination in duplicate["destinations"]:
+                    _shutil.copy2(self._path_root.joinpath(duplicate["source"]), self._path_root.joinpath(destination))
             else:
-                for source in duplicate["sources"]:
-                    destination_path = self._path_root.joinpath(duplicate["destination"]).joinpath(_Path(source).stem)
-                    destination_path.parent.mkdir(parents=True, exist_ok=True)
-                    _shutil.copy2(self._path_root.joinpath(source), destination_path)
+                for source_glob in duplicate["sources"]:
+                    for source in self._path_root.glob(source_glob):
+                        for destination in duplicate["destinations"]:
+                            destination_path = self._path_root.joinpath(destination).joinpath(_Path(source).stem)
+                            destination_path.parent.mkdir(parents=True, exist_ok=True)
+                            _shutil.copy2(self._path_root.joinpath(source), destination_path)
         return
 
     def _compare_dirs(self):

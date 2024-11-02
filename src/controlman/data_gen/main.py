@@ -118,8 +118,6 @@ class MainDataGenerator:
                         json_path="license.expression",
                         data=self._data(),
                     )
-        path_texts = []
-        path_headers = []
         for spdx_ids, spdx_typ in ((license_ids, "license"), (exception_ids, "exception")):
             func = _spdx.license if spdx_typ == "license" else _spdx.exception
             class_ = _spdx.SPDXLicense if spdx_typ == "license" else _spdx.SPDXLicenseException
@@ -177,11 +175,6 @@ class MainDataGenerator:
                     raise_duplicates=False,
                     raise_type_mismatch=True,
                 )
-                path_texts.append(path_text)
-                if header_xml:
-                    path_headers.append(path_header)
-        self._data["license.path.texts_plain"] = path_texts
-        self._data["license.path.headers_plain"] = path_headers
         return
 
     def _discussion_categories(self):

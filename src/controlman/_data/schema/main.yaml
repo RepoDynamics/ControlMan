@@ -34,10 +34,9 @@ description: |
       maintenance, testing, and refactoring tasks.
 
 type: object
-required: [ repo, branch, control ]
+required: [ name, repo, branch, control ]
 properties:
   name:
-    title: Name
     description: |
       Name of the project.
 
@@ -74,7 +73,6 @@ properties:
       - My-Project
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
-    title: Title
     description: |
       A single-line description or slogan of the project.
       
@@ -94,7 +92,6 @@ properties:
       - Python Tools for Quantum Mechanics Simulations and Research
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   abstract:
-    title: Abstract
     description: |
       A short description of the project.
       It can contain GitHub Flavored Markdown and HTML syntax,
@@ -129,7 +126,6 @@ properties:
         Cras eros risus, viverra ut lectus nec, lobortis rhoncus felis.
     $ref: https://jsonschemata.repodynamics.com/string/nonempty
   keywords:
-    title: Keywords
     description: |
       Keywords categorizing the project.
       
@@ -148,7 +144,6 @@ properties:
       - Scientific Computing
     $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   highlights:
-    title: Highlights
     description: |
       Key features of the project.
       
@@ -189,7 +184,6 @@ properties:
           description: Description of the project feature.
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
   license:
-    title: License
     description: |
       License of the project.
       You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
@@ -230,27 +224,45 @@ properties:
     required: [ expression ]
     properties:
       expression:
-        title: SPDX License Expression
-        description: |
-          [SPDX](https://spdx.org/licenses/) identifier of the license.
-          If one of the supported IDs are selected,
-          the rest of the keys are automatically filled in.
-          Otherwise, `name`, `text`, and `notice` must be provided.
-          Supported IDs are:
-          
-          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3 or later](https://choosealicense.com/licenses/agpl-3.0/)
-          - `AGPL-3.0`: [GNU Affero General Public License v3](https://choosealicense.com/licenses/agpl-3.0/)
-          - `GPL-3.0-or-later`: [GNU General Public License v3 or later](https://choosealicense.com/licenses/gpl-3.0/)
-          - `GPL-3.0`: [GNU General Public License v3](https://choosealicense.com/licenses/gpl-3.0/)
-          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://choosealicense.com/licenses/bsd-3-clause/)
-          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://choosealicense.com/licenses/bsd-2-clause/)
-          - `MIT`: [MIT License](https://choosealicense.com/licenses/mit/)
-          - `BSL-1.0`: [Boost Software License 1.0](https://choosealicense.com/licenses/bsl-1.0/)
-          - `Apache-2.0`: [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
-          - `MPL-2.0`: [Mozilla Public License 2.0](https://choosealicense.com/licenses/mpl-2.0/)
-          - `Unlicense`: [The Unlicense](https://choosealicense.com/licenses/unlicense/)
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        description: |
+          An [SPDX license expression](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/)
+          defining the license of the project.
+        description_examples: |
+          To select a single license from the [SPDX License List](https://spdx.org/licenses/),
+          simply provide its [SPDX license ID](https://spdx.dev/learn/handling-license-info/).
+          Some common SPDX license IDs are:
+          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3.0 or later](https://spdx.org/licenses/AGPL-3.0-or-later.html)
+          - `GPL-3.0-or-later`: [GNU General Public License v3.0 or later](https://spdx.org/licenses/GPL-3.0-or-later.html)
+          - `LGPL-3.0-or-later`: [GNU Lesser General Public License v3.0 or later](https://spdx.org/licenses/LGPL-3.0-or-later.html)
+          - `Apache-2.0`: [Apache License 2.0](https://spdx.org/licenses/Apache-2.0.html)
+          - `BSL-1.0`: [Boost Software License 1.0](https://spdx.org/licenses/BSL-1.0.html)
+          - `MIT`: [MIT License](https://spdx.org/licenses/MIT.html)
+          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://spdx.org/licenses/BSD-3-Clause.html)
+          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://spdx.org/licenses/BSD-2-Clause.html)
+          - `MPL-2.0`: [Mozilla Public License 2.0](https://spdx.org/licenses/MPL-2.0.html)
+          - `Unlicense`: [The Unlicense](https://spdx.org/licenses/Unlicense.html)
+          [Composite licenses](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/#composite-license-expressions)
+          can be defined using "OR", "AND", and "WITH" operators with parentheses:
+          - `OR`: Allows either of the licenses to be used.
+          - `AND`: Requires compliance with both licenses.
+          - `WITH`: Defines an [exception](https://spdx.org/licenses/exceptions-index.html) to the license.
+          - `(` and `)`: Grouping of expressions.
+          For example:
+            - `MIT OR GPL-3.0-or-later` allows either the `MIT` or `GPL-3.0-or-later` license to be used.
+            - `LGPL-2.1-only OR MIT OR BSD-3-Clause` allows either the `LGPL-2.1-only`, `MIT`, or `BSD-3-Clause` license to be used.
+            - `LGPL-2.1-only AND MIT` requires compliance with both the `LGPL-2.1-only` and `MIT` licenses.
+            - `GPL-2.0-or-later WITH Bison-exception-2.2` adds `Bison-exception-2.2` to the `GPL-2.0-or-later` license.
+            - `MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)` requires compliance with the `MIT` license and either the `LGPL-2.1-or-later` or `BSD-3-Clause` license.
+          Custom licenses and exceptions can also be defined
+          using the `LicenseRef-` and `AdditionRef-` prefixes, respectively.
+          For example, to add a custom exception to the `MIT` license,
+          you can use `MIT WITH AdditionRef-My-Exception-1.0`.
+          The custom exception `AdditionRef-My-Exception-1.0`
+          must then be defined under [`$.license.component`](#ccc-license-component).
       component:
+        description: |
+          Information about each component of the license expression.
         type: object
         patternProperties:
           '^(DocumentRef-[a-zA-Z0-9-.]+:)?(AdditionRef|LicenseRef)-[a-zA-Z0-9.-]+$':
@@ -272,23 +284,6 @@ properties:
           header:
             default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
-      header:
-        title: Header
-        description: |
-          Custom license notice.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-      path:
-        type: object
-        additionalProperties: false
-        properties:
-          texts_plain:
-            type: array
-            items:
-              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-          headers_plain:
-            type: array
-            items:
-              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
   copyright:
     title: Copyright
     description: |
@@ -3506,20 +3501,75 @@ properties:
     additionalProperties: false
     properties:
       duplicate:
+        description: |
+          Definition of duplicate locations for repository files.
+          Files defined here will be duplicated to the specified destinations
+          and dynamically kept in sync with the source.
+          
+          For each duplication, define a key-value pair where the key is an ID,
+          and the value is a mapping with keys `source` and `destinations`,
+          or `sources` and `destinations`.
+        description_examples: |
+          - Duplicate a file at `path/to/file.txt` to `path/to/backup/file.txt`:
+            ```yaml
+            backup_file:
+              source: path/to/file.txt
+              destinations:
+                - path/to/backup/file.txt
+            ```
+          - Duplicate a file at `path/to/file.txt` to both 
+            `path/to/backup1/backup_file.txt` and `path/to/backup2/backup_file.txt`:
+            ```yaml
+            backup_files:
+              source: path/to/file.txt
+              destinations:
+                - path/to/backup1/backup_file.txt
+                - path/to/backup2/backup_file.txt
+          - Duplicate multiple files at `path/to/file1.txt` and `path/to/file2.txt` to `path/to/backup_dir`:
+            ```yaml
+            backup_files:
+              sources:
+                - path/to/file1.txt
+                - path/to/file2.txt
+              destinations:
+                - path/to/backup_dir
+          - Duplicate all text files in `path/to/text_files` to `path/to/backup_dir`:
+            ```yaml
+            backup_files:
+              sources:
+                - path/to/text_files/*.txt
+              destinations:
+                - path/to/backup_dir
+            ```
         type: object
         additionalProperties:
+          title: Duplicate Files
           type: object
           additionalProperties: false
-          required: [ destination ]
+          required: [ destinations ]
           properties:
             source:
+              description: |
+                Path to a single file to be duplicated.
               $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             sources:
+              description: |
+                Paths or glob patterns for multiple files to be duplicated.
               type: array
+              uniqueItems: true
               items:
                 $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            destination:
-              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            destinations:
+              description: |
+                  Paths to the locations where the file(s) should be duplicated.
+                  When used with `source`, each path must be a full path to a file (including the filename).
+                  When used with `sources`, each path must be a directory path,
+                  where all source files are copied to, keeping their original filenames.
+              type: array
+              uniqueItems: true
+              minItems: 1
+              items:
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
           oneOf:
             - required: [ source ]
             - required: [ sources ]

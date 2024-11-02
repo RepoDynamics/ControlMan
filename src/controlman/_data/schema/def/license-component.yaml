@@ -1,11 +1,19 @@
 $id: https://controlman.repodynamics.com/schema/license-component
 $schema: https://json-schema.org/draft/2020-12/schema
-title: License Details
+title: License Component
 type: object
 required: [ path ]
 properties:
+  type:
+    description: |
+      Type of the component, i.e., either `license` or `exception`.
+    type: string
+    enum: [ license, exception ]
+  custom:
+    description: |
+      Whether the component is a user-defined license or exception.
+    type: boolean
   path:
-    title: File Path
     description: |
       Path to the repository's
       [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
