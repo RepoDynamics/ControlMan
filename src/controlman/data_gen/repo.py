@@ -189,16 +189,14 @@ class RepoDataGenerator:
             if not label_data:
                 continue
             entries = self._data.get(f"project.{release_key}", [])
-            labels = label_data["labels"] = []
+            labels = label_data["label"] = {}
             prefix = label_data['prefix']
             for entry in entries:
-                labels.append(
-                    {
-                        "suffix": entry,
-                        "name": f"{prefix}{entry}",
-                        "description": _jinja2.Template(label_data["description"]).render(
-                            {autogroup_name: entry}
-                        ),
-                    }
-                )
+                labels[entry] = {
+                    "suffix": entry,
+                    "name": f"{prefix}{entry}",
+                    "description": _jinja2.Template(label_data["description"]).render(
+                        {autogroup_name: entry}
+                    ),
+                }
         return
