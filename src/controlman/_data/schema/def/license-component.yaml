@@ -9,25 +9,33 @@ properties:
       Type of the component, i.e., either `license` or `exception`.
     type: string
     enum: [ license, exception ]
+    readOnly: true
   custom:
     description: |
       Whether the component is a user-defined license or exception.
     type: boolean
+    readOnly: true
   path:
     description: |
-      Path to the repository's
-      [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
-      file.
-      To be [recognized by GitHub](https://github.blog/changelog/2022-05-26-easily-discover-and-navigate-to-multiple-licenses-in-repositories/),
+      Path to the repository's [`LICENSE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository)
+      file. To be [recognized by GitHub](https://github.blog/changelog/2022-05-26-easily-discover-and-navigate-to-multiple-licenses-in-repositories/),
       the license file must be named `OFL`, `PATENTS`, `LICENSE`, or `COPYING`,
       placed in the root of the repository.
       The latter two names can have a hyphenated suffix, e.g., `LICENSE-MIT` or `COPYING-AGPL-3.0`.
       The file can also have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-      However, only one period is allowed in the filename.
-      Therefore, if the suffix contains a period, the file cannot have an extension.
+      However, only one period is allowed in the filename,
+      i.e., if the suffix contains a period, the file cannot have an extension.
+      Therefore, all input paths are automatically normalized
+      by replacing all but the last period with a hyphen.
     type: object
+    additionalProperties: false
+    default: { }
+    required: [ text_plain ]
     properties:
       text_plain:
+        title: Plain Text
+        description: |
+          Path to write the plain text license file.
         type: string
         pattern: ^(OFL|PATENTS|((LICENSE|COPYING)(-[a-zA-Z0-9-.]+)?))(?i:.(txt|md|rst))?$
         default: LICENSE-${{ .id }}$.md
@@ -43,15 +51,22 @@ properties:
           - LICENSE-MIT
           - LICENSE-MIT.md
       header_plain:
+        title: Plain Header
+        description: |
+          Path to write the plain text license header file, if any.
         type: string
         default: COPYRIGHT-${{ .id }}$.md
   id:
+    title: ID
+    description: |
+      Identifier of the license or exception.
     type: string
+    readOnly: true
   name:
     title: Name
     description: |
       Full name of the license.
-      This is automatically filled when a supported `id` is selected.
+      For custom licenses, this field is required.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
     examples:
       - GNU Affero General Public License v3.0 or later
