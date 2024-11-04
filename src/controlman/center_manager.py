@@ -93,7 +93,15 @@ class CenterManager:
                 "hook": self._hook_manager.inline_hooks,
                 "root_path": self._path_root,
                 "ccc": self._data_before,
-                "fill_entity": _functools.partial(_helper.fill_entity, github_api=self._github_api, cache_manager=self._cache_manager),
+                "fill_entity": _functools.partial(
+                    _helper.fill_entity,
+                    github_api=self._github_api,
+                    cache_manager=self._cache_manager,
+                    validator=_functools.partial(
+                        _data_validator.validate,
+                        schema="entity",
+                    ),
+                ),
             },
             code_context_partial={
                 "team_members_with_role_types": _helper.team_members_with_role_types,
