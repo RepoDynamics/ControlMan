@@ -1,28 +1,25 @@
 $id: https://controlman.repodynamics.com/schema/commit-auto
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Automatic Commit
-description: Automatic commit type
-type: object
-additionalProperties: false
-required: [ type, description ]
-properties:
-  type:
-    type: string
-    minLength: 1
-    pattern: ^[a-zA-Z0-9_-]+$
-  scope:
-    type: string
-    pattern: ^[a-zA-Z0-9_-]+$
-  description:
-    type: string
-    minLength: 1
-  body:
-    type: string
-    minLength: 1
-  footer:
-    type: string
-    minLength: 1
-  changelog_id:
-    type: string
-  changelog_section_id:
-    type: string
+description: |
+  Configurations for an automatic commit.
+unevaluatedProperties: false
+allOf:
+  - $ref: https://controlman.repodynamics.com/schema/commit
+  - required: [ description ]
+    properties:
+      description:
+        description: |
+          A [Conventional Commits](https://www.conventionalcommits.org/)-like
+          description for the commit message.
+        default: '{{ '
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      body:
+        description: |
+          Commit message body.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      footer:
+        description: |
+          Commit message footer.
+        type: object
+
