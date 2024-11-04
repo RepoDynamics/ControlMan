@@ -517,7 +517,7 @@ class ConfigFileGenerator:
         filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
         cite_old = _ps.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
         out = {
-            k: v for k, v in cite.items() if k in [
+            k: v for k, v in cite.items() if v and k in [
                 "message", "title", "license", "url", "type", "keywords", "abstract"
             ]
         }
