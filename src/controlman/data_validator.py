@@ -63,10 +63,67 @@ class DataValidator:
     def validate(self):
         self.dir_paths()
         self.branch_names()
+        self.citation()
         # self.changelogs()
         # self.commits()
         # self.issue_forms()
         # self.labels()
+        return
+
+    def citation(self):
+        """Verify that citation data are correct."""
+
+        def verify_reference(ref: dict, ref_key: str):
+            entity_list_keys = [
+                "authors", "contacts", "editors", "editors-series", "recipients", "senders", "translators"
+            ]
+            entity_keys = ["conference", "database-provider", "institution", "location", "publisher"]
+            for entity_key in entity_keys:
+                entity = ref.get(entity_key)
+                if isinstance(entity, str) and entity not in self._data["team"]:
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source=self._source,
+                        problem=f"Invalid team member ID: {entity}",
+                        json_path=f"citation.{ref_key}.{entity_key}",
+                        data=self._data,
+                    )
+            for entity_list_key in entity_list_keys:
+                for entity_idx, entity in enumerate(ref.get(entity_list_key, [])):
+                    if isinstance(entity, str) and entity not in self._data["team"]:
+                        raise _exception.load.ControlManSchemaValidationError(
+                            source=self._source,
+                            problem=f"Invalid team member ID: {entity}",
+                            json_path=f"citation.{ref_key}.{entity_list_key}[{entity_idx}]",
+                            data=self._data,
+                        )
+            return
+
+        if not self._data["citation"]:
+            return
+        # Verify that authors list is not empty
+        if not self._data["citation.authors"]:
+            raise _exception.load.ControlManSchemaValidationError(
+                source=self._source,
+                problem="Citation authors are missing.",
+                json_path="citation.authors",
+                data=self._data,
+            )
+        # Verify that member IDs are valid
+        for key in ("authors", "contacts", "contributors"):
+            for member_id in self._data.get(f"citation.{key}", []):
+                if member_id not in self._data["team"]:
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source=self._source,
+                        problem=f"Invalid team member ID: {member_id}",
+                        json_path=f"citation.{key}",
+                        data=self._data,
+                    )
+
+        preferred_citation = self._data["citation.preferred_citation"]
+        if preferred_citation:
+            verify_reference(preferred_citation, "preferred_citation")
+        for ref_idx, ref in enumerate(self._data.get("citation.references", [])):
+            verify_reference(ref, f"references[{ref_idx}]")
         return
 
     def dir_paths(self):
