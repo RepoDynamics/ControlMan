@@ -132,21 +132,22 @@ def fill_entity(
     entity: dict,
     github_api: _pl.api.GitHub,
     cache_manager: CacheManager | None = None,
+    validator: Callable[[dict], None] | None = None,
 ) -> tuple[dict, dict | None]:
     """Fill all missing information in an `entity` object."""
 
-    def _get_github_user(username: str) -> dict:
+    def _get_github_user(username: str | None = None, user_id: str | None = None) -> dict:
 
         def add_social(name, user, url):
             socials[name] = {"id": user, "url": url}
             return
 
         user_info = {}
-        if cache_manager:
-            user_info = cache_manager.get("user", username)
+        if user_id and cache_manager:
+            user_info = cache_manager.get("user", user_id)
         if user_info:
             return user_info
-        user = github_api.user(username=username)
+        user = github_api.user_from_id(user_id) if user_id else github_api.user(username)
         user_info = user.info
         if user_info["blog"] and "://" not in user_info["blog"]:
             user_info["blog"] = f"https://{user_info['blog']}"
@@ -218,10 +219,11 @@ def fill_entity(
             return {"legal": github_user_info["name"]}
         return {"first": name_parts[0], "last": name_parts[1]}
 
+    gh_id = entity.get("github", {}).get("rest_id")
     gh_username = entity.get("github", {}).get("id")
     github_user_info = None
-    if gh_username:
-        github_user_info = _get_github_user(gh_username)
+    if gh_id or gh_username:
+        github_user_info = _get_github_user(username=gh_username, user_id=gh_id)
         for key_self, key_gh in (
             ("rest_id", "id"),
             ("node_id", "node_id"),
@@ -247,6 +249,8 @@ def fill_entity(
                 entity[social_name] = social_data
     if "orcid" in entity and entity["orcid"].get("get_pubs"):
         entity["orcid"]["pubs"] = get_orcid_publications(orcid_id=entity["orcid"]["user"])
+    if validator:
+        validator(entity)
     return entity, github_user_info
 
 
