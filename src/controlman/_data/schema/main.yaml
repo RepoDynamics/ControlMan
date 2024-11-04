@@ -263,9 +263,15 @@ properties:
       component:
         description: |
           Information about each component of the license expression.
+          These are automatically filled for all SPDX licenses and exceptions.
+          For custom licenses and exceptions, you must provide all required data manually.
+          Each component is added as a key-value pair, where the key is the component's ID,
+          as it appears in the license expression.
         type: object
         patternProperties:
           '^(DocumentRef-[a-zA-Z0-9-.]+:)?(AdditionRef|LicenseRef)-[a-zA-Z0-9.-]+$':
+            title: Custom Component
+            description: Definition of a custom component of the license expression.
             allOf:
               - $ref: https://controlman.repodynamics.com/schema/license-component
               - required: [ name ]
@@ -273,6 +279,9 @@ properties:
                   - required: [ text_xml ]
                   - required: [ text_plain ]
         additionalProperties:
+          title: SPDX Component
+          description: |
+              Information about an SPDX component of the license expression.
           $ref: https://controlman.repodynamics.com/schema/license-component
       config:
         type: object
@@ -319,7 +328,7 @@ properties:
     description: |
       [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
       or 639-3 code of the primary natural language of the work.
-    type: string
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
     default: eng
     examples:
       - eng
@@ -341,14 +350,14 @@ properties:
       properties:
         title:
           title: Name of the role.
-          $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
           examples:
             - Conceptualization
             - Software Development
             - Management
         description:
           title: A short description of the role.
-          type: string
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples:
             - Formulation and evolution of overarching project goals and aims.
             - Implementation of the software.
@@ -519,7 +528,12 @@ properties:
           Title of the citation.
           This can be your project's [name](#ccc-name), [title](#ccc-title),
           a combination of both, or any other custom title.
-        default: '${{ name }}$: ${{ title }}$'
+        default: >-
+          #{{
+            name = get("name")
+            title = get("title")
+            return f"{name}: {title}" if title else name
+          }}#
         examples:
           - '${{ name }}$: ${{ title }}$'
           - ${{ name }}$
@@ -603,8 +617,9 @@ properties:
         title: Abstract
         description: |
           A brief description of the project.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: ${{ abstract }}$
+        type: string
+        default: >-
+          #{{ get("abstract", "") }}#
         examples:
           - |
             A custom description of the project
@@ -613,7 +628,8 @@ properties:
         title: Keywords
         description: Keywords categorizing the project.
         $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-        default: ${{ keywords }}$
+        default: >-
+          #{{ get("keywords", []) }}#
         examples:
           - [ A Custom Keyword, Another Custom Keyword ]
       subjects:
@@ -657,13 +673,12 @@ properties:
           SPDX [license ID](#ccc-license-id) of the project.
         default: |
           #{{
-            import licenseman
-          
-            spdx_license_ids, _ = licenseman.spdx.expression.license_ids(get("license.expression"))
-            return spdx_license_ids
+            return [
+              component["id"] for component in get("license.component", {}).values()
+              if component["type"] == "license" and not component["custom"]
+            ]
           }}#
         type: array
-        minItems: 1
         uniqueItems: true
         items:
           $ref: https://jsonschemata.repodynamics.com/id/spdx-license
@@ -679,19 +694,18 @@ properties:
         default: { }
         additionalProperties: false
         properties:
-          build:
-            title: Build
-            description: |
-              URL of the project in a build artifact/binary repository.
-              This is equivalent to `repository-artifact` in CFF.
-            default: ${{ pkg.pypi.url.home }}$
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           source:
             title: Source
             description: |
               URL of the project in a source code repository.
               This is equivalent to `repository-code` in CFF.
             default: ${{ repo.url.home }}$
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          build:
+            title: Build
+            description: |
+              URL of the project in a build artifact/binary repository.
+              This is equivalent to `repository-artifact` in CFF.
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           other:
             title: Other
@@ -702,7 +716,8 @@ properties:
       url:
         title: URL
         description: URL of the project's landing (home) page.
-        default: ${{ web.url.home }}$
+        default: >-
+          #{{ return get("web.url.home") or get("repo.url.home") }}#
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       type:
         title: Type
@@ -928,7 +943,6 @@ properties:
           Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
           such as hexadecimal, RGB, HSL, or named colors.
         type: object
-        default: { }
         required: [ primary, secondary ]
         properties:
           primary:
@@ -1005,12 +1019,6 @@ properties:
                   ASCII art version of the full logo,
                   to be used in command-line interfaces and text-based environments.
                 $ref: https://controlman.repodynamics.com/schema/media-file
-      badge:
-        title: Badge
-        description: |
-          General settings for project badges.
-          These will be used as default values for all badges in the project.
-        $ref: https://docsman.repodynamics.com/schema/element/badge
       footer:
         title: Footer
         description: |
@@ -1387,7 +1395,7 @@ properties:
                   where `major` and `minor` are integers.
                   This is automatically determined from the [`dependency`](#ccc-web.sphinx.dependency) definition.
                 type: string
-                default: '7.3'
+                default: '7.4'
               today_fmt:
                 title: Format of the current date.
                 type: string
@@ -1762,9 +1770,85 @@ properties:
     description: Commit types, sub-types and descriptions
     type: object
     additionalProperties: false
-    required: [ auto ]
+    required: [ config, auto ]
     default: { }
     properties:
+      config:
+        type: object
+        additionalProperties: false
+        required:
+          - scope_start
+          - scope_separator
+          - scope_end
+          - description_separator
+          - body_separator
+          - footer_separator
+          - regex
+        default: { }
+        properties:
+          scope_start:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: "("
+          scope_separator:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: ", "
+          scope_end:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: ")"
+          description_separator:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: ": "
+          body_separator:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: "\n\n"
+          footer_separator:
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            default: "\n\n--------------------------------------------------\n"
+          regex:
+            type: object
+            additionalProperties: false
+            required: [ separator, validator ]
+            default: { }
+            properties:
+              separator:
+                type: object
+                additionalProperties: false
+                required: [ scope_start, scope_items, scope_end, description, body, footer ]
+                default: { }
+                properties:
+                  scope_start:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\s*\(\s*'
+                  scope_items:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\s*,\s*'
+                  scope_end:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\s*\)\s*'
+                  description:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\s*:\s+'
+                  body:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\n'
+                  footer:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '\n-{3,}\n'
+              validator:
+                type: object
+                additionalProperties: false
+                required: [ type, scope, description ]
+                default: { }
+                properties:
+                  type:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '^[^:\s(),]*$'
+                  scope:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '^[^:\s(),]+$'
+                  description:
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                    default: '^[^\n]+$'
       auto:
         title: Automatic Commits
         description: Automatic commit types
@@ -1820,18 +1904,74 @@ properties:
               description: >-
                 Apply automatic formatting and refactoring.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
-      primary:
-        title: Primary Commits
+      release:
         description: Primary action commit types
         type: object
         additionalProperties:
-          title: Custom Primary Commit
+          title: Release Commit
           description: |
-            Configurations for a custom primary commit type.
-            For each custom commit type, a key-value pair must be added,
-            where the key is the ID of the commit type, to reference in other places.
-          $ref: https://controlman.repodynamics.com/schema/commit-primary
-      secondary:
+            Configurations for a release commit.
+            For each commit a key-value pair must be added
+            where the key is the ID of the commit type,
+            to reference in other configurations.
+          allOf:
+            - $ref: https://controlman.repodynamics.com/schema/commit-auto
+            - type: object
+              properties:
+                action:
+                  description: |
+                    The action to be taken when the commit is pushed.
+                  type: string
+                  enum:
+                    - post
+                    - patch
+                    - minor
+                    - major
+                subtypes:
+                  title: Subtypes
+                  description: Configurations for commit sub-types of the commit.
+                  type: object
+                  properties:
+                    any:
+                      title: Any
+                      description: |
+                        A list of `secondary` commit-type IDs,
+                        of which at least one must be present in the head branch.
+                      type: array
+                      items:
+                        type: string
+                      minItems: 1
+                      uniqueItems: true
+                    all:
+                      type: array
+                      items:
+                        type: string
+                      minItems: 1
+                      uniqueItems: true
+                    include:
+                      type: array
+                      items:
+                        type: string
+                      minItems: 1
+                      uniqueItems: true
+                    exclude:
+                      title: Exclude
+                      description: |
+                        A list of `secondary` commit-type IDs
+                        that must not be present in the head branch.
+                      type: array
+                      items:
+                        type: string
+                      minItems: 1
+                      uniqueItems: true
+                  allOf:
+                    - anyOf:
+                        - required: [ any ]
+                        - required: [ all ]
+                    - not:
+                        anyOf:
+                          - required: [ include, exclude ]
+      dev:
         title: Secondary Commits
         description: |
           Secondary action commit types.
@@ -1839,85 +1979,35 @@ properties:
           where the key is both the ID of the commit type (to reference in other places)
           and its commit message type.
         type: object
-        default: { }
         additionalProperties:
           title: Custom Secondary Commit
           description: Configurations for a secondary commit type.
-          type: object
-          required: [ type, description ]
-          properties:
-            type:
-              type: string
-              minLength: 1
-              pattern: ^[a-zA-Z0-9_-]+$
-            scope:
-              type: string
-              pattern: ^[a-zA-Z0-9_-]+$
-            description:
-              title: Description
-              description: Description of the commit type.
-              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          $ref: https://controlman.repodynamics.com/schema/commit
   label:
     title: GitHub labels settings for the project
     description: |
       [GitHub docs](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels)
     type: object
     default: { }
-    additionalProperties: false
-    required: [ type, status, branch, version ]
+    required: [ status, branch, version ]
     properties:
-      type:
-        title: Primary Labels
-        description: Labels for primary commit types.
-        type: object
-        default: { }
-        additionalProperties: false
-        required: [ prefix, label ]
-        properties:
-          prefix:
-            title: Prefix
-            description: Prefix for label names.
-            default: 'type: '
-            $ref: https://controlman.repodynamics.com/schema/label-prefix
-          color:
-            title: Color
-            description: Color of the labels.
-            default: '#A00000'
-            $ref: https://jsonschemata.repodynamics.com/color/hex-string
-          label:
-            title: Labels
-            description: Primary labels.
-            type: object
-            default: { }
-            additionalProperties:
-              title: Custom Primary Labels
-              description: Custom primary labels.
-              $ref: https://controlman.repodynamics.com/schema/label-group-element
-      scope:
-        title: Secondary Type Labels
-        description: Issue sub types
-        $ref: https://controlman.repodynamics.com/schema/label-group
       status:
-        title: Status
-        description: Issue/pull status
+        description: Issue/pull status.
         type: object
         default: { }
         additionalProperties: false
         required: [ prefix, color, label ]
         properties:
           prefix:
-            title: Prefix
-            description: Prefix for the label name
             default: 'status: '
             $ref: https://controlman.repodynamics.com/schema/label-prefix
           color:
-            title: Color
-            description: Color of the label.
+            description: Color of all status labels.
             default: '#0366d6'
             $ref: https://jsonschemata.repodynamics.com/color/hex-string
           label:
             title: Labels
-            description: Labels for the issue sub-type
+            description: Configurations for each status label.
             type: object
             default : { }
             additionalProperties: false
@@ -1937,63 +2027,54 @@ properties:
               - deploy_final
             properties:
               triage:
-                title: Triage
                 description: The issue is being triaged.
                 default:
                   suffix: Triage
                   description: The issue is being triaged.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               rejected:
-                title: Rejected
                 description: The issue/PR has been rejected.
                 default:
                   suffix: Rejected
                   description: The issue/PR has been rejected.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               duplicate:
-                title: Duplicate
                 description: The issue/PR is a duplicate.
                 default:
                   suffix: Duplicate
                   description: The issue/PR is a duplicate.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               invalid:
-                title: Invalid
                 description: The issue/PR is invalid.
                 default:
                   suffix: Invalid
                   description: The issue/PR is invalid.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               planning:
-                title: Planning
                 description: The issue is in the planning phase.
                 default:
                   suffix: Planning
                   description: The issue is in the planning phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               requirement_analysis:
-                title: Requirement Analysis
                 description: The issue is in the requirement analysis phase.
                 default:
                   suffix: Requirement Analysis
                   description: The issue is in the requirement analysis phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               design:
-                title: Design
                 description: The issue is in the design phase.
                 default:
                   suffix: Design
                   description: The issue is in the design phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               implementation:
-                title: Implementation
                 description: The issue is in the implementation phase.
                 default:
                   suffix: Implementation
                   description: The issue is in the implementation phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               testing:
-                title: Testing
                 description: The issue is in the testing phase.
                 default:
                   suffix: Testing
@@ -2027,57 +2108,41 @@ properties:
                   suffix: Final Release
                   description: The issue/PR is published as a final release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
-      branch:
-        title: Branch
-        description: Branch labels. This is an automatic label group.
-        default:
-          prefix: 'branch: '
-          description: Related to the {{ branch }} branch of the repository.
-          color: '#0366d6'
-        $ref: https://controlman.repodynamics.com/schema/label-auto
       version:
-        title: Version
         description: Version labels. This is an automatic label group.
         default:
           prefix: 'version: '
-          description: Related to version {{ version }} of the project.
           color: '#0366d6'
-        $ref: https://controlman.repodynamics.com/schema/label-auto
-      custom:
-        title: Custom Labels
-        description: Custom labels.
+          description: Related to version {{ version }} of the project.
+        $ref: https://controlman.repodynamics.com/schema/label-group
+      branch:
+        description: Branch labels. This is an automatic label group.
+        default:
+          prefix: 'branch: '
+          color: '#0366d6'
+          description: Related to branch {{ branch }} of the repository.
+        $ref: https://controlman.repodynamics.com/schema/label-group
+      single:
+        description: Custom single labels.
         type: object
-        additionalProperties: false
-        properties:
-          single:
-            title: Single
-            description: Custom single labels.
-            type: object
-            additionalProperties:
-              type: object
-              additionalProperties: false
-              required: [ name, color, description ]
-              properties:
-                name:
-                  title: Name
-                  description: Name of the label
-                  type: string
-                color:
-                  title: Color
-                  description: Color of the label
-                  $ref: https://jsonschemata.repodynamics.com/color/hex-string
-                description:
-                  title: Description
-                  description: Description of the label.
-                  $ref: https://jsonschemata.repodynamics.com/config/github/label/description
-          group:
-            title: Label Groups
-            description: Custom label groups.
-            type: object
-            additionalProperties:
-              title: Label Group
-              description: A group of labels.
-              $ref: https://controlman.repodynamics.com/schema/label-group
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [ name ]
+          properties:
+            name:
+              description: Name of the label.
+              type: string
+            color:
+              description: Color of the label.
+              $ref: https://jsonschemata.repodynamics.com/color/hex-string
+            description:
+              description: Description of the label.
+              $ref: https://jsonschemata.repodynamics.com/config/github/label/description
+    additionalProperties:
+      title: Custom Group
+      description: A custom group of labels.
+      $ref: https://controlman.repodynamics.com/schema/label-group
   issue:
     title: Issues
     description: |
@@ -2146,14 +2211,13 @@ properties:
               type: string
               format: uri
       forms:
-        title: Issue form definitions and configurations.
+        description: Issue form definitions and configurations.
         type: array
-        default: [ ]
         uniqueItems: true
         items:
           type: object
           additionalProperties: false
-          required: [ id, action, type, name, description, body ]
+          required: [ id, commit, id_labels, name, description, body ]
           properties:
             id:
               title: Unique identifier of the issue form.
@@ -2164,38 +2228,17 @@ properties:
                 and can only contain alphanumeric characters, underscores, and hyphens.
               type: string
               pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
-            action:
-              title: Action
+            commit:
               description: |
-                Action to be performed when the corresponding pull request is merged.
-              oneOf:
-                - type: "null"
-                - type: string
-                  enum:
-                    - post
-                    - patch
-                    - minor
-                    - major
-              default: null
-            type:
-              title: Primary type of the issue.
-              description: |
-                Each form must be assigned a primary type,
-                which must match the key of one of the [primary type labels](../label/index.md#primary-types),
-                and consequently, the key of either one of the [primary action commit types](../commit/index.md#primary-action-types),
-                or one of the [primary custom commit types](../commit/index.md#primary-custom-types).
-
-                This is used to correlate each issue in the repository with a primary commit type:
-                {{ ccc.name }}$ automatically adds the corresponding primary type label
-                to each issue that is created using the form.
-                Subsequently, when a development branch is merged into a release branch,
+                ID of the [release commit](#ccc-commit-release) associated with the form.
+                
+                Each form must be associated with a release commit.
+                This is used to correlate each issue in the repository with a commit type.
+                When a pull request from a development branch is merged into a release branch,
                 {{ ccc.name }}$ first determines the corresponding issue of the branch from the branch name,
                 and then ascertains the corresponding primary commit type from the issue's primary type label,
                 in order to decide which actions to perform on the release branch.
-              type: string
-            scope:
-              title: Scope of the issue.
-              description: |
+                
                 If two or more forms are assigned the same [primary type](#primary-type),
                 they must each define a unique subtype.
                 The subtype must match the key of one of the [subtype labels](../label/index.md#subtypes).
@@ -2205,7 +2248,32 @@ properties:
                 to unambiguously identify the form that was used to create each issue in the repository.
                 It also helps maintainers and users
                 differentiate between issues with the same primary type.
-              type: string
+              description_default: |
+                If not set, the form ID is used as the commit ID.
+              default: ${{ .id }}$
+              $ref: https://jsonschemata.repodynamics.com/string/oneline
+            id_labels:
+              title: Identifier labels
+              description: |
+                A set of labels that are unique to the form.
+                These are added to each ticket created using this form,
+                and are used to correlate tickets with their corresponding forms.
+              type: array
+              uniqueItems: true
+              minItems: 1
+              items:
+                $ref: https://controlman.repodynamics.com/schema/label-id
+            labels:
+              description: |
+                Optionally labels to be added to issue tickets,
+                in addition to the [identifier labels](#ccc-issue-forms-id-labels).
+                
+                Note that [status](#ccc-label-status) labels are automatically added to each issue
+                and do not need to be specified here.
+              type: array
+              uniqueItems: true
+              items:
+                $ref: https://controlman.repodynamics.com/schema/label-id
             pre_process:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
@@ -2365,24 +2433,6 @@ properties:
               examples:
                 - Report a problem encountered while using the library's API.
               type: string
-            labels:
-              title: Labels to be added to the issue.
-              description: |
-                Optionally, a list of additional labels can be assigned to each form,
-                which are then automatically added to each issue that is created using the form.
-                Each assigned label must exactly match the full name of an existing label in the repository,
-                as defined in the [label configurations](../label/index.md).
-
-                Note that the [primary type](../label/index.md#primary-types), [subtype](../label/index.md#subtypes),
-                and [status](../label/index.md#statuses) labels are automatically added to each issue,
-                and do not need to be specified here.
-              examples:
-                - [ first-custom-label, second-custom-label ]
-              type: array
-              uniqueItems: true
-              minItems: 1
-              items:
-                type: string
             projects:
               title: Projects to add the issue to.
               description: |
@@ -3061,9 +3111,9 @@ properties:
           This is displayed on the GitHub repository's homepage,
           and is added to repository metadata to improve 
           project findability and visibility.
-        type: string
+        type: [ string, 'null' ]
         default: |
-          #{{ return get("title", "") }}#
+          #{{ return get("title") }}#
         description_default: Project [title](#ccc-title).
         examples:
           - ${{ title }}$
@@ -3077,33 +3127,38 @@ properties:
           and can include project's intended purpose, subject area,
           affinity groups, and other important qualities.
           Note that GitHub only accepts up to 20 topics.
-        type: array
-        uniqueItems: true
-        maxItems: 20
-        default: |
-          #{{
-            import pylinks
-            
-            return [
-              pylinks.string.to_slug(keyword)
-              for keyword in get("keywords", []) if len(keyword) <= 50
-            ][:20]
-          }}#
-        items:
-          title: A project keyword.
-          description: |
-            It must start with an alphanumeric character,
-            and can contain 50 or less ASCII alphanumeric characters and hyphens.
-          type: string
-          maxLength: 50
-          pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+        oneOf:
+          - type: null
+          - type: array
+            uniqueItems: true
+            maxItems: 20
+            default: |
+              #{{
+                import pylinks
+                
+                return [
+                  pylinks.string.to_slug(keyword)
+                  for keyword in get("keywords", []) if len(keyword) <= 50
+                ][:20]
+              }}#
+            items:
+              title: A project keyword.
+              description: |
+                It must start with an alphanumeric character,
+                and can contain 50 or less ASCII alphanumeric characters and hyphens.
+              type: string
+              maxLength: 50
+              pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
       homepage:
         title: URL of the project's homepage.
         description: |
           This is displayed on the GitHub repository's homepage,
           helping users to easily find your project's website.
-        $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-        default: ${{ web.url.home }}$
+        anyOf:
+          - $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+          - type: 'null'
+        default: >-
+          #{{ get("web.url.home") }}#
       secret_scanning:
         title: Enable secret scanning.
         type: boolean
@@ -3163,7 +3218,7 @@ properties:
         description: |
           https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches
         type: boolean
-        default: true
+        default: false
       allow_update_branch:
         title: Allow head branch updates from base branch.
         type: boolean
@@ -3171,19 +3226,15 @@ properties:
       squash_merge_commit_title:
         title: Default title of squash merge commit messages.
         enum: [ PR_TITLE, COMMIT_OR_PR_TITLE ]
-        default: PR_TITLE
       squash_merge_commit_message:
         title: Default body of squash merge commit messages.
         enum: [ PR_BODY, COMMIT_MESSAGES, BLANK ]
-        default: PR_BODY
       merge_commit_title:
         title: Default title of merge commit messages.
         enum: [ PR_TITLE, MERGE_MESSAGE ]
-        default: PR_TITLE
       merge_commit_message:
         title: Default body of merge commit messages.
         enum: [ PR_TITLE, PR_BODY, BLANK ]
-        default: PR_BODY
       archived:
         title: Archive the repository.
         type: boolean
@@ -3217,6 +3268,115 @@ properties:
           additionalProperties:
             title: List of attributes to set for the matched files.
             $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+        default:
+          # ------------------------------------------ Auto Detect -------------------------------------------
+          # Auto-detect text files and perform LF normalization. This will handle all files NOT listed below.
+          - "*": [ text=auto ]
+          # ------------------------------------------ Explicit ----------------------------------------------
+          - ".gitattributes": [ text, export-ignore ]
+          - ".gitignore": [ text, export-ignore ]
+          - "AUTHORS": [ text ]
+          - "CHANGELOG": [ text ]
+          - "CHANGES": [ text ]
+          - "CODEOWNERS": [ text ]
+          - "CONTRIBUTING": [ text ]
+          - "COPYING": [ text ]
+          - "copyright": [ text ]
+          - "*COPYRIGHT*": [ text ]
+          - "INSTALL": [ text ]
+          - "license": [ text ]
+          - "LICENSE*": [ text ]
+          - "Makefile": [ text ]
+          - "NEWS": [ text ]
+          - "readme": [ text ]
+          - "*README*": [ text ]
+          - "TODO": [ text ]
+          - "MANIFEST.in": [ text ]
+          - "*.typed": [ text ]
+          # ------------------------------------------ Documents ---------------------------------------------
+          - "*.bibtex": [ text, diff=bibtex ]
+          - "*.doc": [ diff=astextplain ]
+          - "*.DOC": [ diff=astextplain ]
+          - "*.docx": [ diff=astextplain ]
+          - "*.DOCX": [ diff=astextplain ]
+          - "*.dot": [ diff=astextplain ]
+          - "*.DOT": [ diff=astextplain ]
+          - "*.pdf": [ diff=astextplain ]
+          - "*.PDF": [ diff=astextplain ]
+          - "*.rtf": [ diff=astextplain ]
+          - "*.RTF": [ diff=astextplain ]
+          - "*.md": [ text, diff=markdown ]
+          - "*.mdx": [ text, diff=markdown ]
+          - "*.rst": [ text ]
+          - "*.tex": [ text, diff=tex ]
+          - "*.adoc": [ text ]
+          - "*.textile": [ text ]
+          - "*.mustache": [ text ]
+          - "*.csv": [ text, eol=crlf ]
+          - "*.tab": [ text ]
+          - "*.tsv": [ text ]
+          - "*.txt": [ text ]
+          - "*.sql": [ text ]
+          - "*.epub": [ diff=astextplain ]
+          - "*.css": [ text, diff=css ]
+          - "*.htm": [ text, diff=html ]
+          - "*.html": [ text, diff=html ]
+          # ------------------------------------------ Graphics ----------------------------------------------
+          - "*.svg": [ text ]
+          - "*.png": [ binary ]
+          - "*.jpg": [ binary ]
+          - "*.jpeg": [ binary ]
+          - "*.gif": [ binary ]
+          - "*.tif": [ binary ]
+          - "*.tiff": [ binary ]
+          - "*.ico": [ binary ]
+          - "*.eps": [ binary ]
+          # ------------------------------------------ Scripts -----------------------------------------------
+          - "*.bash": [ text, eol=lf ]
+          - "*.fish": [ text, eol=lf ]
+          - "*.sh": [ text, eol=lf ]
+          - "*.zsh": [ text, eol=lf ]
+          # Below are explicitly windows files and should use crlf
+          - "*.bat": [ text, eol=crlf ]
+          - "*.cmd": [ text, eol=crlf ]
+          - "*.ps1": [ text, eol=crlf ]
+          # ------------------------------------------ Serialisation -----------------------------------------
+          - "*.json": [ text ]
+          - "*.toml": [ text ]
+          - "*.xml": [ text ]
+          - "*.yaml": [ text ]
+          - "*.yml": [ text ]
+          # ------------------------------------------ Archives ----------------------------------------------
+          - "*.7z": [ binary ]
+          - "*.gz": [ binary ]
+          - "*.jar": [ binary ]
+          - "*.rar": [ binary ]
+          - "*.tar": [ binary ]
+          - "*.tgz": [ binary ]
+          - "*.zip": [ binary ]
+          # ------------------------------------------ Preserve EOL ------------------------------------------
+          # Text files where line endings should be preserved.
+          - "*.patch": [ -text ]
+          # ------------------------------------------ Python Source Files -----------------------------------
+          - "*.pxd": [ text, diff=python ]
+          - "*.py": [ text, diff=python ]
+          - "*.py3": [ text, diff=python ]
+          - "*.pyw": [ text, diff=python ]
+          - "*.pyx": [ text, diff=python ]
+          - "*.pyz": [ text, diff=python ]
+          - "*.pyi": [ text, diff=python ]
+          # ------------------------------------------ Python Binary Files -----------------------------------
+          # Note: .db, .p, and .pkl files are associated with the python modules
+          # ``pickle``, ``dbm.*``, ``shelve``, ``marshal``, ``anydbm``, and ``bsddb``, among others.
+          - "*.db": [ binary ]
+          - "*.p": [ binary ]
+          - "*.pkl": [ binary ]
+          - "*.pickle": [ binary ]
+          - "*.pyc": [ binary, export-ignore ]
+          - "*.pyo": [ binary, export-ignore ]
+          - "*.pyd": [ binary ]
+          # ------------------------------------------ Jupyter notebook --------------------------------------
+          - "*.ipynb": [ text, eol=lf ]
       gitignore:
         title: The contents of the [`.gitignore`](https://git-scm.com/docs/gitignore) file.
         description: |
@@ -3413,7 +3573,6 @@ properties:
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security"
                 $ref: https://jsonschemata.repodynamics.com/url/https
-
               advisories:
                 title: URL of the repository's security advisories.
                 default: ${{ repo.url.security.home }}$/advisories
@@ -4043,5 +4202,8 @@ properties:
             additionalProperties:
               type: string
   version:
+    description: |
+      Latest version number of the current branch.
+    readOnly: true
     type: string
 
