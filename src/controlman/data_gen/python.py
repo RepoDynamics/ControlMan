@@ -79,7 +79,6 @@ class PythonDataGenerator:
         micro_int = []
         minor_str = []
         minor_int = []
-        minor_str_pyxy = []
         for compat_ver_micro_str in spec.filter(current_python_versions):
             micro_str.append(compat_ver_micro_str)
             compat_ver_micro_int = tuple(map(int, compat_ver_micro_str.split(".")))
@@ -89,7 +88,6 @@ class PythonDataGenerator:
                 continue
             minor_str.append(compat_ver_minor_str)
             minor_int.append(compat_ver_micro_int[:2])
-            minor_str_pyxy.append(f"py{''.join(map(str, compat_ver_micro_int[:2]))}")
 
         if len(micro_str) == 0:
             raise _exception.load.ControlManSchemaValidationError(
@@ -103,7 +101,6 @@ class PythonDataGenerator:
         output = {
             "micros": sorted(micro_str, key=lambda x: tuple(map(int, x.split(".")))),
             "minors": sorted(minor_str, key=lambda x: tuple(map(int, x.split(".")))),
-            "pyxy": sorted(minor_str_pyxy),
         }
         self._data["pkg.python.version"].update(output)
         if self._data["test"]:
