@@ -48,6 +48,9 @@ properties:
         items:
           type: object
           additionalProperties: false
+          oneOf:
+            - required: [ role, mode ]
+            - required: [ id, type, mode ]
           properties:
             role:
               title: Role
@@ -72,14 +75,11 @@ properties:
               type: string
               enum: [ always, pull_request ]
               default: always
-          oneOf:
-            - required: [ role, mode ]
-            - required: [ id, type, mode ]
       protect_creation:
         description: |
           Prevent users from creating matching refs.
         type: boolean
-        default: true
+        default: false
       protect_modification:
         description: |
           Prevent users from updating matching refs.
@@ -97,19 +97,19 @@ properties:
           Prevent users from deleting matching refs.
           Omitting this key is equivalent to setting it to `false`.
         type: boolean
-        default: true
+        default: false
       protect_force_push:
         description: Prevent users from force-pushing to matching refs.
         type: boolean
-        default: true
+        default: false
       require_linear_history:
         description: Prevent merge commits from being pushed to matching refs.
         type: boolean
-        default: true
+        default: false
       require_signatures:
         description: Require commits on matching refs to have verified signatures.
         type: boolean
-        default: true
+        default: false
       require_pull_request:
         description: |
           Require all commits be made to a non-target branch
@@ -117,43 +117,43 @@ properties:
           Omitting this key will disable the protection rule.
         type: object
         additionalProperties: false
-        properties:
-          dismiss_stale_reviews_on_push:
-            description: |
-              Automatically dismiss previous approving pull-request reviews
-              when new reviewable commits are pushed.
-            type: boolean
-            default: true
-          require_code_owner_review:
-            description: |
-              Require an approving review in pull requests including files
-              with a designated code owner.
-            type: boolean
-            default: true
-          require_last_push_approval:
-            description: |
-              Require an approving review on the most recent reviewable push
-              by someone other than the actor performing the push.
-            type: boolean
-            default: true
-          require_review_thread_resolution:
-            description: |
-              Require all conversations on code to be resolved before a pull request
-              can be merged into matching refs.
-            type: boolean
-            default: true
-          required_approving_review_count:
-            description: |
-              The number of approving reviews that are required
-              before a pull request can be merged into matching refs.
-            type: integer
-            default: 1
         required:
           - dismiss_stale_reviews_on_push
           - require_code_owner_review
           - require_last_push_approval
           - require_review_thread_resolution
           - required_approving_review_count
+        properties:
+          dismiss_stale_reviews_on_push:
+            description: |
+              Automatically dismiss previous approving pull-request reviews
+              when new reviewable commits are pushed.
+            type: boolean
+            default: false
+          require_code_owner_review:
+            description: |
+              Require an approving review in pull requests including files
+              with a designated code owner.
+            type: boolean
+            default: false
+          require_last_push_approval:
+            description: |
+              Require an approving review on the most recent reviewable push
+              by someone other than the actor performing the push.
+            type: boolean
+            default: false
+          require_review_thread_resolution:
+            description: |
+              Require all conversations on code to be resolved before a pull request
+              can be merged into matching refs.
+            type: boolean
+            default: false
+          required_approving_review_count:
+            description: |
+              The number of approving reviews that are required
+              before a pull request can be merged into matching refs.
+            type: integer
+            default: 0
       require_status_checks:
         description: |
           Require status checks to pass before a pull request can be merged into matching refs.
@@ -180,7 +180,7 @@ properties:
           strict:
             description: Require status checks to pass on the latest commit.
             type: boolean
-            default: true
+            default: false
         required: [ contexts, strict ]
       required_deployment_environments:
         description: |
