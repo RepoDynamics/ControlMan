@@ -5,7 +5,6 @@ description: |
   A list of keys defined in [`$.team`](#ccc-team).
 type: array
 uniqueItems: true
-minItems: 1
 items:
   title: A team member ID.
   examples:
