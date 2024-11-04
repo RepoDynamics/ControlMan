@@ -10,8 +10,7 @@ properties:
     description: |
       A [Conventional Commits](https://www.conventionalcommits.org/)-like
       type for the commit message.
-    type: string
-    pattern: ^[a-zA-Z0-9_-]+$
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
     examples:
       - fix
       - feat
@@ -28,13 +27,15 @@ properties:
     description: |
       A [Conventional Commits](https://www.conventionalcommits.org/)-like
       scope for the commit message.
-    type: string
-    pattern: ^[a-zA-Z0-9_-]+$
+    oneOf:
+      - $ref: https://jsonschemata.repodynamics.com/string/oneline
+      - $ref: https://jsonschemata.repodynamics.com/array/unique-strings
     examples:
       - pkg
       - test
       - docs
-  commit_description:
+      - [ pkg, test ]
+  type_description:
     description: |
       General description of this kind of commit.
     type: string
