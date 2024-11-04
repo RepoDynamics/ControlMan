@@ -118,6 +118,36 @@ class MainDataGenerator:
                         json_path="license.expression",
                         data=self._data(),
                     )
+        all_ids = license_ids + exception_ids + license_ids_custom + exception_ids_custom
+        for component_id, component_data in self._data["license.component"].items():
+            if component_id not in all_ids:
+                raise _exception.load.ControlManSchemaValidationError(
+                    source="source",
+                    problem=(
+                        f"License component '{component_id}' defined at `$.license.component` "
+                        f"is not part of the license expression at `$.license.expression`."
+                    ),
+                    json_path=f"license.component.{component_id}",
+                    data=self._data(),
+                )
+        for custom_ids, spdx_typ in ((license_ids_custom, "license"), (exception_ids_custom, "exception")):
+            for custom_id in custom_ids:
+                user_data = self._data.setdefault("license.component", {}).setdefault(custom_id, {})
+                user_data_path = user_data.setdefault("path", {})
+                out_data = {
+                    "type": spdx_typ,
+                    "custom": True,
+                    "id": custom_id,
+                    "path": {
+                        "text_plain": normalize_license_filename(
+                            user_data_path.get("text_plain", f"LICENSE-{custom_id}.md")
+                        ),
+                        "header_plain": normalize_license_filename(
+                            user_data_path.get("header_plain", f"COPYRIGHT-{custom_id}.md")
+                        ),
+                    }
+                }
+                user_data.update(out_data)
         for spdx_ids, spdx_typ in ((license_ids, "license"), (exception_ids, "exception")):
             func = _spdx.license if spdx_typ == "license" else _spdx.exception
             class_ = _spdx.SPDXLicense if spdx_typ == "license" else _spdx.SPDXLicenseException
