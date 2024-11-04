@@ -205,7 +205,6 @@ class PythonPackageFileGenerator:
                 docstring_replacement = f"{docstring_replacement}{docstring_text}"
         return _pysyntax.modify.docstring(file_content, docstring_replacement)
 
-
     def _update_header_comments(self, file_content: str, template: dict, template_before: dict) -> str:
 
         def get_wrapped_header_comments(templ: dict) -> str:
