@@ -4,19 +4,19 @@ title: GitHub Label Group
 description: A group of GitHub labels.
 type: object
 additionalProperties: false
-required: [ prefix, color, label ]
+required: [ prefix, color ]
 properties:
   prefix:
-    title: Prefix
-    description: Prefix for the label name.
     $ref: https://controlman.repodynamics.com/schema/label-prefix
   color:
-    title: Color
-    description: Color of the label.
+    description: Color of all labels in the group.
     $ref: https://jsonschemata.repodynamics.com/color/hex-string
+  description:
+    description: Default description of all labels in the group.
+    $ref: https://jsonschemata.repodynamics.com/config/github/label/description
   label:
     title: Labels
-    description: Labels for the group.
+    description: Configurations for each label in the group.
     type: object
     additionalProperties:
       title: Label
