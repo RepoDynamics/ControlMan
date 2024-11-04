@@ -2566,6 +2566,17 @@ properties:
                     title: Description
                     description: Description of the section.
                     type: string
+      contributors:
+        description: |
+          Configurations for documenting project contributors.
+        type: object
+        default: { }
+        properties:
+          path:
+            description: |
+              Path to the contributors source file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: docs/contributors.json
       prerelease_temp_path:
         description: >-
           Path to the file relative to the repository root
@@ -2581,18 +2592,10 @@ properties:
           template:
             type: string
             default: |
-              {%- macro make_user(user) -%}
-                {%- if user.name.full != user.github.id -%}
-                  {{ user.name.full }} (@{{ user.github.id }})
-                {%- else -%}
-                  @{{ user.github.id }}
-                {%- endif -%}
-              {%- endmacro -%}
-              
               # Development Protocol #{{ issue.number }}
               
               - **Type**: {{ form.description }}
-              - **Client**: {{ make_user(issue.user) }}
+              - **Client**: {{ issue.user.md_name }}
               - **Summary**: {{ pr_title }}
               - **Current Status**: {{ status }}
               - **Progress**:
@@ -2669,31 +2672,23 @@ properties:
                   | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ "{:<32}".format(actor) }} | {{ "{:<53}".format(description) }} |
                 {%- endmacro -%}
 
-                {%- macro make_user(user) -%}
-                  {%- if user.name.full != user.github.id -%}
-                    {{ user.name.full }} (@{{ user.github.id }})
-                  {%- else -%}
-                    @{{ user.github.id }}
-                  {%- endif -%}
-                {%- endmacro -%}
-
                 {%- macro make_description() -%}
                   {%- if action == "assigned" -%}
                     {%- if event == "issues" -%}
-                      Issue assigned to {{ make_user(assignee) }}.
+                      Issue assigned to {{ assignee.md_name }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request assigned to {{ make_user(assignee) }}.
+                      Pull request assigned to {{ assignee.md_name }}.
                     {%- endif -%}
                   {%- elif action == "unassigned" -%}
                     {%- if event == "issues" -%}
-                      Issue unassigned from {{ make_user(assignee) }}.
+                      Issue unassigned from {{ assignee.md_name }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request unassigned from {{ make_user(assignee) }}.
+                      Pull request unassigned from {{ assignee.md_name }}.
                     {%- endif -%}
                   {%- elif action == "review_requested" -%}
-                    Review assigned to {{ make_user(requested_reviewer) }}.
+                    Review assigned to {{ requested_reviewer.md_name }}.
                   {%- elif action == "review_request_removed" -%}
-                    Review unassigned from {{ make_user(requested_reviewer) }}.
+                    Review unassigned from {{ requested_reviewer.md_name }}.
                   {%- elif action == "synchronize" -%}
                     New commits pushed to [{{ head.name }}]({{ head.url }}) (CI [{{ context.run_id }}]({{ workflow_url }})).
                   {%- elif action == "labeled" -%}
@@ -2740,13 +2735,13 @@ properties:
                     {%- endif -%}
                   {%- elif action == "opened" -%}
                     {%- if event == "issues" -%}
-                      Issue ticket #{{ issue.number }} submitted by {{ make_user(issue.user) }}.
+                      Issue ticket #{{ issue.number }} submitted by {{ issue.user.md_name }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.ref }}]({{ pull_request.head.url }}) to branch [{{ pull_request.base.ref }}]({{ pull_request.base.url }}) by {{ make_user(pull_request.user) }}.
+                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.ref }}]({{ pull_request.head.url }}) to branch [{{ pull_request.base.ref }}]({{ pull_request.base.url }}) by {{ pull_request.user.md_name }}.
                     {%- endif -%}
                   {%- endif -%}
                 {%- endmacro %}
-                {{ make_entry(make_user(sender), make_description()) -}}
+                {{ make_entry(sender.md_name, make_description()) -}}
           references:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
             default:
