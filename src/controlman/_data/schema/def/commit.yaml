@@ -1,0 +1,40 @@
+$id: https://controlman.repodynamics.com/schema/commit
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Commit
+description: |
+  General configurations for a commit.
+type: object
+required: [ type ]
+properties:
+  type:
+    description: |
+      A [Conventional Commits](https://www.conventionalcommits.org/)-like
+      type for the commit message.
+    type: string
+    pattern: ^[a-zA-Z0-9_-]+$
+    examples:
+      - fix
+      - feat
+      - change
+      - refactor
+      - test
+      - build
+      - ci
+      - docs
+      - style
+      - chore
+      - revert
+  scope:
+    description: |
+      A [Conventional Commits](https://www.conventionalcommits.org/)-like
+      scope for the commit message.
+    type: string
+    pattern: ^[a-zA-Z0-9_-]+$
+    examples:
+      - pkg
+      - test
+      - docs
+  commit_description:
+    description: |
+      General description of this kind of commit.
+    type: string
