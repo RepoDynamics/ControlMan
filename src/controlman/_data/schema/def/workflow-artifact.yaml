@@ -1,0 +1,11 @@
+$id: https://controlman.repodynamics.com/schema/workflow-artifact
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Workflow Artifact
+description: Configurations for a workflow artifact.
+type: object
+additionalProperties: false
+properties:
+  name:
+    description: Name of the artifact
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+
