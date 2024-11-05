@@ -20,12 +20,13 @@ _schema_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_dat
 
 def validate(
     data: dict,
-    schema: _Literal["main", "local", "cache"] = "main",
+    schema: _Literal["main", "local", "cache", "entity"] = "main",
     source: _Literal["source", "compiled"] = "compiled",
     before_substitution: bool = False,
 ) -> None:
     """Validate data against a schema."""
-    schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / f"{schema}.yaml")
+    relpath = "def/entity-def.yaml" if schema == "entity" else f"{schema}.yaml"
+    schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / relpath)
     _js.edit.required_last(schema_dict)
     _add_custom_keys(schema_dict)
     if before_substitution:
