@@ -2577,6 +2577,21 @@ properties:
               Path to the contributors source file.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: docs/contributors.json
+      github_release:
+        description: |
+          Configurations for documenting project releases.
+        type: object
+        additionalProperties: false
+        default: { }
+        properties:
+          title:
+            type: string
+            default: >-
+              {{ ccc.name }} {{ version }}
+          body:
+            type: string
+            default: >-
+              Release notes ...
       prerelease_temp_path:
         description: >-
           Path to the file relative to the repository root
@@ -3784,6 +3799,15 @@ properties:
   workflow:
     type: object
     properties:
+      artifact:
+        type: object
+        additionalProperties: false
+        default: { }
+        properties:
+          website:
+            default:
+              name: Docs
+            $ref: https://controlman.repodynamics.com/schema/workflow-artifact
       schedule:
         title: Configurations for scheduled workflow jobs.
         description: |
