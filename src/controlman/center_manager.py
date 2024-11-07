@@ -93,6 +93,7 @@ class CenterManager:
                 "hook": self._hook_manager.inline_hooks,
                 "root_path": self._path_root,
                 "ccc": self._data_before,
+                "slugify": _pylinks.string.to_slug,
                 "fill_entity": _functools.partial(
                     _helper.fill_entity,
                     github_api=self._github_api,

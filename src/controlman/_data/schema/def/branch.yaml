@@ -16,6 +16,12 @@ properties:
       - prerelease/v
       - dev/
       - auto-update/
+  name_separator:
+    description: |
+      Separator between the branch prefix and suffixes.
+      This is only used when the branch name is a prefix.
+    type: string
+    default: "/"
   ruleset:
     title: Ruleset
     description: Branch protection rules for the branch (group).

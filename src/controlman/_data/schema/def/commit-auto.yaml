@@ -3,7 +3,6 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Automatic Commit
 description: |
   Configurations for an automatic commit.
-unevaluatedProperties: false
 allOf:
   - $ref: https://controlman.repodynamics.com/schema/commit
   - required: [ description ]

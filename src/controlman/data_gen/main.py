@@ -119,7 +119,7 @@ class MainDataGenerator:
                         data=self._data(),
                     )
         all_ids = license_ids + exception_ids + license_ids_custom + exception_ids_custom
-        for component_id, component_data in self._data["license.component"].items():
+        for component_id, component_data in self._data.get("license.component", {}).items():
             if component_id not in all_ids:
                 raise _exception.load.ControlManSchemaValidationError(
                     source="source",
