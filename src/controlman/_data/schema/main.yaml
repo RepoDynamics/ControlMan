@@ -4072,6 +4072,7 @@ properties:
         properties:
           web_build:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4090,6 +4091,7 @@ properties:
                       name: GH-Pages {{ version }}
           web_deploy:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4101,18 +4103,21 @@ properties:
                   url: ${{ web.url.home }}$
           pkg_lint:
             type: object
+            default: { }
             properties:
               name:
                 type: string
                 default: Lint ${{ pkg.name }}$ {{ version }}
           test_lint:
             type: object
+            default: { }
             properties:
               name:
                 type: string
                 default: Lint ${{ test.name }}$ {{ version }}
           pkg_test:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4127,6 +4132,7 @@ properties:
                       name: Test Report {{ version }} ({{ source }} - {{ os }} - {{ python }})
           pkg_build:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4145,6 +4151,7 @@ properties:
                       name: ${{ pkg.name }}$ {{ version }} ({{ python }}-{{ platform }})
           test_build:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4163,6 +4170,7 @@ properties:
                       name: ${{ test.name }}$ {{ version }} ({{ python }}-{{ platform }})
           pkg_publish_testpypi:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4180,6 +4188,7 @@ properties:
                     default: https://test.pypi.org/legacy/
           test_publish_testpypi:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4197,6 +4206,7 @@ properties:
                     default: https://test.pypi.org/legacy/
           pkg_publish_pypi:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4214,6 +4224,7 @@ properties:
                     default: https://upload.pypi.org/legacy/
           test_publish_pypi:
             type: object
+            default: { }
             properties:
               name:
                 type: string
@@ -4342,7 +4353,6 @@ properties:
                     action:
                       type: string
                       enum: [ build, deploy ]
-
   tool:
     title: Configurations for tools used in the development workflow.
     description: |
