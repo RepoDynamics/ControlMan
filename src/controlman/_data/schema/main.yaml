@@ -4081,6 +4081,7 @@ properties:
               artifact:
                 type: object
                 additionalProperties: false
+                default: { }
                 properties:
                   build:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
@@ -4126,6 +4127,7 @@ properties:
               artifact:
                 type: object
                 additionalProperties: false
+                default: { }
                 properties:
                   report:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
@@ -4141,6 +4143,7 @@ properties:
               artifact:
                 type: object
                 additionalProperties: false
+                default: { }
                 properties:
                   sdist:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
@@ -4160,6 +4163,7 @@ properties:
               artifact:
                 type: object
                 additionalProperties: false
+                default: { }
                 properties:
                   sdist:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
@@ -4183,6 +4187,7 @@ properties:
                   url: https://test.pypi.org/project/${{ pkg.name }}$/{{ version }}
               index:
                 type: object
+                default: { }
                 properties:
                   url:
                     type: string
@@ -4201,6 +4206,7 @@ properties:
                   url: https://test.pypi.org/project/${{ test.name }}$/{{ version }}
               index:
                 type: object
+                default: { }
                 properties:
                   url:
                     type: string
@@ -4219,6 +4225,7 @@ properties:
                   url: https://pypi.org/project/${{ pkg.name }}$/{{ version }}
               index:
                 type: object
+                default: { }
                 properties:
                   url:
                     type: string
@@ -4237,6 +4244,7 @@ properties:
                   url: https://pypi.org/project/${{ test.name }}$/{{ version }}
               index:
                 type: object
+                default: { }
                 properties:
                   url:
                     type: string
