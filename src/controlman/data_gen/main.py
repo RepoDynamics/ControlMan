@@ -90,7 +90,7 @@ class MainDataGenerator:
             {k: repo_info[k] for k in ("id", "node_id", "name", "full_name", "created_at", "default_branch")}
         )
         ccm_repo.setdefault("url", {})["home"] = repo_info["html_url"]
-        self._data["team.owner.github.id"] = repo_info["owner"]["login"]
+        self._data["team.owner.github"] = {"id": repo_info["owner"]["login"], "rest_id": repo_info["owner"]["id"]}
         return
 
     def _team(self) -> None:

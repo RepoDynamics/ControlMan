@@ -1,4 +1,5 @@
 from pathlib import Path as _Path
+import copy as _copy
 
 import pyserials as _ps
 from controlman.exception.load import ControlManSchemaValidationError
@@ -39,6 +40,7 @@ class FormGenerator:
                 if pre_process and not pre_process_existence(pre_process):
                     continue
                 if not marker_added and elem["type"] == "checkboxes":
+                    elem = _copy.deepcopy(elem)
                     elem["attributes"]["options"][0]["label"] += f"<!-- ISSUE-ID: {form['id']} -->"
                     marker_added = True
                 form_output["body"].append(

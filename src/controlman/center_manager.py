@@ -157,7 +157,7 @@ class CenterManager:
         self.generate_data()
         with _logger.sectioning("Dynamic File Generation"):
             self._files = _file_gen.generate(
-                data=_ps.NestedDict(_ps.update.remove_keys(self._data(), const.CUSTOM_KEY)),
+                data=self._data,
                 data_before=self._data_before,
                 repo_path=self._path_root,
             )

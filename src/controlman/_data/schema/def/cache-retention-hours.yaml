@@ -51,3 +51,9 @@ properties:
       used to update workflow configurations such as CI/CD/CT pipelines.
     default: 500
     $ref: https://jsonschemata.repodynamics.com/number/non-negative
+  license:
+    title:
+    description: |
+      License data retrieved from the SPDX repository.
+    default: 1000
+    $ref: https://jsonschemata.repodynamics.com/number/non-negative
