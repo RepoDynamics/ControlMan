@@ -3405,8 +3405,9 @@ properties:
                 type: object
                 default: |
                   #{{
+                    base = get("repo.url.discussions.home")
                     return {
-                      slug: f"${{ repo.url.discussions.home }}$/new?category={slug}"
+                      slug: f"{base}/new?category={slug}"
                       for slug in get("discussion.category", {}).keys()
                     }
                   }}#
