@@ -11,4 +11,4 @@ properties:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   url:
     description: URL of the environment.
-    $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
