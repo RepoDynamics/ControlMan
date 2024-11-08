@@ -141,7 +141,7 @@ class PythonPackageFileGenerator:
         for filepath in abs_path.glob("**/*.py"):
             file_content = filepath.read_text()
             if mapping:
-                file_content = _pysyntax.modify.imports(module_content=file_content, mapping=mapping)
+                file_content = _pysyntax.modify.imports(code=file_content, mapping=mapping)
             if filepath in path_to_globs_map:
                 for config_id, file_config in path_to_globs_map[filepath]:
                     if "docstring" in file_config:
