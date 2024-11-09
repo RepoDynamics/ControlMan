@@ -3617,7 +3617,6 @@ properties:
           Configurations for documenting project releases.
         type: object
         additionalProperties: false
-        default: { }
         required: [ name ]
         properties:
           name:
@@ -3648,29 +3647,8 @@ properties:
             default: version
           asset:
             type: object
-            properties:
-              sdist:
-                $ref: https://controlman.repodynamics.com/schema/gh-release-asset
-              binary:
-                $ref: https://controlman.repodynamics.com/schema/gh-release-asset
-              website:
-                $ref: https://controlman.repodynamics.com/schema/gh-release-asset
-              custom:
-                type: object
-                additionalProperties:
-                  allOf:
-                    - $ref: https://controlman.repodynamics.com/schema/gh-release-asset
-                    - required: [ files ]
-                      properties:
-                        files:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              source:
-                                type: string
-                              destination:
-                                $ref: https://jsonschemata.repodynamics.com/path/posix/relative-from-cwd
+            additionalProperties:
+              $ref: https://controlman.repodynamics.com/schema/gh-release-asset
       zenodo:
         type: object
         required:

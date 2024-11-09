@@ -3,7 +3,7 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: GitHub Release Asset
 description: Configurations for a GitHub release asset.
 type: object
-required: [ name ]
+required: [ files ]
 properties:
   name:
     description: File name of the asset.
@@ -11,3 +11,19 @@ properties:
   label:
     description: Label of the asset.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
+  files:
+    type: array
+    items:
+      type: object
+      required: [ destination ]
+      anyOf:
+        - required: [ source ]
+        - required: [ artifact ]
+      properties:
+        source:
+          type: string
+        destination:
+          type: string
+          default: '.'
+        artifact:
+          type: string

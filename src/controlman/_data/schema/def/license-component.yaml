@@ -55,7 +55,7 @@ properties:
         description: |
           Path to write the plain text license header file, if any.
         type: string
-        default: COPYRIGHT-${{ .id }}$.md
+        default: COPYING-${{ .id }}$.md
   id:
     title: ID
     description: |
