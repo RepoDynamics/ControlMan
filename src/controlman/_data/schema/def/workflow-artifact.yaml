@@ -9,12 +9,23 @@ properties:
   name:
     description: Name of the artifact.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
+  merge:
+    type: object
+    additionalProperties: false
+    required: [ name, pattern ]
+    properties:
+      name:
+        description: Name of the merged artifact.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      pattern:
+        description: Pattern to match the artifacts to merge.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
   retention_days:
     description: Number of days to retain the artifact.
     type: integer
     minimum: 1
     maximum: 90
-  include_hidden_files:
+  include_hidden:
     description: Whether to include hidden files in the artifact.
     type: boolean
     default: false

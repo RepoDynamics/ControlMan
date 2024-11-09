@@ -4071,13 +4071,13 @@ properties:
         type: object
         default: { }
         properties:
-          web_build:
+          web:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: Build Web {{ version }}
+                default: Web (v{{ version }})
               artifact:
                 type: object
                 additionalProperties: false
@@ -4086,44 +4086,33 @@ properties:
                   build:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                     default:
-                      name: Website {{ version }}
+                      name: Website - v{{ version }}
                   pages:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                     default:
-                      name: GH-Pages {{ version }}
-          web_deploy:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Web Deployment ({{ version }})
+                      name: Website - v{{ version }} - GH-Pages
               env:
                 $ref: https://controlman.repodynamics.com/schema/workflow-env
                 default:
                   name: GitHub Pages
                   url: ${{ web.url.home }}$
-          pkg_lint:
+          lint:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: Lint ${{ pkg.name }}$ {{ version }}
-          test_lint:
+                default: Lint ({{ pkg.name }} v{{ version }})
+          test:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: Lint ${{ test.name }}$ {{ version }}
-          pkg_test:
-            type: object
-            default: { }
-            properties:
-              name:
+                default: Test ({{ source }} - v{{ version }})
+              task_name:
                 type: string
-                default: Test {{ version }} ({{ source }})
+                default: 'py{{ python }} | {{ os }}'
               artifact:
                 type: object
                 additionalProperties: false
@@ -4132,14 +4121,17 @@ properties:
                   report:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                     default:
-                      name: Test Report {{ version }} ({{ source }} - {{ os }} - {{ python }})
-          pkg_build:
+                      name: Test Report - {{ source }} - v{{ version }} - py{{ python }} - {{ os }}
+                      merge:
+                        name: Test Reports - {{ source }} - v{{ version }}
+                        pattern: Test Report -*
+          build:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: Build ${{ pkg.name }}$ {{ version }}
+                default: Build ({{ pkg.name }} v{{ version }})
               artifact:
                 type: object
                 additionalProperties: false
@@ -4148,43 +4140,33 @@ properties:
                   sdist:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                     default:
-                      name: ${{ pkg.name }}$ {{ version }}
+                      name: '{{ pkg.name }} v{{ version }} - sdist'
                   wheel:
                     $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                     default:
-                      name: ${{ pkg.name }}$ {{ version }} ({{ python }}-{{ platform }})
-          test_build:
+                      name: '{{ pkg.name }} v{{ version }} - wheel - {{ python }} - {{ platform }}'
+                      merge:
+                        name: '{{ pkg.name }} v{{ version }} - wheels'
+                        pattern: '{{ pkg.name }} v{{ version }} - wheel - *'
+                  readme:
+                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                    default:
+                      name: '{{ pkg.name }} v{{ version }} - README'
+          publish_testpypi:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: Build ${{ test.name }}$ {{ version }}
-              artifact:
-                type: object
-                additionalProperties: false
-                default: { }
-                properties:
-                  sdist:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: ${{ test.name }}$ {{ version }}
-                  wheel:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: ${{ test.name }}$ {{ version }} ({{ python }}-{{ platform }})
-          pkg_publish_testpypi:
-            type: object
-            default: { }
-            properties:
-              name:
+                default: Publish (TestPyPI)
+              task_name:
                 type: string
-                default: TestPyPI Deployment ${{ pkg.name }}$ {{ version }}
+                default: '{{ pkg.name }} v{{ version }}'
               env:
                 $ref: https://controlman.repodynamics.com/schema/workflow-env
                 default:
-                  name: TestPyPI
-                  url: https://test.pypi.org/project/${{ pkg.name }}$/{{ version }}
+                  name: TestPyPI ({{ pkg.name }})
+                  url: https://test.pypi.org/project/{{ pkg.name }}/{{ version }}
               index:
                 type: object
                 default: { }
@@ -4192,56 +4174,21 @@ properties:
                   url:
                     type: string
                     default: https://test.pypi.org/legacy/
-          test_publish_testpypi:
+          publish_pypi:
             type: object
             default: { }
             properties:
               name:
                 type: string
-                default: TestPyPI Deployment ${{ test.name }}$ {{ version }}
-              env:
-                $ref: https://controlman.repodynamics.com/schema/workflow-env
-                default:
-                  name: TestPyPI
-                  url: https://test.pypi.org/project/${{ test.name }}$/{{ version }}
-              index:
-                type: object
-                default: { }
-                properties:
-                  url:
-                    type: string
-                    default: https://test.pypi.org/legacy/
-          pkg_publish_pypi:
-            type: object
-            default: { }
-            properties:
-              name:
+                default: Publish (PyPI)
+              task_name:
                 type: string
-                default: PyPI Deployment ${{ pkg.name }}$ {{ version }}
+                default: '{{ pkg.name }} v{{ version }}'
               env:
                 $ref: https://controlman.repodynamics.com/schema/workflow-env
                 default:
-                  name: PyPI
-                  url: https://pypi.org/project/${{ pkg.name }}$/{{ version }}
-              index:
-                type: object
-                default: { }
-                properties:
-                  url:
-                    type: string
-                    default: https://upload.pypi.org/legacy/
-          test_publish_pypi:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: PyPI Deployment ${{ test.name }}$ {{ version }}
-              env:
-                $ref: https://controlman.repodynamics.com/schema/workflow-env
-                default:
-                  name: PyPI
-                  url: https://pypi.org/project/${{ test.name }}$/{{ version }}
+                  name: PyPI ({{ pkg.name }})
+                  url: https://pypi.org/project/{{ pkg.name }}/{{ version }}
               index:
                 type: object
                 default: { }
