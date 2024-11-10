@@ -228,6 +228,7 @@ def fill_entity(
     if gh_id or gh_username:
         github_user_info = _get_github_user(username=gh_username, user_id=gh_id)
         for key_self, key_gh in (
+            ("id", "login"),
             ("rest_id", "id"),
             ("node_id", "node_id"),
             ("url", "html_url"),
