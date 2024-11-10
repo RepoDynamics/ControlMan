@@ -2629,6 +2629,7 @@ properties:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
             default:
               template: |
+                
                 [^{{ ref.id }}]: [{{ ref.title }}]({{ ref.url }})
           pr_title:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
