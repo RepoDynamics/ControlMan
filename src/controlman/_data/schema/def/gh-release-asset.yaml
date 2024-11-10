@@ -4,6 +4,9 @@ title: GitHub Release Asset
 description: Configurations for a GitHub release asset.
 type: object
 required: [ files ]
+oneOf:
+  - required: [ format ]
+  - required: [ media_type ]
 properties:
   name:
     description: File name of the asset.
@@ -26,4 +29,10 @@ properties:
           type: string
           default: '.'
         artifact:
-          type: string
+          type: boolean
+          default: false
+  format:
+    type: string
+    enum: [ zip, tar, tar.gz, tar.bz2, tar.xz, gz, bz2, xz ]
+  media_type:
+    type: string

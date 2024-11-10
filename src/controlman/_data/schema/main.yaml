@@ -3652,12 +3652,17 @@ properties:
       zenodo:
         type: object
         required:
+          - asset
           - title
           - creators
           - description
           - upload_type
           - access_right
         properties:
+          asset:
+            type: object
+            additionalProperties:
+              $ref: https://controlman.repodynamics.com/schema/gh-release-asset
           title:
             description: |
               Title of the deposition.
@@ -4174,6 +4179,13 @@ properties:
                   url:
                     type: string
                     default: https://upload.pypi.org/legacy/
+          release:
+            type: object
+            default: { }
+            properties:
+              name:
+                type: string
+                default: Release
       schedule:
         description: |
           Configurations for scheduled jobs
