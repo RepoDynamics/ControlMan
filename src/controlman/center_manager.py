@@ -98,10 +98,6 @@ class CenterManager:
                     _helper.fill_entity,
                     github_api=self._github_api,
                     cache_manager=self._cache_manager,
-                    validator=_functools.partial(
-                        _data_validator.validate,
-                        schema="entity",
-                    ),
                 ),
             },
             code_context_partial={

@@ -7,6 +7,9 @@ import re as _re
 
 from loggerman import logger as _logger
 import pylinks as _pl
+import pyserials as _ps
+
+from controlman import data_validator as _validator
 
 if _TYPE_CHECKING:
     from typing import Sequence, Callable
@@ -132,7 +135,6 @@ def fill_entity(
     entity: dict,
     github_api: _pl.api.GitHub,
     cache_manager: CacheManager | None = None,
-    validator: Callable[[dict], None] | None = None,
 ) -> tuple[dict, dict | None]:
     """Fill all missing information in an `entity` object."""
 
@@ -178,7 +180,7 @@ def fill_entity(
                     generics.append(account["url"])
                     _logger.info(f"Unknown account", account['url'])
         if cache_manager:
-            cache_manager.set("user", username, user_info)
+            cache_manager.set("user", user_info["id"], user_info)
         return user_info
 
     def get_orcid_publications(orcid_id: str) -> list[dict]:
@@ -201,22 +203,23 @@ def fill_entity(
             publications.append(publication_data)
         return sorted(publications, key=lambda i: i["date_tuple"], reverse=True)
 
-    def make_name():
-        if not github_user_info.get("name"):
+    def make_name(user: dict):
+        username = user["login"]
+        if not user.get("name"):
             _logger.warning(
-                f"GitHub user {gh_username} has no name",
+                f"GitHub user {username} has no name",
                 f"Setting entity to legal person",
             )
-            return {"legal": gh_username}
-        if github_user_info["type"] != "User":
-            return {"legal": github_user_info["name"]}
-        name_parts = github_user_info["name"].split(" ")
+            return {"legal": username}
+        if user["type"] != "User":
+            return {"legal": user["name"]}
+        name_parts = user["name"].split(" ")
         if len(name_parts) != 2:
             _logger.warning(
-                f"GitHub user {gh_username} has a non-standard name",
-                f"Setting entity to legal person with name {github_user_info['name']}",
+                f"GitHub user {user} has a non-standard name",
+                f"Setting entity to legal person with name '{user['name']}'.",
             )
-            return {"legal": github_user_info["name"]}
+            return {"legal": user["name"]}
         return {"first": name_parts[0], "last": name_parts[1]}
 
     gh_id = entity.get("github", {}).get("rest_id")
@@ -231,7 +234,7 @@ def fill_entity(
         ):
             entity["github"][key_self] = github_user_info[key_gh]
         if "name" not in entity:
-            entity["name"] = make_name()
+            entity["name"] = make_name(github_user_info)
         for key_self, key_gh in (
             ("affiliation", "company"),
             ("bio", "bio"),
@@ -249,9 +252,14 @@ def fill_entity(
                 entity[social_name] = social_data
     if "orcid" in entity and entity["orcid"].get("get_pubs"):
         entity["orcid"]["pubs"] = get_orcid_publications(orcid_id=entity["orcid"]["user"])
-    if validator:
-        validator(entity)
-    return entity, github_user_info
+    _validator.validate(
+        data=entity,
+        schema = "entity",
+        before_substitution = True
+    )
+    entity_ = _ps.NestedDict(entity)
+    entity_.fill()
+    return entity_(), github_user_info
 
 
 
