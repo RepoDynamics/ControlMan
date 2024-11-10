@@ -2623,8 +2623,9 @@ properties:
                       Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.ref }}]({{ pull_request.head.url }}) to branch [{{ pull_request.base.ref }}]({{ pull_request.base.url }}) by {{ pull_request.user.md_name }}.
                     {%- endif -%}
                   {%- endif -%}
-                {%- endmacro %}
-                {{ make_entry(sender.md_name, make_description()) -}}
+                {%- endmacro -%}
+                {%- set description = make_description() %}
+                {{ make_entry(sender.md_name, description) if description else "" -}}
           references:
             $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
             default:
