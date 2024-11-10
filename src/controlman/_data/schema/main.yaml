@@ -2573,7 +2573,7 @@ properties:
                   {%- elif action == "review_request_removed" -%}
                     Review unassigned from {{ requested_reviewer.md_name }}.
                   {%- elif action == "synchronize" -%}
-                    New commits pushed to [{{ head.name }}]({{ head.url }}) (CI [{{ context.run_id }}]({{ workflow_url }})).
+                    New commits pushed to [{{ pull_request.head.name }}]({{ pull_request.head.url.homepage }}) (CI [{{ context.run_id }}]({{ context.run_url }})).
                   {%- elif action == "labeled" -%}
                     {%- set category = label.category -%}
                     {%- if category == "type" -%}
@@ -2620,7 +2620,7 @@ properties:
                     {%- if event == "issues" -%}
                       Issue ticket #{{ issue.number }} submitted by {{ issue.user.md_name }}.
                     {%- elif event == "pull_request" -%}
-                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.ref }}]({{ pull_request.head.url }}) to branch [{{ pull_request.base.ref }}]({{ pull_request.base.url }}) by {{ pull_request.user.md_name }}.
+                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.name }}]({{ pull_request.head.url.homepage }}) to branch [{{ pull_request.base.name }}]({{ pull_request.base.url.homepage }}) by {{ pull_request.user.md_name }}.
                     {%- endif -%}
                   {%- endif -%}
                 {%- endmacro -%}
@@ -2641,7 +2641,7 @@ properties:
             default:
               template: |
                 {%- macro make_pull(pull) -%}
-                  #{{ pull.number }} (branch [{{ pull.head.name }}]({{ pull.head.url }}))
+                  #{{ pull.number }} (branch [{{ pull.head.name }}]({{ pull.head.url.homepage }}))
                 {%- endmacro -%}
 
                 {%- macro describe() -%}
