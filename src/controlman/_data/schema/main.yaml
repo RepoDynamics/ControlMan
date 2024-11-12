@@ -2575,7 +2575,7 @@ properties:
                   {%- elif action == "synchronize" -%}
                     New commits pushed to [{{ pull_request.head.name }}]({{ pull_request.head.url.homepage }}) (CI [{{ context.run_id }}]({{ context.run_url }})).
                   {%- elif action == "labeled" -%}
-                    {%- set category = label.category -%}
+                    {%- set category = label.category.value -%}
                     {%- if category == "type" -%}
                         Type set to `{{ label.suffix }}`.
                     {%- elif category == "scope" -%}
@@ -2585,7 +2585,7 @@ properties:
                     {%- elif category == "branch" -%}
                           Target branch set to `{{ label.suffix }}`.
                     {%- elif category == "status" -%}
-                      {%- set status = label.id -%}
+                      {%- set status = label.id.value or label.id -%}
                       {%- if status == "triage" -%}
                         Entered the triage phase.
                       {%- elif status == "rejected" -%}
