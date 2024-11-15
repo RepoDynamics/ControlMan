@@ -18,12 +18,13 @@ properties:
     type: array
     items:
       type: object
-      required: [ destination ]
-      anyOf:
-        - required: [ source ]
-        - required: [ artifact ]
+      additionalProperties: false
+      required: [ source, destination, artifact ]
       properties:
         source:
+          type: string
+          default: '.'
+        pattern:
           type: string
         destination:
           type: string
