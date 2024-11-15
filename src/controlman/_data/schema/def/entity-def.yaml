@@ -166,20 +166,7 @@ properties:
             return full
           }}#
   role:
-    title: Roles of the person in the project.
-    description: |
-      Define all roles in the project in [`role`](#ccc-role),
-      and use their ID here.
-    examples:
-      - author: 1
-        contact: 10
-    type: object
-    additionalProperties:
-      title: Priority
-      description: |
-        Priority of the person in the role.
-        Higher numbers have higher priority.
-      $ref: https://jsonschemata.repodynamics.com/number/non-negative
+    $ref: https://controlman.repodynamics.com/schema/role-priority
   ownership:
     title: Ownership
     description: |
