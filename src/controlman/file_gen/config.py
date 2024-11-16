@@ -10,6 +10,7 @@ import pylinks
 from pylinks.exception.api import WebAPIError as _WebAPIError
 from licenseman.spdx import license_text as _license_text
 
+import controlman
 from controlman.datatype import DynamicFile, DynamicFileType
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
@@ -434,11 +435,19 @@ class ConfigFileGenerator:
                     out[out_key] = repo[in_key]
             return out
 
-        def create_person(entity: str | dict):
-            if isinstance(entity, str):
-                entity = self._data["team"].get(entity)
+        def create_person(id_: str | dict):
+            if isinstance(id_, str):
+                entity = self._data["team"].get(id_) or contributors.get(id_)
                 if not entity:
-                    raise ValueError(f"Person '{entity}' not found in team data.")
+                    raise ValueError(f"Person '{id_}' not found in team or contributor data.")
+            elif id_["member"]:
+                entity = self._data["team"].get(id_["id"])
+                if not entity:
+                    raise ValueError(f"Person '{id_["id"]}' not found in team data.")
+            else:
+                entity = contributors.get(id_["id"])
+                if not entity:
+                    raise ValueError(f"Contributor ID {id_["id"]} not found.")
             _out = {}
             if entity["name"].get("legal"):
                 _out["name"] = entity["name"]["legal"]
@@ -514,32 +523,27 @@ class ConfigFileGenerator:
         cite = self._data["citation"]
         if not cite:
             return [DynamicFile(**generated_file)]
-        filepath = self._path_repo / _const.FILEPATH_CITATION_CONFIG
-        cite_old = _ps.read.yaml_from_file(path=filepath) if filepath.is_file() else {}
+        contributors = controlman.read_contributors(repo_path=self._path_repo)
         out = {
-            k: v for k, v in cite.items() if v and k in [
-                "message", "title", "license", "url", "type", "keywords", "abstract"
+            k.replace("_", "-"): v for k, v in cite.items() if v and k in [
+                "message", "title", "license", "url", "type", "keywords", "abstract",
+                "version", "date_released", "doi", "commit", "license_url"
             ]
         }
-        for key in ("version", "date-released", "doi", "commit"):
-            if cite_old.get(key):
-                out[key] = cite_old[key]
-        for key in ("license_url",):
-            if cite.get(key):
-                out[key.replace('_', "-")] = cite[key]
+        out["cff-version"] = "1.2.0"
+        out["authors"] = [create_person(id_=entity) for entity in cite["authors"]]
         if cite.get("repository"):
             out |= create_repository(cite["repository"])
         if cite.get("identifiers"):
             out["identifiers"] = [create_identifier(ident) for ident in cite["identifiers"]]
         if cite.get("contacts"):
-            out["contact"] = [create_person(entity=entity) for entity in cite["contacts"]]
-        out["authors"] = [create_person(entity=entity) for entity in cite["authors"]]
+            out["contact"] = [create_person(id_=entity) for entity in cite["contacts"]]
         if cite.get("preferred_citation"):
             out["preferred-citation"] = create_reference(cite["preferred_citation"])
         if cite.get("references"):
             out["references"] = [create_reference(ref) for ref in cite["references"]]
-        out["cff-version"] = "1.2.0"
-        file_content = _ps.write.to_yaml_string(data=out, end_of_file_newline=True)
+        out_sorted = {k: out[k] for k in cite["order"] if k in out}
+        file_content = _ps.write.to_yaml_string(data=out_sorted, end_of_file_newline=True)
         return [DynamicFile(content=file_content, **generated_file)]
 
     def validate_codecov_config(self, config: str) -> None:
