@@ -43,11 +43,16 @@ def team_members_with_role_types(
     for member_id, member_data in team_data.items():
         if active_only and not member_data["active"]:
             continue
-        for role_id, member_priority in member_data.get("role", {}).items():
-            member_role_type = role_data[role_id]["type"]
-            if member_role_type in role_types:
-                out.append((member_data | {"id": member_id}, role_types.index(member_role_type), member_priority))
-                break
+        max_priority = -1
+        for role_type in role_types:
+            for member_role_id, member_priority in member_data.get("role", {}).items():
+                member_role_type = role_data[member_role_id]["type"]
+                if member_role_type == role_type:
+                    max_priority = max(max_priority, member_priority)
+        if max_priority > 0:
+            out.append(
+                (member_data | {"id": member_id}, max_priority, member_data["name"]["full_inverted"])
+            )
     return [member_data for member_data, _, _ in sorted(out, key=lambda i: (i[1], i[2]), reverse=True)]
 
 
