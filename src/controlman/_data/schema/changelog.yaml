@@ -1,0 +1,48 @@
+$id: https://controlman.repodynamics.com/schema/changelog
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Changelog
+description: Project's changelog.
+type: array
+items:
+  type: object
+  required: [ version ]
+  properties:
+    type_id:
+      type: string
+    public:
+      type: boolean
+    version:
+      type: string
+    ongoing:
+      type: boolean
+    issue:
+      type: object
+    pull_request:
+      type: object
+    milestone:
+      type: object
+    protocol:
+      type: object
+      properties:
+        data:
+          type: object
+        tasks:
+          type: array
+    parent:
+      type: object
+      properties:
+        sha:
+          type: string
+        version:
+          type: string
+        distance:
+          type: string
+    contributor:
+      type: object
+      properties:
+        member:
+          type: object
+        user:
+          type: object
+        external:
+          type: object
