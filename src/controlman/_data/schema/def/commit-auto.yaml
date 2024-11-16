@@ -11,7 +11,7 @@ allOf:
         description: |
           A [Conventional Commits](https://www.conventionalcommits.org/)-like
           description for the commit message.
-        default: '{{ pr_title }}'
+        default: '{{ pull_request.title }}'
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       body:
         description: |
