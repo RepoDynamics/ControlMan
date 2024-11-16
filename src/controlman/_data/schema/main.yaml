@@ -507,8 +507,60 @@ properties:
       :::
     type: object
     additionalProperties: false
-    required: [ message, title, authors, type ]
+    required: [ message, title, authors, type, order ]
     properties:
+      order:
+        type: array
+        uniqueItems: true
+        contains:
+          enum: [ message, title, authors, type, cff-version ]
+        minContains: 5
+        items:
+          type: string
+          enum:
+            - abstract
+            - authors
+            - cff-version
+            - commit
+            - contact
+            - date-released
+            - doi
+            - identifiers
+            - keywords
+            - license
+            - license-url
+            - message
+            - preferred-citation
+            - references
+            - repository
+            - repository-artifact
+            - repository-code
+            - title
+            - type
+            - url
+            - version
+        default:
+          - message
+          - preferred-citation
+          - doi
+          - commit
+          - version
+          - date-released
+          - license
+          - license-url
+          - url
+          - repository
+          - repository-artifact
+          - repository-code
+          - identifiers
+          - type
+          - title
+          - authors
+          - contact
+          - abstract
+          - keywords
+          - references
+          - cff-version
       message:
         title: Message
         description: |
@@ -557,12 +609,13 @@ properties:
           :::
         default: |
           #{{
-              return [
-                member["id"] for member in team_members_with_role_types(
-                  "Author", 
-                  active_only=True,
-                )
-              ]
+            return [
+              {"id": int_author["id"], "member": True}
+              for int_author in team_members_with_role_types("Author", active_only=True)
+            ] + [
+              {"id"}: ext_author["id"], "member": False}
+              for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
+            ]
           }}#
         $ref: https://controlman.repodynamics.com/schema/member-ids
         examples:
@@ -573,18 +626,25 @@ properties:
           Project's contact persons.
           It is recommended to define the persons in 
           [`$.team`](#ccc-team) and reference them here using templating.
-        default: |
-          #{{
-              return [
-                member["id"] for member in team_members_with_role_types(
-                  "ContactPerson",
-                  active_only=True,
-                )
-              ]
-          }}#
         examples:
           - [ owner, some_author_id ]
         $ref: https://controlman.repodynamics.com/schema/member-ids
+      doi:
+        oneOf:
+          - $ref: https://jsonschemata.repodynamics.com/id/doi
+          - type: "null"
+      version:
+        oneOf:
+          - $ref: https://jsonschemata.repodynamics.com/string/oneline
+          - type: "null"
+      date_released:
+        oneOf:
+          - $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+          - type: "null"
+      commit:
+        oneOf:
+          - $ref: https://jsonschemata.repodynamics.com/string/oneline
+          - type: "null"
       abstract:
         title: Abstract
         description: |
@@ -1737,7 +1797,7 @@ properties:
         type: object
         default: { }
         additionalProperties: false
-        required: [ dev_branch_creation, changelog_init, config_sync, refactor ]
+        required: [ dev_branch_creation, changelog_sync, config_sync, refactor ]
         properties:
           dev_branch_creation:
             title: Development Branch Creation
@@ -1747,24 +1807,21 @@ properties:
               type: init
               scope: dev
               description: >-
-                Create development branch for issue #{{ issue.number }}.
+                Create development branch for pull #{{ pull_request.number }} (issue #{{ issue.number }}).
               body: |
                 Head branch name: {{ head.name }}
                 Base branch name: {{ base.name }}
                 Base branch SHA:  {{ base.sha }}
             $ref: https://controlman.repodynamics.com/schema/commit-auto
-          changelog_init:
-            title: Changelog Initialization
+          changelog_sync:
+            title: Changelog Synchronization
             description: |
               Automatic initialization of a new changelog entry.
             default:
               type: sync
               scope: changelog
               description: >-
-                Initialize new changelog entry.
-              body: |
-                Issue #{{ issue.number }}
-                Pull #{{ pull_request.number }}
+                Synchronize changelog and contributors data.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
           config_sync:
             title: Configuration Synchronization
@@ -1865,7 +1922,19 @@ properties:
         additionalProperties:
           title: Custom Secondary Commit
           description: Configurations for a secondary commit type.
-          $ref: https://controlman.repodynamics.com/schema/commit
+          allOf:
+            - $ref: https://controlman.repodynamics.com/schema/commit
+            - properties:
+                role:
+                  description: |
+                    Default roles for authors and committers of this commit type.
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    author:
+                      $ref: https://controlman.repodynamics.com/schema/role-priority
+                    committer:
+                      $ref: https://controlman.repodynamics.com/schema/role-priority
   label:
     title: GitHub labels settings for the project
     description: |
@@ -2093,6 +2162,12 @@ properties:
               description: URL to the external link
               type: string
               format: uri
+      form_default:
+        type: object
+        additionalProperties: false
+        properties:
+          role:
+            $ref: https://controlman.repodynamics.com/schema/issue-role
       forms:
         description: Issue form definitions and configurations.
         type: array
@@ -2157,6 +2232,8 @@ properties:
               uniqueItems: true
               items:
                 $ref: https://controlman.repodynamics.com/schema/label-id
+            role:
+              $ref: https://controlman.repodynamics.com/schema/issue-role
             pre_process:
               description: |
                 Some issue forms, or some elements of an issue form, may only need to be present
@@ -3656,11 +3733,22 @@ properties:
         required:
           - asset
           - title
-          - creators
           - description
           - upload_type
           - access_right
         properties:
+          concept_id:
+            title: Concept ID
+            description: Concept ID of the Zenodo deposition.
+            type: [string, "null"]
+            default: >-
+              #{{ return get("var.zenodo.concept.id") }}#
+          sandbox_concept_id:
+            title: Sandbox Concept ID
+            description: Concept ID of the Zenodo Sandbox deposition.
+            type: [ string, "null" ]
+            default: >-
+              #{{ return get("var.zenodo_sandbox.concept.id") }}#
           asset:
             type: object
             additionalProperties:
@@ -3669,18 +3757,20 @@ properties:
             description: |
               Title of the deposition.
             default: ${{ citation.title }}$
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
           creators:
             $ref: https://controlman.repodynamics.com/schema/member-ids
             description: |
               Core creators/authors of the deposition, ordered by contribution (highest first).
             default: |
               #{{
-                  return [
-                    member["id"] for member in team_members_with_role_types(
-                      "Author", 
-                      active_only=True,
-                    )
-                  ]
+                return [
+                  {"id": int_author["id"], "member": True}
+                  for int_author in team_members_with_role_types("Author", active_only=True)
+                ] + [
+                  {"id"}: ext_author["id"], "member": False}
+                  for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
+                ]
               }}#
             examples:
               - [ owner, some_author_id ]
@@ -3688,6 +3778,7 @@ properties:
             description: |
               Description of the deposition.
             default: ${{ citation.abstract }}$
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
           upload_type:
             description: |
               Type of the deposition.
@@ -3771,6 +3862,7 @@ properties:
             description: |
               Free-form keywords for the deposition.
               These are used to help users find the project.
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
           subjects:
             title: Subjects
             description: |
@@ -3835,7 +3927,7 @@ properties:
               description: An identifier related to the work.
               type: object
               additionalProperties: false
-              required: [ identifier, relation, resource_type ]
+              required: [ identifier, relation ]
               properties:
                 identifier:
                   description: |
@@ -3939,28 +4031,68 @@ properties:
             description: |
               List of OpenAIRE-supported grants funding the research for this project.
             examples:
-              - - id: '10.13039/501100000780::283595'
-                - id: 283595
+              - - '10.13039/501100000780::283595'
+                - 283595
             type: array
             uniqueItems: true
             minItems: 1
             items:
-              type: object
-              additionalProperties: false
-              properties:
-                id:
-                  title: ID
-                  description: |
-                    Grant ID; can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
-
-
-
-
+              title: Grant ID
+              description: |
+                Can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
           notes:
             title: Notes
             description: |
               Additional notes about the citation.
             $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          imprint_publisher:
+            description: |
+              Publisher of the deposition.
+              The publisher is used to formulate the citation.
+              Defaults to 'Zenodo'.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            examples:
+              - Zenodo
+          custom:
+            description: |
+              Additional publication-type-specific fields.
+            type: object
+            default: { }
+            properties:
+              "code:codeRepository":
+                title: Code Repository
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: ${{ repo.url.home }}$
+              "code:programmingLanguage":
+                type: array
+                uniqueItems: true
+                items:
+                  type: object
+                  required: [ id ]
+                  properties:
+                    id:
+                      description: |
+                        ID of a used programming language.
+                      $ref: https://jsonschemata.repodynamics.com/string/oneline
+                      examples:
+                        - python
+                        - java
+              "code:developmentStatus":
+                type: object
+                required: [ id ]
+                properties:
+                  id:
+                    type: string
+                    enum:
+                      - wip
+                      - unsupported
+                      - inactive
+                      - suspended
+                      - moved
+                      - concept
+                      - abandoned
+                      - active
         allOf:
           - if:
               properties:
