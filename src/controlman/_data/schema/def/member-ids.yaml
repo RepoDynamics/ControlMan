@@ -10,4 +10,12 @@ items:
   examples:
     - owner
     - some_author_id
-  $ref: https://controlman.repodynamics.com/schema/member-id
+  oneOf:
+    - $ref: https://controlman.repodynamics.com/schema/member-id
+    - type: object
+      properties:
+        id:
+          $ref: https://controlman.repodynamics.com/schema/member-id
+        member:
+          type: boolean
+          default: true
