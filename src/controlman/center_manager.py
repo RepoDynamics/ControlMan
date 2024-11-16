@@ -23,6 +23,7 @@ from controlman import file_gen as _file_gen
 from controlman import data_loader as _data_loader
 from controlman import data_validator as _data_validator
 from controlman.reporter import ControlCenterReporter as _ControlCenterReporter
+from controlman.changelog_manager import ChangelogManager
 from controlman import data_helper as _helper
 
 
@@ -104,6 +105,9 @@ class CenterManager:
                 "team_members_with_role_types": _helper.team_members_with_role_types,
                 "team_members_without_role_types": _helper.team_members_without_role_types,
                 "team_members_with_role_ids": _helper.team_members_with_role_ids,
+            },
+            code_context_call={
+                "changelog": ChangelogManager(repo_path=self._git.repo_path)
             },
             relative_template_keys=const.RELATIVE_TEMPLATE_KEYS
         )
