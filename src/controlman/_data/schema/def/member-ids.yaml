@@ -1,15 +1,23 @@
-$id: https://controlman.repodynamics.com/schema/member-ids
+$id: https://controlman.repodynamics.com/schema/entity-ids
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Team Member IDs
+title: Entity IDs
 description: |
-  A list of keys defined in [`$.team`](#ccc-team).
+  A list of persons (members or contributors) defined by their IDs.
 type: array
 uniqueItems: true
 items:
-  title: A team member ID.
+  title: Entity ID
+  description: |
+    An entity can either be defined as a string or a mapping.
+    If it is a string, it is the member or contributor ID of the entity.
+    To avoid possible conflicts, you can also use the `member` key to
+    explicitly specify whether the ID belongs to a team member or a contributor.
   examples:
-    - owner
-    - some_author_id
+    - some_member_id
+    - some_contributor_id
+    - {id: some_member_id}
+    - {id: some_member_id, member: true}
+    - {id: some_contributor_id, member: false}
   oneOf:
     - $ref: https://controlman.repodynamics.com/schema/member-id
     - type: object
