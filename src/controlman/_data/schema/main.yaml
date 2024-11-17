@@ -617,7 +617,7 @@ properties:
               for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
             ]
           }}#
-        $ref: https://controlman.repodynamics.com/schema/member-ids
+        $ref: https://controlman.repodynamics.com/schema/entity-ids
         examples:
           - [ owner, some_author_id ]
       contacts:
@@ -628,7 +628,7 @@ properties:
           [`$.team`](#ccc-team) and reference them here using templating.
         examples:
           - [ owner, some_author_id ]
-        $ref: https://controlman.repodynamics.com/schema/member-ids
+        $ref: https://controlman.repodynamics.com/schema/entity-ids
       doi:
         oneOf:
           - $ref: https://jsonschemata.repodynamics.com/id/doi
@@ -729,7 +729,6 @@ properties:
           These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
         type: array
         uniqueItems: true
-        minItems: 1
         items:
           title: Identifier
           description: An identifier for the project.
@@ -1832,6 +1831,16 @@ properties:
               scope: config
               description: >-
                 Synchronize dynamic files with control center configurations.
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
+          vars_sync:
+            title: Variables Synchronization
+            description: |
+              Automatic synchronization of variables file.
+            default:
+              type: sync
+              scope: vars
+              description: >-
+                Synchronize variables file.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
           refactor:
             title: Refactor
@@ -3727,7 +3736,7 @@ properties:
           asset:
             type: object
             additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/gh-release-asset
+              $ref: https://controlman.repodynamics.com/schema/release-asset
       zenodo:
         type: object
         required:
@@ -3752,14 +3761,14 @@ properties:
           asset:
             type: object
             additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/gh-release-asset
+              $ref: https://controlman.repodynamics.com/schema/release-asset
           title:
             description: |
               Title of the deposition.
             default: ${{ citation.title }}$
             $ref: https://jsonschemata.repodynamics.com/string/oneline
           creators:
-            $ref: https://controlman.repodynamics.com/schema/member-ids
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
             description: |
               Core creators/authors of the deposition, ordered by contribution (highest first).
             default: |
@@ -3768,7 +3777,7 @@ properties:
                   {"id": int_author["id"], "member": True}
                   for int_author in team_members_with_role_types("Author", active_only=True)
                 ] + [
-                  {"id"}: ext_author["id"], "member": False}
+                  {"id": ext_author["id"], "member": False}
                   for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
                 ]
               }}#
@@ -3913,7 +3922,7 @@ properties:
               the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
               key of the `pyproject.toml` file).
               :::
-            $ref: https://controlman.repodynamics.com/schema/member-ids
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
             examples:
               - [ owner, some_author_id ]
           related_identifiers:
