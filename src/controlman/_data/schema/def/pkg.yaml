@@ -231,7 +231,7 @@ properties:
       to provide credit to the authors of the package.
       For example, they are displayed on the package's homepage on PyPI and TestPyPI.
       :::
-    $ref: https://controlman.repodynamics.com/schema/member-ids
+    $ref: https://controlman.repodynamics.com/schema/entity-ids
     default: |
       #{{
           return [
@@ -259,7 +259,7 @@ properties:
       to provide credit to the maintainers of the package.
       For example, they are displayed on the package's homepage on PyPI and TestPyPI.
       :::
-    $ref: https://controlman.repodynamics.com/schema/member-ids
+    $ref: https://controlman.repodynamics.com/schema/entity-ids
     description_default: All maintainers defined in `$.maintainers`.
     default: |
       #{{
