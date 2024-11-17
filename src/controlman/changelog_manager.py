@@ -106,5 +106,3 @@ class Changelog(_ps.PropertyDict):
                         )
                     )
         return [entity for entity, _, _ in sorted(out, key=lambda i: (i[1], i[2]), reverse=True)]
-
-
