@@ -12,6 +12,7 @@ import pysyntax as _pysyntax
 from loggerman import logger
 import pylinks as _pl
 
+import controlman
 from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
 from controlman.file_gen import unit as _unit
@@ -37,6 +38,7 @@ class PythonPackageFileGenerator:
         self._path_root_before: _Path | None = None
         self._path_src_before: _Path | None = None
         self._path_import_before: _Path | None = None
+        self._contributors = controlman.read_contributors(self._path_repo)
         return
 
     def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[DynamicFile]:
@@ -333,8 +335,13 @@ class PythonPackageFileGenerator:
                 project[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
         return project
 
-    def _make_person_entry(self, person_id: str) -> dict[str, str]:
-        person = self._data["team"][person_id]
+    def _make_person_entry(self, person_id: str | dict) -> dict[str, str]:
+        if isinstance(person_id, str):
+            person = self._data["team"][person_id] or self._contributors[person_id]
+        elif person_id["member"]:
+            person = self._data["team"][person_id["id"]]
+        else:
+            person = self._contributors[person_id["id"]]
         person_entry = {"name": person["name"]["full"]}
         if "email" in person:
             person_entry["email"] = person["email"]["id"]

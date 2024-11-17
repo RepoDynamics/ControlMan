@@ -3,6 +3,7 @@ from pathlib import Path as _Path
 import copy
 import re as _re
 
+import controlman
 import jsonschema as _jsonschema
 import referencing as _referencing
 from referencing import jsonschema as _referencing_jsonschema
@@ -64,7 +65,7 @@ class DataValidator:
     def validate(self):
         self.dir_paths()
         self.branch_names()
-        self.citation()
+        # self.citation()
         # self.changelogs()
         # self.commits()
         # self.issue_forms()
@@ -110,7 +111,7 @@ class DataValidator:
                 data=self._data,
             )
         # Verify that member IDs are valid
-        for key in ("authors", "contacts", "contributors"):
+        for key in ("authors", "contacts"):
             for member_id in self._data.get(f"citation.{key}", []):
                 if member_id not in self._data["team"]:
                     raise _exception.load.ControlManSchemaValidationError(
