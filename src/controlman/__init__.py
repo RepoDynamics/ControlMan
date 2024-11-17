@@ -77,18 +77,6 @@ def from_json_file(
     _data_validator.validate(data=data)
     return _ps.NestedDict(data)
 
-def read_contributors(
-    repo_path: str | _Path,
-    filepath: str = const.FILEPATH_CONTRIBUTORS,
-) -> dict:
-    fullpath = _Path(repo_path) / filepath
-    if fullpath.exists():
-        try:
-            return _ps.read.json_from_file(path=fullpath)
-        except _ps.exception.read.PySerialsReadException as e:
-            raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
-        # _data_validator.validate(data=data)
-    return {}
 
 def from_json_file_at_commit(
     git_manager: _Git,
@@ -130,3 +118,31 @@ def from_json_string(data: str) -> _ps.NestedDict:
         raise _exception.load.ControlManInvalidMetadataError(e) from None
     _data_validator.validate(data=data)
     return _ps.NestedDict(data)
+
+
+def read_contributors(
+    repo_path: str | _Path,
+    filepath: str = const.FILEPATH_CONTRIBUTORS,
+) -> dict:
+    fullpath = _Path(repo_path) / filepath
+    if fullpath.exists():
+        try:
+            return _ps.read.json_from_file(path=fullpath)
+        except _ps.exception.read.PySerialsReadException as e:
+            raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
+        # _data_validator.validate(data=data)
+    return {}
+
+
+def read_variables(
+    repo_path: str | _Path,
+    filepath: str = const.FILEPATH_VARIABLES,
+) -> dict:
+    fullpath = _Path(repo_path) / filepath
+    if fullpath.exists():
+        try:
+            return _ps.read.json_from_file(path=fullpath)
+        except _ps.exception.read.PySerialsReadException as e:
+            raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
+        # _data_validator.validate(data=data)
+    return {}
