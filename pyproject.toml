@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev366"
+version = "0.0.0.dev367"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -28,9 +28,9 @@ dependencies = [
     "ruamel.yaml == 0.17.40",
     "Jinja2 >= 3, < 4",
     "PyLinks == 0.0.0.dev48",
-    "LoggerMan == 0.0.0.dev64",
+    "LoggerMan == 0.0.0.dev65",
     "PySerials == 0.0.0.dev38",
-    "GitTidy == 0.0.0.dev61",
+    "GitTidy == 0.0.0.dev62",
     "PkgData == 0.0.0.dev5",
     "PyShellMan == 0.0.0.dev25",
     "PySyntax == 0.0.0.dev5",
@@ -39,6 +39,6 @@ dependencies = [
     "JSONSchemata == 0.0.0.dev34",
     "VersionMan == 0.0.0.dev249",
     "HTMP == 0.0.0.dev5",
-    "LicenseMan == 0.0.0.dev21",
+    "LicenseMan == 0.0.0.dev22",
 ]
 requires-python = ">=3.10"
