@@ -1,0 +1,39 @@
+$id: https://controlman.repodynamics.com/schema/release-asset
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Release Asset
+description: Configurations for a release asset, e.g., for GitHub Releases or Zenodo.
+type: object
+required: [ files ]
+oneOf:
+  - required: [ format ]
+  - required: [ media_type ]
+properties:
+  name:
+    description: File name of the asset.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  label:
+    description: Label of the asset.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  files:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [ source, destination, artifact ]
+      properties:
+        source:
+          type: string
+          default: '.'
+        pattern:
+          type: string
+        destination:
+          type: string
+          default: '.'
+        artifact:
+          type: boolean
+          default: false
+  format:
+    type: string
+    enum: [ zip, tar, tar.gz, tar.bz2, tar.xz, gz, bz2, xz ]
+  media_type:
+    type: string
