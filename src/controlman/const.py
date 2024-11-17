@@ -13,6 +13,7 @@ DIRNAME_LOCAL_REPODYNAMICS = "RepoDynamics"
 FILEPATH_METADATA = ".github/.repodynamics/metadata.json"
 FILEPATH_CHANGELOG = ".github/.repodynamics/changelog.json"
 FILEPATH_CONTRIBUTORS = ".github/.repodynamics/contributors.json"
+FILEPATH_VARIABLES = ".github/.repodynamics/variables.json"
 FILENAME_METADATA_CACHE = ".metadata_cache.yaml"
 FILENAME_LOCAL_CONFIG = "config.yaml"
 
