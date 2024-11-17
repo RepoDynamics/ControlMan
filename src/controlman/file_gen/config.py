@@ -421,7 +421,7 @@ class ConfigFileGenerator:
 
         def create_identifier(ident: dict):
             return {
-                k: v for k, v in ident if k not in ("relation", "resource_type")
+                k: v for k, v in ident.items() if k not in ("relation", "resource_type")
             }
 
         def create_repository(repo: dict):
