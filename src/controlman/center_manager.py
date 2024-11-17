@@ -2,6 +2,7 @@ from pathlib import Path as _Path
 import shutil as _shutil
 import functools as _functools
 
+import controlman
 from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
 import pylinks as _pylinks
 import pyserials as _ps
@@ -140,11 +141,13 @@ class CenterManager:
             )
             self._cache_manager.save()
         with _logger.sectioning("Template Resolution"):
+            data["var"] = controlman.read_variables(repo_path=self._path_root)
             data.fill()
             _logger.success(
                 "Filled Data",
                 "All template variables have been successfully resolved.",
             )
+            data.pop("var")
         data = _ps.NestedDict(_ps.update.remove_keys(data(), const.RELATIVE_TEMPLATE_KEYS))
         with _logger.sectioning("Final Data Validation"):
             _data_validator.validate(data=data(), source="source")
