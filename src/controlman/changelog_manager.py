@@ -80,9 +80,9 @@ class Changelog(_ps.PropertyDict):
         if member:
             types = ["member"]
         elif member is False:
-            types = ["external"]
+            types = ["collaborator"]
         else:
-            types = ["member", "external"]
+            types = ["member", "collaborator"]
         for contributor_type in types:
             contributors = contrib.get(contributor_type)
             for contributor_id, contributor_data in contributors.items():
