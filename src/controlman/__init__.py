@@ -120,6 +120,22 @@ def from_json_string(data: str) -> _ps.NestedDict:
     return _ps.NestedDict(data)
 
 
+def read_changelog(
+    repo_path: str | _Path,
+    filepath: str = const.FILEPATH_CHANGELOG,
+):
+    fullpath = _Path(repo_path) / filepath
+    if fullpath.exists():
+        try:
+            data = _ps.read.json_from_file(path=fullpath)
+        except _ps.exception.read.PySerialsReadException as e:
+            raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
+    else:
+        data = {}
+    _data_validator.validate(data=data, schema="changelog")
+    return data
+
+
 def read_contributors(
     repo_path: str | _Path,
     filepath: str = const.FILEPATH_CONTRIBUTORS,
@@ -127,11 +143,13 @@ def read_contributors(
     fullpath = _Path(repo_path) / filepath
     if fullpath.exists():
         try:
-            return _ps.read.json_from_file(path=fullpath)
+            data = _ps.read.json_from_file(path=fullpath)
         except _ps.exception.read.PySerialsReadException as e:
             raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
-        # _data_validator.validate(data=data)
-    return {}
+    else:
+        data = {}
+    _data_validator.validate(data=data, schema="contributors")
+    return data
 
 
 def read_variables(
@@ -141,8 +159,10 @@ def read_variables(
     fullpath = _Path(repo_path) / filepath
     if fullpath.exists():
         try:
-            return _ps.read.json_from_file(path=fullpath)
+            data = _ps.read.json_from_file(path=fullpath)
         except _ps.exception.read.PySerialsReadException as e:
             raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
-        # _data_validator.validate(data=data)
-    return {}
+    else:
+        data = {}
+    _data_validator.validate(data=data, schema="variables")
+    return data

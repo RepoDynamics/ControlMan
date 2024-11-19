@@ -1,0 +1,25 @@
+$id: https://controlman.repodynamics.com/schema/variable-zenodo
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Zenodo Variable
+description: Variable data for a Zenodo or Zenodo Sandbox project.
+type: object
+additionalProperties: false
+default: { }
+properties:
+  concept:
+    type: object
+    additionalProperties: false
+    default: { }
+    properties:
+      doi:
+        oneOf:
+          - $ref: https://jsonschemata.repodynamics.com/id/doi
+          - type: "null"
+        default: null
+      draft:
+        type: boolean
+        default: false
+      id:
+        type: integer
+        minimum: 0
+        default: 0

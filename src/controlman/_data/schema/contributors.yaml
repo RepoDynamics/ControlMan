@@ -3,8 +3,5 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Contributors
 description: Project's contributors.
 type: object
-properties:
-  github:
-    type: object
-  external:
-    type: object
+additionalProperties:
+  $ref: https://controlman.repodynamics.com/schema/entity-def

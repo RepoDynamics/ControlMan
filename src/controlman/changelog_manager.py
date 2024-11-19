@@ -19,14 +19,7 @@ class ChangelogManager:
     def __init__(self, repo_path: Path):
         self._get_metadata = None
         self._path_changelog = repo_path / const.FILEPATH_CHANGELOG
-        if self._path_changelog.exists():
-            try:
-                self._changelogs = _ps.read.json_from_file(path=self._path_changelog)
-            except _ps.exception.read.PySerialsReadException as e:
-                raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=self._path_changelog) from None
-            # _data_validator.validate(data=data)
-        else:
-            self._changelogs = []
+        self._changelogs = controlman.read_changelog(repo_path=repo_path)
         self._contrib = controlman.read_contributors(repo_path=repo_path)
         return
 
@@ -100,7 +93,7 @@ class Changelog(_ps.PropertyDict):
                         entity = self._contrib[contributor_id]
                     out.append(
                         (
-                            entity | {"id": "contributor_id", "member": is_member},
+                            entity | {"id": contributor_id, "member": is_member},
                             max_priority,
                             entity["name"]["full_inverted"]
                         )

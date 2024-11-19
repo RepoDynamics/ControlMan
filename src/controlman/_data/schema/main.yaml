@@ -1842,6 +1842,16 @@ properties:
               description: >-
                 Synchronize variables file.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
+          contrib_sync:
+            title: Contributors Synchronization
+            description: |
+              Automatic synchronization of contributors file.
+            default:
+              type: sync
+              scope: contrib
+              description: >-
+                Synchronize contributors file.
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
           refactor:
             title: Refactor
             description: |

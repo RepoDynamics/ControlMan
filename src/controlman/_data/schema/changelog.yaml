@@ -3,6 +3,10 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Changelog
 description: Project's changelog.
 type: array
+default:
+  - ongoing: true
+    public: true
+    version: 0.0.0
 items:
   type: object
   required: [ version ]
@@ -19,6 +23,8 @@ items:
       type: object
     pull_request:
       type: object
+    labels:
+      type: array
     milestone:
       type: object
     protocol:
@@ -45,4 +51,13 @@ items:
         user:
           type: object
         external:
+          type: object
+    release:
+      type: object
+      properties:
+        github:
+          type: object
+        zenodo:
+          type: object
+        zenodo_sandbox:
           type: object
