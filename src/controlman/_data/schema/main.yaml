@@ -876,6 +876,7 @@ properties:
       such as colors, logos, and badges.
     type: object
     additionalProperties: false
+    default: { }
     properties:
       color:
         title: Colors
@@ -908,26 +909,35 @@ properties:
             title: Icon
             description: Favicon (website icon) of the project.
             $ref: https://controlman.repodynamics.com/schema/media-file
+            default:
+              path_web: _media/logo/favicon.svg
           simple:
             title: Simple
             description: Simple versions of the project's logo, to be used in small spaces.
             type: object
+            default: { }
             additionalProperties: false
             properties:
               light:
                 title: Light
                 description: Light-themed version of the simple logo.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/simple_light.svg
               dark:
                 title: Dark
                 description: Dark-themed version of the simple logo.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/simple_dark.svg
               raster:
                 title: Raster
                 description: |
                   Raster version of the simple logo,
                   to be used in places where vector graphics are not supported.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/simple_light.png
               ascii:
                 title: ASCII
                 description: |
@@ -938,22 +948,29 @@ properties:
             title: Full
             description: Full versions of the project's logo, to be used in large spaces.
             type: object
+            default: { }
             additionalProperties: false
             properties:
               light:
                 title: Light
                 description: Light-themed version of the full logo.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/full_light.svg
               dark:
                 title: Dark
                 description: Dark-themed version of the full logo.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/full_dark.svg
               raster:
                 title: Raster
                 description: |
                   Raster version of the full logo,
                   to be used in places where vector graphics are not supported.
                 $ref: https://controlman.repodynamics.com/schema/media-file
+                default:
+                  path_web: _media/logo/full_light.png
               ascii:
                 title: ASCII
                 description: |
@@ -2150,8 +2167,6 @@ properties:
 
       ## References
       - [GitHub Documentation](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates)
-  
-
     type: object
     default : { }
     additionalProperties: false
@@ -2164,7 +2179,6 @@ properties:
       contact_links:
         description: External links to be shown on the issue template chooser
         type: array
-        default: [ ]
         uniqueItems: true
         items:
           type: object
@@ -4191,11 +4205,26 @@ properties:
               After the specified duration,
               the cached data is considered stale
               and will be automatically synced with the source.
+            default: { }
             $ref: https://controlman.repodynamics.com/schema/cache-retention-hours
       url:
-        title: URL of the project's configuration file.
-        default: ${{ repo.url.raw }}$/.github/.repodynamics/metadata.json
-        $ref: https://jsonschemata.repodynamics.com/url/https
+        type: object
+        description: URLs of project configuration resources.
+        additionalProperties: false
+        default: { }
+        properties:
+          metadata:
+            title: URL of the project's metadata file.
+            $ref: https://jsonschemata.repodynamics.com/url/https
+            default: ${{ repo.url.raw }}$/.github/.repodynamics/metadata.json
+          variables:
+            title: URL of the project's variables file.
+            $ref: https://jsonschemata.repodynamics.com/url/https
+            default: ${{ repo.url.raw }}$/.github/.repodynamics/variables.json
+          changelog:
+            title: URL of the project's changelog file.
+            $ref: https://jsonschemata.repodynamics.com/url/https
+            default: ${{ repo.url.raw }}$/.github/.repodynamics/changelog.json
   workflow:
     description: |
       Configurations for the project's workflows

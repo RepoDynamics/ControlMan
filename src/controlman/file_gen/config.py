@@ -376,11 +376,9 @@ class ConfigFileGenerator:
         issues = self._data["issue"]
         if not issues:
             return [DynamicFile(**generate_file)]
-        config = {}
-        if issues.get("blank_enabled"):
-            config["blank_issues_enabled"] = issues["blank_enabled"]
+        config = {"blank_issues_enabled": issues["blank_enabled"]}
         if issues.get("contact_links"):
-            config["contact_links"] = self._data["issue"]["contact_links"]
+            config["contact_links"] = issues["contact_links"]
         file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
         return [DynamicFile(content=file_content, **generate_file)]
 
