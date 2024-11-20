@@ -12,10 +12,10 @@ properties:
     default: { }
     properties:
       doi:
+        default: null
         oneOf:
           - $ref: https://jsonschemata.repodynamics.com/id/doi
           - type: "null"
-        default: null
       draft:
         type: boolean
         default: false
