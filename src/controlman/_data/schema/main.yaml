@@ -3117,25 +3117,17 @@ properties:
           and can include project's intended purpose, subject area,
           affinity groups, and other important qualities.
           Note that GitHub only accepts up to 20 topics.
-        oneOf:
-          - type: null
-          - type: array
-            uniqueItems: true
-            maxItems: 20
-            default: |
-              #{{                
-                return [
-                  slugify(keyword) for keyword in get("keywords", []) if len(keyword) <= 50
-                ][:20]
-              }}#
-            items:
-              title: A project keyword.
-              description: |
-                It must start with an alphanumeric character,
-                and can contain 50 or less ASCII alphanumeric characters and hyphens.
-              type: string
-              maxLength: 50
-              pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
+        type: array
+        uniqueItems: true
+        maxItems: 20
+        items:
+          title: A project keyword.
+          description: |
+            It must start with an alphanumeric character,
+            and can contain 50 or less ASCII alphanumeric characters and hyphens.
+          type: string
+          maxLength: 50
+          pattern: ^[A-Za-z0-9][A-Za-z0-9\-]*$
       homepage:
         title: URL of the project's homepage.
         description: |
