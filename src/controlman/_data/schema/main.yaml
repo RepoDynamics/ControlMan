@@ -477,278 +477,657 @@ properties:
             - required: [ github ]
             - required: [ name ]
   citation:
-    title: Citation
-    description: |
-      Project's citation information.
-      
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      This is primarily used to automatically maintain a
-      [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
-      ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
-      However, information that are only defined here, such as [`authors`](#ccc-citation-authors),
-      [`contacts`](#ccc-citation-contacts), and [`preferred_citation`](#ccc-citation-preferred_citation),
-      are also used in other places, such as the project's website, README, and package metadata.
-      :::
-
-      :::{admonition} Citation File Format (CFF)
-      :class: dropdown seealso
-      
-      This object closely follows the
-      [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
-      (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)).
-      However, it is simplified (e.g., `entity` and `person` are merged into [`Entity`](#ccc-defs-entity)),
-      and many fields are automatically filled, e.g.:
-      
-      - `doi` (given you have [activated your Zenodo account](#install-zenodo)),
-        `version` and `date-released`are automatically filled for each new release.
-      - `cff-version` is automatically added to the file.
-      :::
     type: object
     additionalProperties: false
-    required: [ message, title, authors, type, order ]
     properties:
-      order:
-        type: array
-        uniqueItems: true
-        contains:
-          enum: [ message, title, authors, type, cff-version ]
-        minContains: 5
-        items:
-          type: string
-          enum:
-            - abstract
-            - authors
-            - cff-version
-            - commit
-            - contact
-            - date-released
-            - doi
-            - identifiers
-            - keywords
-            - license
-            - license-url
-            - message
-            - preferred-citation
-            - references
-            - repository
-            - repository-artifact
-            - repository-code
-            - title
-            - type
-            - url
-            - version
-        default:
-          - message
-          - preferred-citation
-          - doi
-          - commit
-          - version
-          - date-released
-          - license
-          - license-url
-          - url
-          - repository
-          - repository-artifact
-          - repository-code
-          - identifiers
-          - type
-          - title
-          - authors
-          - contact
-          - abstract
-          - keywords
-          - references
-          - cff-version
-      message:
-        title: Message
+      cff:
         description: |
-          A message to include in the citation file.
-          On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
-          on the repository's main page.
-        examples:
-          - If you use this software, please cite both the article from preferred-citation and the software itself.
-          - If you use this software, please cite it using the metadata from this file.
-          - Please cite this software using these metadata.
-          - Please cite this software using the metadata from 'preferred-citation'.
-        default: If you use ${{ name }}$, please cite it using this reference.
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-      title:
-        title: Title
-        description: |
-          Title of the citation.
-          This can be your project's [name](#ccc-name), [title](#ccc-title),
-          a combination of both, or any other custom title.
-        default: >-
-          #{{
-            name = get("name")
-            title = get("title")
-            return f"{name}: {title}" if title else name
-          }}#
-        examples:
-          - '${{ name }}$: ${{ title }}$'
-          - ${{ name }}$
-          - ${{ pkg.name }}$
-          - A Custom Title
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-      authors:
-        title: Authors
-        description: |
-          Core author(s) of the project, ordered by contribution (highest first).
+          Project's citation information.
           
           :::{admonition} Usage
           :class: dropdown note
           
-          These are automatically displayed on the project's website,
-          the front page of the project's PDF documentation,
-          and the project's PyPI and TestPyPI pages
-          (by being added to package metadata, i.e.,
-          the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
-          key of the `pyproject.toml` file).
+          This is primarily used to automatically maintain a
+          [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
+          ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
+          However, information that are only defined here, such as [`authors`](#ccc-citation-authors),
+          [`contacts`](#ccc-citation-contacts), and [`preferred_citation`](#ccc-citation-preferred_citation),
+          are also used in other places, such as the project's website, README, and package metadata.
           :::
-        default: |
-          #{{
-            return [
-              {"id": int_author["id"], "member": True}
-              for int_author in team_members_with_role_types("Author", active_only=True)
-            ] + [
-              {"id"}: ext_author["id"], "member": False}
-              for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
-            ]
-          }}#
-        $ref: https://controlman.repodynamics.com/schema/entity-ids
-        examples:
-          - [ owner, some_author_id ]
-      contacts:
-        title: Contacts
-        description: |
-          Project's contact persons.
-          It is recommended to define the persons in 
-          [`$.team`](#ccc-team) and reference them here using templating.
-        examples:
-          - [ owner, some_author_id ]
-        $ref: https://controlman.repodynamics.com/schema/entity-ids
-      doi:
-        oneOf:
-          - $ref: https://jsonschemata.repodynamics.com/id/doi
-          - type: "null"
-      version:
-        oneOf:
-          - $ref: https://jsonschemata.repodynamics.com/string/oneline
-          - type: "null"
-      date_released:
-        oneOf:
-          - $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-          - type: "null"
-      commit:
-        oneOf:
-          - $ref: https://jsonschemata.repodynamics.com/string/oneline
-          - type: "null"
-      abstract:
-        title: Abstract
-        description: |
-          A brief description of the project.
-        type: string
-        default: >-
-          #{{ return get("abstract", "") }}#
-        examples:
-          - |
-            A custom description of the project
-            that can span multiple lines.
-      keywords:
-        title: Keywords
-        description: Keywords categorizing the project.
-        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-        default: >-
-          #{{ return get("keywords", []) }}#
-        examples:
-          - [ A Custom Keyword, Another Custom Keyword ]
-      license:
-        title: License
-        description: |
-          SPDX [license ID](#ccc-license-id) of the project.
-        default: |
-          #{{
-            return [
-              component["id"] for component in get("license.component", {}).values()
-              if component["type"] == "license" and not component["custom"]
-            ]
-          }}#
-        type: array
-        uniqueItems: true
-        items:
-          $ref: https://jsonschemata.repodynamics.com/id/spdx-license
-      license_url:
-        title: License URL
-        description: The URL of the project's license (only required for non-SPDX licenses).
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      repository:
-        title: Repository
-        description: |
-          URLs of the project's repositories.
+    
+          :::{admonition} Citation File Format (CFF)
+          :class: dropdown seealso
+          
+          This object closely follows the
+          [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
+          (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)).
+          However, it is simplified (e.g., `entity` and `person` are merged into [`Entity`](#ccc-defs-entity)),
+          and many fields are automatically filled, e.g.:
+          
+          - `doi` (given you have [activated your Zenodo account](#install-zenodo)),
+            `version` and `date-released`are automatically filled for each new release.
+          - `cff-version` is automatically added to the file.
+          :::
         type: object
-        default: { }
         additionalProperties: false
+        required: [ message, title, authors, type, order ]
         properties:
-          source:
-            title: Source
+          order:
+            type: array
+            uniqueItems: true
+            contains:
+              enum: [ message, title, authors, type, cff-version ]
+            minContains: 5
+            items:
+              type: string
+              enum:
+                - abstract
+                - authors
+                - cff-version
+                - commit
+                - contact
+                - date-released
+                - doi
+                - identifiers
+                - keywords
+                - license
+                - license-url
+                - message
+                - preferred-citation
+                - references
+                - repository
+                - repository-artifact
+                - repository-code
+                - title
+                - type
+                - url
+                - version
+            default:
+              - message
+              - preferred-citation
+              - doi
+              - commit
+              - version
+              - date-released
+              - license
+              - license-url
+              - url
+              - repository
+              - repository-artifact
+              - repository-code
+              - identifiers
+              - type
+              - title
+              - authors
+              - contact
+              - abstract
+              - keywords
+              - references
+              - cff-version
+          message:
+            title: Message
             description: |
-              URL of the project in a source code repository.
-              This is equivalent to `repository-code` in CFF.
-            default: ${{ repo.url.home }}$
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-          build:
-            title: Build
+              A message to include in the citation file.
+              On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
+              on the repository's main page.
+            examples:
+              - If you use this software, please cite both the article from preferred-citation and the software itself.
+              - If you use this software, please cite it using the metadata from this file.
+              - Please cite this software using these metadata.
+              - Please cite this software using the metadata from 'preferred-citation'.
+            default: If you use ${{ name }}$, please cite it using this reference.
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          title:
+            title: Title
             description: |
-              URL of the project in a build artifact/binary repository.
-              This is equivalent to `repository-artifact` in CFF.
-            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-          other:
-            title: Other
+              Title of the citation.
+              This can be your project's [name](#ccc-name), [title](#ccc-title),
+              a combination of both, or any other custom title.
+            default: >-
+              #{{
+                name = get("name")
+                title = get("title")
+                return f"{name}: {title}" if title else name
+              }}#
+            examples:
+              - '${{ name }}$: ${{ title }}$'
+              - ${{ name }}$
+              - ${{ pkg.name }}$
+              - A Custom Title
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          authors:
+            title: Authors
             description: |
-              URL of the project in another type of repository.
-              This is equivalent to `repository` in CFF.
+              Core author(s) of the project, ordered by contribution (highest first).
+              
+              :::{admonition} Usage
+              :class: dropdown note
+              
+              These are automatically displayed on the project's website,
+              the front page of the project's PDF documentation,
+              and the project's PyPI and TestPyPI pages
+              (by being added to package metadata, i.e.,
+              the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+              key of the `pyproject.toml` file).
+              :::
+            default: |
+              #{{
+                return [
+                  {"id": int_author["id"], "member": True}
+                  for int_author in team_members_with_role_types("Author", active_only=True)
+                ] + [
+                  {"id"}: ext_author["id"], "member": False}
+                  for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
+                ]
+              }}#
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
+            examples:
+              - [ owner, some_author_id ]
+          contacts:
+            title: Contacts
+            description: |
+              Project's contact persons.
+              It is recommended to define the persons in 
+              [`$.team`](#ccc-team) and reference them here using templating.
+            examples:
+              - [ owner, some_author_id ]
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
+          doi:
+            oneOf:
+              - $ref: https://jsonschemata.repodynamics.com/id/doi
+              - type: "null"
+          version:
+            oneOf:
+              - $ref: https://jsonschemata.repodynamics.com/string/oneline
+              - type: "null"
+          date_released:
+            oneOf:
+              - $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+              - type: "null"
+          commit:
+            oneOf:
+              - $ref: https://jsonschemata.repodynamics.com/string/oneline
+              - type: "null"
+          abstract:
+            title: Abstract
+            description: |
+              A brief description of the project.
+            type: string
+            default: >-
+              #{{ return get("abstract", "") }}#
+            examples:
+              - |
+                A custom description of the project
+                that can span multiple lines.
+          keywords:
+            title: Keywords
+            description: Keywords categorizing the project.
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+            default: >-
+              #{{ return get("keywords", []) }}#
+            examples:
+              - [ A Custom Keyword, Another Custom Keyword ]
+          license:
+            title: License
+            description: |
+              SPDX [license ID](#ccc-license-id) of the project.
+            default: |
+              #{{
+                return [
+                  component["id"] for component in get("license.component", {}).values()
+                  if component["type"] == "license" and not component["custom"]
+                ]
+              }}#
+            type: array
+            uniqueItems: true
+            items:
+              $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+          license_url:
+            title: License URL
+            description: The URL of the project's license (only required for non-SPDX licenses).
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      url:
-        title: URL
-        description: URL of the project's landing (home) page.
-        default: >-
-          #{{ return get("web.url.home") or get("repo.url.home") }}#
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      type:
-        title: Type
-        description: Type of the work. This can be either `dataset` or `software`.
-        type: string
-        enum: [ dataset, software ]
-        default: software
-      identifiers:
-        title: Identifiers
-        description: |
-          List of identifiers for the project.
-          These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
-        type: array
-        uniqueItems: true
-        items:
-          title: Identifier
-          description: An identifier for the project.
-          $ref: https://controlman.repodynamics.com/schema/identifier
-      preferred_citation:
-        title: Preferred Citation
-        description: |
-          A reference to another work that should be cited
-          instead of the software itself.
-        $ref: https://controlman.repodynamics.com/schema/reference
-      references:
-        title: References
-        description: |
-          Reference(s) to other creative works related to, or used/referenced by, the project.
-        type: array
-        uniqueItems: true
-        items:
-          title: Reference
-          description: A reference to another work.
-          $ref: https://controlman.repodynamics.com/schema/reference
+          repository:
+            title: Repository
+            description: |
+              URLs of the project's repositories.
+            type: object
+            default: { }
+            additionalProperties: false
+            properties:
+              source:
+                title: Source
+                description: |
+                  URL of the project in a source code repository.
+                  This is equivalent to `repository-code` in CFF.
+                default: ${{ repo.url.home }}$
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+              build:
+                title: Build
+                description: |
+                  URL of the project in a build artifact/binary repository.
+                  This is equivalent to `repository-artifact` in CFF.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+              other:
+                title: Other
+                description: |
+                  URL of the project in another type of repository.
+                  This is equivalent to `repository` in CFF.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          url:
+            title: URL
+            description: URL of the project's landing (home) page.
+            default: >-
+              #{{ return get("web.url.home") or get("repo.url.home") }}#
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          type:
+            title: Type
+            description: Type of the work. This can be either `dataset` or `software`.
+            type: string
+            enum: [ dataset, software ]
+            default: software
+          identifiers:
+            title: Identifiers
+            description: |
+              List of identifiers for the project.
+              These can be any type of identifier, such as DOI, URL, SWH, or any other custom identifier.
+            type: array
+            uniqueItems: true
+            items:
+              title: Identifier
+              description: An identifier for the project.
+              $ref: https://controlman.repodynamics.com/schema/identifier
+          preferred_citation:
+            title: Preferred Citation
+            description: |
+              A reference to another work that should be cited
+              instead of the software itself.
+            $ref: https://controlman.repodynamics.com/schema/reference
+          references:
+            title: References
+            description: |
+              Reference(s) to other creative works related to, or used/referenced by, the project.
+            type: array
+            uniqueItems: true
+            items:
+              title: Reference
+              description: A reference to another work.
+              $ref: https://controlman.repodynamics.com/schema/reference
+      zenodo:
+        type: object
+        additionalProperties: false
+        required: [ title, description, upload_type, access_right ]
+        properties:
+          title:
+            description: |
+              Title of the deposition.
+            default: ${{ citation.cff.title }}$
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+          creators:
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
+            description: |
+              Core creators/authors of the deposition, ordered by contribution (highest first).
+            default: |
+              #{{
+                return [
+                  {"id": int_author["id"], "member": True}
+                  for int_author in team_members_with_role_types("Author", active_only=True)
+                ] + [
+                  {"id": ext_author["id"], "member": False}
+                  for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
+                ]
+              }}#
+            examples:
+              - [ owner, some_author_id ]
+          description:
+            description: |
+              Description of the deposition.
+            default: ${{ citation.cff.abstract }}$
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          upload_type:
+            description: |
+              Type of the deposition.
+            type: string
+            enum:
+              - dataset
+              - image
+              - lesson
+              - other
+              - physicalobject
+              - poster
+              - presentation
+              - publication
+              - software
+              - video
+            default: ${{ citation.cff.type }}$
+          access_right:
+            description: |
+              Access rights for the project:
+              * `open`: Open Access
+              * `embargoed`: Embargoed Access
+              * `restricted`: Restricted Access
+              * `closed`: Closed Access
+            type: string
+            enum: [ open, embargoed, restricted, closed ]
+            default: open
+          license:
+            description: |
+              SPDX license ID of the project.
+              This is required if `access_right` is `open` or `embargoed`.
+              Note that Zenodo only accepts a single license ID.
+            $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+          access_conditions:
+            title: Access Conditions
+            description: |
+              Conditions for accessing the project.
+              This is only required if `access_right` is `restricted`.
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          embargo_date:
+            description: |
+              Date when the embargo will be lifted.
+              This is only required if `access_right` is `embargoed`.
+            $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+          publication_type:
+            description: |
+              Type of the publication.
+              This is only required if `upload_type` is `publication`.
+            type: string
+            enum:
+              - annotationcollection
+              - article
+              - book
+              - conferencepaper
+              - datamanagementplan
+              - deliverable
+              - milestone
+              - other
+              - patent
+              - preprint
+              - proposal
+              - report
+              - section
+              - softwaredocumentation
+              - taxonomictreatment
+              - technicalnote
+              - thesis
+              - workingpaper
+          image_type:
+            description: |
+              Type of the image.
+              This is only required if `upload_type` is `image`.
+            type: string
+            enum:
+              - diagram
+              - drawing
+              - figure
+              - other
+              - photo
+              - plot
+          keywords:
+            description: |
+              Free-form keywords for the deposition.
+              These are used to help users find the project.
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+          subjects:
+            title: Subjects
+            description: |
+              Project subjects from a taxonomy or controlled vocabulary.
+            examples:
+              - - term: Astronomy
+                  id: http://id.loc.gov/authorities/subjects/sh85009003
+                  scheme: url
+            type: array
+            uniqueItems: true
+            minItems: 1
+            items:
+              title: Subject
+              description: A subject from a taxonomy or controlled vocabulary.
+              type: object
+              additionalProperties: false
+              required: [ term, identifier ]
+              properties:
+                term:
+                  description: Term from a taxonomy or controlled vocabulary.
+                  type: string
+                  minLength: 1
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                identifier:
+                  description: ID of the term from a taxonomy or controlled vocabulary.
+                  type: string
+                  minLength: 1
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                scheme:
+                  description: Scheme of the term from a taxonomy or controlled vocabulary.
+                  type: string
+                  minLength: 1
+                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          language:
+            default: ${{ language }}$
+          contributors:
+            title: Contributors
+            description: |
+              Other contributors of the project, ordered by contribution (highest first).
+
+              :::{admonition} Usage
+              :class: dropdown note
+
+              These are automatically displayed on the project's website,
+              the front page of the project's PDF documentation,
+              and the project's PyPI and TestPyPI pages
+              (by being added to package metadata, i.e.,
+              the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
+              key of the `pyproject.toml` file).
+              :::
+            $ref: https://controlman.repodynamics.com/schema/entity-ids
+            examples:
+              - [ owner, some_author_id ]
+          related_identifiers:
+            title: Related Identifiers
+            description: |
+              List of related identifiers for the project.
+            type: array
+            uniqueItems: true
+            items:
+              title: Related Identifier
+              description: An identifier related to the work.
+              type: object
+              additionalProperties: false
+              required: [ identifier, relation ]
+              properties:
+                identifier:
+                  description: |
+                    The value of the identifier.
+                    Supported identifiers include:
+                    DOI, Handle, ARK, PURL, ISSN, ISBN, PubMed ID, PubMed Central ID, ADS Bibliographic Code,
+                    arXiv, Life Science Identifiers (LSID), EAN-13, ISTC, URNs and URLs.
+                  examples:
+                    - 10.5281/zenodo.1003150
+                    - https://example.com
+                relation:
+                  title: Relation
+                  description: |
+                    The relation of the identifier to the work.
+                  type: string
+                  enum:
+                    - isCitedBy
+                    - cites
+                    - isSupplementTo
+                    - isSupplementedBy
+                    - isContinuedBy
+                    - continues
+                    - isDescribedBy
+                    - describes
+                    - hasMetadata
+                    - isMetadataFor
+                    - isNewVersionOf
+                    - isPreviousVersionOf
+                    - isPartOf
+                    - hasPart
+                    - isReferencedBy
+                    - references
+                    - isDocumentedBy
+                    - documents
+                    - isCompiledBy
+                    - compiles
+                    - isVariantFormOf
+                    - isOriginalFormof
+                    - isIdenticalTo
+                    - isAlternateIdentifier
+                    - isReviewedBy
+                    - reviews
+                    - isDerivedFrom
+                    - isSourceOf
+                    - requires
+                    - isRequiredBy
+                    - isObsoletedBy
+                    - obsoletes
+                resource_type:
+                  title: Resource Type
+                  description: |
+                    The type of the resource identified by the identifier.
+                  type: string
+                  enum:
+                    - software
+                    - poster
+                    - presentation
+                    - dataset
+                    - video
+                    - lesson
+                    - physicalobject
+                    - other
+                    - image-figure
+                    - image-plot
+                    - image-drawing
+                    - image-diagram
+                    - image-photo
+                    - image-other
+                    - publication-annotationcollection
+                    - publication-book
+                    - publication-section
+                    - publication-conferencepaper
+                    - publication-datamanagementplan
+                    - publication-article
+                    - publication-patent
+                    - publication-preprint
+                    - publication-deliverable
+                    - publication-milestone
+                    - publication-proposal
+                    - publication-report
+                    - publication-softwaredocumentation
+                    - publication-taxonomictreatment
+                    - publication-technicalnote
+                    - publication-thesis
+                    - publication-workingpaper
+                    - publication-other
+          references:
+            description: |
+              List of references for the project.
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+          communities:
+            description: |
+              ID list of Zenodo communities you wish the project to appear in.
+              The owner of the communities will be notified,
+              and can either accept or reject your request.
+            examples:
+              - [ ecfunded ]
+            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+          grants:
+            title: Grants
+            description: |
+              List of OpenAIRE-supported grants funding the research for this project.
+            examples:
+              - - '10.13039/501100000780::283595'
+                - 283595
+            type: array
+            uniqueItems: true
+            minItems: 1
+            items:
+              title: Grant ID
+              description: |
+                Can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          notes:
+            title: Notes
+            description: |
+              Additional notes about the citation.
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          imprint_publisher:
+            description: |
+              Publisher of the deposition.
+              The publisher is used to formulate the citation.
+              Defaults to 'Zenodo'.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            examples:
+              - Zenodo
+          custom:
+            description: |
+              Additional publication-type-specific fields.
+            type: object
+            default: { }
+            properties:
+              "code:codeRepository":
+                title: Code Repository
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: ${{ repo.url.home }}$
+              "code:programmingLanguage":
+                type: array
+                uniqueItems: true
+                items:
+                  type: object
+                  required: [ id ]
+                  properties:
+                    id:
+                      description: |
+                        ID of a used programming language.
+                      $ref: https://jsonschemata.repodynamics.com/string/oneline
+                      examples:
+                        - python
+                        - java
+              "code:developmentStatus":
+                type: object
+                required: [ id ]
+                properties:
+                  id:
+                    type: string
+                    enum:
+                      - wip
+                      - unsupported
+                      - inactive
+                      - suspended
+                      - moved
+                      - concept
+                      - abandoned
+                      - active
+        allOf:
+          - if:
+              properties:
+                upload_type:
+                  const: publication
+              then:
+                required: [ publication_type ]
+          - if:
+              properties:
+                upload_type:
+                  const: image
+              then:
+                required: [ image_type ]
+          - if:
+              properties:
+                access_right:
+                  enum: [ embargoed, open ]
+              then:
+                required: [ license ]
+          - if:
+              properties:
+                access_right:
+                  const: embargoed
+              then:
+                required: [ embargo_date ]
+          - if:
+              properties:
+                access_right:
+                  const: restricted
+              then:
+                required: [ access_conditions ]
   funding:
     title: Funding
     description: |
@@ -3383,6 +3762,10 @@ properties:
         type: string
         examples:
           - MDEwOlJlcG9zaXRvcnkxMjk2MjY5
+      owner:
+        description: |
+          GitHub username of the repository owner.
+        type: string
       name:
         title: Repository name.
         default_auto: retrieved from [GitHub API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository)
@@ -3565,6 +3948,27 @@ properties:
                 examples:
                   - "https://github.com/RepoDynamics/PyPackIT/security/advisories/new"
                 $ref: https://jsonschemata.repodynamics.com/url/https
+          commits:
+            title: GitHub commits URLs.
+            type: object
+            default: { }
+            properties:
+              home:
+                title: URL of the repository's commits overview.
+                default: ${{ repo.url.home }}$/commits
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/commits"
+                $ref: https://jsonschemata.repodynamics.com/url/https
+          deployments:
+            type: object
+            default: { }
+            properties:
+              home:
+                description: URL of the repository's deployments overview.
+                default: ${{ repo.url.home }}$/deployments
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/deployments"
+                $ref: https://jsonschemata.repodynamics.com/url/https
   branch:
     title: GitHub/Git branch settings.
     description:
@@ -3713,442 +4117,6 @@ properties:
             - required: [ source ]
             - required: [ sources ]
   # CI
-  release:
-    type: object
-    properties:
-      github:
-        description: |
-          Configurations for documenting project releases.
-        type: object
-        additionalProperties: false
-        required: [ name ]
-        properties:
-          name:
-            type: string
-            default: >-
-              {{ ccc.name }} {{ version }}
-          body:
-            type: string
-            default: >-
-              Release notes ...
-          draft:
-            description: |
-              Whether to create a draft release instead of a published one.
-            type: boolean
-            default: false
-          discussion_category_name:
-            description: |
-              Slug of an existing discussion category in the repository.
-              If specified, a discussion of the specified category is created
-              and linked to the release.
-            type: string
-            default: announcements
-          order:
-            description: |
-              Strategy to determine the latest release
-            type: string
-            enum: [ version, date ]
-            default: version
-          asset:
-            type: object
-            additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/release-asset
-      zenodo:
-        type: object
-        required:
-          - asset
-          - title
-          - description
-          - upload_type
-          - access_right
-        properties:
-          concept_id:
-            title: Concept ID
-            description: Concept ID of the Zenodo deposition.
-            type: [string, "null"]
-            default: >-
-              #{{ return get("var.zenodo.concept.id") }}#
-          sandbox_concept_id:
-            title: Sandbox Concept ID
-            description: Concept ID of the Zenodo Sandbox deposition.
-            type: [ string, "null" ]
-            default: >-
-              #{{ return get("var.zenodo_sandbox.concept.id") }}#
-          asset:
-            type: object
-            additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/release-asset
-          title:
-            description: |
-              Title of the deposition.
-            default: ${{ citation.title }}$
-            $ref: https://jsonschemata.repodynamics.com/string/oneline
-          creators:
-            $ref: https://controlman.repodynamics.com/schema/entity-ids
-            description: |
-              Core creators/authors of the deposition, ordered by contribution (highest first).
-            default: |
-              #{{
-                return [
-                  {"id": int_author["id"], "member": True}
-                  for int_author in team_members_with_role_types("Author", active_only=True)
-                ] + [
-                  {"id": ext_author["id"], "member": False}
-                  for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
-                ]
-              }}#
-            examples:
-              - [ owner, some_author_id ]
-          description:
-            description: |
-              Description of the deposition.
-            default: ${{ citation.abstract }}$
-            $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          upload_type:
-            description: |
-              Type of the deposition.
-            type: string
-            enum:
-              - dataset
-              - image
-              - lesson
-              - other
-              - physicalobject
-              - poster
-              - presentation
-              - publication
-              - software
-              - video
-            default: ${{ citation.type }}$
-          access_right:
-            description: |
-              Access rights for the project:
-              * `open`: Open Access
-              * `embargoed`: Embargoed Access
-              * `restricted`: Restricted Access
-              * `closed`: Closed Access
-            type: string
-            enum: [ open, embargoed, restricted, closed ]
-            default: open
-          license:
-            description: |
-              SPDX license ID of the project.
-              This is required if `access_right` is `open` or `embargoed`.
-              Note that Zenodo only accepts a single license ID.
-            $ref: https://jsonschemata.repodynamics.com/id/spdx-license
-          access_conditions:
-            title: Access Conditions
-            description: |
-              Conditions for accessing the project.
-              This is only required if `access_right` is `restricted`.
-            $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          embargo_date:
-            description: |
-              Date when the embargo will be lifted.
-              This is only required if `access_right` is `embargoed`.
-            $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-          publication_type:
-            description: |
-              Type of the publication.
-              This is only required if `upload_type` is `publication`.
-            type: string
-            enum:
-              - annotationcollection
-              - article
-              - book
-              - conferencepaper
-              - datamanagementplan
-              - deliverable
-              - milestone
-              - other
-              - patent
-              - preprint
-              - proposal
-              - report
-              - section
-              - softwaredocumentation
-              - taxonomictreatment
-              - technicalnote
-              - thesis
-              - workingpaper
-          image_type:
-            description: |
-              Type of the image.
-              This is only required if `upload_type` is `image`.
-            type: string
-            enum:
-              - diagram
-              - drawing
-              - figure
-              - other
-              - photo
-              - plot
-          keywords:
-            description: |
-              Free-form keywords for the deposition.
-              These are used to help users find the project.
-            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-          subjects:
-            title: Subjects
-            description: |
-              Project subjects from a taxonomy or controlled vocabulary.
-            examples:
-              - - term: Astronomy
-                  id: http://id.loc.gov/authorities/subjects/sh85009003
-                  scheme: url
-            type: array
-            uniqueItems: true
-            minItems: 1
-            items:
-              title: Subject
-              description: A subject from a taxonomy or controlled vocabulary.
-              type: object
-              additionalProperties: false
-              required: [ term, identifier ]
-              properties:
-                term:
-                  description: Term from a taxonomy or controlled vocabulary.
-                  type: string
-                  minLength: 1
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                identifier:
-                  description: ID of the term from a taxonomy or controlled vocabulary.
-                  type: string
-                  minLength: 1
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-                scheme:
-                  description: Scheme of the term from a taxonomy or controlled vocabulary.
-                  type: string
-                  minLength: 1
-                  $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          language:
-            default: ${{ language }}$
-          contributors:
-            title: Contributors
-            description: |
-              Other contributors of the project, ordered by contribution (highest first).
-
-              :::{admonition} Usage
-              :class: dropdown note
-
-              These are automatically displayed on the project's website,
-              the front page of the project's PDF documentation,
-              and the project's PyPI and TestPyPI pages
-              (by being added to package metadata, i.e.,
-              the [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
-              key of the `pyproject.toml` file).
-              :::
-            $ref: https://controlman.repodynamics.com/schema/entity-ids
-            examples:
-              - [ owner, some_author_id ]
-          related_identifiers:
-            title: Related Identifiers
-            description: |
-              List of related identifiers for the project.
-            type: array
-            uniqueItems: true
-            items:
-              title: Related Identifier
-              description: An identifier related to the work.
-              type: object
-              additionalProperties: false
-              required: [ identifier, relation ]
-              properties:
-                identifier:
-                  description: |
-                    The value of the identifier.
-                    Supported identifiers include:
-                    DOI, Handle, ARK, PURL, ISSN, ISBN, PubMed ID, PubMed Central ID, ADS Bibliographic Code,
-                    arXiv, Life Science Identifiers (LSID), EAN-13, ISTC, URNs and URLs.
-                  examples:
-                    - 10.5281/zenodo.1003150
-                    - https://example.com
-                relation:
-                  title: Relation
-                  description: |
-                    The relation of the identifier to the work.
-                  type: string
-                  enum:
-                    - isCitedBy
-                    - cites
-                    - isSupplementTo
-                    - isSupplementedBy
-                    - isContinuedBy
-                    - continues
-                    - isDescribedBy
-                    - describes
-                    - hasMetadata
-                    - isMetadataFor
-                    - isNewVersionOf
-                    - isPreviousVersionOf
-                    - isPartOf
-                    - hasPart
-                    - isReferencedBy
-                    - references
-                    - isDocumentedBy
-                    - documents
-                    - isCompiledBy
-                    - compiles
-                    - isVariantFormOf
-                    - isOriginalFormof
-                    - isIdenticalTo
-                    - isAlternateIdentifier
-                    - isReviewedBy
-                    - reviews
-                    - isDerivedFrom
-                    - isSourceOf
-                    - requires
-                    - isRequiredBy
-                    - isObsoletedBy
-                    - obsoletes
-                resource_type:
-                  title: Resource Type
-                  description: |
-                    The type of the resource identified by the identifier.
-                  type: string
-                  enum:
-                    - software
-                    - poster
-                    - presentation
-                    - dataset
-                    - video
-                    - lesson
-                    - physicalobject
-                    - other
-                    - image-figure
-                    - image-plot
-                    - image-drawing
-                    - image-diagram
-                    - image-photo
-                    - image-other
-                    - publication-annotationcollection
-                    - publication-book
-                    - publication-section
-                    - publication-conferencepaper
-                    - publication-datamanagementplan
-                    - publication-article
-                    - publication-patent
-                    - publication-preprint
-                    - publication-deliverable
-                    - publication-milestone
-                    - publication-proposal
-                    - publication-report
-                    - publication-softwaredocumentation
-                    - publication-taxonomictreatment
-                    - publication-technicalnote
-                    - publication-thesis
-                    - publication-workingpaper
-                    - publication-other
-          references:
-            description: |
-              List of references for the project.
-            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-          communities:
-            description: |
-              ID list of Zenodo communities you wish the project to appear in.
-              The owner of the communities will be notified,
-              and can either accept or reject your request.
-            examples:
-              - [ ecfunded ]
-            $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-          grants:
-            title: Grants
-            description: |
-              List of OpenAIRE-supported grants funding the research for this project.
-            examples:
-              - - '10.13039/501100000780::283595'
-                - 283595
-            type: array
-            uniqueItems: true
-            minItems: 1
-            items:
-              title: Grant ID
-              description: |
-                Can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
-              $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          notes:
-            title: Notes
-            description: |
-              Additional notes about the citation.
-            $ref: https://jsonschemata.repodynamics.com/string/nonempty
-          imprint_publisher:
-            description: |
-              Publisher of the deposition.
-              The publisher is used to formulate the citation.
-              Defaults to 'Zenodo'.
-            $ref: https://jsonschemata.repodynamics.com/string/oneline
-            examples:
-              - Zenodo
-          custom:
-            description: |
-              Additional publication-type-specific fields.
-            type: object
-            default: { }
-            properties:
-              "code:codeRepository":
-                title: Code Repository
-                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-                default: ${{ repo.url.home }}$
-              "code:programmingLanguage":
-                type: array
-                uniqueItems: true
-                items:
-                  type: object
-                  required: [ id ]
-                  properties:
-                    id:
-                      description: |
-                        ID of a used programming language.
-                      $ref: https://jsonschemata.repodynamics.com/string/oneline
-                      examples:
-                        - python
-                        - java
-              "code:developmentStatus":
-                type: object
-                required: [ id ]
-                properties:
-                  id:
-                    type: string
-                    enum:
-                      - wip
-                      - unsupported
-                      - inactive
-                      - suspended
-                      - moved
-                      - concept
-                      - abandoned
-                      - active
-        allOf:
-          - if:
-              properties:
-                upload_type:
-                  const: publication
-              then:
-                required: [ publication_type ]
-          - if:
-              properties:
-                upload_type:
-                  const: image
-              then:
-                required: [ image_type ]
-          - if:
-              properties:
-                access_right:
-                  enum: [ embargoed, open ]
-              then:
-                required: [ license ]
-          - if:
-              properties:
-                access_right:
-                  const: embargoed
-              then:
-                required: [ embargo_date ]
-          - if:
-              properties:
-                access_right:
-                  const: restricted
-              then:
-                required: [ access_conditions ]
   control:
     title: Configurations for the project's control center.
     type: object
@@ -4223,143 +4191,186 @@ properties:
       and Continuous pipelines.
     type: object
     default: { }
+    additionalProperties: false
     properties:
-      job:
+      web:
+        type: object
+        additionalProperties: false
+        required: [ name, artifact, env, action ]
+        default: { }
+        properties:
+          name:
+            description: |
+              Name of the GitHub workflow job.
+              Note that each workflow job must have a unique name.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: Web (v{{ version }})
+          artifact:
+            description: Configuration for build artifacts.
+            type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              build:
+                description: Sphinx-build artifact.
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: Website - v{{ version }}
+              pages:
+                description: GitHub-Pages artifact.
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: Website - v{{ version }} - GH-Pages
+          env:
+            description: Configuration for the GitHub deployment environment.
+            $ref: https://controlman.repodynamics.com/schema/workflow-env
+            default:
+              name: GitHub Pages
+              url: ${{ web.url.home }}$
+          action:
+            description: Type of action for build and deployment tasks.
+            type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              build:
+                type: string
+                enum: [ auto, disabled ]
+                default: auto
+              deploy:
+                type: string
+                enum: [ auto, disabled ]
+                default: auto
+      lint:
         type: object
         default: { }
         properties:
-          web:
+          name:
+            type: string
+            default: Lint ({{ pkg.name }} v{{ version }})
+          action:
+            description: Type of action for lint tasks.
+            type: string
+            enum: [ auto, disabled ]
+            default: auto
+      test:
+        type: object
+        default: { }
+        properties:
+          name:
+            type: string
+            default: Test ({{ source }} - v{{ version }})
+          task_name:
+            type: string
+            default: 'py{{ python }} | {{ os }}'
+          artifact:
             type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              report:
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: Test Report - {{ source }} - v{{ version }} - py{{ python }} - {{ os }}
+                  merge:
+                    name: Test Reports - {{ source }} - v{{ version }}
+                    pattern: Test Report -*
+          action:
+            description: Type of action for lint tasks.
+            type: string
+            enum: [ auto, disabled ]
+            default: auto
+      build:
+        type: object
+        default: { }
+        properties:
+          name:
+            type: string
+            default: Build ({{ pkg.name }} v{{ version }})
+          artifact:
+            type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              sdist:
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: '{{ pkg.name }} v{{ version }} - sdist'
+              wheel:
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: '{{ pkg.name }} v{{ version }} - wheel - {{ python }} - {{ platform }}'
+                  merge:
+                    name: '{{ pkg.name }} v{{ version }} - wheels'
+                    pattern: '{{ pkg.name }} v{{ version }} - wheel - *'
+              readme:
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: '{{ pkg.name }} v{{ version }} - README'
+      publish:
+        type: object
+        additionalProperties: false
+        properties:
+          pypi:
+            $ref: https://controlman.repodynamics.com/schema/workflow-publish-pypi
+          testpypi:
+            $ref: https://controlman.repodynamics.com/schema/workflow-publish-pypi
+          github:
+            type: object
+            additionalProperties: false
+            required: [ name, env, release, action ]
             default: { }
             properties:
               name:
                 type: string
-                default: Web (v{{ version }})
-              artifact:
-                type: object
-                additionalProperties: false
-                default: { }
-                properties:
-                  build:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: Website - v{{ version }}
-                  pages:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: Website - v{{ version }} - GH-Pages
+                default: GitHub Release
               env:
                 $ref: https://controlman.repodynamics.com/schema/workflow-env
                 default:
-                  name: GitHub Pages
-                  url: ${{ web.url.home }}$
-          lint:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Lint ({{ pkg.name }} v{{ version }})
-          test:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Test ({{ source }} - v{{ version }})
-              task_name:
-                type: string
-                default: 'py{{ python }} | {{ os }}'
-              artifact:
+                  name: GitHub Release
+                  url: ${{ repo.url.deployments.home }}$
+              release:
                 type: object
                 additionalProperties: false
+                required: [ name ]
                 default: { }
                 properties:
-                  report:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: Test Report - {{ source }} - v{{ version }} - py{{ python }} - {{ os }}
-                      merge:
-                        name: Test Reports - {{ source }} - v{{ version }}
-                        pattern: Test Report -*
-          build:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Build ({{ pkg.name }} v{{ version }})
-              artifact:
-                type: object
-                additionalProperties: false
-                default: { }
-                properties:
-                  sdist:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: '{{ pkg.name }} v{{ version }} - sdist'
-                  wheel:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: '{{ pkg.name }} v{{ version }} - wheel - {{ python }} - {{ platform }}'
-                      merge:
-                        name: '{{ pkg.name }} v{{ version }} - wheels'
-                        pattern: '{{ pkg.name }} v{{ version }} - wheel - *'
-                  readme:
-                    $ref: https://controlman.repodynamics.com/schema/workflow-artifact
-                    default:
-                      name: '{{ pkg.name }} v{{ version }} - README'
-          publish_testpypi:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Publish (TestPyPI)
-              task_name:
-                type: string
-                default: '{{ pkg.name }} v{{ version }}'
-              env:
-                $ref: https://controlman.repodynamics.com/schema/workflow-env
-                default:
-                  name: TestPyPI ({{ pkg.name }})
-                  url: https://test.pypi.org/project/{{ pkg.name }}/{{ version }}
-              index:
-                type: object
-                default: { }
-                properties:
-                  url:
+                  name:
                     type: string
-                    default: https://test.pypi.org/legacy/
-          publish_pypi:
-            type: object
-            default: { }
-            properties:
-              name:
-                type: string
-                default: Publish (PyPI)
-              task_name:
-                type: string
-                default: '{{ pkg.name }} v{{ version }}'
-              env:
-                $ref: https://controlman.repodynamics.com/schema/workflow-env
-                default:
-                  name: PyPI ({{ pkg.name }})
-                  url: https://pypi.org/project/{{ pkg.name }}/{{ version }}
-              index:
-                type: object
-                default: { }
-                properties:
-                  url:
+                    default: >-
+                      {{ ccc.name }} {{ version }}
+                  body:
                     type: string
-                    default: https://upload.pypi.org/legacy/
-          release:
-            type: object
-            default: { }
-            properties:
-              name:
+                  draft:
+                    description: |
+                      Whether to create a draft release instead of a published one.
+                    type: boolean
+                    default: false
+                  discussion_category_name:
+                    description: |
+                      Slug of an existing discussion category in the repository.
+                      If specified, a discussion of the specified category is created
+                      and linked to the release.
+                    type: string
+                    default: announcements
+                  order:
+                    description: |
+                      Strategy to determine the latest release
+                    type: string
+                    enum: [ version, date ]
+                    default: version
+              asset:
+                type: object
+                additionalProperties:
+                  $ref: https://controlman.repodynamics.com/schema/release-asset
+              action:
                 type: string
-                default: Release
+                enum: [ auto, disabled ]
+                default: auto
+          zenodo:
+            $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
+          zenodo-sandbox:
+            $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
       schedule:
         description: |
           Configurations for scheduled jobs
@@ -4868,4 +4879,3 @@ properties:
       Latest version number of the current branch.
     readOnly: true
     type: string
-
