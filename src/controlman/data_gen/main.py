@@ -86,6 +86,7 @@ class MainDataGenerator:
             repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
         ).strftime("%Y-%m-%d")
         ccm_repo = self._data.setdefault("repo", {})
+        ccm_repo["owner"] = repo_info["owner"]["login"]
         ccm_repo.update(
             {k: repo_info[k] for k in ("id", "node_id", "name", "full_name", "created_at", "default_branch")}
         )
