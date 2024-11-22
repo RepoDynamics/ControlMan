@@ -1,0 +1,50 @@
+$id: https://controlman.repodynamics.com/schema/workflow-publish-pypi
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PyPI Publish Workflow
+description: Workflow configurations for publishing on PyPI/TestPyPI repositories.
+type: object
+additionalProperties: false
+required: [ name, task_name, env, index ]
+properties:
+  name:
+    description: |
+      Name of the GitHub workflow job.
+      Note that each workflow job must have a unique name.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  task_name:
+    description: |
+      Name of the GitHub workflow task, i.e.,
+      the sub-job for this specific publication.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+    default: '{{ pkg.name }} v{{ version }}'
+  env:
+    $ref: https://controlman.repodynamics.com/schema/workflow-env
+  index:
+    type: object
+    additionalProperties: false
+    required: [ url ]
+    properties:
+      url:
+        type: object
+        additionalProperties: false
+        required: [ upload ]
+        properties:
+          upload:
+            description: Upload URL of the indexing repository.
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+            examples:
+              - https://upload.pypi.org/legacy/
+              - https://test.pypi.org/legacy/
+  action:
+    description: Type of action for the main package and its test-suite.
+    type: object
+    default: { }
+    properties:
+      pkg:
+        type: string
+        enum: [ auto, disabled ]
+        default: auto
+      test:
+        type: string
+        enum: [ auto, disabled ]
+        default: auto
