@@ -510,7 +510,7 @@ class ConfigFileGenerator:
                 out["identifiers"] = [create_identifier(ident) for ident in ref["identifiers"]]
             return out
 
-        if not (self._data.get("citation") or self._data_before.get("citation")):
+        if not (self._data.get("citation.cff") or self._data_before.get("citation.cff")):
             return []
         generated_file = {
             "type": DynamicFileType.CONFIG,
@@ -518,7 +518,7 @@ class ConfigFileGenerator:
             "path": _const.FILEPATH_CITATION_CONFIG,
             "path_before": _const.FILEPATH_CITATION_CONFIG,
         }
-        cite = self._data["citation"]
+        cite = self._data["citation.cff"]
         if not cite:
             return [DynamicFile(**generated_file)]
         contributors = controlman.read_contributors(repo_path=self._path_repo)
