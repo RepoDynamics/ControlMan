@@ -242,7 +242,7 @@ properties:
           ]
       }}#
     examples:
-      - ${{ citation.authors }}$
+      - ${{ citation.cff.authors }}$
       - [ owner, some_author_id ]
   maintainers:
     title: Maintainers
@@ -271,7 +271,7 @@ properties:
           ]
       }}#
     examples:
-      - ${{ citation.authors }}$
+      - ${{ citation.cff.authors }}$
       - [ owner, some_author_id ]
   license:
     type: string
@@ -744,6 +744,9 @@ properties:
     type: object
     default: { }
     properties:
+      publishable:
+        type: boolean
+        default: true
       url:
         title: URLs of the package on PyPI.
         type: object
