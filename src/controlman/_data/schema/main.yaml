@@ -4317,6 +4317,11 @@ properties:
                 $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                 default:
                   name: '{{ pkg.name }} v{{ version }} - README'
+          action:
+            description: Type of action for lint tasks.
+            type: string
+            enum: [ auto, disabled ]
+            default: auto
       publish:
         type: object
         additionalProperties: false
@@ -4326,57 +4331,50 @@ properties:
           testpypi:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-pypi
           github:
-            type: object
-            additionalProperties: false
-            required: [ name, env, release, action ]
             default: { }
-            properties:
-              name:
-                type: string
-                default: GitHub Release
-              env:
-                $ref: https://controlman.repodynamics.com/schema/workflow-env
-                default:
-                  name: GitHub Release
-                  url: ${{ repo.url.deployments.home }}$
-              release:
-                type: object
-                additionalProperties: false
-                required: [ name ]
-                default: { }
+            unevaluatedProperties: false
+            allOf:
+              - $ref: https://controlman.repodynamics.com/schema/workflow-publish
+              - required: [ release, action ]
                 properties:
-                  name:
+                  release:
+                    type: object
+                    additionalProperties: false
+                    required: [ name ]
+                    default: { }
+                    properties:
+                      name:
+                        type: string
+                        default: >-
+                          {{ ccc.name }} {{ version }}
+                      body:
+                        type: string
+                      draft:
+                        description: |
+                          Whether to create a draft release instead of a published one.
+                        type: boolean
+                        default: false
+                      discussion_category_name:
+                        description: |
+                          Slug of an existing discussion category in the repository.
+                          If specified, a discussion of the specified category is created
+                          and linked to the release.
+                        type: string
+                        default: announcements
+                      order:
+                        description: |
+                          Strategy to determine the latest release
+                        type: string
+                        enum: [ version, date ]
+                        default: version
+                  asset:
+                    type: object
+                    additionalProperties:
+                      $ref: https://controlman.repodynamics.com/schema/release-asset
+                  action:
                     type: string
-                    default: >-
-                      {{ ccc.name }} {{ version }}
-                  body:
-                    type: string
-                  draft:
-                    description: |
-                      Whether to create a draft release instead of a published one.
-                    type: boolean
-                    default: false
-                  discussion_category_name:
-                    description: |
-                      Slug of an existing discussion category in the repository.
-                      If specified, a discussion of the specified category is created
-                      and linked to the release.
-                    type: string
-                    default: announcements
-                  order:
-                    description: |
-                      Strategy to determine the latest release
-                    type: string
-                    enum: [ version, date ]
-                    default: version
-              asset:
-                type: object
-                additionalProperties:
-                  $ref: https://controlman.repodynamics.com/schema/release-asset
-              action:
-                type: string
-                enum: [ auto, disabled ]
-                default: auto
+                    enum: [ auto, disabled ]
+                    default: auto
           zenodo:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
           zenodo-sandbox:
