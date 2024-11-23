@@ -1,9 +1,3 @@
-# Standard libraries
-from dataclasses import asdict as _asdict
-import datetime as _datetime
-import re as _re
-
-# Non-standard libraries
 from gittidy import Git as _Git
 import pylinks
 from loggerman import logger as _logger
@@ -14,6 +8,7 @@ from licenseman import spdx as _spdx
 from controlman import data_helper as _helper
 from controlman.cache_manager import CacheManager
 from controlman import exception as _exception
+from controlman import date
 
 
 class MainDataGenerator:
@@ -82,9 +77,7 @@ class MainDataGenerator:
             log_info,
             repo_info_code_block,
         )
-        repo_info["created_at"] = _datetime.datetime.strptime(
-            repo_info["created_at"], "%Y-%m-%dT%H:%M:%SZ"
-        ).strftime("%Y-%m-%d")
+        repo_info["created_at"] = date.to_internal(date.from_github(repo_info["created_at"]))
         ccm_repo = self._data.setdefault("repo", {})
         ccm_repo["owner"] = repo_info["owner"]["login"]
         ccm_repo.update(
@@ -225,6 +218,11 @@ class MainDataGenerator:
             category_obj = discussion.setdefault(category["slug"], {})
             category_obj["id"] = category["id"]
             category_obj["name"] = category["name"]
+            category_obj["emoji"] = category["emojiHTML"].removeprefix("<div>").removesuffix("</div>").strip()
+            category_obj["created_at"] = date.to_internal(date.from_github(category["createdAt"]))
+            category_obj["updated_at"] = date.to_internal(date.from_github(category["updatedAt"]))
+            category_obj["is_answerable"] = category["isAnswerable"]
+            category_obj["description"] = category["description"]
         return
 
 

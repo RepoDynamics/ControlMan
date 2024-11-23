@@ -310,10 +310,10 @@ properties:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
     default: |
       #{{
-        from datetime import datetime
+        from controlman import date
         
-        start_year = datetime.strptime(get("repo.created_at"), "%Y-%m-%d").year
-        current_year = datetime.today().year
+        start_year = date.from_internal(get("repo.created_at")).year
+        current_year = date.from_now().year
         period = f"{start_year}–{current_year}" if start_year < current_year else current_year
         return f"© {period} {get("team.owner.name.full")}"
       }}#
@@ -3358,6 +3358,16 @@ properties:
                 This is automatically fetched from the 
                 [GitHub API](https://docs.github.com/en/graphql/reference/objects#discussioncategory).
               type: string
+            emoji:
+              type: string
+            description:
+              type: string
+            is_answerable:
+              type: boolean
+            created_at:
+              $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+            updated_at:
+              $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
             form:
               title: Category Form
               description: |

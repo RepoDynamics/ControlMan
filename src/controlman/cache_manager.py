@@ -8,11 +8,9 @@ import mdit as _mdit
 
 from controlman import exception as _exception, const as _const
 from controlman import data_validator as _data_validator
-
+from controlman import date
 
 class CacheManager:
-
-    _TIME_FORMAT = "%Y_%m_%d_%H_%M_%S"
 
     def __init__(
         self,
@@ -101,7 +99,7 @@ class CacheManager:
 
     def set(self, typ: str, key: str, value: dict | list | str | int | float | bool):
         new_item = {
-            "timestamp": _datetime.datetime.now(tz=_datetime.timezone.utc).strftime(self._TIME_FORMAT),
+            "timestamp": date.to_internal(date.from_now()),
             "data": value,
         }
         self._cache.setdefault(typ, {})[key] = new_item
@@ -138,5 +136,5 @@ class CacheManager:
 
     def _is_expired(self, typ: str, timestamp: str) -> bool:
         time_delta = _datetime.timedelta(hours=self._retention_hours[typ])
-        exp_date = _datetime.datetime.strptime(timestamp, self._TIME_FORMAT) + time_delta
+        exp_date = date.from_internal(timestamp) + time_delta
         return exp_date <= _datetime.datetime.now()
