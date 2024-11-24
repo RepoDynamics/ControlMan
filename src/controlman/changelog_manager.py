@@ -34,7 +34,7 @@ class ChangelogManager:
     @property
     def current_public(self) -> Changelog:
         for changelog in self._changelogs:
-            if changelog["public"]:
+            if changelog["type"] != "local":
                 return Changelog(changelog, contrib=self._contrib, get_metadata=self._get_metadata)
         return Changelog({}, contrib=self._contrib, get_metadata=self._get_metadata)
 
@@ -42,7 +42,7 @@ class ChangelogManager:
     def last_public(self) -> Changelog:
         seen_public = False
         for changelog in self._changelogs:
-            if changelog["public"]:
+            if changelog["type"] != "local":
                 if seen_public:
                     return Changelog(changelog, contrib=self._contrib, get_metadata=self._get_metadata)
                 seen_public = True

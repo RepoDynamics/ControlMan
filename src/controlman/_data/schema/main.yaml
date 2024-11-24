@@ -2968,7 +2968,7 @@ properties:
               
               - **Type**: {{ form.description }}
               - **Client**: {{ issue.user.md_name }}
-              - **Summary**: {{ pr_title }}
+              - **Summary**: {{ data.summary }}
               - **Current Status**: {{ status }}
               - **Progress**:
                 {{ status_checkbox.triage }}{{ status_checkbox.planning }}{{ status_checkbox.requirement_analysis }}{{ status_checkbox.design }}{{ status_checkbox.implementation }}{{ status_checkbox.testing }}{{ status_checkbox.deploy }}
@@ -3212,7 +3212,11 @@ properties:
                 $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
           data:
             type: object
+            additionalProperties:
+              $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
             default:
+              summary:
+                value: '{{ pr_title }}'
               description:
                 value: "\n\n**TBD**\n\n"
               urd:
@@ -3229,8 +3233,6 @@ properties:
                 value: "\n\n**TBD**\n\n"
               deployment:
                 value: "\n\n**TBD**\n\n"
-            additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
           marker:
             type: object
             default: { }

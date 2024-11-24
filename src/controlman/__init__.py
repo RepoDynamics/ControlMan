@@ -132,7 +132,8 @@ def read_changelog(
         except _ps.exception.read.PySerialsReadException as e:
             raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
     else:
-        data = [{"ongoing": True, "public": True, "version": "0.0.0", "date": _date.to_internal(_date.from_now())}]
+        data = [
+            {"ongoing": True, "public": True, "version": "0.0.0", "date": _date.to_internal(_date.from_now())}]
     _data_validator.validate(data=data, schema="changelog")
     return data
 

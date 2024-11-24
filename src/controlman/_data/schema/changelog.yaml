@@ -3,24 +3,28 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Changelog
 description: Project's changelog.
 type: array
-default:
-  - ongoing: true
-    public: true
-    version: 0.0.0
 items:
   type: object
   required: [ version ]
   properties:
-    date:
-      $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
-    type_id:
-      type: string
-    public:
+    ongoing:
       type: boolean
     version:
       type: string
-    ongoing:
-      type: boolean
+    date:
+      $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+    type:
+      type: string
+      enum: [major, minor, patch, post, local]
+    phase:
+      type: string
+      enum: [dev, pre, final]
+    title:
+      type: string
+    description:
+      type: string
+    type_id:
+      type: string
     issue:
       type: object
     pull_request:
@@ -31,11 +35,8 @@ items:
       type: object
     protocol:
       type: object
-      properties:
-        data:
-          type: object
-        tasks:
-          type: array
+    tasks:
+      type: array
     parent:
       type: object
       properties:
@@ -54,12 +55,9 @@ items:
           type: object
         external:
           type: object
-    release:
+    github:
       type: object
-      properties:
-        github:
-          type: object
-        zenodo:
-          type: object
-        zenodo_sandbox:
-          type: object
+    zenodo:
+      type: object
+    zenodo_sandbox:
+      type: object
