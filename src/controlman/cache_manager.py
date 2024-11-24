@@ -137,4 +137,4 @@ class CacheManager:
     def _is_expired(self, typ: str, timestamp: str) -> bool:
         time_delta = _datetime.timedelta(hours=self._retention_hours[typ])
         exp_date = date.from_internal(timestamp) + time_delta
-        return exp_date <= _datetime.datetime.now()
+        return exp_date <= _datetime.datetime.now(tz=_datetime.UTC)
