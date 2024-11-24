@@ -11,6 +11,8 @@ items:
   type: object
   required: [ version ]
   properties:
+    date:
+      type: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
     type_id:
       type: string
     public:

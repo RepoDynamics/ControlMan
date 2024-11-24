@@ -14,6 +14,7 @@ from controlman import data_validator as _data_validator
 from controlman import _file_util
 from controlman import exception as _exception
 from controlman.center_manager import CenterManager
+from controlman import date as _date
 
 
 # TODO: Remove after adding versioningit
@@ -131,7 +132,7 @@ def read_changelog(
         except _ps.exception.read.PySerialsReadException as e:
             raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
     else:
-        data = [{"ongoing": True, "public": True, "version": "0.0.0"}]
+        data = [{"ongoing": True, "public": True, "version": "0.0.0", "date": _date.to_internal(_date.from_now())}]
     _data_validator.validate(data=data, schema="changelog")
     return data
 
