@@ -4350,7 +4350,10 @@ properties:
                         default: >-
                           {{ ccc.name }} {{ version }}
                       body:
-                        type: string
+                        oneOf:
+                          - type: string
+                          - type: object
+                          - type: list
                       draft:
                         description: |
                           Whether to create a draft release instead of a published one.
