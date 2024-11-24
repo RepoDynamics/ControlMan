@@ -4348,7 +4348,7 @@ properties:
                       name:
                         type: string
                         default: >-
-                          {{ ccc.name }} {{ version }}
+                          ${{ name }}$ #{{ return changelog.current_public.version }}#
                       body:
                         oneOf:
                           - type: string
@@ -4382,7 +4382,7 @@ properties:
                     default: auto
           zenodo:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
-          zenodo-sandbox:
+          zenodo_sandbox:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
       schedule:
         description: |

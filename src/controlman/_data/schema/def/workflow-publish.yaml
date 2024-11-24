@@ -9,7 +9,7 @@ properties:
     description: |
       Name of the GitHub workflow.
       Note that each workflow must have a unique name,
-      other than 'github', 'zenodo', and 'zenodo-sandbox', which share a name.
+      other than 'github', 'zenodo', and 'zenodo_sandbox', which share a name.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   task_name:
     description: |
