@@ -7,8 +7,6 @@ items:
   type: object
   required: [ version ]
   properties:
-    ongoing:
-      type: boolean
     version:
       type: string
     date:

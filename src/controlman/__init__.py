@@ -126,14 +126,10 @@ def read_changelog(
     filepath: str = const.FILEPATH_CHANGELOG,
 ):
     fullpath = _Path(repo_path) / filepath
-    if fullpath.exists():
-        try:
-            data = _ps.read.json_from_file(path=fullpath)
-        except _ps.exception.read.PySerialsReadException as e:
-            raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
-    else:
-        data = [
-            {"ongoing": True, "public": True, "version": "0.0.0", "date": _date.to_internal(_date.from_now())}]
+    try:
+        data = _ps.read.json_from_file(path=fullpath)
+    except _ps.exception.read.PySerialsReadException as e:
+        raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=fullpath) from None
     _data_validator.validate(data=data, schema="changelog")
     return data
 
