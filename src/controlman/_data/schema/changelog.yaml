@@ -5,7 +5,7 @@ description: Project's changelog.
 type: array
 items:
   type: object
-  required: [ version ]
+  required: [ version, date, type, title, description,  ]
   properties:
     version:
       type: string
@@ -16,11 +16,18 @@ items:
       enum: [major, minor, patch, post, local]
     phase:
       type: string
-      enum: [dev, pre, final]
+      enum: [dev, pre]
     title:
       type: string
     description:
       type: string
+    dev:
+      type: object
+      properties:
+        zenodo_sandbox:
+          type: object
+        version:
+          type: string
     type_id:
       type: string
     issue:
@@ -56,6 +63,4 @@ items:
     github:
       type: object
     zenodo:
-      type: object
-    zenodo_sandbox:
       type: object
