@@ -17,7 +17,7 @@ FILEPATH_VARIABLES = ".github/.repodynamics/variables.json"
 FILENAME_METADATA_CACHE = ".metadata_cache.yaml"
 FILENAME_LOCAL_CONFIG = "config.yaml"
 
-DIRNAME_CC_HOOK = "hook"
+DIRNAME_CC_HOOK = "hooks"
 
 FILENAME_CC_HOOK_REQUIREMENTS = "requirements.txt"
 FILENAME_CC_HOOK_STAGED = "staged.py"

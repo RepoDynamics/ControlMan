@@ -324,14 +324,24 @@ properties:
         the period is set to the current year, e.g., `2024`.
       - Otherwise, the period is set to the repository creation year and the current year, e.g., `2024–2026`.
   language:
-    title: Language
-    description: |
-      [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
-      or 639-3 code of the primary natural language of the work.
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
-    default: eng
-    examples:
-      - eng
+    description: Natural language of the project.
+    type: object
+    default: { }
+    required: [ code, name ]
+    properties:
+      code:
+        # Refs:
+        # https://github.com/ISO639
+        # https://iso639-3.sil.org/code_tables/download_tables
+        description: |
+          [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
+          or 639-3 code of the primary natural language of the work.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        default: eng
+      name:
+        description: Name of the language.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        default: English
   role:
     title: Roles
     description: |
@@ -901,7 +911,7 @@ properties:
                   minLength: 1
                   $ref: https://jsonschemata.repodynamics.com/string/nonempty
           language:
-            default: ${{ language }}$
+            default: ${{ language.code }}$
           contributors:
             title: Contributors
             description: |
@@ -1247,126 +1257,60 @@ properties:
             - https://paypal.me/EXAMPLE-PAYPAL-USERNAME
             - https://example.com/donate
           $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-  # Documentation
-  theme:
-    title: Theme
+  code_owners:
+    title: Code Owners
     description: |
-      Configurations defining the visual theme of the project,
-      such as colors, logos, and badges.
+      Pull request reviewers for different parts of the project.
+      This is used to automatically maintain the
+      [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+      file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
+      which will then be used to automatically assign reviewers to pull requests
+      based on the glob pattern of the modified files.
     type: object
     additionalProperties: false
-    default: { }
+    required: [ path ]
     properties:
-      color:
-        title: Colors
-        description: |
-          Colors of the project's light and dark themes.
-          Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
-          such as hexadecimal, RGB, HSL, or named colors.
-        type: object
-        required: [ primary, secondary ]
-        properties:
-          primary:
-            title: Primary
-            description: Primary color of the project.
-            $ref: https://controlman.repodynamics.com/schema/themed-color
-          secondary:
-            title: Secondary
-            description: Secondary color of the project.
-            $ref: https://controlman.repodynamics.com/schema/themed-color
-      logo:
-        title: Logo
-        description: |
-          Logos of the project.
-          All values must be filenames of files in the [media](#ccc-theme-path) directory,
-          given as paths relative to the media directory.
-        type: object
-        additionalProperties: false
-        default: { }
-        properties:
-          icon:
-            title: Icon
-            description: Favicon (website icon) of the project.
-            $ref: https://controlman.repodynamics.com/schema/media-file
-            default:
-              path_web: _media/logo/favicon.svg
-          simple:
-            title: Simple
-            description: Simple versions of the project's logo, to be used in small spaces.
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              light:
-                title: Light
-                description: Light-themed version of the simple logo.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/simple_light.svg
-              dark:
-                title: Dark
-                description: Dark-themed version of the simple logo.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/simple_dark.svg
-              raster:
-                title: Raster
-                description: |
-                  Raster version of the simple logo,
-                  to be used in places where vector graphics are not supported.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/simple_light.png
-              ascii:
-                title: ASCII
-                description: |
-                  ASCII art version of the simple logo,
-                  to be used in command-line interfaces and text-based environments.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-          full:
-            title: Full
-            description: Full versions of the project's logo, to be used in large spaces.
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              light:
-                title: Light
-                description: Light-themed version of the full logo.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/full_light.svg
-              dark:
-                title: Dark
-                description: Dark-themed version of the full logo.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/full_dark.svg
-              raster:
-                title: Raster
-                description: |
-                  Raster version of the full logo,
-                  to be used in places where vector graphics are not supported.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-                default:
-                  path_web: _media/logo/full_light.png
-              ascii:
-                title: ASCII
-                description: |
-                  ASCII art version of the full logo,
-                  to be used in command-line interfaces and text-based environments.
-                $ref: https://controlman.repodynamics.com/schema/media-file
-      footer:
-        title: Footer
-        description: |
-          Configurations of project's footer.
-          The footer is automatically added to the project's [README](#ccc-readme) and
-          [community health files](#ccc-health).
-        oneOf:
-          - type: string
-          - $ref: https://docsman.repodynamics.com/schema
-  readme:
-    title: README Files
+      path:
+        title: File Path
+          Path to the
+          [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+          file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
+          and placed either in the `.github` directory, the `docs` directory,
+          or the root of the repository.
+        type: string
+        default: .github/CODEOWNERS
+        pattern: ^(?:|.github/|docs/)CODEOWNERS$
+        examples:
+          - CODEOWNERS
+          - .github/CODEOWNERS
+          - docs/CODEOWNERS
+      url:
+        title: URL
+        description: URL of the repository's `CODEOWNERS` file.
+        default: ${{ repo.url.blob }}$/${{ .path }}$
+        examples:
+          - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+        $ref: https://jsonschemata.repodynamics.com/url/https
+  binder:
+    type: object
+  color:
+    description: |
+      Colors of the project's light and dark themes.
+      Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
+      such as hexadecimal, RGB, HSL, or named colors.
+    type: object
+    required: [ primary, secondary ]
+    properties:
+      primary:
+        title: Primary
+        description: Primary color of the project.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      secondary:
+        title: Secondary
+        description: Secondary color of the project.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+  # Documentation
+  document:
     description: |
       These include README files that are displayed to users on landing pages of
       project's repositories, such as GitHub, PyPI, and Anaconda, as well as
@@ -1375,6 +1319,9 @@ properties:
       
       Configurations for README files in different directories of the repository.
       For each readme file, add a key-value pair where the key is the path to the directory.
+      
+      Configurations for 
+      [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
       
       :::{admonition} Supported Syntax
       :class: dropdown info
@@ -1403,242 +1350,6 @@ properties:
     additionalProperties:
       title: Configuration for a directory README file.
       $ref: https://controlman.repodynamics.com/schema/docfile
-    properties:
-      main:
-        title: >-
-          Main [`README`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
-          file of the GitHub repository.
-        allOf:
-          - properties:
-              path:
-                description: |
-                  It must be named `README` (case-sensitive) and placed either in the
-                  `.github` directory, the `docs` directory, or the root of the repository,
-                  and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                  If more than one of such files are present, the order of precedence is
-                  `.github`, then root, and finally the `docs` directory.
-                pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
-                default: README.md
-                examples:
-                  - README
-                  - README.md
-                  - .github/README.txt
-                  - docs/README.rst
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-  health:
-    title: |
-      Configurations for 
-      [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
-    type: object
-    additionalProperties: false
-    properties:
-      contributing:
-        title: Contributing Guidelines
-        description: |
-          This corresponds to the [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users create an issue or open a pull request.
-
-          This file is used to communicate how people can contribute to the project,
-          and may include information on how to report bugs, suggest enhancements,
-          and submit code changes, as well as references to documentation, contact information,
-          and other resources. We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        allOf:
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-                  file.
-                description: |
-                  This file must be named `CONTRIBUTING` (case-insensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
-                pattern: ^(?:|.github/|docs/)(?i:CONTRIBUTING(?:.(txt|md|rst))?)$
-                default: CONTRIBUTING.md
-                examples:
-                  - CONTRIBUTING
-                  - CONTRIBUTING.md
-                  - contributing.rst
-                  - docs/CONTRIBUTING.txt
-                  - .github/contributing.md
-      governance:
-        title: Governance Model
-        description: |
-          This corresponds to the `GOVERNANCE`
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage.
-
-          This file is used to communicate how decisions are made in the project,
-          and may include information on how the project is managed, how decisions are made,
-          and how conflicts are resolved.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        allOf:
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-          - properties:
-              path:
-                title: Path to the `GOVERNANCE` file.
-                description: |
-                  This file must be named `GOVERNANCE` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
-                default: GOVERNANCE.md
-                examples:
-                  - GOVERNANCE
-                  - GOVERNANCE.md
-                  - docs/GOVERNANCE.txt
-                  - .github/GOVERNANCE.md
-      security:
-        title: Security Policy
-        description: |
-          This corresponds to the
-          [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users want to create a new issue or security advisory. 
-
-          This file is used to communicate how security vulnerabilities are handled in the project,
-          and may include information on how to report security vulnerabilities,
-          how they are triaged, and how they are resolved.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        allOf:
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-                  file.
-                description: |
-                  This file must be named `SECURITY` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
-                default: SECURITY.md
-                examples:
-                  - SECURITY
-                  - SECURITY.md
-                  - docs/SECURITY.txt
-                  - .github/SECURITY.md
-      support:
-        title: Support Resources
-        description: |
-          This corresponds to the [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users are creating a new issue.
-
-          This file is used to communicate how users can get support for the project,
-          and may include information on how to ask questions, report issues, and request features.
-          We recommend to keep this file short,
-          and only include links to resources on the project's website,
-          as to avoid duplication of content.
-        allOf:
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-          - properties:
-              path:
-                title: Support Policy
-                description: |
-                  Path to the
-                  [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-                  file (cf. [`doc.support`](#ccc-doc.support)).
-
-                  This file must be named `SUPPORT` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository. 
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
-                default: SUPPORT.md
-                examples:
-                  - SUPPORT
-                  - SUPPORT.md
-                  - docs/SUPPORT.txt
-                  - .github/SUPPORT.md
-      code_of_conduct:
-        title: Code of Conduct
-        description: |
-          This corresponds to the
-          [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-          file in the repository, which is automatically recognized by GitHub,
-          and displayed on the repository's homepage,
-          as well as when users are creating a new issue or opening a pull request.
-          However, for "Code of conduct" to be marked as complete in the repository's community profile,
-          GitHub only accepts the
-          [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
-          and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
-
-          This file is used to communicate the standards of behavior expected from contributors,
-          and may include information on how to report violations, how they are triaged,
-          and how they are resolved.
-        allOf:
-          - $ref: https://controlman.repodynamics.com/schema/docfile
-          - properties:
-              path:
-                title: |
-                  Path to the
-                  [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-                  file.
-                description: |
-                  This file must be named `CODE_OF_CONDUCT` (case-sensitive)
-                  and placed either in the `.github` directory, the `docs` directory,
-                  or the root of the repository.
-                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-                type: string
-                pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
-                default: CODE_OF_CONDUCT.md
-                examples:
-                  - CODE_OF_CONDUCT
-                  - CODE_OF_CONDUCT.md
-                  - docs/CODE_OF_CONDUCT.txt
-                  - .github/CODE_OF_CONDUCT.MD
-      code_owners:
-        title: Code Owners
-        description: |
-          Pull request reviewers for different parts of the project.
-          This is used to automatically maintain the
-          [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-          file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
-          which will then be used to automatically assign reviewers to pull requests
-          based on the glob pattern of the modified files.
-        type: object
-        additionalProperties: false
-        required: [ path ]
-        properties:
-          path:
-            title: File Path
-              Path to the
-              [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-              file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-            type: string
-            default: .github/CODEOWNERS
-            pattern: ^(?:|.github/|docs/)CODEOWNERS$
-            examples:
-              - CODEOWNERS
-              - .github/CODEOWNERS
-              - docs/CODEOWNERS
-          url:
-            title: URL
-            description: URL of the repository's `CODEOWNERS` file.
-            default: ${{ repo.url.blob }}$/${{ .path }}$
-            examples:
-              - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-            $ref: https://jsonschemata.repodynamics.com/url/https
   web:
     title: Configurations for the project's website.
     type: object
@@ -1906,78 +1617,6 @@ properties:
         description:
           All paths must be relative to the root of the website directory, without suffix.
         type: object
-        default: |
-          #{{
-            from loggerman import logger
-            import mdit
-            import pylinks as pl
-            import pyserials as ps
-        
-            path = root_path / (ccc["web.path.source"] or get("web.path.source"))
-            url_home = get("web.url.home")
-        
-            pages = {}
-            blog = {}
-            for md_filepath in path.rglob("*.md", case_sensitive=False):
-                if not md_filepath.is_file():
-                    continue
-                rel_path = md_filepath.relative_to(path)
-                dirhtml_path = str(rel_path.with_suffix("")).removesuffix("/index")
-                text = md_filepath.read_text()
-                frontmatter = mdit.parse.frontmatter(text) or {}
-                if "ccid" in frontmatter:
-                    pages[pl.string.to_slug(frontmatter["ccid"])] = {
-                        "title": mdit.parse.title(text),
-                        "path": dirhtml_path,
-                        "url": f"{url_home}/{dirhtml_path}",
-                    }
-                for key in ["category", "tags"]:
-                    val = frontmatter.get(key)
-                    if not val:
-                        continue
-                    if isinstance(val, str):
-                        val = [item.strip() for item in val.split(",")]
-                    if not isinstance(val, list):
-                        logger.warning(
-                            mdit.inline_container(
-                                "Invalid webpage frontmatter: ",
-                                mdit.element.code_span(str(rel_path)),
-                            ),
-                            mdit.inline_container(
-                                "Invalid frontmatter value for ",
-                                mdit.element.code_span(key),
-                                " :"),
-                            mdit.element.code_block(
-                                ps.write.to_yaml_string(val, end_of_file_newline=False),
-                                language="yaml",
-                            ),
-                        )
-                    blog.setdefault(key, []).extend(val)
-            if "blog" not in pages:
-                return pages
-            for key, values in blog.items():
-                for value in set(values):
-                    value_slug = pl.string.to_slug(value)
-                    key_singular = key.removesuffix('s')
-                    final_key = f"blog_{key_singular}_{value_slug}"
-                    if final_key in pages:
-                        logger.error(
-                            mdit.inline_container(
-                                "Duplicate webpage ID ",
-                                mdit.element.code_span(final_key)
-                            ),
-                            f"Generated ID '{final_key}' already exists "
-                            f"for page '{pages[final_key]['path']}'. "
-                            "Please do not use `ccid` values that start with 'blog_'."
-                        )
-                    blog_group_path = f"{pages["blog"]["path"]}/{key_singular}/{value_slug}"
-                    pages[final_key] = {
-                        "title": value,
-                        "path": blog_group_path,
-                        "url": f"{url_home}/{blog_group_path}",
-                    }
-            return pages
-          }}#
         additionalProperties:
           title: Relative path to the page.
           type: object
@@ -2090,6 +1729,29 @@ properties:
             links:
               title: Links
               type: array
+      announcement:
+        title: Configurations of project announcements.
+        type: object
+        required: [ path, retention_days, url ]
+        properties:
+          path:
+            title: Path to the announcement banner file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ web.path.root }}$/announcement.html
+            examples:
+              - docs/announcement.html
+          retention_days:
+            title: Number of days to keep an announcement.
+            default: 30
+            $ref: https://jsonschemata.repodynamics.com/number/non-negative
+          url:
+            title: URL to the announcement banner file.
+            $ref: https://jsonschemata.repodynamics.com/url/http-explicit
+            default: ${{ repo.url.raw }}$/${{ .path }}$
+      file:
+        type: object
+        additionalProperties:
+          $ref: https://controlman.repodynamics.com/schema/web-file
   # Package
   pkg:
     title: Package
@@ -2366,8 +2028,11 @@ properties:
         required: [ prefix, color, label ]
         properties:
           prefix:
-            default: 'status: '
+            default: Status
             $ref: https://controlman.repodynamics.com/schema/label-prefix
+          separator:
+            type: string
+            default: ": "
           color:
             description: Color of all status labels.
             default: '#0366d6'
@@ -2396,96 +2061,96 @@ properties:
               triage:
                 description: The issue is being triaged.
                 default:
-                  suffix: Triage
-                  description: The issue is being triaged.
+                  suffix: triage
+                  description: The issue has been submitted and is being triaged.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               rejected:
                 description: The issue/PR has been rejected.
                 default:
-                  suffix: Rejected
-                  description: The issue/PR has been rejected.
+                  suffix: rejected
+                  description: The issue has been rejected and closed.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               duplicate:
                 description: The issue/PR is a duplicate.
                 default:
-                  suffix: Duplicate
-                  description: The issue/PR is a duplicate.
+                  suffix: duplicate
+                  description: The issue has been marked as duplicate and closed.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               invalid:
                 description: The issue/PR is invalid.
                 default:
-                  suffix: Invalid
-                  description: The issue/PR is invalid.
+                  suffix: invalid
+                  description: The issue has been marked as invalid and closed.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               planning:
                 description: The issue is in the planning phase.
                 default:
-                  suffix: Planning
+                  suffix: planning
                   description: The issue is in the planning phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               requirement_analysis:
                 description: The issue is in the requirement analysis phase.
                 default:
-                  suffix: Requirement Analysis
+                  suffix: requirement analysis
                   description: The issue is in the requirement analysis phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               design:
                 description: The issue is in the design phase.
                 default:
-                  suffix: Design
+                  suffix: design
                   description: The issue is in the design phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               implementation:
                 description: The issue is in the implementation phase.
                 default:
-                  suffix: Implementation
+                  suffix: implementation
                   description: The issue is in the implementation phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               testing:
                 description: The issue is in the testing phase.
                 default:
-                  suffix: Testing
+                  suffix: testing
                   description: The issue is in the testing phase.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_alpha:
                 title: Alpha Release
                 description: The issue/PR is in alpha release.
                 default:
-                  suffix: Alpha Release
-                  description: The issue/PR is in alpha release.
+                  suffix: alpha release
+                  description: Published as alpha release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_beta:
                 title: Beta Release
                 description: The issue/PR is in beta release.
                 default:
-                  suffix: Beta Release
-                  description: The issue/PR is in beta release.
+                  suffix: beta release
+                  description: Published as beta release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_rc:
                 title: Release Candidate
                 description: The issue/PR is published as a release candidate.
                 default:
-                  suffix: Release Candidate
-                  description: The issue/PR is published as a release candidate.
+                  suffix: release candidate
+                  description: Published as release candidate.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
               deploy_final:
                 title: Final Release
                 description: The issue/PR has been merged into a release branch.
                 default:
-                  suffix: Final Release
-                  description: The issue/PR is published as a final release.
+                  suffix: final release
+                  description: Published as final release.
                 $ref: https://controlman.repodynamics.com/schema/label-group-element
       version:
         description: Version labels. This is an automatic label group.
         default:
-          prefix: 'version: '
+          prefix: Version
           color: '#0366d6'
           description: Related to version {{ version }} of the project.
         $ref: https://controlman.repodynamics.com/schema/label-group
       branch:
         description: Branch labels. This is an automatic label group.
         default:
-          prefix: 'branch: '
+          prefix: 'Branch'
           color: '#0366d6'
           description: Related to branch {{ branch }} of the repository.
         $ref: https://controlman.repodynamics.com/schema/label-group
@@ -2574,12 +2239,18 @@ properties:
               description: URL to the external link
               type: string
               format: uri
-      form_default:
+      form:
+        description: |
+          Default configurations for all forms.
+          Settings here will be recursively merged with each issue form's settings.
+          In case of duplicates, the issue form's settings take precedence.
         type: object
         additionalProperties: false
         properties:
           role:
             $ref: https://controlman.repodynamics.com/schema/issue-role
+          task:
+            $ref: https://controlman.repodynamics.com/schema/conditional-task
       forms:
         description: Issue form definitions and configurations.
         type: array
@@ -2587,7 +2258,7 @@ properties:
         items:
           type: object
           additionalProperties: false
-          required: [ id, commit, id_labels, name, description, body ]
+          required: [ id, active, commit, id_labels, name, description, body ]
           properties:
             id:
               title: Unique identifier of the issue form.
@@ -2598,6 +2269,19 @@ properties:
                 and can only contain alphanumeric characters, underscores, and hyphens.
               type: string
               pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+            active:
+              description: |
+                Whether this form is currently active.
+
+                Only active forms are included in the repository's available issue forms.
+                This can be used to dynamically toggle available issue forms based on certain conditions.
+
+                For example, in {{ ccc.name }}'s default configurations, there are three separate issue forms
+                defined for reporting bugs in the package's API, GUI, and CLI. However, your package may only have
+                some of these interfaces, in which case it makes sense to only show the corresponding issue forms
+                when the corresponding interfaces are present. This is achieved by adding a condition to each form.
+              type: boolean
+              default: true
             commit:
               description: |
                 ID of the [release commit](#ccc-commit-release) associated with the form.
@@ -2646,148 +2330,6 @@ properties:
                 $ref: https://controlman.repodynamics.com/schema/label-id
             role:
               $ref: https://controlman.repodynamics.com/schema/issue-role
-            pre_process:
-              description: |
-                Some issue forms, or some elements of an issue form, may only need to be present
-                when certain conditions are met. Instead of you having to manually modify issue forms
-                each time one of these conditions changes, {{ ccc.name }} allows you to dynamically
-                define conditions for each form and each of its elements, so that they are automatically
-                added/removed according to the specified conditions. This is done by adding a `pre_process`
-                key either to the form itself, or to specific elements of the form. The value of the
-                `pre_process` key must be an object with one of the following keys:
-                - `if_any`: The form/element is only displayed if any of the specified values evaluate to `True`.
-                - `if_all`: The form/element is only displayed if all of the specified values evaluate to `True`.
-                - `if_none`: The form/element is only displayed if none of the specified values evaluate to `True`.
-                - `if_equal`: The form/element is only displayed if all of the specified values are equal.
-
-                For any of the above keys, the value must be an array, where the elements of the array
-                can have any type (e.g., string, integer, boolean, etc.). For boolean conditions
-                (i.e., `if_any`, `if_all`, and `if_none`), the value of each element is cast to a boolean
-                in Python, thus for example, `0`, `0.0`, `""`, `[]`, `{}`, and `null` all evaluate to `False`,
-                while any non-zero number, non-empty string, non-empty list, and non-empty dictionary evaluates to `True`.
-
-                For example, in {{ ccc.name }}'s default configurations, there are three separate issue forms
-                defined for reporting bugs in the package's API, GUI, and CLI. However, your package may only have
-                some of these interfaces, in which case it makes sense to only show the corresponding issue forms
-                when the corresponding interfaces are present. This is achieved by adding a condition to each form.
-              examples:
-                - if_any: [ "${‎{ package.releases.gui_scripts }}$" ] # Display a form only if the package has a GUI interface
-                - if_any: [ "${‎{ package.releases.cli_scripts }}$" ] # Display a form only if the package has a CLI interface
-                - if_any: [ "${‎{ package.releases.has_scripts }}$" ] # Display an element within a form only if the package has scripts
-              $ref: https://controlman.repodynamics.com/schema/gh-form-preprocess
-            post_process:
-              description: |
-                {{ ccc.name }} allows you to define post-processing instructions for each form,
-                which are executed after an issue is created using the form.
-
-                Issues that are created using GitHub's issue forms are visually not very appealing,
-                since GitHub simply creates a new `<h3>` heading for each form element,
-                and adds the user input underneath, without any formatting.
-                Moreover, there may be some elements that are only meant for the submission step,
-                and are not meant to be displayed in the issue body (e.g., checkboxes for agreeing with terms and conditions).
-                Therefore, {{ ccc.name }} allows you to define a template for the issue body,
-                which is used to reformat the issue body after the issue is created.
-                The template must be defined as a string representing valid Markdown and/or HTML syntax,
-                where the user input for each form element is referenced (similiar to Python strings)
-                using the syntax `{id}`, where `id` is the `id` of the corresponding form element.
-              examples:
-                - body: |
-                    <h2>Bug Location</h2>
-
-                    <ul>
-                    <li><b>Package Version</b>: {version}</li>
-                    <li><b>Fully Qualified Name</b>: {api_entry}</li>
-                    </ul>
-
-                    <h2>System and Version Specifications</h2>
-
-                    <ul>
-                    <li><b>Operating System</b>: {os}</li>
-                    <li><b>Python Version</b>: {python_version}</li>
-                    <li><b>Package Manager</b>: {package_manager}</li>
-                    <li>
-                    <details>
-                    <summary><b>Environment</b></summary>
-
-                    ```
-                    {environment}
-                    ```
-
-                    </details>
-                    </li>
-                    </ul>
-
-                    <h2>Bug Summary</h2>
-
-                    {summary}
-
-                    <h2>Unit-Test / Minimal Reproducible Example (MRE)</h2>
-
-                    {code}
-
-                    <h2>Error Message</h2>
-
-                    {log}
-              type: object
-              additionalProperties: false
-              properties:
-                assign_creator:
-                  title: Adding the Issue Creator as Assignee
-                  description: |
-                    You may want to ask the person who created an issue whether they would like to contribute
-                    to the resolution of the issue, and if so, add them as an assignee to the issue.
-                    {{ ccc.name }} allows you to do this automatically; first you need to add a `checkbox` element
-                    to the form, which asks the user whether they would like to be added as an assignee.
-                    Then, add a key `assign_creator` to the `post_process` object of the form, and under that,
-                    add a key `if_checkbox` whose value must be an object with a key `id`,
-                    specifying the `id` of the corresponding checkbox element.
-                    If the checkbox element has multiple checkboxes,
-                    you can also specify the `number` of the checkbox (starting from 1) that must be checked.
-                    Also, if you have formulated the checkbox label in a way that the creator must be added as an assignee
-                    if the checkbox is unchecked, you can set the `is_checked` key to `False`.
-
-                    ::::{dropdown} Example
-                    :::{code-block} yaml
-                    :caption: 🗂 `.meta/dev/issue.yaml`
-                    forms:
-                      - body:
-                          - type: checkboxes
-                            id: collab
-                            attributes:
-                              label: |
-                                Thank you again for filling this bug report.
-                                If you are willing to collaborate on fixing the issue,
-                                please select the option below.
-                              options:
-                                - label: I am willing to work on the issue and submit a pull request.
-                                  required: false
-                        post_process:
-                          assign_creator:
-                            if_checkbox:
-                              id: collab
-                              number: 1  # optional, default: 1
-                              is_checked: true  # optional, default: true
-                    :::
-                    ::::
-                  type: object
-                  additionalProperties: false
-                  properties:
-                    if_checkbox:
-                      type: object
-                      additionalProperties: false
-                      properties:
-                        id:
-                          type: string
-                        number:
-                          type: integer
-                          default: 1
-                        is_checked:
-                          type: boolean
-                          default: true
-                      required: [ id, number, is_checked ]
-                body:
-                  title: Formatting the Issue Body
-                  type: string
             name:
               title: Name of the issue form.
               description: |
@@ -2834,444 +2376,33 @@ properties:
               type: string
             body:
               $ref: https://controlman.repodynamics.com/schema/gh-form-body
-  doc:
-    description: Development process protocol specifications
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      changelog:
-        title: Changelog Configurations
-        description: |
-          Configurations for different changelog files.
-          Project's changelog templates and paths.
-          Configurations and templates for your project's changelogs and release notes.
-        type: object
-        default: { }
-        properties:
-          path:
-            title: Path
-            description: Path to the changelog file, relative to the root of the repository.
-            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: docs/changelog.json
-        additionalProperties:
-          title: Changelog
-          description: |
-            Configurations for a changelog file.
-            For each changelog, add a key-value pair,
-            where the key is the ID of the changelog, to reference in other places.
-          type: object
-          additionalProperties: false
-          required: [ name, title, path, intro, entry, sections ]
-          properties:
-            name:
-              title: Name
-              description: Name of the changelog.
-              $ref: https://jsonschemata.repodynamics.com/string/nonempty
-              examples:
-                - Public API
-            path:
-              title: Path
-              description: Path to the changelog file, relative to the root of the repository.
-              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-              examples:
-                - CHANGELOG.md
-            title:
-              title: Title
-              description: Title of the changelog document.
-              $ref: https://jsonschemata.repodynamics.com/string/nonempty
-              examples:
-                - ${{ name }}$ Changelog (Public API)
-            intro:
-              title: Introduction
-              description: Introduction text of the changelog.
-              $ref: https://jsonschemata.repodynamics.com/string/nonempty
-              examples: |
-                All notable changes to this project will be documented in this file.
+            processed_body:
+              description: |
+                {{ ccc.name }} allows you to define post-processing instructions for each form,
+                which are executed after an issue is created using the form.
 
-                The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-                and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-            entry:
-              title: Entry
-              description: Configurations for the entries in the changelog.
-              type: object
-              default: { }
-              additionalProperties: false
-              required: [ title, intro ]
-              properties:
-                title:
-                  title: Title
-                  description: Title of the entry.
-                  type: string
-                  minLength: 1
-                  default: "[{ver_dist}] – {date}"
-                intro:
-                  title: Introduction
-                  description: Introduction text of the entry.
-                  type: string
-                  minLength: 1
-                  default: |
-                    - Commit Type: {commit_type}
-                    - Commit Title: {commit_title}
-                    - Parent Commit: [{parent_commit_hash}]({parent_commit_url})
-            sections:
-              title: Sections
-              description: Sections of each entry in the changelog.
-              type: array
-              minItems: 1
-              items:
-                title: Section
-                description: Section of the changelog.
-                type: object
-                additionalProperties: false
-                required: [ id, title, description ]
-                properties:
-                  id:
-                    title: ID
-                    description: ID of the section, to reference in other places.
-                    type: string
-                  title:
-                    title: Title
-                    description: Title of the section.
-                    type: string
-                  description:
-                    title: Description
-                    description: Description of the section.
-                    type: string
-      contributors:
-        description: |
-          Configurations for documenting project contributors.
-        type: object
-        default: { }
-        properties:
-          path:
-            description: |
-              Path to the contributors source file.
-            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: docs/contributors.json
-      prerelease_temp_path:
-        description: >-
-          Path to the file relative to the repository root
-          for storing pre-release development process protocols.
-        type: string
-        default: docs/prerelease_dev_protocols.md
+                Issues that are created using GitHub's issue forms are visually not very appealing,
+                since GitHub simply creates a new `<h3>` heading for each form element,
+                and adds the user input underneath, without any formatting.
+                Moreover, there may be some elements that are only meant for the submission step,
+                and are not meant to be displayed in the issue body (e.g., checkboxes for agreeing with terms and conditions).
+                Therefore, {{ ccc.name }} allows you to define a template for the issue body,
+                which is used to reformat the issue body after the issue is created.
+                The template must be defined as a string representing valid Markdown and/or HTML syntax,
+                where the user input for each form element is referenced (similiar to Python strings)
+                using the syntax `{id}`, where `id` is the `id` of the corresponding form element.
+            task:
+              $ref: https://controlman.repodynamics.com/schema/conditional-task
       protocol:
-        type: object
-        default: { }
-        additionalProperties: false
-        required: [ marker ]
-        properties:
-          template:
-            type: string
-            default: |
-              # Development Protocol #{{ issue.number }}
-              
-              - **Type**: {{ form.description }}
-              - **Client**: {{ issue.user.md_name }}
-              - **Summary**: {{ data.summary }}
-              - **Current Status**: {{ status }}
-              - **Progress**:
-                {{ status_checkbox.triage }}{{ status_checkbox.planning }}{{ status_checkbox.requirement_analysis }}{{ status_checkbox.design }}{{ status_checkbox.implementation }}{{ status_checkbox.testing }}{{ status_checkbox.deploy }}
-              
-              {{ pr_list }}
-              
-              ## User Requirements Document (URD)
-              
-              {{ data.urd }}
-              
-              ## Triage
-              
-              {{ data.triage }}
-              
-              ## Plan
-              
-              {{ data.plan }}
-              
-              ## Software Requirements Specification (SRS)
-              
-              {{ data.srs }}
-              
-              ## Software Design Document (SDD)
-              
-              {{ data.sdd }}
-              
-              ## Implementation
-              
-              {{ data.description }}
-              
-              ### Task List
-              
-              {{ tasklist }}
-              
-              ## Testing
-              
-              {{ data.testing }}
-              
-              ## Deployment
-              
-              {{ data.deployment }}
-              
-              ## Timeline
-              
-              <div align="center">
-              
-              {{ timeline }}
-              
-              </div>
-              
-              {{ references }}
-          tasklist:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-            default:
-              value: "\n\n<!-- Tasklist\n
-                - [ ] secondary-commit-type: Summary of task 1.\n
-                \u0020\u0020Description of task 1.\n
-                \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
-                \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
-                - [ ] secondary-commit-type: Summary of task 2.\n
-                \u0020\u0020Description of task 2.\n
-                -->\n\n"
-          timeline:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
-            default:
-              value: >-
-
-                |    Date    |   Time   |              Actor               |                      Description                      |
-
-                | ---------- | -------- | -------------------------------- | ----------------------------------------------------- |
-              template: |
-                {%- macro make_entry(actor, description) -%}
-                  | {{ now.strftime("%Y.%m.%d") }} | {{ now.strftime("%H:%M:%S") }} | {{ "{:<32}".format(actor) }} | {{ "{:<53}".format(description) }} |
-                {%- endmacro -%}
-
-                {%- macro make_description() -%}
-                  {%- if action == "assigned" -%}
-                    {%- if event == "issues" -%}
-                      Issue assigned to {{ assignee.md_name }}.
-                    {%- elif event == "pull_request" -%}
-                      Pull request assigned to {{ assignee.md_name }}.
-                    {%- endif -%}
-                  {%- elif action == "unassigned" -%}
-                    {%- if event == "issues" -%}
-                      Issue unassigned from {{ assignee.md_name }}.
-                    {%- elif event == "pull_request" -%}
-                      Pull request unassigned from {{ assignee.md_name }}.
-                    {%- endif -%}
-                  {%- elif action == "review_requested" -%}
-                    Review assigned to {{ requested_reviewer.md_name }}.
-                  {%- elif action == "review_request_removed" -%}
-                    Review unassigned from {{ requested_reviewer.md_name }}.
-                  {%- elif action == "synchronize" -%}
-                    New commits pushed to [{{ pull_request.head.name }}]({{ pull_request.head.url.homepage }}) (CI [{{ context.run_id }}]({{ context.run_url }})).
-                  {%- elif action == "labeled" -%}
-                    {%- set category = label.category.value -%}
-                    {%- if category == "type" -%}
-                        Type set to `{{ label.suffix }}`.
-                    {%- elif category == "scope" -%}
-                        Scope set to `{{ label.suffix }}`.
-                    {%- elif category == "version" -%}
-                          Target version set to `{{ label.suffix }}`.
-                    {%- elif category == "branch" -%}
-                          Target branch set to `{{ label.suffix }}`.
-                    {%- elif category == "status" -%}
-                      {%- set status = label.id.value or label.id -%}
-                      {%- if status == "triage" -%}
-                        Entered the triage phase.
-                      {%- elif status == "rejected" -%}
-                        Rejected and closed.
-                      {%- elif status == "duplicate" -%}
-                        Marked as duplicate and closed.
-                      {%- elif status == "invalid" -%}
-                        Marked as invalid and closed.
-                      {%- elif status == "planning" -%}
-                        Entered the planning phase.
-                      {%- elif status == "requirement_analysis" -%}
-                        Entered the requirement analysis phase.
-                      {%- elif status == "design" -%}
-                        Entered the design phase.
-                      {%- elif status == "implementation" -%}
-                        Entered the implementation phase.
-                      {%- elif status == "testing" -%}
-                        Entered the testing phase.
-                      {%- elif status == "deploy_alpha" -%}
-                        Deployed as alpha release.
-                      {%- elif status == "deploy_beta" -%}
-                        Deployed as beta release.
-                      {%- elif status == "deploy_rc" -%}
-                        Deployed as release candidate.
-                      {%- elif status == "deploy_final" -%}
-                        Deployed as final release.
-                      {%- else -%}
-                        Status changed to {{ status }}.
-                      {%- endif -%}
-                    {%- endif -%}
-                  {%- elif action == "opened" -%}
-                    {%- if event == "issues" -%}
-                      Issue ticket #{{ issue.number }} submitted by {{ issue.user.md_name }}.
-                    {%- elif event == "pull_request" -%}
-                      Pull request #{{ pull_request.number }} opened from branch [{{ pull_request.head.name }}]({{ pull_request.head.url.homepage }}) to branch [{{ pull_request.base.name }}]({{ pull_request.base.url.homepage }}) by {{ pull_request.user.md_name }}.
-                    {%- endif -%}
-                  {%- endif -%}
-                {%- endmacro -%}
-                {%- set description = make_description() %}
-                {{ make_entry(sender.md_name, description) if description else "" -}}
-          references:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
-            default:
-              template: |
-                
-                [^{{ ref.id }}]: [{{ ref.title }}]({{ ref.url }})
-          pr_title:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-            default:
-              value: TBD
-          pr_list:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
-            default:
-              template: |
-                {%- macro make_pull(pull) -%}
-                  #{{ pull.number }} (branch [{{ pull.head.name }}]({{ pull.head.url.homepage }}))
-                {%- endmacro -%}
-
-                {%- macro describe() -%}
-                  {%- if pulls|length == 1 -%}
-                    PR {{ make_pull(pulls[0]) }}.
-                  {%- else -%}
-                    the following PRs:
-                    {% for pull in pulls -%}
-                      > - {{ make_pull(pull) }}
-                    {% endfor -%}
-                  {%- endif -%}
-                {%- endmacro %}
-
-                > [!NOTE]
-                > The implementation, testing, and deployment are tracked in {{ describe() -}}
-          status:
-            $ref: https://controlman.repodynamics.com/schema/doc-protocol-dynamic-data
-            default:
-              template: |
-                {%- if status == "triage" -%}
-                  Submitted and awaiting triage.
-                {%- elif status == "rejected" -%}
-                  Rejected and closed.
-                {%- elif status == "duplicate" -%}
-                  Marked as duplicate and closed.
-                {%- elif status == "invalid" -%}
-                  Marked as invalid and closed.
-                {%- elif status == "planning" -%}
-                  In the planning phase.
-                {%- elif status == "requirement_analysis" -%}
-                  In the requirement analysis phase.
-                {%- elif status == "design" -%}
-                  In the design phase.
-                {%- elif status == "implementation" -%}
-                  In the implementation phase.
-                {%- elif status == "testing" -%}
-                  In the testing phase.
-                {%- elif status == "deploy_alpha" -%}
-                  Deployed as alpha release.
-                {%- elif status == "deploy_beta" -%}
-                  Deployed as beta release.
-                {%- elif status == "deploy_rc" -%}
-                  Deployed as release candidate.
-                {%- elif status == "deploy_final" -%}
-                  Deployed as final release.
-                {%- endif -%}
-          status_checkbox:
-            type: object
-            additionalProperties: false
-            default:
-              triage:
-                value: '\n  - [ ] Triage'
-              planning:
-                value: '\n  - [ ] Planning'
-              requirement_analysis:
-                value: '\n  - [ ] Requirement Analysis'
-              design:
-                value: '\n  - [ ] Design'
-              implementation:
-                value: '\n  - [ ] Implementation'
-              testing:
-                value: '\n  - [ ] Testing'
-              deploy:
-                value: '\n  - [ ] Deployment'
-            properties:
-              triage:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              planning:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              requirement_analysis:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              design:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              implementation:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              testing:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-              deploy:
-                $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-          data:
-            type: object
-            additionalProperties:
-              $ref: https://controlman.repodynamics.com/schema/doc-protocol-data
-            default:
-              summary:
-                value: '{{ pr_title }}'
-              description:
-                value: "\n\n**TBD**\n\n"
-              urd:
-                value: "\n\n{{ issue_body }}\n\n"
-              triage:
-                value: "\n\n**TBD**\n\n"
-              plan:
-                value: "\n\n**TBD**\n\n"
-              srs:
-                value: "\n\n**TBD**\n\n"
-              sdd:
-                value: "\n\n**TBD**\n\n"
-              testing:
-                value: "\n\n**TBD**\n\n"
-              deployment:
-                value: "\n\n**TBD**\n\n"
-          marker:
-            type: object
-            default: { }
-            additionalProperties: false
-            properties:
-              start:
-                type: string
-                default: '<!-- BEGIN: {} -->'
-              end:
-                type: string
-                default: '<!-- END: {} -->'
-          as_comment:
-            type: boolean
-            default: false
-      announcement:
-        title: Configurations of project announcements.
-        type: object
-        required: [ path, retention_days, url ]
-        properties:
-          path:
-            title: Path to the announcement banner file.
-            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ web.path.root }}$/announcement.html
-            examples:
-              - docs/announcement.html
-          retention_days:
-            title: Number of days to keep an announcement.
-            default: 30
-            $ref: https://jsonschemata.repodynamics.com/number/non-negative
-          url:
-            title: URL to the announcement banner file.
-            $ref: https://jsonschemata.repodynamics.com/url/http-explicit
-            default: ${{ repo.url.raw }}$/${{ .path }}$
+        $ref: https://controlman.repodynamics.com/schema/protocol
   pull:
     title: Pull Requests
     description: GitHub pull request settings for the project
     type: object
     additionalProperties: false
     properties:
+      protocol:
+        $ref: https://controlman.repodynamics.com/schema/protocol
       template:
         title: Templates
         description: |
@@ -4887,8 +4018,3 @@ properties:
             type: object
             additionalProperties:
               type: string
-  version:
-    description: |
-      Latest version number of the current branch.
-    readOnly: true
-    type: string

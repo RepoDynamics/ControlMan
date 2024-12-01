@@ -89,11 +89,16 @@ class CenterManager:
             )
         with _logger.sectioning("Post-Load Data Validation"):
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
+        code_context_call = {
+            "changelog": ChangelogManager(repo_path=self._git.repo_path)
+        }
+        inline_hooks = self._hook_manager.inline_hooks
+        if inline_hooks:
+            code_context_call["hook"] = inline_hooks.InlineHooks(self._git.repo_path, self._data_before)
         self._data_raw = _ps.NestedDict(
             full_data,
             code_context={
-                "hook": self._hook_manager.inline_hooks,
-                "root_path": self._path_root,
+                "repo_path": self._path_root,
                 "ccc": self._data_before,
                 "slugify": _pylinks.string.to_slug,
                 "fill_entity": _functools.partial(
@@ -107,9 +112,7 @@ class CenterManager:
                 "team_members_without_role_types": _helper.team_members_without_role_types,
                 "team_members_with_role_ids": _helper.team_members_with_role_ids,
             },
-            code_context_call={
-                "changelog": ChangelogManager(repo_path=self._git.repo_path)
-            },
+            code_context_call=code_context_call,
             relative_template_keys=const.RELATIVE_TEMPLATE_KEYS
         )
         return self._data_raw

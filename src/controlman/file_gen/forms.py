@@ -27,8 +27,7 @@ class FormGenerator:
         forms = self._data.get("issue.forms", [])
         paths = []
         for form_idx, form in enumerate(forms):
-            pre_process = form.get("pre_process")
-            if pre_process and not pre_process_existence(pre_process):
+            if not form.get("active", True):
                 continue
             form_output = {
                 key: val for key, val in form.items() if key in _const.ISSUE_FORM_TOP_LEVEL_KEYS
@@ -36,8 +35,7 @@ class FormGenerator:
             form_output[_const.ISSUE_FORM_BODY_KEY] = []
             marker_added = False
             for elem in form[_const.ISSUE_FORM_BODY_KEY]:
-                pre_process = elem.get("pre_process")
-                if pre_process and not pre_process_existence(pre_process):
+                if not elem.get("active", True):
                     continue
                 if not marker_added and elem["type"] == "checkboxes":
                     elem = _copy.deepcopy(elem)
@@ -158,15 +156,3 @@ class FormGenerator:
                     )
                 )
         return out
-
-
-def pre_process_existence(commands: dict) -> bool:
-    if "if_any" in commands:
-        return any(commands["if_any"])
-    if "if_all" in commands:
-        return all(commands["if_all"])
-    if "if_none" in commands:
-        return not any(commands["if_none"])
-    if "if_equal" in commands:
-        return all([commands["if_equal"][0] == elem for elem in commands["if_equal"][1:]])
-    return True

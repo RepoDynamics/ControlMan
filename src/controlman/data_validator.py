@@ -3,7 +3,7 @@ from pathlib import Path as _Path
 import copy
 import re as _re
 
-import controlman
+import trove_classifiers as _trove_classifiers
 import jsonschema as _jsonschema
 import referencing as _referencing
 from referencing import jsonschema as _referencing_jsonschema
@@ -66,12 +66,26 @@ class DataValidator:
     def validate(self):
         self.dir_paths()
         self.branch_names()
+        self.trove_classifiers()
         # self.citation()
         # self.changelogs()
         # self.commits()
         # self.issue_forms()
         # self.labels()
         return
+
+    def trove_classifiers(self):
+        for path in ("pkg", "test"):
+            classifiers = self._data.get(f"{path}.classifiers", [])
+            for classifier in classifiers:
+                if classifier not in _trove_classifiers.classifiers:
+                    raise _exception.load.ControlManSchemaValidationError(
+                        source="source",
+                        before_substitution=True,
+                        problem=f"Trove classifier '{classifier}' is not valid.",
+                        json_path=f"{path}.classifiers",
+                        data=self._data(),
+                    )
 
     def citation(self):
         """Verify that citation data are correct."""

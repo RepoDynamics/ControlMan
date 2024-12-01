@@ -211,11 +211,32 @@ properties:
       description: URL of a project resource
       $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
   readme:
-    title: README file of the PyPI/TestPyPI package.
+    title: README
     description: |
-      `readme` metadata of your package
-      (formerly known as `long_description`)
-    $ref: https://controlman.repodynamics.com/schema/docfile
+      Full description of the package.
+      https://packaging.python.org/en/latest/specifications/pyproject-toml/#readme
+    type: object
+    additionalProperties: false
+    oneOf:
+      - required: [ file ]
+      - required: [ text ]
+    required: [ content-type ]
+    properties:
+      file:
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+        description: Filepath to the README file.
+      text:
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+        description: Content of the README file.
+      content-type:
+        type: string
+        enum:
+          - text/markdown
+          - text/x-rst
+          - text/plain
+        default: text/markdown
+      charset:
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
   authors:
     title: Authors
     description: |
@@ -281,6 +302,7 @@ properties:
     type: boolean
     default: true
   os:
+    title: OS
     description: Operating systems for the project
     examples:
       - linux:
@@ -288,79 +310,44 @@ properties:
         macos:
         windows:
     type: object
-    additionalProperties: false
     minProperties: 1
-    default:
-      linux: {}
-      macos: {}
-      windows: {}
-    properties:
-      linux:
-        title: Linux configurations.
-        type: object
-        additionalProperties: false
-        properties:
-          name:
-            title: Display name of the OS.
-            $ref: https://jsonschemata.repodynamics.com/string/oneline
-            default: Linux
-          runner:
-            title: GitHub Actions runner for the OS.
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [ name, runner ]
+      properties:
+        name:
+          description: Display name of the OS.
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        runner:
+          description: GitHub Actions runner for the OS.
+          type: string
+          examples:
+            - ubuntu-latest
+            - ubuntu-24.04
+            - ubuntu-22.04
+            - ubuntu-20.04
+            - macos-latest
+            - macos-15
+            - macos-14
+            - macos-13
+            - macos-12
+            - windows-latest
+            - windows-2022
+            - windows-2019
+        builds:
+          description: |
+            List of [cibuildwheel build identifiers](https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip)
+            to build.
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
             type: string
-            default: ubuntu-latest
-            enum: [ ubuntu-latest, ubuntu-22.04, ubuntu-20.04 ]
-          cibuild:
-            title: Cibuild configurations.
-            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
-        required: [ name, runner ]
-      macos:
-        title: MacOS configurations.
-        type: object
-        additionalProperties: false
-        properties:
-          name:
-            title: Display name of the OS.
-            $ref: https://jsonschemata.repodynamics.com/string/oneline
-            default: MacOS
-          runner:
-            title: GitHub Actions runner for the OS.
-            type: string
-            default: macos-latest
-            enum:
-              - macos-latest
-              - macos-latest-xl
-              - macos-13
-              - macos-13-xl
-              - macos-12
-              - macos-12-xl
-              - macos-11
-          cibuild:
-            title: Cibuild configurations.
-            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
-        required: [ name, runner ]
-      windows:
-        title: Windows configurations.
-        properties:
-          name:
-            title: Display name of the OS.
-            $ref: https://jsonschemata.repodynamics.com/string/oneline
-            default: Windows
-          runner:
-            title: GitHub Actions runner for the OS.
-            type: string
-            default: windows-latest
-            enum:
-              - windows-latest
-              - windows-2022
-              - windows-2019
-          cibuild:
-            title: Cibuild configurations.
-            $ref: https://controlman.repodynamics.com/schema/pkg-os-cibuild
-        required: [ name, runner ]
-  os_independent:
-    type: boolean
-    default: |
-      #{{ return get(".python.pure") and len(get(".os")) == 3 }}#
+            examples:
+              - cp313-macosx_x86_64
+              - cp312-win_arm64
+              - cp312-manylinux_i686
   python:
     title: Python configurations for the package.
     description: |
@@ -518,7 +505,7 @@ properties:
             path: ${{ ....path.root }}$/conda_env.yaml
           pip:
             path: ${{ ....path.root }}$/requirements.txt
-  file:
+  source_file:
     description: |
       Configurations for Python source files.
     type: object
@@ -746,7 +733,10 @@ properties:
     properties:
       publishable:
         type: boolean
-        default: true
+        default: |
+          #{{
+            return all("pip" in dep for dep in get("..dependency.core").values())
+          }}#
       url:
         title: URLs of the package on PyPI.
         type: object
@@ -775,6 +765,12 @@ properties:
       This requires following the [instructions](https://conda-forge.org/docs/maintainer/adding_pkgs.html).
     type: object
     properties:
+      publishable:
+        type: boolean
+        default: |
+          #{{
+            return all("conda" in dep for dep in get("..dependency.core").values())
+          }}#
       readme:
         title: README file of the Conda package.
         default:

@@ -42,5 +42,6 @@ allOf:
   - $ref: https://jsonschemata.repodynamics.com/config/github/form/body
   - items:
       properties:
-        pre_process:
-          $ref: https://controlman.repodynamics.com/schema/gh-form-preprocess
+        active:
+          type: boolean
+          default: true

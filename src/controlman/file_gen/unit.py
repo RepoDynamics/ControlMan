@@ -27,16 +27,15 @@ def create_environment_files(
     pip_dependencies = []
     pip_only_dependencies = []
     conda_dependencies = ["python"]
-    channel_frequency = {}
     pip_full = True
     for dependency in dependencies:
-        has_conda = "conda" in dependency
         has_pip = "pip" in dependency
-        if has_conda:
-            conda_dependencies.append(dependency["conda"]["spec"])
+        if "conda" in dependency:
             channel = dependency["conda"].get("channel")
-            if channel:
-                channel_frequency[channel] = channel_frequency.get(channel, 0) + 1
+            spec = dependency["conda"]["spec"]
+            # Specify channels for each package separately:
+            #  https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually
+            conda_dependencies.append(f"{channel}::{spec}" if channel else spec)
         else:
             pip_only_dependencies.append(dependency["pip"]["spec"])
         if has_pip:
@@ -48,7 +47,6 @@ def create_environment_files(
         conda_dependencies.append({"pip": pip_only_dependencies})
     env = {
         "name": env_name,
-        "channels": sorted(channel_frequency, key=channel_frequency.get, reverse=True) + ["defaults"],
         "dependencies": conda_dependencies,
     }
     conda_env = _ps.write.to_yaml_string(data=env, end_of_file_newline=True)

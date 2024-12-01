@@ -8,6 +8,9 @@ required: [ prefix, color ]
 properties:
   prefix:
     $ref: https://controlman.repodynamics.com/schema/label-prefix
+  separator:
+    type: string
+    default: ": "
   color:
     description: Color of all labels in the group.
     $ref: https://jsonschemata.repodynamics.com/color/hex-string

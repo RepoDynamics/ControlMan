@@ -59,7 +59,7 @@ class ConfigFileGenerator:
         ----------
         https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
         """
-        path_key = "health.code_owners.path"
+        path_key = "code_owners.path"
         if self._is_disabled(path_key):
             return []
         codeowners_files = {
@@ -77,7 +77,7 @@ class ConfigFileGenerator:
                 )
                 if glob_def.get("description"):
                     pattern_description[glob_def["glob"]] = glob_def["description"]
-            for member_role in member.get("roles", []):
+            for member_role in member.get("role", {}).keys():
                 for glob_def in self._data["role"][member_role].get("ownership", []):
                     data.setdefault(glob_def["priority"], {}).setdefault(glob_def["glob"], []).append(
                         member["github"]["id"]

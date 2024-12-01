@@ -1,0 +1,118 @@
+$id: https://controlman.repodynamics.com/schema/protocol
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Document
+description: |
+  Configurations for an issue/PR protocol.
+type: object
+default: { }
+additionalProperties: false
+required: [ marker ]
+properties:
+  config:
+    type: object
+    properties:
+      pr_title:
+        type: string
+  data:
+    type: object
+    additionalProperties:
+      title: Datum
+      description: Development protocol data.
+      type: object
+      additionalProperties: false
+      properties:
+        start:
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        end:
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        value:
+          type: string
+          default: ''
+        template:
+          type: string
+  tasklist:
+    $ref: https://controlman.repodynamics.com/schema/protocol-data-static
+    default:
+      value: "\n\n<!-- Tasklist\n
+        - [ ] secondary-commit-type: Summary of task 1.\n
+        \u0020\u0020Description of task 1.\n
+        \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
+        \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
+        - [ ] secondary-commit-type: Summary of task 2.\n
+        \u0020\u0020Description of task 2.\n
+        -->\n\n"
+  template:
+    oneOf:
+      - type: string
+      - type: object
+    default: |
+      # Development Protocol #{{ issue.number }}
+
+      - **Type**: {{ form.description }}
+      - **Client**: {{ issue.user.md_name }}
+      - **Summary**: {{ data.summary }}
+      - **Current Status**: {{ status }}
+      - **Progress**:
+        {{ status_checkbox.triage }}{{ status_checkbox.planning }}{{ status_checkbox.requirement_analysis }}{{ status_checkbox.design }}{{ status_checkbox.implementation }}{{ status_checkbox.testing }}{{ status_checkbox.deploy }}
+
+      {{ pr_list }}
+
+      ## User Requirements Document (URD)
+
+      {{ data.urd }}
+
+      ## Triage
+
+      {{ data.triage }}
+
+      ## Plan
+
+      {{ data.plan }}
+
+      ## Software Requirements Specification (SRS)
+
+      {{ data.srs }}
+
+      ## Software Design Document (SDD)
+
+      {{ data.sdd }}
+
+      ## Implementation
+
+      {{ data.description }}
+
+      ### Task List
+
+      {{ tasklist }}
+
+      ## Testing
+
+      {{ data.testing }}
+
+      ## Deployment
+
+      {{ data.deployment }}
+
+      ## Timeline
+
+      <div align="center">
+
+      {{ timeline }}
+
+      </div>
+
+      {{ references }}
+  marker:
+    type: object
+    default: { }
+    additionalProperties: false
+    properties:
+      start:
+        type: string
+        default: '<!-- BEGIN: {} -->'
+      end:
+        type: string
+        default: '<!-- END: {} -->'
+  as_comment:
+    type: boolean
+    default: false

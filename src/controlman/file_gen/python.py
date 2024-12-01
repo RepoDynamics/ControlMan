@@ -133,7 +133,7 @@ class PythonPackageFileGenerator:
         # Get all file glob matches
         path_to_globs_map = {}
         abs_path = self._path_repo / (self._path_import_before or self._path_import)
-        for config_id, file_config in self._pkg.get("file", {}).items():
+        for config_id, file_config in self._pkg.get("source_file", {}).items():
             for filepath_match in abs_path.glob(file_config["glob"]):
                 path_to_globs_map.setdefault(filepath_match, []).append((config_id, file_config))
         if not (mapping or path_to_globs_map):
@@ -147,7 +147,7 @@ class PythonPackageFileGenerator:
             if filepath in path_to_globs_map:
                 for config_id, file_config in path_to_globs_map[filepath]:
                     if "docstring" in file_config:
-                        docstring_before = self._pkg_before.get("file", {}).get(config_id, {}).get("docstring")
+                        docstring_before = self._pkg_before.get("source_file", {}).get(config_id, {}).get("docstring")
                         if docstring_before != file_config["docstring"]:
                             file_content = self._update_docstring(
                                 file_content,
@@ -155,7 +155,7 @@ class PythonPackageFileGenerator:
                                 docstring_before,
                             )
                     if "header_comments" in file_config:
-                        header_commens_before = self._pkg_before.get("file", {}).get(config_id, {}).get("header_comments")
+                        header_commens_before = self._pkg_before.get("source_file", {}).get(config_id, {}).get("header_comments")
                         if header_commens_before != file_config["header_comments"]:
                             file_content = self._update_header_comments(
                                 file_content,
@@ -309,7 +309,6 @@ class PythonPackageFileGenerator:
         return output
 
     def pyproject_project(self) -> dict:
-        readme = _Path(self._pkg["readme.path"]).name if self._pkg["readme.path"] else None
         license = {"text": self._data["license.expression"]} if self._data["license.expression"] else None
         data = {
             "name": ("str", self._pkg["name"]),
@@ -320,7 +319,7 @@ class PythonPackageFileGenerator:
             "urls": ("table", self._pkg["urls"]),
             "authors": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("authors", [])]),
             "maintainers": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("maintainers", [])]),
-            "readme": ("str", readme),
+            "readme": ("table", self._pkg["readme"]),
             "requires-python": ("str", self._pkg["python.version.spec"]),
             "dependencies": ("array", self.pyproject_project_dependencies),
             "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),

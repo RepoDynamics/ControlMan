@@ -6,7 +6,6 @@ from packaging import specifiers as _specifiers
 
 from gittidy import Git as _Git
 import pylinks
-import trove_classifiers as _trove_classifiers
 from loggerman import logger as _logger
 import pyserials as _ps
 
@@ -31,7 +30,6 @@ class PythonDataGenerator:
 
     def generate(self):
         self._package_python_versions()
-        self.trove_classifiers()
         return
 
     def _package_python_versions(self) -> None:
@@ -105,71 +103,4 @@ class PythonDataGenerator:
         self._data["pkg.python.version"].update(output)
         if self._data["test"]:
             self._data["test.python.version.spec"] = spec_str
-        return
-
-    def trove_classifiers(self):
-
-        def programming_language() -> list[str]:
-            template = "Programming Language :: Python :: {}"
-            classifiers = []
-            has_2 = False
-            has_3 = False
-            for version in self._data["pkg.python.version.minors"]:
-                if version.startswith("2"):
-                    has_2 = True
-                if version.startswith("3"):
-                    has_3 = True
-                classifiers.append(template.format(version))
-            if has_2 and not has_3:
-                classifiers.append(template.format("2 :: Only"))
-            elif has_3 and not has_2:
-                classifiers.append(template.format("3 :: Only"))
-            return classifiers
-
-        def operating_system():
-            template = "Operating System :: {}"
-            postfix = {
-                "windows": "Microsoft :: Windows",
-                "macos": "MacOS",
-                "linux": "POSIX :: Linux",
-            }
-            data_os = self._data["pkg.os"]
-            has_build_info = any("ci_build" in data_os.get(name, {}) for name in postfix.keys())
-            if not has_build_info and all(name in data_os for name in postfix.keys()):
-                return [template.format("OS Independent")]
-            return [template.format(postfix[os_name]) for os_name in postfix.keys() if os_name in data_os]
-
-        def license():
-            troves = []
-            for component in self._data.get("license.component", {}).values():
-                trove = component.get("trove_classifier")
-                if trove:
-                    troves.append(trove)
-            return troves
-
-        common_classifiers = programming_language()
-        common_classifiers.extend(operating_system())
-        common_classifiers.extend(license())
-        # Development status is added in `data_gen.python`
-        if self._data["pkg.typed"]:
-            common_classifiers.append("Typing :: Typed")
-        for common_classifier in common_classifiers:
-            if common_classifier not in _trove_classifiers.classifiers:
-                raise RuntimeError(
-                    f"Auto-generated trove classifier '{common_classifier}' is not valid. "
-                    "Please file an issue ticket at https://github.com/RepoDynamics/ControlMan."
-                )
-        for path in ("pkg", "test"):
-            classifiers = self._data.get(f"{path}.classifiers", [])
-            for classifier in classifiers:
-                if classifier not in _trove_classifiers.classifiers:
-                    raise _exception.load.ControlManSchemaValidationError(
-                        source="source",
-                        before_substitution=True,
-                        problem=f"Trove classifier '{classifier}' is not valid.",
-                        json_path=f"{path}.classifiers",
-                        data=self._data(),
-                    )
-            classifiers.extend(common_classifiers)
-            self._data[f"{path}.classifiers"] = sorted(set(classifiers))
         return

@@ -15,8 +15,7 @@ class DynamicFileType(_Enum):
     TEST_CONFIG = ("test_config", "Test Suite Configuration")
     PKG_SOURCE = ("pkg_source", "Package Source")
     TEST_SOURCE = ("test_source", "Test Suite Source")
-    README = ("readme", "ReadMe")
-    HEALTH = ("health", "Community Health")
+    DOC = ("document", "Document")
 
 
 class DynamicDirType(_Enum):

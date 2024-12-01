@@ -147,40 +147,6 @@ class RepoDataGenerator:
                 if key in ("gui_names", "cli_names"):
                     out["has_scripts"] = True
         self._data["project"] = out
-        if curr_branch_latest_version:
-            self._data["version"] = str(curr_branch_latest_version)
-            if self._data["pkg"]:
-                self._package_development_status(curr_branch_latest_version)
-        return
-
-    def _package_development_status(self, ver: _ver.PEP440SemVer) -> None:
-        phase = {
-            1: "Planning",
-            2: "Pre-Alpha",
-            3: "Alpha",
-            4: "Beta",
-            5: "Production/Stable",
-            6: "Mature",
-            7: "Inactive",
-        }
-        if ver.release == (0, 0, 0):
-            status_code = 1
-        elif ver.dev is not None:
-            status_code = 2
-        elif ver.pre:
-            if ver.pre[0] == "a":
-                status_code = 3
-            else:
-                status_code = 4
-        elif ver.major == 0:
-            status_code = 4
-        else:
-            latest_ver = max(_ver.PEP440SemVer(ver) for ver in self._data["project"]["versions"])
-            if ver.major < latest_ver.major:
-                status_code = 6
-            else:
-                status_code = 5
-        self._data["pkg.classifiers"].append(f"Development Status :: {status_code} - {phase[status_code]}")
         return
 
     def _repo_labels(self) -> None:
@@ -191,10 +157,11 @@ class RepoDataGenerator:
             entries = self._data.get(f"project.{release_key}", [])
             labels = label_data["label"] = {}
             prefix = label_data['prefix']
+            separator = label_data["separator"]
             for entry in entries:
                 labels[entry] = {
                     "suffix": entry,
-                    "name": f"{prefix}{entry}",
+                    "name": f"{prefix}{separator}{entry}",
                     "description": _jinja2.Template(label_data["description"]).render(
                         {autogroup_name: entry}
                     ),

@@ -7,8 +7,10 @@ allOf:
   - properties:
       pip:
         type: object
+        required: [ spec ]
         properties:
           spec:
+            type: string
             title: |
               Dependency specification for pip, according to 
               [PEP 508](https://peps.python.org/pep-0508/#specification).
@@ -20,11 +22,10 @@ allOf:
               in pip documentation.
             examples:
               - "numpy >= 1.21.2"
-            type: string
-        required: [ spec ]
       conda:
         title: Conda Specification
         type: object
+        required: [ spec, channel ]
         properties:
           spec:
             title: |
@@ -39,7 +40,6 @@ allOf:
             examples:
               - anaconda
               - my-channel
-        required: [ spec, channel ]
     anyOf:
       - required: [ conda ]
       - required: [ pip ]
