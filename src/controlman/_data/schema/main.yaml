@@ -2174,6 +2174,7 @@ properties:
     additionalProperties:
       title: Custom Group
       description: A custom group of labels.
+      default: { }
       $ref: https://controlman.repodynamics.com/schema/label-group
   issue:
     title: Issues

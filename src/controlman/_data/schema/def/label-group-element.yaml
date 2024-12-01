@@ -4,7 +4,7 @@ title: GitHub Label Group Element
 description: An element of a group of GitHub labels.
 type: object
 additionalProperties: false
-required: [ suffix ]
+required: [ suffix, name ]
 properties:
   suffix:
     title: Suffix

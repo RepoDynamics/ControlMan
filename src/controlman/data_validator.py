@@ -502,6 +502,7 @@ def _make_registry():
     resources_before = []
     for registry_schema_id in registry_after:
         registry_schema_dict = registry_after[registry_schema_id].contents
+        registry_schema_dict.pop("$schema", None)
         _add_custom_keys(registry_schema_dict)
         registry_schema_spec = registry_after[registry_schema_id]._specification
         registry_schema_dict_before = modify_schema(copy.deepcopy(registry_schema_dict))

@@ -161,7 +161,7 @@ class RepoDataGenerator:
             for entry in entries:
                 labels[entry] = {
                     "suffix": entry,
-                    "name": f"{prefix}{separator}{entry}",
+                    # "name": f"{prefix}{separator}{entry}",
                     "description": _jinja2.Template(label_data["description"]).render(
                         {autogroup_name: entry}
                     ),
