@@ -419,7 +419,7 @@ properties:
       pure:
         type: boolean
         default: |
-          #{{ return not any("ci_build" in os for os in get("..os").values()) }}#
+          #{{ return not any("builds" in os for os in get("..os").values()) }}#
       implementation:
         type: string
         enum:
