@@ -4011,11 +4011,7 @@ properties:
             type: object
             additionalProperties:
               type: string
-          readme:
-            type: object
-            additionalProperties:
-              type: string
-          health:
+          document:
             type: object
             additionalProperties:
               type: string
