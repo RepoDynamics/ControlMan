@@ -2150,7 +2150,7 @@ properties:
       branch:
         description: Branch labels. This is an automatic label group.
         default:
-          prefix: 'Branch'
+          prefix: Branch
           color: '#0366d6'
           description: Related to branch {{ branch }} of the repository.
         $ref: https://controlman.repodynamics.com/schema/label-group

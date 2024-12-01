@@ -46,9 +46,6 @@ FILEPATH_GIT_ATTRIBUTES = ".gitattributes"
 ISSUE_FORM_TOP_LEVEL_KEYS = (
     "name",
     "description",
-    "body",
-    "assignees",
-    "labels",
     "title",
     "projects",
 )
