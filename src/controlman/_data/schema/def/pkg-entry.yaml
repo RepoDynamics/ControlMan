@@ -13,6 +13,14 @@ additionalProperties:
       type: string
     ref:
       type: string
+    pypi:
+      type: boolean
+      default: true
+    conda:
+      oneOf:
+        - type: boolean
+        - $ref: https://jsonschemata.repodynamics.com/string/oneline
+      default: true
 examples:
   - main:
       name: ${{ pkg.import_name }}$
