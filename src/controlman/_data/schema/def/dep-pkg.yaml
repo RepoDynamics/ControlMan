@@ -40,6 +40,8 @@ allOf:
             examples:
               - anaconda
               - my-channel
+          selector:
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
     anyOf:
       - required: [ conda ]
       - required: [ pip ]
