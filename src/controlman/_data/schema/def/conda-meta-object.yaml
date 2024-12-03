@@ -1,0 +1,15 @@
+$id: https://controlman.repodynamics.com/schema/conda-meta-object
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Conda Meta Object
+description: |
+  A dictionary in a conda recipe metadata file.
+type: object
+minProperties: 1
+additionalProperties: false
+properties:
+  prepend:
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  append:
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  values:
+    type: object
