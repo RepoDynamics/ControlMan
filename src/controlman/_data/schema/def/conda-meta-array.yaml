@@ -1,0 +1,25 @@
+$id: https://controlman.repodynamics.com/schema/conda-meta-array
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Conda Meta Array
+description: |
+  An array of values in a conda recipe metadata file.
+type: object
+minProperties: 1
+additionalProperties: false
+properties:
+  prepend:
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  append:
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  values:
+    type: array
+    items:
+      type: object
+      required: [ value ]
+      additionalProperties: false
+      properties:
+        value:
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        selector:
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+
