@@ -58,6 +58,7 @@ class PythonPackageFileGenerator:
             + self.python_files()
             + self.typing_marker()
             + self.manifest()
+            + self.conda()
         )
 
     def is_disabled(self, key: str):
@@ -106,6 +107,33 @@ class PythonPackageFileGenerator:
             DynamicFile(content=conda_env, **conda_env_file),
             DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
         ]
+
+    def conda(self):
+        out = []
+        changelogs = controlman.read_changelog(repo_path=self._path_repo)
+        for _changelog in changelogs:
+            if _changelog["type"] != "local":
+                changelog = _changelog
+                break
+        else:
+            changelog = {}
+        for typ, changelog in (("local", None), ("global", changelog)):
+            meta = CondaRecipeGenerator(
+                meta=self._pkg["conda.recipe.meta"],
+                pkg=self._pkg,
+                data=self._data,
+                recipe_dir_path=self._pkg[f"conda.recipe.path.{typ}"],
+                changelog=changelog,
+            ).generate()
+            file = DynamicFile(
+                type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
+                subtype=(f"conda_recipe_meta_{typ}", f"Conda Recipe {typ.title()} Metadata"),
+                content=meta,
+                path=f"{self._pkg[f"conda.recipe.path.{typ}"]}/meta.yaml",
+                path_before=f"{self._pkg_before[f'conda.recipe.path.{typ}']}/meta.yaml",
+            )
+            out.append(file)
+        return out
 
     def python_files(self) -> list[DynamicFile]:
         # Generate import name mapping
@@ -298,8 +326,13 @@ class PythonPackageFileGenerator:
         return [file]
 
     def pyproject_build_system(self) -> dict:
+        requirements = []
+        for req in self._pkg["dependency.build"].values():
+            spec = req.get("pip", {}).get("spec")
+            if spec:
+                requirements.append(spec)
         data = {
-            "requires": ("array", self._data[f"{self._type}.build.requires"]),
+            "requires": ("array", requirements),
             "build-backend": ("str", self._data[f"{self._type}.build.backend"]),
         }
         output = {}
@@ -375,10 +408,275 @@ class PythonPackageFileGenerator:
     def _scripts(self, typ: Literal["cli", "gui"]) -> dict[str, str]:
         scripts = {}
         for entry in self._data.get(f"{self._type}.entry.{typ}", {}).values():
-            scripts[entry["name"]] = entry["ref"]
+            if entry["pypi"]:
+                scripts[entry["name"]] = entry["ref"]
         return scripts
 
     @staticmethod
     def _get_whitespace(string: str, leading: bool) -> str:
         match = _re.match(r"^\s*", string) if leading else _re.search(r"\s*$", string)
         return match.group() if match else ""
+
+
+class CondaRecipeGenerator:
+
+    def __init__(self, meta: dict, pkg: dict, data: _ps.NestedDict, recipe_dir_path: str, changelog: dict | None = None):
+        self._path = recipe_dir_path
+        self._meta_full = meta
+        self._meta = meta["values"]
+        self._pkg = pkg
+        self._data = data
+        self._changelog = changelog
+        self._full_ver_env_var_name = "PKG_FULL_VERSION"
+        return
+
+    def generate(self):
+        blocks = [
+            self._make_header(),
+            self._make_package(),
+            self._make_source(),
+            self._make_build(),
+            self._make_requirements(),
+            self._make_test(),
+            self._make_about(),
+        ]
+        for top_level_key in ("app", "extra"):
+            if top_level_key in self._meta:
+                block = _ps.write.to_yaml_string(
+                    data=self._meta[top_level_key],
+                    end_of_file_newline=False,
+                )
+                blocks.append(block)
+        self._meta_full.get("append", "").strip()
+        return "\n\n".join(block for block in blocks if block).strip() + "\n"
+
+    def _make_header(self) -> str:
+        version = (
+            f'"{self._changelog["version"]}"' if self._changelog
+            else f'environ.get("{self._full_ver_env_var_name}", environ.get("GIT_DESCRIBE_TAG", "0.0.0")).removeprefix("{self._data["tag.version.prefix"]}")'
+        )
+        headers = [
+            f'{{% set name = "{self._pkg["name"]}" %}}',
+            f"{{% set version = {version} %}}",
+            f'{{% set pkg_dir = "{"." if self._changelog else self._pkg["path"]["root"]}/" %}}',
+            self._meta_full.get("prepend", ""),
+        ]
+        return "\n".join(headers).strip()
+
+    @staticmethod
+    def _make_package() -> str:
+        pkg =  {
+            "name": "{{ name | lower }}",
+            "version": "{{ version }}",
+        }
+        return _ps.write.to_yaml_string({"package": pkg}, end_of_file_newline=False)
+
+    def _make_source(self) -> str:
+        source = {}
+        if self._changelog:
+            files = self._changelog.get("pypi", {}).get("files", [])
+            for file in files:
+                if file["name"].endswith(".tar.gz"):
+                    source = {
+                        "url": f"https://pypi.org/packages/source/{{{{ name[0]|lower }}}}/{file["name"]}",
+                        "sha256": file["sha256"],
+                        "sha1": file["sha1"],
+                        "md5": file["md5"],
+                    }
+                    break
+        if not source:
+            source = {"path": "../" * len(self._path.split("/"))}
+        return _ps.write.to_yaml_string({"source": source}, end_of_file_newline=False)
+
+    def _make_build(self):
+
+        def add_noarch():
+            if self._pkg["python"]["pure"]:
+                lines.append("noarch: python")
+
+        def add_skip():
+            condition = build.get("condition")
+            if condition:
+                lines.append(f"skip: True  # [{condition}]")
+            return
+
+        def add_number():
+            number = "0" if self._changelog else f'{{{{ "0" if environ.get("{self._full_ver_env_var_name}") else environ.get("GIT_DESCRIBE_NUMBER", 0) }}}}'
+            lines.append(f"number: {number}")
+            return
+
+        def add_string():
+            if self._changelog:
+                return
+            lines.extend(
+                self._make_multi_key_entry(key="string", data=build)
+            )
+            for key in ("force_use_keys", "force_ignore_keys"):
+                lines.extend(
+                    self._make_yaml_array(key=key, data=build)
+                )
+            return
+
+        def add_entry_points():
+            entry_points = self._pkg.get("entry", {})
+            out = []
+            for key in ("cli", "gui"):
+                if key in entry_points:
+                    for entry in entry_points[key].values():
+                        conda_selector = entry["conda"]
+                        if not conda_selector:
+                            continue
+                        selector = "" if conda_selector is True else f"  # [{conda_selector}]"
+                        out.append(f"  - {entry["name"]} = {entry["ref"]}{selector}")
+            if not out:
+                return
+            lines.append("entry_points:")
+            lines.extend(out)
+            return
+
+        def add_ignore_prefix_files():
+            key = "ignore_prefix_files"
+            if key not in build:
+                return
+            data = build[key]
+            if isinstance(data, list):
+                lines.extend(self._make_yaml_array(key=key, data=build))
+            else:
+                lines.extend(self._make_multi_key_entry(key=key, data=build))
+            return
+
+        def add_script_env():
+            lines.extend(
+                self._make_yaml_array(
+                    key="script_env",
+                    data=build,
+                    add_items=[f"- {self._full_ver_env_var_name}"] if not self._changelog else None
+                )
+            )
+            return
+
+        def add_run_exports():
+            exports = build.get("run_exports")
+            if not exports:
+                return
+            sublines = []
+            for key in ("strong", "weak"):
+                sublines.extend(self._make_yaml_array(key=key, data=exports))
+            lines.extend(self._prepend_and_append(sublines, exports))
+            return
+
+        build = self._meta.get("build", {}).get("values", {})
+        lines = []
+
+        for key, typ in (
+            ("noarch", add_noarch),
+            ("skip", add_skip),
+            ("script", "multi"),
+            ("number", add_number),
+            ("string", add_string),
+            ("entry_points", add_entry_points),
+            ("osx_is_app", "multi"),
+            ("python_site_packages_path", "multi"),
+            ("track_features", "array"),
+            ("preserve_egg_dir", "multi"),
+            ("skip_compile_pyc", "array"),
+            ("no_link", "array"),
+            ("rpaths", "array"),
+            ("always_include_files", "array"),
+            ("binary_relocation", "multi"),
+            ("detect_binary_files_with_prefix", "multi"),
+            ("binary_has_prefix_files", "array"),
+            ("has_prefix_files", "array"),
+            ("ignore_prefix_files", add_ignore_prefix_files),
+            ("include_recipe", "multi"),
+            ("script_env", add_script_env),
+            ("run_exports", add_run_exports),
+            ("ignore_run_exports", "array"),
+            ("ignore_run_exports_from", "array"),
+            ("pin_depends", "multi"),
+            ("overlinking_ignore_patterns", "array"),
+            ("missing_dso_whitelist", "array"),
+            ("runpath_whitelist", "array")
+        ):
+            if typ == "multi":
+                lines.extend(self._make_multi_key_entry(key=key, data=build))
+            elif typ == "array":
+                lines.extend(self._make_yaml_array(key=key, data=build))
+            else:
+                typ()
+        final_lines = self._make_yaml_mapping(key="build", lines=lines, data=self._meta["build"])
+        return "\n".join(final_lines).strip()
+
+    def _make_requirements(self):
+        reqs = self._meta.get("requirements", {}).get("values", {})
+        lines = []
+        for key in ("build", "host", "run", "run_constrained"):
+            lines.extend(self._make_yaml_array(key=key, data=reqs))
+        final_lines = self._make_yaml_mapping(key="requirements", lines=lines, data=self._meta["requirements"])
+        return "\n".join(final_lines).strip()
+
+    def _make_test(self):
+        test = self._meta.get("test", {}).get("values", {})
+        lines = []
+        for key in ("imports", "requires", "commands", "files", "source_files", "downstreams"):
+            lines.extend(self._make_yaml_array(key=key, data=test))
+        final_lines = self._make_yaml_mapping(key="test", lines=lines, data=self._meta["test"])
+        return "\n".join(final_lines).strip()
+
+    def _make_about(self):
+        about = self._meta["about"]
+        readme = self._data.get("pkg.readme", {})
+        if "text" in readme:
+            about["description"] = readme["text"]
+        elif "file" in readme:
+            about["description"] = "\n".join(
+                (
+                    "{{",
+                    "  load_file_regex(",
+                    f'    load_file=pkg_dir ~ "{readme["file"]}",',
+                    f'    regex_pattern="(?s)^(.*)$",',
+                    '  )[1] | default("") | indent(width=4)',
+                    "}}"
+                )
+            )
+        return _ps.write.to_yaml_string(data={"about": about}, end_of_file_newline=False)
+
+    def _make_multi_key_entry(self, key: str, data: dict) -> list[str]:
+        if key not in data:
+            return []
+        entries = data[key]
+        out = []
+        for entry in entries:
+            out.append(f"{key}: {entry["value"]}{self._make_selector(entry)}")
+        return out
+
+    def _make_yaml_array(self, key: str, data: dict, add_items: list[str] | None = None) -> list[str]:
+        lines = []
+        array = data.get(key, {})
+        for value in array.get("values", []):
+            lines.append(f"- {value["value"]}{self._make_selector(value)}")
+        lines.extend(add_items or [])
+        all_lines = self._prepend_and_append(lines, array)
+        if not all_lines:
+            return []
+        return [f"{key}:"] + [f"  {line}" for line in all_lines]
+
+    def _make_yaml_mapping(self, key: str, lines: list[str], data: dict):
+        return [f"{key}:"] + [f"  {line}" for line in self._prepend_and_append(lines, data)]
+
+    @staticmethod
+    def _prepend_and_append(core: list[str], data: dict):
+        lines = []
+        prepend = data.get("prepend")
+        if prepend:
+            lines.extend(prepend.splitlines())
+        lines.extend(core)
+        append = data.get("append")
+        if append:
+            lines.extend(append.splitlines())
+        return lines
+
+    @staticmethod
+    def _make_selector(data: dict):
+        selector = data.get("selector")
+        return f"  # [{selector}]" if selector else ""
