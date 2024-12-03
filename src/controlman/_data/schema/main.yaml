@@ -3447,6 +3447,13 @@ properties:
                   merge:
                     name: '{{ pkg.name }} v{{ version }} - wheels'
                     pattern: '{{ pkg.name }} v{{ version }} - wheel - *'
+              conda:
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: '{{ pkg.name }} v{{ version }} - conda - {{ python }} - {{ platform }}'
+                  merge:
+                    name: '{{ pkg.name }} v{{ version }} - conda'
+                    pattern: '{{ pkg.name }} v{{ version }} - conda - *'
               readme:
                 $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                 default:
@@ -3516,6 +3523,33 @@ properties:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
           zenodo_sandbox:
             $ref: https://controlman.repodynamics.com/schema/workflow-publish-zenodo
+          anaconda:
+            description: Workflow configurations for publishing on an Anaconda channel.
+            unevaluatedProperties: false
+            allOf:
+              - $ref: https://controlman.repodynamics.com/schema/workflow-publish
+              - required: [ index, action ]
+                properties:
+                  index:
+                    type: object
+                    additionalProperties: false
+                    required: [ channel ]
+                    properties:
+                      channel:
+                        type: string
+                  action:
+                    description: Type of action for the main package and its test-suite.
+                    type: object
+                    default: { }
+                    properties:
+                      pkg:
+                        type: string
+                        enum: [ auto, disabled ]
+                        default: auto
+                      test:
+                        type: string
+                        enum: [ auto, disabled ]
+                        default: auto
       schedule:
         description: |
           Configurations for scheduled jobs
