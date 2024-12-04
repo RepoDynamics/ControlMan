@@ -626,7 +626,7 @@ class CondaRecipeGenerator:
 
     def _make_about(self):
         about = copy.deepcopy(self._meta["about"])
-        readme = self._data.get("pkg.readme", {})
+        readme = self._pkg.get("readme", {})
         if "text" in readme:
             about["description"] = readme["text"]
         elif "file" in readme:
