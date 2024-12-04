@@ -5,6 +5,7 @@ from typing import Literal
 import textwrap
 from pathlib import Path as _Path
 import re as _re
+import copy
 
 # Non-standard libraries
 import pyserials as _ps
@@ -624,7 +625,7 @@ class CondaRecipeGenerator:
         return "\n".join(final_lines).strip()
 
     def _make_about(self):
-        about = self._meta["about"]
+        about = copy.deepcopy(self._meta["about"])
         readme = self._data.get("pkg.readme", {})
         if "text" in readme:
             about["description"] = readme["text"]
