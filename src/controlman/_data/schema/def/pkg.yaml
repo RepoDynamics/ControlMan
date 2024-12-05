@@ -94,7 +94,6 @@ properties:
     default: |
       #{{
         import re
-        
         project_name = get("name")
         project_name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", project_name)
         return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", project_name_normalized)
@@ -507,7 +506,7 @@ properties:
         default:
           conda:
             name: ${{ ....import_name }}$
-            path: ${{ ....path.root }}$/conda_env.yaml
+            path: ${{ ....path.root }}$/environment.yaml
           pip:
             path: ${{ ....path.root }}$/requirements.txt
   source_file:

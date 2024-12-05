@@ -231,12 +231,13 @@ class ConfigFileGenerator:
             if tool_env:
                 env_file = tool_env["file"]
                 env_conda_entry = env_conda.setdefault(
-                    env_file["conda"]["path"], {"name": env_file["conda"]["name"], "deps": [], "tool_names": []}
+                    env_file["conda"]["path"], {"name": env_file["conda"]["name"], "deps": [], "tool_names": [], "python": []}
                 )
                 if env_conda_entry["name"] != env_file["conda"]["name"]:
                     raise ValueError()
                 env_conda_entry["deps"].extend(list(tool_env["dependency"].values()))
                 env_conda_entry["tool_names"].append(tool_name)
+                env_conda_entry["python"].append(env_file["conda"]["python"])
                 env_file_pip = env_file.get("pip")
                 if env_file_pip:
                     env_pip_entry = env_pip.setdefault(env_file_pip["path"], {"deps": [], "tool_names": []})
@@ -260,10 +261,13 @@ class ConfigFileGenerator:
         out = []
         # Write conda environment files
         for conda_env_path, conda_env_data in env_conda.items():
+            python = set(spec for spec in conda_env_data["python"] if spec)
+            if len(python) > 1 :
+                raise ValueError("Multiple different python versions defined for the same conda environment file.")
             conda_env = _unit.create_environment_files(
                 dependencies=conda_env_data["deps"],
                 env_name=conda_env_data["name"],
-                python_version_spec=conda_env_data["python"]
+                python_version_spec=python.pop() if python else ""
             )[0]
             out.append(
                 DynamicFile(
