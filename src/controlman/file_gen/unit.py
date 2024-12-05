@@ -4,6 +4,7 @@ import pyserials as _ps
 def create_environment_files(
     dependencies: list[dict],
     env_name: str = "conda_env",
+    python_version_spec: str = "",
 ) -> tuple[str, str | None, bool]:
     """Create pip `requirements.txt` and conda `environment.yml` files from a list of dependencies.
 
@@ -26,7 +27,7 @@ def create_environment_files(
     """
     pip_dependencies = []
     pip_only_dependencies = []
-    conda_dependencies = ["python"]
+    conda_dependencies = [f"python {python_version_spec}".strip()]
     pip_full = True
     for dependency in dependencies:
         has_pip = "pip" in dependency

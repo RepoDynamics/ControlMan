@@ -19,6 +19,10 @@ properties:
           - ${{ repo.name }}$-web
           - ${{ pkg.name }}$-test
           - my-custom-env
+      python:
+        description: Python version specifier for the environment.
+        type: string
+        default: ""
       path:
         title: Path to the environment file.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd

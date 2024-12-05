@@ -1291,8 +1291,6 @@ properties:
         examples:
           - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
         $ref: https://jsonschemata.repodynamics.com/url/https
-  binder:
-    type: object
   color:
     description: |
       Colors of the project's light and dark themes.

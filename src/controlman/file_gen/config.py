@@ -189,6 +189,7 @@ class ConfigFileGenerator:
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
             env_name=pylinks.string.to_slug(self._data["web.env.file.conda.name"]),
+            python_version_spec=self._data["web.env.file.conda.python"],
         )
         return [
             DynamicFile(content=conda_env, **conda_env_file),
@@ -262,6 +263,7 @@ class ConfigFileGenerator:
             conda_env = _unit.create_environment_files(
                 dependencies=conda_env_data["deps"],
                 env_name=conda_env_data["name"],
+                python_version_spec=conda_env_data["python"]
             )[0]
             out.append(
                 DynamicFile(

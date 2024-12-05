@@ -103,6 +103,7 @@ class PythonPackageFileGenerator:
         conda_env, pip_env, pip_full = _unit.create_environment_files(
             dependencies=dependencies,
             env_name=_pl.string.to_slug(self._data[f"{self._type}.dependency.env.conda.name"]),
+            python_version_spec=self._data[f"{self._type}.python.version.spec"]
         )
         return [
             DynamicFile(content=conda_env, **conda_env_file),
