@@ -3,6 +3,7 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Module Dependency
 description: Definition of a module as a dependency.
 type: object
+required: [ import_name ]
 properties:
   name:
     title: Name of the module.
@@ -53,7 +54,6 @@ properties:
     type: string
   notes:
     type: string
-required: [ import_name ]
 examples:
   - pip_spec: "numpy >= 1.21.2"
     usage: Numerical computing.

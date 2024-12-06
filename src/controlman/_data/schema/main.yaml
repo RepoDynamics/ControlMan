@@ -3461,6 +3461,66 @@ properties:
             type: string
             enum: [ auto, disabled ]
             default: auto
+      docker:
+        type: object
+        additionalProperties: false
+        required: [ name, artifact, env, action ]
+        default: { }
+        properties:
+          name:
+            description: |
+              Name of the GitHub workflow job.
+              Note that each workflow job must have a unique name.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: Docker (v{{ version }})
+          artifact:
+            description: Configuration for docker artifacts.
+            type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              dockerfile:
+                description: Dockerfile artifact.
+                $ref: https://controlman.repodynamics.com/schema/workflow-artifact
+                default:
+                  name: Dockerfile - v{{ version }}
+          env:
+            description: Configuration for the GitHub deployment environment.
+            $ref: https://controlman.repodynamics.com/schema/workflow-env
+            default:
+              name: GitHub Container Registry
+          action:
+            description: Type of action for build and deployment tasks.
+            type: object
+            additionalProperties: false
+            default: { }
+            properties:
+              build:
+                type: string
+                enum: [ auto, disabled ]
+                default: auto
+              deploy:
+                type: string
+                enum: [ auto, disabled ]
+                default: auto
+          image:
+            description: |
+              Refs:
+              - https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+              - https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+            type: object
+            properties:
+              label:
+                type: object
+                default:
+                  org.opencontainers.image.source: ${{ repo.url.home }}$
+                  org.opencontainers.image.description: '#{{ return get("title", get("name")) }}#'
+                  org.opencontainers.image.licenses: '#{{ return get("license.expression") }}#'
+                  org.opencontainers.image.created: '{{ now.isoformat() }}'
+                  org.opencontainers.image.version: '{{ version }}'
+                  org.opencontainers.image.title: '${{ name }}$ {{ version }}'
+                additionalProperties:
+                  type: string
       publish:
         type: object
         additionalProperties: false
