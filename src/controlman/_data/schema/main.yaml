@@ -3461,10 +3461,10 @@ properties:
             type: string
             enum: [ auto, disabled ]
             default: auto
-      docker:
+      binder:
         type: object
         additionalProperties: false
-        required: [ name, artifact, env, action ]
+        required: [ name, env, action, path ]
         default: { }
         properties:
           name:
@@ -3503,6 +3503,37 @@ properties:
                 type: string
                 enum: [ auto, disabled ]
                 default: auto
+          path:
+            type: object
+            additionalProperties: false
+            required: [ config ]
+            properties:
+              config:
+                description: |
+                  Path to the configuration directory
+                  containing the environment files to build the docker image.
+                  Note that this path cannot be the root directory, `.binder`, or `binder`.
+                default: .docker
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+              dockerfile:
+                description: |
+                  Path to configuration directory
+                  containing the Dockerfile.
+                  Note that this path can only be the root directory, `.binder`, or `binder`,
+                  as these are the only locations recognized by `mybinder`.
+                type: string
+                enum: [ ".", ".binder", "binder" ]
+            if:
+              required: [ dockerfile ]
+            then:
+              not:
+                properties:
+                  config:
+                    enum: [ ".", ".binder", "binder" ]
+            else:
+              properties:
+                config:
+                  enum: [ ".", ".binder", "binder" ]
           image:
             description: |
               Refs:
@@ -3521,6 +3552,8 @@ properties:
                   org.opencontainers.image.title: '${{ name }}$ {{ version }}'
                 additionalProperties:
                   type: string
+              test_script:
+                type: string
       publish:
         type: object
         additionalProperties: false
