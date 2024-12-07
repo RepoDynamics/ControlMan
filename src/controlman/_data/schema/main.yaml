@@ -3464,7 +3464,7 @@ properties:
       binder:
         type: object
         additionalProperties: false
-        required: [ name, env, action, path ]
+        required: [ name, env, action, path, index ]
         default: { }
         properties:
           name:
@@ -3554,6 +3554,21 @@ properties:
                   type: string
               test_script:
                 type: string
+          index:
+            type: object
+            additionalProperties: false
+            required: [ registry, namespace, name ]
+            default: { }
+            properties:
+              registry:
+                type: string
+                default: ghcr.io
+              namespace:
+                type: string
+                default: ${{ repo.owner }}$
+              name:
+                type: string
+                default: ${{ repo.name }}$
       publish:
         type: object
         additionalProperties: false
