@@ -3557,12 +3557,15 @@ properties:
           index:
             type: object
             additionalProperties: false
-            required: [ registry, namespace, name ]
+            required: [ registry, namespace, name, username ]
             default: { }
             properties:
               registry:
                 type: string
                 default: ghcr.io
+              username:
+                type: string
+                default: ${{ repo.owner }}$
               namespace:
                 type: string
                 default: ${{ repo.owner }}$
