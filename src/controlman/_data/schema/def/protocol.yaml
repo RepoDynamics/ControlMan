@@ -11,8 +11,36 @@ properties:
   config:
     type: object
     properties:
-      pr_title:
-        type: string
+      start:
+        default: |
+          <details id="config"><summary>Config</summary>
+          
+          ```yaml
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      end:
+        default: |
+          
+          ```
+          
+          </details>
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      default:
+        type: object
+        properties:
+          pr_title:
+            type: string
+  inputs:
+    type: object
+    properties:
+      start:
+        default: |
+          <!-- BEGIN: inputs
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      end:
+        default: |
+          
+          END: inputs -->
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
   data:
     type: object
     additionalProperties:
