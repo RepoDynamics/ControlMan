@@ -3499,6 +3499,7 @@ properties:
             $ref: https://controlman.repodynamics.com/schema/workflow-env
             default:
               name: GitHub Container Registry
+              url: ${{ ..index.url.home }}$
           action:
             description: Type of action for build and deployment tasks.
             type: object

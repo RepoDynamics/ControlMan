@@ -964,5 +964,14 @@ properties:
         properties:
           home:
             title: Homepage URL of the Conda package.
-            default: https://anaconda.org/conda-forge/${{ ...name }}$
+            default: |
+              #{{
+                pkg_name = get("...name")
+                if get("workflow.publish.conda-forge"):
+                  channel = "conda-forge"
+                else:
+                  anaconda = get("workflow.publish.anaconda")
+                  channel = anaconda["index"]["channel"]
+                return f"https://anaconda.org/{channel}/{pkg_name}".lower()
+              }}#
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
