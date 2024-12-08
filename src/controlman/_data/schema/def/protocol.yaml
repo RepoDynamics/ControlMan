@@ -20,6 +20,7 @@ properties:
       description: Development protocol data.
       type: object
       additionalProperties: false
+      required: [ value ]
       properties:
         start:
           $ref: https://jsonschemata.repodynamics.com/string/oneline
@@ -30,6 +31,10 @@ properties:
           default: ''
         template:
           type: string
+        template_type:
+          type: string
+          enum: [ prepend, append ]
+          default: append
   tasklist:
     $ref: https://controlman.repodynamics.com/schema/protocol-data-static
     default:
