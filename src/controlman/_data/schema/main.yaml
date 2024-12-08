@@ -1888,6 +1888,16 @@ properties:
               description: >-
                 Synchronize dynamic files with control center configurations.
             $ref: https://controlman.repodynamics.com/schema/commit-auto
+          dockerfile_sync:
+            title: Dockerfile Synchronization
+            description: |
+              Automatic synchronization of Dockerfile file.
+            default:
+              type: sync
+              scope: dockerfile
+              description: >-
+                Synchronize dockerfile with latest image name.
+            $ref: https://controlman.repodynamics.com/schema/commit-auto
           vars_sync:
             title: Variables Synchronization
             description: |
@@ -3572,6 +3582,12 @@ properties:
               name:
                 type: string
                 default: ${{ repo.name }}$
+              url:
+                type: object
+                properties:
+                  home:
+                    $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                    default: ${{ repo.url.home }}$/pkgs/container/${{ .name }}$
       publish:
         type: object
         additionalProperties: false
