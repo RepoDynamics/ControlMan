@@ -3584,10 +3584,11 @@ properties:
                 default: ${{ repo.name }}$
               url:
                 type: object
+                default: { }
                 properties:
                   home:
                     $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-                    default: ${{ repo.url.home }}$/pkgs/container/${{ .name }}$
+                    default: ${{ repo.url.home }}$/pkgs/container/${{ ..name }}$
       publish:
         type: object
         additionalProperties: false
