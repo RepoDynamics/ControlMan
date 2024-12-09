@@ -74,6 +74,7 @@ properties:
           default: append
   tasklist:
     type: object
+    default: {}
     additionalProperties: false
     properties:
       start:
@@ -84,14 +85,13 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       value:
         type: string
-        default: "\n\n<!-- Tasklist\n
-          - [ ] secondary-commit-type: Summary of task 1.\n
-          \u0020\u0020Description of task 1.\n
-          \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
-          \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
-          - [ ] secondary-commit-type: Summary of task 2.\n
-          \u0020\u0020Description of task 2.\n
-          -->\n\n"
+        default: |
+          - [ ] commit-type: Summary of task 1.
+            Description of task 1.
+            - [ ] Summary of subtask 1.1.
+              Description of subtask 1.1.
+          - [ ] commit-type(scope): Summary of task 2.
+            Description of task 2.
   template:
     oneOf:
       - type: string
