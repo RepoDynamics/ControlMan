@@ -6,7 +6,7 @@ description: |
 type: object
 default: { }
 additionalProperties: false
-required: [ config, template ]
+required: [ config, template, tasklist ]
 properties:
   config:
     type: object
@@ -84,7 +84,7 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       value:
         type: string
-        value: "\n\n<!-- Tasklist\n
+        default: "\n\n<!-- Tasklist\n
           - [ ] secondary-commit-type: Summary of task 1.\n
           \u0020\u0020Description of task 1.\n
           \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
