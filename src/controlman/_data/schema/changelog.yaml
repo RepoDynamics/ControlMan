@@ -5,9 +5,15 @@ description: Project's changelog.
 type: array
 items:
   type: object
-  required: [ version, date, type, title, description,  ]
+  required: [ version, date, type, title, description ]
   properties:
     version:
+      type: string
+    tag:
+      description: |
+        Git version tag of the release.
+        This is only available when type is not local,
+        as local versions are not tagged.
       type: string
     date:
       $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
@@ -16,11 +22,7 @@ items:
       enum: [major, minor, patch, post, local]
     phase:
       type: string
-      enum: [dev, pre]
-    title:
-      type: string
-    description:
-      type: string
+      enum: [dev, alpha, beta, rc]
     dev:
       type: object
       properties:
@@ -28,20 +30,51 @@ items:
           type: object
         version:
           type: string
-    type_id:
-      type: string
     issue:
       type: object
+      properties:
+        type:
+          description: |
+            ID of the issue form used to create this issue.
+          type: string
+        number:
+          description: Issue number on GitHub.
+          type: integer
+        id:
+          description: Issue ID on GitHub.
+          type: integer
+        node_id:
+          description: Issue node ID on GitHub.
+          type: string
+        url:
+          description: URL to the issue on GitHub.
+        date:
+          description: Issue creation date.
+          $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+        title:
+          description: Issue title.
+          type: string
+        protocol:
+          type: object
+          properties:
+            data:
+              type: object
+            input:
+              type: object
     pull_request:
       type: object
+      properties:
+        protocol:
+          type: object
+          properties:
+            data:
+              type: object
+            tasklist:
+              type: array
     labels:
       type: array
     milestone:
       type: object
-    protocol:
-      type: object
-    tasks:
-      type: array
     parent:
       type: object
       properties:
@@ -53,12 +86,11 @@ items:
           type: string
     contributor:
       type: object
+      additionalProperties: false
       properties:
         member:
           type: object
-        user:
-          type: object
-        external:
+        collaborator:
           type: object
     github:
       type: object

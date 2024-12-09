@@ -45,3 +45,8 @@ allOf:
         active:
           type: boolean
           default: true
+        changelog:
+          description: |
+            Whether to add this input to the changelog.
+            The default is false.
+          type: boolean

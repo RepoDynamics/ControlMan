@@ -69,6 +69,11 @@ properties:
           type: string
           enum: [ prepend, append ]
           default: append
+        changelog:
+          description: |
+            Whether to add this data to the changelog.
+            The default is false.
+          type: boolean
   tasklist:
     type: object
     default: {}
