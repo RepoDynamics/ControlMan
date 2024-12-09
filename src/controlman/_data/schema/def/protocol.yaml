@@ -40,13 +40,10 @@ properties:
     required: [ start, end ]
     properties:
       start:
-        default: |
-          <!-- BEGIN: inputs
+        default: "<!-- BEGIN: inputs\n"
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       end:
-        default: |
-          
-          END: inputs -->
+        default: "\nEND: inputs -->"
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
   data:
     type: object
