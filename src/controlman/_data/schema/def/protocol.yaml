@@ -16,14 +16,14 @@ properties:
           <details id="config"><summary>Config</summary>
           
           ```yaml
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       end:
         default: |
           
           ```
           
           </details>
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       default:
         type: object
         properties:
@@ -35,12 +35,12 @@ properties:
       start:
         default: |
           <!-- BEGIN: inputs
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
       end:
         default: |
           
           END: inputs -->
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
   data:
     type: object
     additionalProperties:
@@ -51,9 +51,9 @@ properties:
       required: [ value ]
       properties:
         start:
-          $ref: https://jsonschemata.repodynamics.com/string/oneline
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
         end:
-          $ref: https://jsonschemata.repodynamics.com/string/oneline
+          $ref: https://jsonschemata.repodynamics.com/string/nonempty
         value:
           type: string
           default: ''
@@ -141,10 +141,10 @@ properties:
     additionalProperties: false
     properties:
       start:
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
         default: '<!-- BEGIN: {} -->'
       end:
-        type: string
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
         default: '<!-- END: {} -->'
   as_comment:
     type: boolean
