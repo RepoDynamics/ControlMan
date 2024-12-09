@@ -113,7 +113,8 @@ class CenterManager:
                 "team_members_with_role_ids": _helper.team_members_with_role_ids,
             },
             code_context_call=code_context_call,
-            relative_template_keys=const.RELATIVE_TEMPLATE_KEYS
+            relative_template_keys=const.RELATIVE_TEMPLATE_KEYS,
+            relative_key_key="__key__",
         )
         return self._data_raw
 

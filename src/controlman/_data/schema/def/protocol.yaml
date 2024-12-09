@@ -6,7 +6,7 @@ description: |
 type: object
 default: { }
 additionalProperties: false
-required: [ marker ]
+required: [ config, template ]
 properties:
   config:
     type: object
@@ -58,8 +58,10 @@ properties:
       required: [ value ]
       properties:
         start:
+          default: '<!-- BEGIN: data.${{ .__key__ }}$ -->'
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
         end:
+          default: '<!-- END: data.${{ .__key__ }}$ -->'
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
         value:
           type: string
@@ -71,16 +73,25 @@ properties:
           enum: [ prepend, append ]
           default: append
   tasklist:
-    $ref: https://controlman.repodynamics.com/schema/protocol-data-static
-    default:
-      value: "\n\n<!-- Tasklist\n
-        - [ ] secondary-commit-type: Summary of task 1.\n
-        \u0020\u0020Description of task 1.\n
-        \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
-        \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
-        - [ ] secondary-commit-type: Summary of task 2.\n
-        \u0020\u0020Description of task 2.\n
-        -->\n\n"
+    type: object
+    additionalProperties: false
+    properties:
+      start:
+        default: '<!-- BEGIN: tasklist -->'
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      end:
+        default: '<!-- END: tasklist -->'
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      value:
+        type: string
+        value: "\n\n<!-- Tasklist\n
+          - [ ] secondary-commit-type: Summary of task 1.\n
+          \u0020\u0020Description of task 1.\n
+          \u0020\u0020- [ ] secondary-commit-type: Summary of subtask 1.1.\n
+          \u0020\u0020\u0020\u0020Description of subtask 1.1.\n
+          - [ ] secondary-commit-type: Summary of task 2.\n
+          \u0020\u0020Description of task 2.\n
+          -->\n\n"
   template:
     oneOf:
       - type: string
@@ -142,17 +153,6 @@ properties:
       </div>
 
       {{ references }}
-  marker:
-    type: object
-    default: { }
-    additionalProperties: false
-    properties:
-      start:
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: '<!-- BEGIN: {} -->'
-      end:
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        default: '<!-- END: {} -->'
   as_comment:
     type: boolean
     default: false
