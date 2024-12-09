@@ -10,6 +10,9 @@ required: [ marker ]
 properties:
   config:
     type: object
+    default: { }
+    additionalProperties: false
+    required: [ start, end ]
     properties:
       start:
         default: |
@@ -26,11 +29,15 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       default:
         type: object
+        additionalProperties: false
         properties:
           pr_title:
             type: string
   inputs:
     type: object
+    default: { }
+    additionalProperties: false
+    required: [ start, end ]
     properties:
       start:
         default: |
