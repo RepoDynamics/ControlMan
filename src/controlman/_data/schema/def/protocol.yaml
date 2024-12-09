@@ -75,10 +75,10 @@ properties:
     additionalProperties: false
     properties:
       start:
-        default: '<!-- BEGIN: tasklist -->'
+        default: "<!-- BEGIN: tasklist -->\n\n"
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       end:
-        default: '<!-- END: tasklist -->'
+        default: "\n\n<!-- END: tasklist -->"
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       value:
         type: string
