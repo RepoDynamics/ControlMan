@@ -3475,7 +3475,6 @@ properties:
         type: object
         additionalProperties: false
         required: [ name, env, action, path, index ]
-        default: { }
         properties:
           name:
             description: |
