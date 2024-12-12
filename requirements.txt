@@ -8,7 +8,7 @@ Jinja2 >= 3, < 4
 PyLinks == 0.0.0.dev64
 LoggerMan == 0.0.0.dev81
 PySerials == 0.0.0.dev54
-GitTidy == 0.0.0.dev78
+GitTidy == 0.0.0.dev79
 PkgData == 0.0.0.dev5
 PyShellMan == 0.0.0.dev41
 PySyntax == 0.0.0.dev5

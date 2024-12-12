@@ -3176,7 +3176,7 @@ properties:
               For example, if you choose `v` (so version tags are `v1.0.0`, `v1.0.1`, etc.),
               then no other tags should start with `v`.
             type: string
-            default: vers/
+            default: v
             examples:
               - version/
               - ver/
@@ -3191,6 +3191,36 @@ properties:
             examples:
               - "Release {{ version }}"
               - "v{{ version }}"
+      release:
+        description: |
+          Configurations for release tags.
+          Release tags are running tags that always point to the latest release
+          of a specific major version.
+        type: object
+        additionalProperties: false
+        required: [ prefix, message ]
+        properties:
+          prefix:
+            description: |
+              Prefix of release tags. You must choose a prefix that does not conflict with other tags.
+              For example, if you choose `r` (so tags are `r0.1`, `r1`, `r2`, etc.),
+              then no other tags should start with `r`.
+            type: string
+            default: r
+            examples:
+              - releases/
+              - rel/
+              - r-
+              - 'r '
+          message:
+            title: Message
+            description: |
+              Jinja template for the message of the release tag.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+            default: "Latest release ({{ version }}) of major version {{ release }}."
+            examples:
+              - "Release {{ release }}"
+              - "r{{ release }}"
   file:
     type: object
     additionalProperties: false

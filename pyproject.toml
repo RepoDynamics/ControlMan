@@ -17,7 +17,7 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev421"
+version = "0.0.0.dev422"
 name = "ControlMan"
 dependencies = [
     "packaging >= 23.2, < 24",
@@ -30,7 +30,7 @@ dependencies = [
     "PyLinks == 0.0.0.dev64",
     "LoggerMan == 0.0.0.dev81",
     "PySerials == 0.0.0.dev54",
-    "GitTidy == 0.0.0.dev78",
+    "GitTidy == 0.0.0.dev79",
     "PkgData == 0.0.0.dev5",
     "PyShellMan == 0.0.0.dev41",
     "PySyntax == 0.0.0.dev5",
