@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/workflow-env
 $schema: https://json-schema.org/draft/2020-12/schema
-title: GitHub Actions Workflow Environment
+title: Workflow Environment
 description: Configurations for a GitHub Actions workflow environment.
 type: object
 required: [ name ]

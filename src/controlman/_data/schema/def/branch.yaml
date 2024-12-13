@@ -1,14 +1,16 @@
 $id: https://controlman.repodynamics.com/schema/branch
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Branch Configurations
-description: Configurations for a branch (group).
+title: Branch
+description: |
+  Configurations for a branch type.
 type: object
 additionalProperties: false
 required: [ name ]
 properties:
   name:
-    title: Branch Name
-    description: Name (for main branch) or prefix (for branch groups) of the branch (group).
+    description: |
+      Name (for main branch) or prefix (for other branch types)
+      of the branch type.
     type: string
     examples:
       - main
@@ -18,21 +20,19 @@ properties:
       - auto-update/
   name_separator:
     description: |
-      Separator between the branch prefix and suffixes.
+      Separator between branch name parts.
       This is only used when the branch name is a prefix.
     type: string
     default: "/"
   ruleset:
-    title: Ruleset
-    description: Branch protection rules for the branch (group).
+    description: Protection rules for the branch type.
     type: object
     additionalProperties: false
     required: [ enforcement, bypass_actors ]
     properties:
       enforcement:
-        title: Enforcement
         description: |
-          The enforcement level of the ruleset; one of:
+          Enforcement level of the ruleset; one of:
           - 'active': Enforce rules.
           - 'disabled': Do not enforce rules.
           - 'evaluate': Allows admins to test rules before enforcing them.
@@ -42,8 +42,10 @@ properties:
         enum: [ disabled, evaluate, active ]
         default: active
       bypass_actors:
-        title: Bypass Actors
-        description: List of roles, teams, or apps allowed to bypass the rules.
+        description: |
+          List of roles, teams, or apps allowed to bypass the rules.
+          Note that the user owning the GitHub PAT entered as
+          the `REPO_ADMIN_TOKEN` repository secret must have bypass permissions.
         type: array
         default:
           - role: organization_admin
@@ -52,6 +54,11 @@ properties:
             mode: always
         uniqueItems: true
         items:
+          title: Bypass Actor
+          description: |
+            A role, team, or app allowed to bypass the rules.
+            You must either provide `role` or
+            `id` and `type`.
           type: object
           additionalProperties: false
           oneOf:
@@ -59,13 +66,13 @@ properties:
             - required: [ id, type, mode ]
           properties:
             role:
-              title: Role
+              description: User role allowed to bypass rules.
               type: string
               enum: [ organization_admin, repository_admin, repository_maintainer, repository_writer ]
             id:
               title: ID
               description: |
-                The account ID of the actor.
+                Account ID of the actor.
                 If `type` is organization_admin, this should be 1.
               type: integer
             type:

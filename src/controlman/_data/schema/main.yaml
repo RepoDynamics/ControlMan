@@ -185,13 +185,6 @@ properties:
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
   license:
     description: |
-      License of the project.
-      You can either select one of the supported [SPDX](https://spdx.org/licenses/) licenses
-      by providing its `id`, or any other SPDX license by providing its `id`, `name`, `text`, and `notice`.
-      When a supported `id` is set, all other keys are filled automatically.
-      Nevertheless, you can still override any key by providing the corresponding custom value.
-      The license is then automatically incorporated into the project.
-      
       :::{admonition} Usage
       :class: dropdown note
       
@@ -294,7 +287,6 @@ properties:
             default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
   copyright:
-    title: Copyright
     description: |
       Copyright notice of the project.
       
@@ -487,16 +479,14 @@ properties:
             - required: [ github ]
             - required: [ name ]
   citation:
+    description: |
+      Citation information of the project.
     type: object
     additionalProperties: false
     properties:
       cff:
+        title: Citation File
         description: |
-          Project's citation information.
-          
-          :::{admonition} Usage
-          :class: dropdown note
-          
           This is primarily used to automatically maintain a
           [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
           ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
@@ -763,6 +753,8 @@ properties:
               description: A reference to another work.
               $ref: https://controlman.repodynamics.com/schema/reference
       zenodo:
+        description: |
+          Metadata for Zenodo depositions.
         type: object
         additionalProperties: false
         required: [ title, description, upload_type, access_right ]
@@ -1139,7 +1131,6 @@ properties:
               then:
                 required: [ access_conditions ]
   funding:
-    title: Funding
     description: |
       Available funding options of the project.
       You can specify up to four
@@ -1310,7 +1301,8 @@ properties:
   # Documentation
   document:
     description: |
-      These include README files that are displayed to users on landing pages of
+      Definition of dynamic documentation files for the project,
+      such as README files that are displayed to users on landing pages of
       project's repositories, such as GitHub, PyPI, and Anaconda, as well as
       README files in different directories of the repository providing
       technical information to contributors and reviewers.
@@ -1349,35 +1341,43 @@ properties:
       title: Configuration for a directory README file.
       $ref: https://controlman.repodynamics.com/schema/docfile
   web:
-    title: Configurations for the project's website.
+    title: Website
+    description: Configurations for the project's website.
     type: object
     additionalProperties: false
     required: [ path, sphinx ]
     properties:
       toc:
+        title: Table of Content
+        description: |
+          The entire website's table of contents.
         type: object
       path:
-        title: Path to the website directory.
+        description: Paths to the website directory.
         type: object
         default: { }
         additionalProperties: false
         required: [ root, source ]
         properties:
           root:
+            description: Path to website root directory relative to the repository root.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: docs/website
           source_rel:
+            description: Path to website source directory relative to the website root directory.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: source
           source:
+            description: Path to website source directory relative to the repository root.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
             default: ${{ .root }}$/${{ .source_rel }}$
           to_root:
-            title: Relative path from the source directory to the root of the repository.
-            default: ../../..
+            description: Relative path from the source directory to the root of the repository.
+            default: |
+              #{{ return len(get(".source").split("/")) * "../" }}#
       sphinx:
-        title: Configurations for the Sphinx website generator.
         description: |
+          Configurations for the Sphinx website generator.
           These are the [same key-value pairs](https://www.sphinx-doc.org/en/master/usage/configuration.html)
           that can be added to the `conf.py` file of a Sphinx project.
           They are automatically added to `conf.py` file during the website build process.
@@ -1390,6 +1390,7 @@ properties:
         additionalProperties: false
         properties:
           dependency:
+            description: Sphinx version specifications.
             default:
               import_name: sphinx
               pip:
@@ -1402,6 +1403,7 @@ properties:
                 source: https://github.com/sphinx-doc/sphinx
             $ref: https://controlman.repodynamics.com/schema/dep-pkg
           config:
+            description: Sphinx configurations.
             type: object
             additionalProperties: true
             default: { }

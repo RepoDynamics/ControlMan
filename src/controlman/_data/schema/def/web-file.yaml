@@ -2,7 +2,7 @@ $id: https://controlman.repodynamics.com/schema/web-file
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Website File
 description: |
-  Declaration of a static file in the website source directory.
+  Declaration of a file in the website source directory.
 type: object
 additionalProperties: false
 required: [ path, url ]

@@ -8,186 +8,142 @@ additionalProperties: false
 required: [ content, output ]
 properties:
   content:
+    description: Content of the document.
     type: object
   output:
+    description: |
+      Document output files.
+      You can have the document in different output formats
+      saved to different locations.
     type: object
     additionalProperties:
+      title: Output Definition
       type: object
       properties:
         target:
+          description: |
+            Definition of the target output format.
           default: github
           oneOf:
             - type: string
             - type: object
         filters:
+          description: |
+            Filters to apply to document content for this output.
           type: array
           items:
             type: string
         heading_number_explicit:
+          description: |
+            Whether to explicitly add heading numbers to each heading.
           type: boolean
           default: false
         path:
-          description: |
-            Path of the output document file.
-            Note that the repository [README](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
-            file and [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
-            are only recognized by GitHub when placed at certain paths, as follows:
-
-            
-            [README](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
-              file must be named `README` (case-sensitive) and placed either in the
-              `.github` directory, the `docs` directory, or the root of the repository,
-              and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-              If more than one of such files are present, the order of precedence is
-              `.github`, then root, and finally the `docs` directory.
-                    pattern: ^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$
-                    examples:
-                      - README
-                      - README.md
-                      - .github/README.txt
-                      - docs/README.rst
-            
-            Contributing Guidelines
-            This corresponds to the [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
-            file in the repository, which is automatically recognized by GitHub,
-            and displayed on the repository's homepage,
-            as well as when users create an issue or open a pull request.
-            This file is used to communicate how people can contribute to the project,
-            and may include information on how to report bugs, suggest enhancements,
-            and submit code changes, as well as references to documentation, contact information,
-            and other resources. We recommend to keep this file short,
-            and only include links to resources on the project's website,
-            as to avoid duplication of content.
-            description: |
-              This file must be named `CONTRIBUTING` (case-insensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
-            pattern: ^(?:|.github/|docs/)(?i:CONTRIBUTING(?:.(txt|md|rst))?)$
-            default: CONTRIBUTING.md
-            examples:
-              - CONTRIBUTING
-              - CONTRIBUTING.md
-              - contributing.rst
-              - docs/CONTRIBUTING.txt
-              - .github/contributing.md
-            
-            Governance Model
-            This corresponds to the `GOVERNANCE`
-            file in the repository, which is automatically recognized by GitHub,
-            and displayed on the repository's homepage.
-  
-            This file is used to communicate how decisions are made in the project,
-            and may include information on how the project is managed, how decisions are made,
-            and how conflicts are resolved.
-            We recommend to keep this file short,
-            and only include links to resources on the project's website,
-            as to avoid duplication of content.
-            description: |
-              This file must be named `GOVERNANCE` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$
-            default: GOVERNANCE.md
-            examples:
-              - GOVERNANCE
-              - GOVERNANCE.md
-              - docs/GOVERNANCE.txt
-              - .github/GOVERNANCE.md
-            
-            Security Policy
-            This corresponds to the
-            [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
-            file in the repository, which is automatically recognized by GitHub,
-            and displayed on the repository's homepage,
-            as well as when users want to create a new issue or security advisory.
-            This file is used to communicate how security vulnerabilities are handled in the project,
-            and may include information on how to report security vulnerabilities,
-            how they are triaged, and how they are resolved.
-            We recommend to keep this file short,
-            and only include links to resources on the project's website,
-            as to avoid duplication of content.
-            description: |
-              This file must be named `SECURITY` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$
-            default: SECURITY.md
-            examples:
-              - SECURITY
-              - SECURITY.md
-              - docs/SECURITY.txt
-              - .github/SECURITY.md
-            
-            Support Resources
-            This corresponds to the [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-            file in the repository, which is automatically recognized by GitHub,
-            and displayed on the repository's homepage,
-            as well as when users are creating a new issue.
-  
-            This file is used to communicate how users can get support for the project,
-            and may include information on how to ask questions, report issues, and request features.
-            We recommend to keep this file short,
-            and only include links to resources on the project's website,
-            as to avoid duplication of content.
-            description: |
-              Path to the
-              [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
-              file (cf. [`doc.support`](#ccc-doc.support)).
-
-              This file must be named `SUPPORT` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository. 
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$
-            default: SUPPORT.md
-            examples:
-              - SUPPORT
-              - SUPPORT.md
-              - docs/SUPPORT.txt
-              - .github/SUPPORT.md
-            
-            Code of Conduct
-            This corresponds to the
-            [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-            file in the repository, which is automatically recognized by GitHub,
-            and displayed on the repository's homepage,
-            as well as when users are creating a new issue or opening a pull request.
-            However, for "Code of conduct" to be marked as complete in the repository's community profile,
-            GitHub only accepts the
-            [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
-            and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
-            This file is used to communicate the standards of behavior expected from contributors,
-            and may include information on how to report violations, how they are triaged,
-            and how they are resolved.
-            description: |
-              This file must be named `CODE_OF_CONDUCT` (case-sensitive)
-              and placed either in the `.github` directory, the `docs` directory,
-              or the root of the repository.
-              It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
-            type: string
-            pattern: ^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$
-            default: CODE_OF_CONDUCT.md
-            examples:
-              - CODE_OF_CONDUCT
-              - CODE_OF_CONDUCT.md
-              - docs/CODE_OF_CONDUCT.txt
-              - .github/CODE_OF_CONDUCT.MD
-            
-
           $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
           examples:
             - README
             - README.md
             - .github/README.txt
             - docs/README.rst
+          description: |
+            Path of the output document file.
+            Note that the repository [README](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
+            file and [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
+            are only recognized by GitHub when placed at certain paths, as follows:
+
+            :::{rubric} [`README`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
+            :heading-level: 3
+            :::
+            The file must be na`med `README` (case-sensitive) and placed either in the
+            `.github` directory, the `docs` directory, or the root of the repository,
+            and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            If more than one of such files are present, the order of precedence is
+            `.github`, then root, and finally the `docs` directory.
+            - RegEx pattern: `^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$`
+            - Examples:
+              - `README`
+              - `README.md`
+              - `.github/README.txt`
+              - `docs/README.rst`
+            
+            :::{rubric} [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+            :heading-level: 3
+            :::
+            The file must be named `CONTRIBUTING` (case-insensitive)
+            and placed either in the `.github` directory, the `docs` directory,
+            or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
+            - RegEx pattern: `^(?:|.github/|docs/)(?i:CONTRIBUTING(?:.(txt|md|rst))?)$`
+            - Examples:
+              - `CONTRIBUTING`
+              - `CONTRIBUTING.md`
+              - `contributing.rst`
+              - `docs/CONTRIBUTING.txt`
+              - `.github/contributing.md`
+            
+            :::{rubric} [`GOVERNANCE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/)
+            :heading-level: 3
+            :::
+            The file must be named `GOVERNANCE` (case-sensitive)
+            and placed either in the `.github` directory, the `docs` directory,
+            or the root of the repository. 
+            It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            - RegEx pattern: `^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$`
+            examples:
+              - `GOVERNANCE`
+              - `GOVERNANCE.md`
+              - `docs/GOVERNANCE.txt`
+              - `.github/GOVERNANCE.md`
+            
+            :::{rubric} [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
+            :heading-level: 3
+            :::
+            The file must be named `SECURITY` (case-sensitive)
+            and placed either in the `.github` directory, the `docs` directory,
+            or the root of the repository. 
+            It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            - RegEx pattern: `^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$`
+            - Examples:
+              - `SECURITY`
+              - `SECURITY.md`
+              - `docs/SECURITY.txt`
+              - `.github/SECURITY.md`
+            
+            :::{rubric} [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
+            :heading-level: 3
+            :::
+            The file must be named `SUPPORT` (case-sensitive)
+            and placed either in the `.github` directory, the `docs` directory,
+            or the root of the repository. 
+            It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            - RegEx pattern: `^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$`
+            - Examples:
+              - `SUPPORT`
+              - `SUPPORT.md`
+              - `docs/SUPPORT.txt`
+              - `.github/SUPPORT.md`
+            
+            :::{rubric} [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
+            :heading-level: 3
+            :::
+            The file must be named `CODE_OF_CONDUCT` (case-sensitive)
+            and placed either in the `.github` directory, the `docs` directory,
+            or the root of the repository.
+            It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+            - RegEx pattern: `^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$`
+            - Examples:
+              - `CODE_OF_CONDUCT`
+              - `CODE_OF_CONDUCT.md`
+              - `docs/CODE_OF_CONDUCT.txt`
+              - `.github/CODE_OF_CONDUCT.MD`
+            
+            Note that for "Code of conduct" to be marked as complete in the repository's community profile,
+            GitHub only accepts the
+            [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
+            and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
         url:
-          title: |
-            URL of the file on GitHub
+          title: URL
+          description: |
+            URL of the file on GitHub.
           default: ${{ repo.url.blob }}$/${{ .path }}$
           examples:
             - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"

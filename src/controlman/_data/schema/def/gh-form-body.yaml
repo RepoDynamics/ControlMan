@@ -43,10 +43,13 @@ allOf:
   - items:
       properties:
         active:
+          description: |
+            Whether this body element is currently active.
           type: boolean
           default: true
         changelog:
           description: |
             Whether to add this input to the changelog.
-            The default is false.
+            Only applicable to issue forms.
           type: boolean
+          default: false

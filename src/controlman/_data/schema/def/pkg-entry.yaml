@@ -1,6 +1,8 @@
 $id: https://controlman.repodynamics.com/schema/pkg-entry
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Entry points for the package.
+title: Package Entry Points
+description: |
+  Entry points for the package.
 type: object
 additionalProperties:
   type: object

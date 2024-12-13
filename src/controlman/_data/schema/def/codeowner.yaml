@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/code-owner
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Code Owner Definition
+title: Code Owner
 description: |
   Code owner definitions for different parts of the project.
 type: array
@@ -52,7 +52,5 @@ items:
         - 3000
       $ref: https://jsonschemata.repodynamics.com/number/non-negative
     description:
-      title: Description
       description: Description of the path or glob pattern.
       $ref: https://jsonschemata.repodynamics.com/string/nonempty
-

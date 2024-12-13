@@ -6,10 +6,13 @@ type: array
 uniqueItems: true
 minItems: 1
 items:
-  title: An entity.
+  title: Entity
+  description: |
+    Either the ID of a team member defined in [`$.team`](#ccc-team),
+    or an entity definition.
   examples:
     - owner
-    - some_author_id
+    - some_team_member_id
     - name:
         first: John
         last: Doe

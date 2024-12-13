@@ -16,6 +16,10 @@ items:
   additionalProperties: false
   properties:
     value:
+      description: |
+        The value.
       $ref: https://jsonschemata.repodynamics.com/string/oneline
     selector:
+      description: |
+        Line selector to add to the value.
       $ref: https://jsonschemata.repodynamics.com/string/oneline

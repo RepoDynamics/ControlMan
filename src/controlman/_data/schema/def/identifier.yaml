@@ -1,21 +1,18 @@
 $id: https://controlman.repodynamics.com/schema/identifier
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Identifier
-description: An identifier for the work.
+description: A Citation File Format identifier for the work.
 type: object
 additionalProperties: false
 required: [ type, value ]
 properties:
   type:
-    title: Type
-    description: The type of the identifier.
+    description: Type of the identifier.
     type: string
     enum: [ doi, url, swh, other ]
   value:
-    title: Value
     description: |
-      The value of the identifier.
-
+      Value of the identifier.
       Depending on `type`, this must be:
       - `doi`: A Digital Object Identifier (DOI) 
          conforming to the regex pattern `^10\.\d{4,9}(\.\d+)?/[A-Za-z0-9:/_;\-\.\(\)\[\]\\]+$`.
@@ -29,7 +26,6 @@ properties:
       - https://example.com
       - swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2
   description:
-    title: Description
     description: A description for the identifier value.
     $ref: https://jsonschemata.repodynamics.com/string/nonempty
     examples:

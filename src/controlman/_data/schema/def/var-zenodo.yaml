@@ -7,19 +7,25 @@ additionalProperties: false
 default: { }
 properties:
   concept:
+    description: |
+      Concept record data.
     type: object
     additionalProperties: false
     default: { }
     properties:
       doi:
+        description: DOI of the concept record.
         default: null
         oneOf:
           - $ref: https://jsonschemata.repodynamics.com/id/doi
           - type: "null"
       draft:
+        description: Whether the concept record is still in the draft phase.
         type: boolean
         default: false
       id:
+        title: ID
+        description: Record ID of the concept.
         type: integer
         minimum: 0
         default: 0

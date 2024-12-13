@@ -3,16 +3,17 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: Environment files for dependencies.
 type: object
 additionalProperties: false
+required: [ conda ]
 properties:
   conda:
-    title: Conda environment.
-    description: Configurations for the output `environment.yaml`-style conda environment file.
+    description: |
+      Configurations for the output `environment.yaml`-style conda environment file.
     type: object
     additionalProperties: false
     required: [ name, path ]
     properties:
       name:
-        title: Name of the environment.
+        description: Name of the environment.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         examples:
           - ${{ repo.name }}$-dev
@@ -32,8 +33,8 @@ properties:
           - .github/dev_env.yaml
           - environment.yaml
   pip:
-    title: Pip environment.
-    description: Configurations for the output `requirements.txt`-style pip environment file.
+    description: |
+      Configurations for the output `requirements.txt`-style pip environment file.
     type: object
     additionalProperties: false
     properties:
@@ -45,4 +46,3 @@ properties:
           - ${{ dir.web.root }}$/requirements.txt
           - .github/dev_req.txt
           - requirements.txt
-required: [ conda ]

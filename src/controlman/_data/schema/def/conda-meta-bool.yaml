@@ -16,6 +16,10 @@ items:
   additionalProperties: false
   properties:
     value:
+      description: |
+        The boolean value.
       type: boolean
     selector:
+      description: |
+        Line selector to add to the array element.
       $ref: https://jsonschemata.repodynamics.com/string/oneline

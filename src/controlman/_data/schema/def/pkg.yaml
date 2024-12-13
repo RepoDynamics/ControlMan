@@ -1,7 +1,8 @@
 $id: https://controlman.repodynamics.com/schema/pkg
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Configurations for a Python package.
+title: Package
 description: |
+  Configurations for a Python package.
   This corresponds to data for both the project's Python package and test suite.
   However, some fields (e.g., OS and Python version requirements)
   are only relevant for the package,
@@ -21,25 +22,28 @@ additionalProperties: false
 required: [ path, name, import_name, os, python, build ]
 properties:
   path:
-    title: Path to the source code directory.
     description: |
-      The parent directory will be the root of the package,
-      and the import package directory will be placed directly under this directory.
+      Local paths to package resources.
     type: object
     default: { }
     additionalProperties: false
     required: [ root, source, source_rel, import ]
     properties:
       root:
+        description: |
+          Path to package root directory relative to the repository root.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: pkg
       source_rel:
+        description: Path to package source directory relative to the package root directory.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: src
       source:
+        description: Path to package source directory relative to the repository root.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
         default: ${{ .root }}$/${{ .source_rel }}$
       import:
+        description: Path to package top-level import directory relative to the repository root.
         type: string
         default: ${{ .source }}$/${{ ..import_name }}$
   name:

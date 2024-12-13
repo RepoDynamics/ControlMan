@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/workflow-artifact
 $schema: https://json-schema.org/draft/2020-12/schema
-title: GitHub Actions Artifact
+title: Artifact
 description: Configurations for a GitHub Actions artifact.
 type: object
 required: [ name ]
@@ -10,6 +10,8 @@ properties:
     description: Name of the artifact.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   merge:
+    description: |
+      Configurations for merging this artifact into another.
     type: object
     additionalProperties: false
     required: [ name, pattern ]

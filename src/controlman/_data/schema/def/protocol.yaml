@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/protocol
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Document
+title: Protocol
 description: |
   Configurations for an issue/PR protocol.
 type: object
@@ -98,63 +98,6 @@ properties:
     oneOf:
       - type: string
       - type: object
-    default: |
-      # Development Protocol #{{ issue.number }}
-
-      - **Type**: {{ form.description }}
-      - **Client**: {{ issue.user.md_name }}
-      - **Summary**: {{ data.summary }}
-      - **Current Status**: {{ status }}
-      - **Progress**:
-        {{ status_checkbox.triage }}{{ status_checkbox.planning }}{{ status_checkbox.requirement_analysis }}{{ status_checkbox.design }}{{ status_checkbox.implementation }}{{ status_checkbox.testing }}{{ status_checkbox.deploy }}
-
-      {{ pr_list }}
-
-      ## User Requirements Document (URD)
-
-      {{ data.urd }}
-
-      ## Triage
-
-      {{ data.triage }}
-
-      ## Plan
-
-      {{ data.plan }}
-
-      ## Software Requirements Specification (SRS)
-
-      {{ data.srs }}
-
-      ## Software Design Document (SDD)
-
-      {{ data.sdd }}
-
-      ## Implementation
-
-      {{ data.description }}
-
-      ### Task List
-
-      {{ tasklist }}
-
-      ## Testing
-
-      {{ data.testing }}
-
-      ## Deployment
-
-      {{ data.deployment }}
-
-      ## Timeline
-
-      <div align="center">
-
-      {{ timeline }}
-
-      </div>
-
-      {{ references }}
   as_comment:
     type: boolean
     default: false
