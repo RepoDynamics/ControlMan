@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Options
+title: Control Center Configurations
 description: |
   This section contains a full reference and detailed explanation of all
   available options in your repository's control center.
