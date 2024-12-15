@@ -63,7 +63,7 @@ properties:
       :::
     description_default: |
       If not provided (recommended), the default value is the following template,
-      which generates the name from the repository name by replacing all hyphens with spaces.
+      which generates the project name from the repository name by replacing all hyphens with spaces.
     default: |
       #{{ return get("repo.name").replace("-", " ") }}#
     examples:
@@ -74,7 +74,7 @@ properties:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
     description: |
-      A single-line description or slogan of the project.
+      One-line title or motto of the project.
       
       :::{admonition} Usage
       :class: dropdown note
@@ -93,7 +93,7 @@ properties:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   abstract:
     description: |
-      A short description of the project.
+      Short description of the project.
       It can contain GitHub Flavored Markdown and HTML syntax,
       for example, to make text bold, italic, or to add hyperlinks.
 
@@ -185,6 +185,8 @@ properties:
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
   license:
     description: |
+      License of the project.
+      
       :::{admonition} Usage
       :class: dropdown note
       
@@ -335,9 +337,8 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
         default: English
   role:
-    title: Roles
     description: |
-      Role definitions for project members.
+      Role definitions for team members.
       For each role, add a key-value pair
       where the key is an ID for the role,
       which can then be referenced in [team member roles](#ccc-defs-entity-roles).
@@ -437,12 +438,11 @@ properties:
             Ownership of different parts of the project.
           $ref: https://controlman.repodynamics.com/schema/code-owner
   team:
-    title: Team
     description: |
-      Natural and legal persons
-      (e.g., copyright holders, authors, maintainers, research groups, institutions, etc.)
-      involved in the project.
-      For each person, define a key-value pair, where the key is the ID of the person.
+      Natural and legal persons involved in the project.
+      
+      For each person (e.g., copyright holders, authors, maintainers, research groups, institutions, etc.),
+      define a key-value pair, where the key is the ID of the person.
       The ID can then be used to reference the person in other configurations
       using templating
       (e.g. see [`maintainer`](#ccc-maintainer) and [`citation`](#ccc-citation)).

@@ -1,6 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/gh-form-body
 $schema: https://json-schema.org/draft/2020-12/schema
-title: GitHub Form Body
+title: GitHub Form Body (Augmented)
 description: |
   Definition of the elements in the discussion form, according to GitHub's
   [syntax for GitHub's form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema),
