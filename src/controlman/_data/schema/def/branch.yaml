@@ -2,7 +2,7 @@ $id: https://controlman.repodynamics.com/schema/branch
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Branch
 description: |
-  Configurations for a branch type.
+  Configurations for a branch type in the repository.
 type: object
 additionalProperties: false
 required: [ name ]
