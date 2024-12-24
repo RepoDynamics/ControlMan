@@ -3822,8 +3822,9 @@ properties:
                       type: string
                       enum: [ build, deploy ]
   tool:
-    title: Configurations for tools used in the development workflow.
     description: |
+      Configurations for tools used in the development workflow.
+      
       These include pre-integrated tools as well as any additional tools
       that you can add to the project's workflow.
     type: object
@@ -4132,6 +4133,12 @@ properties:
             default: .local/report
   # Auto
   project:
+    description: |
+      Data about the project.
+      
+      These are all read-only data,
+      automatically generated during synchronization.
+    readOnly: true
     type: object
     additionalProperties: true
     properties:
