@@ -4,12 +4,7 @@ title: Control Center Configurations
 description: |
   This section contains a full reference and detailed explanation of all
   available options in your repository's control center.
-  These are divided into two categories: **non-extendable** and **extendable** options.
-  Non-extendable options are those that are required by {{ ccc.name }}
-  during workflow initialization, and thus cannot be extended from other repositories.
-  These are all stored in YAML files at the root of your repository's control center directory.
-  Extendable options, on the other hand, are those that can be freely extended from other repositories,
-  and are organized into subdirectories within your repository's control center.
+  
   
   Changing these settings and pushing them to the remote repository's default branch will automatically
   apply the corresponding changes to the entire repository, i.e., branch protection rules will be updated,
@@ -32,7 +27,6 @@ description: |
   Workflow: Development workflow configurations for 
       Continuous integration, deployment, configuration automation,
       maintenance, testing, and refactoring tasks.
-
 type: object
 required: [ name, repo, branch, control ]
 properties:
@@ -2287,7 +2281,7 @@ properties:
                 Only active forms are included in the repository's available issue forms.
                 This can be used to dynamically toggle available issue forms based on certain conditions.
 
-                For example, in {{ ccc.name }}'s default configurations, there are three separate issue forms
+                For example, in |{{ ccc.name }}|'s default configurations, there are three separate issue forms
                 defined for reporting bugs in the package's API, GUI, and CLI. However, your package may only have
                 some of these interfaces, in which case it makes sense to only show the corresponding issue forms
                 when the corresponding interfaces are present. This is achieved by adding a condition to each form.
@@ -2300,14 +2294,14 @@ properties:
                 Each form must be associated with a release commit.
                 This is used to correlate each issue in the repository with a commit type.
                 When a pull request from a development branch is merged into a release branch,
-                {{ ccc.name }}$ first determines the corresponding issue of the branch from the branch name,
+                |{{ ccc.name }}| first determines the corresponding issue of the branch from the branch name,
                 and then ascertains the corresponding primary commit type from the issue's primary type label,
                 in order to decide which actions to perform on the release branch.
                 
                 If two or more forms are assigned the same [primary type](#primary-type),
                 they must each define a unique subtype.
                 The subtype must match the key of one of the [subtype labels](../label/index.md#subtypes).
-                {{ ccc.name }} automatically adds the corresponding subtype label
+                |{{ ccc.name }}| automatically adds the corresponding subtype label
                 to each issue that is created using the form,
                 and uses that with conjunction with the primary type label
                 to unambiguously identify the form that was used to create each issue in the repository.
@@ -2389,7 +2383,7 @@ properties:
               $ref: https://controlman.repodynamics.com/schema/gh-form-body
             processed_body:
               description: |
-                {{ ccc.name }} allows you to define post-processing instructions for each form,
+                |{{ ccc.name }}| allows you to define post-processing instructions for each form,
                 which are executed after an issue is created using the form.
 
                 Issues that are created using GitHub's issue forms are visually not very appealing,
@@ -2397,7 +2391,7 @@ properties:
                 and adds the user input underneath, without any formatting.
                 Moreover, there may be some elements that are only meant for the submission step,
                 and are not meant to be displayed in the issue body (e.g., checkboxes for agreeing with terms and conditions).
-                Therefore, {{ ccc.name }} allows you to define a template for the issue body,
+                Therefore, |{{ ccc.name }}| allows you to define a template for the issue body,
                 which is used to reformat the issue body after the issue is created.
                 The template must be defined as a string representing valid Markdown and/or HTML syntax,
                 where the user input for each form element is referenced (similiar to Python strings)
@@ -3976,7 +3970,7 @@ properties:
     title: Directory structure of the repository.
     description: |
       From the seven [main directories](/manual/fundamentals/structure/index.md) in your repository
-      that {{ccc.name}} manages and works with,
+      that |{{ccc.name}}| manages and works with,
       the [GitHub directory](/manual/fundamentals/structure/github.md)
       and the [Docs directory](/manual/fundamentals/structure/docs.md)
       have fixed paths according to GitHub requirements,
@@ -4011,7 +4005,7 @@ properties:
       You can also add other custom keys under `dir.local.cache` and `dir.local.report`
       for other tools that you use, and reference them in the corresponding configuration files.
       Note that you do not have to specify all keys in the `path.yaml` file;
-      for all keys that are not specified, {{ccc.name}} will use the default values.
+      for all keys that are not specified, |{{ccc.name}}| will use the default values.
       Also, you can entirely omit the `path.yaml` file if you do not want to customize any paths.
 
 
@@ -4031,9 +4025,9 @@ properties:
         meaning that they cannot be a subdirectory of any other main directory.
       :::
 
-      {{ccc.name}} automatically manages a variety of files in your repository's main directories,
+      |{{ccc.name}}| automatically manages a variety of files in your repository's main directories,
       and performs a number of tasks that require access to these files.
-      For example, to run your tests and build your website, {{ccc.name}} needs to know
+      For example, to run your tests and build your website, |{{ccc.name}}| needs to know
       the path to tests and website directories. In addition, these paths are used as
       substitutions in a number of other configuration files for your project,
       so that you do not have to manually update these files when you change a path.
