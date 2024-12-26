@@ -19,6 +19,15 @@ from controlman import exception as _exception
 _schema_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_data" / "schema"
 
 
+def get_schema(
+    schema: _Literal["main", "local", "cache", "entity", "variables", "changelog", "contributors"] = "main",
+) -> dict:
+    """Validate data against a schema."""
+    relpath = "def/entity-def.yaml" if schema == "entity" else f"{schema}.yaml"
+    schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / relpath)
+    return schema_dict
+
+
 def validate(
     data: dict,
     schema: _Literal["main", "local", "cache", "entity", "variables", "changelog", "contributors"] = "main",
@@ -26,8 +35,7 @@ def validate(
     before_substitution: bool = False,
 ) -> None:
     """Validate data against a schema."""
-    relpath = "def/entity-def.yaml" if schema == "entity" else f"{schema}.yaml"
-    schema_dict = _ps.read.yaml_from_file(path=_schema_dir_path / relpath)
+    schema_dict = get_schema(schema=schema)
     _js.edit.required_last(schema_dict)
     if schema == "main":
         _add_custom_keys(schema_dict)
@@ -510,6 +518,22 @@ def _make_registry():
 
     registry_before = resources_before @ _referencing.Registry()
     return registry_before, registry_after
+
+
+def get_registry():
+
+    def make_resource(
+        schema: dict, spec: _referencing.Specification = _referencing_jsonschema.DRAFT202012
+    ) -> _referencing.Resource:
+        return _referencing.Resource.from_contents(schema, default_specification=spec)
+
+    resources = []
+    def_schemas_path = _schema_dir_path
+    for schema_filepath in def_schemas_path.glob("**/*.yaml"):
+        schema_dict = _ps.read.yaml_from_file(path=schema_filepath)
+        resources.append(make_resource(schema_dict))
+    registry, _ = _mdit_schema.make_registry(dynamic=False, crawl=True, add_resources=resources)
+    return registry
 
 
 def _add_custom_keys(schema: dict):
