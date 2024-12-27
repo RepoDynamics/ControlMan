@@ -2,81 +2,60 @@ $id: https://controlman.repodynamics.com/schema
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Control Center Configurations
 description: |
-  This section contains a full reference and detailed explanation of all
-  available options in your repository's control center.
+  The top-level object (a.k.a., mapping, dictionary)
+  containing all control center configurations.
   
-  
-  Changing these settings and pushing them to the remote repository's default branch will automatically
-  apply the corresponding changes to the entire repository, i.e., branch protection rules will be updated,
-  and all corresponding branches will be renamed.
-  
-  Project: Main project metadata and settings, including
-      name, descriptors, copyright, license, citation,
-      funding, team, theme, documentation, and contact information.
-  Package: Python package and test-suite configurations,
-      including build system, dependencies, requirements,
-      entry points, classifiers, and other metadata.
-  Documentation: Project documentation and UX configurations, including
-      website, README files, community health files, and theme settings.
-  Issue Tracking: Issue tracking and development configurations,
-      including templates and settings for issues, labels, 
-      design documents, commits, pull requests, and changelogs.
-  Version Control: Version control system (VCS) configurations, such as
-      GitHub/Git repository settings, branch/tag names,
-      protection rules, and directory structure.
-  Workflow: Development workflow configurations for 
-      Continuous integration, deployment, configuration automation,
-      maintenance, testing, and refactoring tasks.
+  Note that some elements are labeled as read-only;
+  these are automatically generated/updated during synchronization
+  and thus do not need to be manually added to the control center configuration files.
 type: object
+additionalProperties: false
 required: [ name, repo, branch, control ]
 properties:
   name:
     description: |
       Name of the project.
-
-      :::{admonition} Usage
-      :class: dropdown note
       
-      The name is used to dynamically reference the project in various places,
-      such as documentation website, citation data, README files, and community health files.
-      It is also used to derive the [package name](#ccc-pkg-name) when not explicitly specified.
-      :::
-
-      :::{admonition} Best Practices
-      :class: dropdown tip
+      This is used to dynamically reference the project name in various places,
+      such as repository and package metadata, distribution packages and artifacts,
+      as well as license, citation, and other documentation files.
+      
+      :::{admonition} Naming Best Practices
+      :class: tip
       
       The project name on itself has no restrictions and can be any valid unicode string.
-      However, by default, it is also used to derive the 
+      However, by default it is used to derive the 
       [distribution name](#ccc-pkg-name)
-      and [import name](#ccc-pkg-import_name) of the package,
+      and [import name](#ccc-pkg-import_name) of the package as well,
       which have stricter naming specifications.
-      While you can separately set these to different values,
+      While these can be separately set to custom values,
       for consistency, it is recommended to **choose a project name
       that is as similar as possible to the distribution and import name of the package**.
-      This helps to avoid confusion and makes it easier for others to find, install, and use your package.
+      This helps to avoid confusion and makes it easier for others to find and identify the project
+      and its products.
       :::
     description_default: |
-      If not provided (recommended), the default value is the following template,
-      which generates the project name from the repository name by replacing all hyphens with spaces.
+      If not provided (recommended), the default value is the following Python template,
+      which generates the project name from the repository name by replacing all hyphens with spaces:
     default: |
       #{{ return get("repo.name").replace("-", " ") }}#
     examples:
       - ${{ repo.name }}$
-      - MyProject
-      - My Project
-      - My-Project
+      - '!ext https://example.com/data.yaml $.jsonpath.to.my.project.name'
+      - My Project Name
+    description_examples:
+      - 'Set to the exact repository name:'
+      - 'Set to the value at JSONPath `$.jsonpath.to.my.project.name` of a YAML file at `https://example.com/data.yaml`:'
+      - 'Set to a custom static value:'
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
     description: |
       One-line title or motto of the project.
       
-      :::{admonition} Usage
-      :class: dropdown note
-
-      By default, the title is added to the project's [citation](#ccc-citation-title),
-      [package](#ccc-pkg-description), and [repository](#ccc-repo-description) metadata.
-      It is also used in various other places,
-      such as `title` HTML attributes of project logos and links. 
+      By default, the title is used in various places including
+      the project's [citation](#ccc-citation-title),
+      [package](#ccc-pkg-description) and [repository](#ccc-repo-description) metadata,
+      as well as documentation and website content and metadata. 
       :::
     examples:
       - Effortless Scientific Computation and Data Analysis in Python
@@ -88,7 +67,8 @@ properties:
   abstract:
     description: |
       Short description of the project.
-      It can contain GitHub Flavored Markdown and HTML syntax,
+      
+      It can contain inline HTML and GitHub Flavored Markdown,
       for example, to make text bold, italic, or to add hyperlinks.
 
       :::{admonition} Usage
@@ -1395,7 +1375,7 @@ properties:
               url:
                 docs: https://www.sphinx-doc.org/
                 source: https://github.com/sphinx-doc/sphinx
-            $ref: https://controlman.repodynamics.com/schema/dep-pkg
+            $ref: https://controlman.repodynamics.com/schema/dep-direct
           config:
             description: Sphinx configurations.
             type: object
@@ -1553,7 +1533,7 @@ properties:
                   description: |
                     The `import_name` must be the name of the extension as it is imported in Python,
                     i.e., what's added to the `extensions` list in the `conf.py` file.
-                  $ref: https://controlman.repodynamics.com/schema/dep-module
+                  $ref: https://controlman.repodynamics.com/schema/dep-indirect
                 config:
                   title: Configuration to be added to the Sphinx configuration.
                   type: object
@@ -1581,8 +1561,8 @@ properties:
                 docs: https://pydata-sphinx-theme.readthedocs.io/
                 source: https://github.com/pydata/pydata-sphinx-theme
             anyOf:
-              - $ref: https://controlman.repodynamics.com/schema/dep-pkg
-              - $ref: https://controlman.repodynamics.com/schema/dep-module
+              - $ref: https://controlman.repodynamics.com/schema/dep-direct
+              - $ref: https://controlman.repodynamics.com/schema/dep-indirect
           config:
             title: Configuration options for the theme.
             type: object
@@ -1601,7 +1581,7 @@ properties:
           properties:
             dependency:
               title: Dependency to be installed.
-              $ref: https://controlman.repodynamics.com/schema/dep-pkg
+              $ref: https://controlman.repodynamics.com/schema/dep-direct
             config:
               title: Configuration to be added to the Sphinx configuration.
               type: object
