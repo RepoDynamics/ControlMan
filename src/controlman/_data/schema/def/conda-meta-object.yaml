@@ -2,7 +2,7 @@ $id: https://controlman.repodynamics.com/schema/conda-meta-object
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Conda Meta Object
 description: |
-  A mapping (aka dictionary, object)
+  An object (a.k.a., mapping, dictionary)
   in a conda recipe metadata file.
 type: object
 minProperties: 1
