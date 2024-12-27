@@ -1,5 +1,6 @@
 $id: https://controlman.repodynamics.com/schema/dynamicfile-pkg
 $schema: https://json-schema.org/draft/2020-12/schema
+title: Package Dynamic File
 type: object
 properties:
   manifest:
