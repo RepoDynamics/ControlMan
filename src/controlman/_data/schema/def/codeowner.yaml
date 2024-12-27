@@ -22,7 +22,6 @@ items:
   required: [ glob, priority ]
   properties:
     glob:
-      title: Glob Pattern
       description: Glob pattern to match the files.
       examples:
         - "*"
@@ -30,9 +29,9 @@ items:
         - "/.github/"
       $ref: https://jsonschemata.repodynamics.com/string/nonempty
     priority:
-      title: Priority
       description: |
         Priority of the glob pattern.
+        
         When multiple patterns match a file,
         the owners of the pattern with the highest priority are [assigned
         as reviewers](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file)
