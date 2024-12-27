@@ -1,0 +1,82 @@
+$id: https://controlman.repodynamics.com/schema/dep-indirect
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Indirect Dependency
+description: |
+  Declaration of an indirect dependency.
+  
+  An indirect dependency is an application, package, or module
+  that is directly used by the project in some way,
+  but does not need to be explicitly installed
+  because it is already installed as a dependency of another project dependency.
+  An example are [Sphinx's built-in extensions](https://www.sphinx-doc.org/en/master/usage/extensions/index.html#built-in-extensions)
+  that are included in Sphinx, but need to be declared in the `conf.py` file to be used.
+type: object
+required: [ import_name ]
+properties:
+  import_name:
+    description: |
+      The name or command used to import/invoke the package.
+    type: string
+    pattern: '^[a-zA-Z0-9_\.-]*$'
+  name:
+    description: Name of the module.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+  description:
+    description: A description for the module.
+    type: string
+  url:
+    title: URL
+    description: URLs to resources related to the module.
+    type: object
+    additionalProperties:
+      title: Additional URLs
+      description: |
+        URLs to resources other than the ones explicitly specified.
+      type: object
+      required: [ title, url ]
+      properties:
+        title:
+          description: Title of the URL.
+          type: string
+        description:
+          description: Description of the URL.
+          type: string
+        url:
+          title: URL
+          description: The URL.
+          $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+    properties:
+      docs:
+        description: URL of the module documentation.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      pip:
+        description: URL of the pip package.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      conda:
+        description: URL of the conda package.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      bin:
+        description: URL of the binary package.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+      source:
+        description: URL of the source code.
+        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  intersphinx_mapping:
+    description: Intersphinx mapping definition of the module.
+    type: object
+    additionalProperties: false
+    properties:
+      key:
+        type: string
+      target:
+        type: string
+        format: uri
+      inventory:
+        type: array
+        items:
+          type: string
+        minItems: 1
+    required: [ target ]
+  notes:
+    description: Additional notes related to the module.
+    type: string
