@@ -111,6 +111,7 @@ def _create_external_tag_constructor(
             if cached_data:
                 return cached_data
         url, *jsonpath_expr = tag_value.split(' ', 1)
+        file_ext = url.split('.')[-1]
         try:
             data_raw_whole = _pl.http.request(
                 url=url,
@@ -125,11 +126,18 @@ def _create_external_tag_constructor(
                 url=url,
                 cause=e,
             ) from None
-        data = _ps.read.yaml_from_string(
-            data=data_raw_whole,
-            safe=True,
-            constructors={tag_name: load_external_data},
-        )
+        if file_ext == "json":
+            data = _ps.read.json_from_string(data=data_raw_whole, strict=False)
+        elif file_ext in ("yaml", "yml"):
+            data = _ps.read.yaml_from_string(
+                data=data_raw_whole,
+                safe=True,
+                constructors={tag_name: load_external_data},
+            )
+        elif file_ext == "toml":
+            data = _ps.read.toml_from_string(data=data_raw_whole, as_dict=True)
+        else:
+            raise ValueError(f"Invalid file extension {file_ext} for URL {url}")
         if jsonpath_expr:
             jsonpath_expr = _jsonpath.parse(jsonpath_expr[0])
             matches = jsonpath_expr.find(data)
