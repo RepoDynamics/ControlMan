@@ -483,12 +483,12 @@ properties:
         description: Build dependencies.
         type: object
         additionalProperties:
-          $ref: https://controlman.repodynamics.com/schema/dep-pkg
+          $ref: https://controlman.repodynamics.com/schema/dep-direct
       core:
         title: Package core dependencies.
         type: object
         additionalProperties:
-          $ref: https://controlman.repodynamics.com/schema/dep-pkg
+          $ref: https://controlman.repodynamics.com/schema/dep-direct
       optional:
         title: Optional Dependencies
         description: Optional dependencies for the project
@@ -504,7 +504,7 @@ properties:
             package:
               type: object
               additionalProperties:
-                $ref: https://controlman.repodynamics.com/schema/dep-pkg
+                $ref: https://controlman.repodynamics.com/schema/dep-direct
       env:
         $ref: https://controlman.repodynamics.com/schema/env-file
         default:
