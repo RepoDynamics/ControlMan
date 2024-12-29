@@ -7,36 +7,38 @@ description: |
   
   Note that some elements are labeled as read-only;
   these are automatically generated/updated during synchronization
-  and thus do not need to be manually added to the control center configuration files.
+  and do not need to be manually added to the control center configuration files.
 type: object
 additionalProperties: false
 required: [ name, repo, branch, control ]
 properties:
   name:
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
     description: |
       Name of the project.
       
-      This is used to dynamically reference the project name in various places,
-      such as repository and package metadata, distribution packages and artifacts,
-      as well as license, citation, and other documentation files.
+      It has no restrictions on itself and can be any valid unicode string.
+      However, to avoid confusion and make it easier for others to find and identify the project,
+      it is recommended to **keep the project name as similar as possible to the
+      [repository name](#ccc-repo-name), [distribution name](#ccc-pkg-name)
+      and [import name](#ccc-pkg-import_name) of the package,
+      and other project components**, which generally have stricter naming requirements.
+      Therefore, while these can be separately set to custom values,
+      it is recommended to allow the project name to be derived from the repository name (see default),
+      and other names from the project name. 
       
-      :::{admonition} Naming Best Practices
-      :class: tip
+      :::{admonition} Usage
+      :class: dropdown note toggle-shown
       
-      The project name on itself has no restrictions and can be any valid unicode string.
-      However, by default it is used to derive the 
-      [distribution name](#ccc-pkg-name)
-      and [import name](#ccc-pkg-import_name) of the package as well,
-      which have stricter naming specifications.
-      While these can be separately set to custom values,
-      for consistency, it is recommended to **choose a project name
-      that is as similar as possible to the distribution and import name of the package**.
-      This helps to avoid confusion and makes it easier for others to find and identify the project
-      and its products.
+      By default, `name` is used to derive names for project's distribution packages and artifacts,
+      and to dynamically reference the project name in various places
+      like repository and package metadata, license, citation, and other documentation files. 
       :::
     description_default: |
       If not provided (recommended), the default value is the following Python template,
-      which generates the project name from the repository name by replacing all hyphens with spaces:
+      which generates the project name from the repository name by replacing all hyphens with spaces.
+      Note that this is a dynamic template, which means it is evaluated at runtime during synchronization.
+      Therefore, changing the GitHub repository name will automatically change the project name as well.
     default: |
       #{{ return get("repo.name").replace("-", " ") }}#
     examples:
@@ -47,12 +49,17 @@ properties:
       - 'Set to the exact repository name:'
       - 'Set to the value at JSONPath `$.jsonpath.to.my.project.name` of a YAML file at `https://example.com/data.yaml`:'
       - 'Set to a custom static value:'
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
   title:
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
     description: |
-      One-line title or motto of the project.
+      Title or motto of the project.
       
-      By default, the title is used in various places including
+      It must be a one-line string, i.e., no newlines allowed.
+      
+      :::{admonition} Usage
+      :class: dropdown note toggle-shown
+      
+      By default, `title` is used in various places including
       the project's [citation](#ccc-citation-title),
       [package](#ccc-pkg-description) and [repository](#ccc-repo-description) metadata,
       as well as documentation and website content and metadata. 
@@ -63,8 +70,8 @@ properties:
       - Powerful Tools for Simulating Complex Engineering Systems
       - Your Python Solution for Secure and Scalable Network Management
       - Python Tools for Quantum Mechanics Simulations and Research
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
   abstract:
+    $ref: https://jsonschemata.repodynamics.com/string/nonempty
     description: |
       Short description of the project.
       
@@ -72,10 +79,10 @@ properties:
       for example, to make text bold, italic, or to add hyperlinks.
 
       :::{admonition} Usage
-      :class: dropdown note
+      :class: dropdown note toggle-shown
       
-      The abstract is automatically added to the project's [`citation`](#ccc-citation-abstract) data,
-      and displayed on the repository's [`README`](#ccc-readme-main) file,
+      By default, `abstract` is automatically added to the project's [`citation`](#ccc-citation-abstract) data,
+      and displayed on the repository's README file,
       on the homepage of the project's website,
       on the project's PyPI and TestPyPI pages
       (cf. [`pkg.readme`](#ccc-pkg-readme)),
@@ -98,35 +105,35 @@ properties:
         Nullam tristique efficitur lorem, semper sollicitudin mauris aliquet vel. 
         Interdum et malesuada fames ac ante ipsum primis in faucibus. 
         Cras eros risus, viverra ut lectus nec, lobortis rhoncus felis.
-    $ref: https://jsonschemata.repodynamics.com/string/nonempty
   keywords:
     description: |
       Keywords categorizing the project.
       
       :::{admonition} Usage
-      :class: dropdown note
+      :class: dropdown note toggle-shown
       
-      Keywords are automatically added to project [citation data](#ccc-citation-keywords),
+      By default, keywords are automatically added to project [citation data](#ccc-citation-keywords),
       [GitHub repository](#ccc-repo-topics), and [package metadata](#ccc-pkg-keywords),
-      helping to make the project easier to discover.      
+      helping to make the project easier to discover on various platforms.
       :::
     examples:
-      - Python
-      - Data Analysis
-      - Machine Learning
-      - Computer-Aided Design
-      - Scientific Computing
+      - - Python
+        - Data Analysis
+        - Machine Learning
+        - Computer-Aided Design
+        - Scientific Computing
     $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   highlights:
     description: |
       Key features of the project.
       
+      It must be an array of objects, each with `title` and `description` keys.
+      
       :::{admonition} Usage
-      :class: dropdown note
+      :class: dropdown note toggle-shown
       
       By default, project highlights are included
-      in the [repository](#ccc-readme-main) and [package](#ccc-pkg-readme) README files,
-      as well as on the project's website.
+      in main README files and on the project's homepage.
       :::
     examples:
       - - title: Easy Installation
@@ -144,34 +151,74 @@ properties:
       title: Highlight
       description: |
         A key feature of the project.
-        Each highlight must contain a `title` and a `description`.
+        
+        A feature is defined by a `title` and a `description`.
       type: object
       additionalProperties: false
       required: [ title, description ]
       properties:
         title:
-          title: Title
-          description: Title of the project feature.
           $ref: https://jsonschemata.repodynamics.com/string/oneline
+          description: |
+            Title of the feature.
+            
+            It must be a one-line string.
         description:
-          title: Description
-          description: Description of the project feature.
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
+          description: |
+            Description of the feature.
+            
+            It can be any non-empty string, and can contain
+            inline HTML and GitHub Flavored Markdown,
+            for example, to make text bold, italic, or to add hyperlinks.
   license:
     description: |
-      License of the project.
+      License information of the project.
+      
+      :::{rubric} SPDX License Expression
+      :heading-level: 2
+      :::
+      Using the [System Package Data Exchange](https://spdx.org/) (SPDX) license standard,
+      define the project's license by providing its 
+      [SPDX license expression](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/)
+      under the [`expression`](#ccc-license-expression) key.
+      
+      :::{rubric} License Components
+      :heading-level: 2
+      :::
+      If the license expression contains custom components (i.e., those not available in the
+      [SPDX License List](https://spdx.org/licenses/) or
+      [License Exceptions](https://spdx.org/licenses/exceptions-index.html)),
+      these must be manually defined under the [`component`](#ccc-license-component) key.
+      All other standard components are automatically retrieved from the SPDX database
+      and added to the `component` object under their respective
+      [SPDX license ID](https://spdx.dev/learn/handling-license-info/).
+      
+      :::{rubric} License Customization
+      :heading-level: 2
+      :::
+      The automatically generated license documents can be customized
+      via the [`config`](#ccc-license-config) key, with options
+      to replace license placeholder values with project metadata
+      and control document formatting.
       
       :::{admonition} Usage
-      :class: dropdown note
+      :class: dropdown note toggle-shown
       
-      After customizing the license with the project's [copyright notice](#ccc-copyright-notice):
+      Available data for each component defined in the [license expression](#ccc-license-expression)
+      is automatically retrieved from the SPDX database, and customized with project metadata
+      according to the [specified configurations](#ccc-license-config).
+      License and license header (copyright notice) documents are then generated
+      and written to the specified locations.
+      The default filepaths follow the [requirements for
+      GitHub](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository)
+      to recognize and display them on the repository.
       
-      - A license file is [added to the repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository),
-        where GitHub can recognize and display it.
-      - The license file is incorporated in all package releases.
-      - License identifiers are added to the package metadata.
+      By default, the license is also incorporated into several other project components: 
+      - License files are added to all releases.
+      - License identifiers are added to all package metadata.
       - Full license and copyright information are featured on the documentation website.
-      - A license and copyright notice is included in library source files.
+      - A copyright notice and [SPDX short-form identifier](https://spdx.dev/learn/handling-license-info/) is included in all source files.
       :::
       
       :::{admonition} Open Source Licenses
@@ -183,55 +230,100 @@ properties:
       - [Choose a License](https://choosealicense.com/)
       - [SPDX License List Data (JSON)](https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json)
       :::
+    description_examples:
+      - |
+        To define a license using standard components available in the SPDX License List,
+        the only required field is `expression`.
+        For example, to use the [MIT License](https://spdx.org/licenses/MIT.html):
+      - |
+        To define a complex license with standard components:
+      - |
+        To define a simple custom license:
+      - |
+        To define a complex license wih a custom exception named `My-Exception-1.0`:
+      - |
+        To customize document output;
+        for example, exclude optional sections from the license,
+        change the line length to 100 characters,
+        center the title, and remove underline from the title:
     examples:
-      - id: Unlicense
-      - id: MIT
-        notice: |
-          This is a custom license notice that overwrites
-          the default MIT license's notice.
+      - expression: MIT
+      - expression: MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)
+      - expression: LicenseRef-My-License
+        component:
+          My-License:
+            name: My License
+            text_plain: |
+              This is the content of my custom license.
+      - expression: MIT WITH AdditionRef-My-Exception-1.0
+        component:
+          AdditionRef-My-Exception-1.0:
+            name: My Exception
+            text_plain: |
+              This is the content of my custom exception.
+      - expression: MIT
+        config:
+          text:
+            plain:
+              optionals: false
+              line_length: 100
+              title_centered: true
+              title_underline: ""
     type: object
     required: [ expression ]
     properties:
       expression:
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
         description: |
-          An [SPDX license expression](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/)
-          defining the license of the project.
-        description_examples: |
-          To select a single license from the [SPDX License List](https://spdx.org/licenses/),
-          simply provide its [SPDX license ID](https://spdx.dev/learn/handling-license-info/).
-          Some common SPDX license IDs are:
-          - `AGPL-3.0-or-later`: [GNU Affero General Public License v3.0 or later](https://spdx.org/licenses/AGPL-3.0-or-later.html)
-          - `GPL-3.0-or-later`: [GNU General Public License v3.0 or later](https://spdx.org/licenses/GPL-3.0-or-later.html)
-          - `LGPL-3.0-or-later`: [GNU Lesser General Public License v3.0 or later](https://spdx.org/licenses/LGPL-3.0-or-later.html)
-          - `Apache-2.0`: [Apache License 2.0](https://spdx.org/licenses/Apache-2.0.html)
-          - `BSL-1.0`: [Boost Software License 1.0](https://spdx.org/licenses/BSL-1.0.html)
-          - `MIT`: [MIT License](https://spdx.org/licenses/MIT.html)
-          - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://spdx.org/licenses/BSD-3-Clause.html)
-          - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://spdx.org/licenses/BSD-2-Clause.html)
-          - `MPL-2.0`: [Mozilla Public License 2.0](https://spdx.org/licenses/MPL-2.0.html)
-          - `Unlicense`: [The Unlicense](https://spdx.org/licenses/Unlicense.html)
-          [Composite licenses](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/#composite-license-expressions)
-          can be defined using "OR", "AND", and "WITH" operators with parentheses:
-          - `OR`: Allows either of the licenses to be used.
-          - `AND`: Requires compliance with both licenses.
-          - `WITH`: Defines an [exception](https://spdx.org/licenses/exceptions-index.html) to the license.
-          - `(` and `)`: Grouping of expressions.
-          For example:
-            - `MIT OR GPL-3.0-or-later` allows either the `MIT` or `GPL-3.0-or-later` license to be used.
-            - `LGPL-2.1-only OR MIT OR BSD-3-Clause` allows either the `LGPL-2.1-only`, `MIT`, or `BSD-3-Clause` license to be used.
-            - `LGPL-2.1-only AND MIT` requires compliance with both the `LGPL-2.1-only` and `MIT` licenses.
-            - `GPL-2.0-or-later WITH Bison-exception-2.2` adds `Bison-exception-2.2` to the `GPL-2.0-or-later` license.
-            - `MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)` requires compliance with the `MIT` license and either the `LGPL-2.1-or-later` or `BSD-3-Clause` license.
-          Custom licenses and exceptions can also be defined
-          using the `LicenseRef-` and `AdditionRef-` prefixes, respectively.
-          For example, to add a custom exception to the `MIT` license,
-          you can use `MIT WITH AdditionRef-My-Exception-1.0`.
-          The custom exception `AdditionRef-My-Exception-1.0`
-          must then be defined under [`$.license.component`](#ccc-license-component).
+          Project's [SPDX license expression](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/).
+        examples:
+          - AGPL-3.0-or-later
+          - MIT OR GPL-3.0-or-later
+          - LGPL-2.1-only OR MIT OR BSD-3-Clause
+          - LGPL-2.1-only AND MIT
+          - GPL-2.0-or-later WITH Bison-exception-2.2
+          - MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)
+          - MIT WITH AdditionRef-My-Exception-1.0
+        description_examples:
+          - |
+            To select a single license from the [SPDX License List](https://spdx.org/licenses/),
+            simply provide its [SPDX license ID](https://spdx.dev/learn/handling-license-info/).
+            Some common SPDX license IDs are:
+            - `AGPL-3.0-or-later`: [GNU Affero General Public License v3.0 or later](https://spdx.org/licenses/AGPL-3.0-or-later.html)
+            - `GPL-3.0-or-later`: [GNU General Public License v3.0 or later](https://spdx.org/licenses/GPL-3.0-or-later.html)
+            - `LGPL-3.0-or-later`: [GNU Lesser General Public License v3.0 or later](https://spdx.org/licenses/LGPL-3.0-or-later.html)
+            - `Apache-2.0`: [Apache License 2.0](https://spdx.org/licenses/Apache-2.0.html)
+            - `BSL-1.0`: [Boost Software License 1.0](https://spdx.org/licenses/BSL-1.0.html)
+            - `MIT`: [MIT License](https://spdx.org/licenses/MIT.html)
+            - `BSD-3-Clause`: [BSD 3-Clause "New" or "Revised" License](https://spdx.org/licenses/BSD-3-Clause.html)
+            - `BSD-2-Clause`: [BSD 2-Clause "Simplified" License](https://spdx.org/licenses/BSD-2-Clause.html)
+            - `MPL-2.0`: [Mozilla Public License 2.0](https://spdx.org/licenses/MPL-2.0.html)
+            - `Unlicense`: [The Unlicense](https://spdx.org/licenses/Unlicense.html)
+            
+            For example, to use the [GNU Affero General Public License v3.0 or later](https://spdx.org/licenses/AGPL-3.0-or-later.html):
+          - |
+            [Composite licenses](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/#composite-license-expressions)
+            can be defined using "OR", "AND", and "WITH" operators with parentheses:
+            - `OR`: Allows either of the licenses to be used.
+            - `AND`: Requires compliance with both licenses.
+            - `WITH`: Defines an [exception](https://spdx.org/licenses/exceptions-index.html) to the license.
+            - `(` and `)`: Grouping of expressions.
+            
+            For example, to allow either the `MIT` or the `GPL-3.0-or-later` license to be used:
+          - 'To allow either the `LGPL-2.1-only`, `MIT`, or `BSD-3-Clause` license to be used:'
+          - 'To require compliance with both the `LGPL-2.1-only` and `MIT` licenses:'
+          - 'To add `Bison-exception-2.2` to the `GPL-2.0-or-later` license:'
+          - 'To require compliance with the `MIT` license and either the `LGPL-2.1-or-later` or `BSD-3-Clause` license:'
+          - |
+            Custom licenses and exceptions can also be defined
+            using the `LicenseRef-` and `AdditionRef-` prefixes, respectively.
+            For example, to add a custom exception to the `MIT` license
+            (note that the custom exception `AdditionRef-My-Exception-1.0`
+            must then be defined under [`$.license.component`](#ccc-license-component)):
       component:
         description: |
           Information about each component of the license expression.
+          
           These are automatically filled for all SPDX licenses and exceptions.
           For custom licenses and exceptions, you must provide all required data manually.
           Each component is added as a key-value pair, where the key is the component's ID,
@@ -240,42 +332,65 @@ properties:
         patternProperties:
           '^(DocumentRef-[a-zA-Z0-9-.]+:)?(AdditionRef|LicenseRef)-[a-zA-Z0-9.-]+$':
             title: Custom Component
-            description: Definition of a custom component of the license expression.
+            description: |
+              Definition of a custom component of the license expression.
+              
+              Custom components must at least define a `name` and either `text_xml` or `text_plain`.
+            type: object
+            required: [ name ]
+            anyOf:
+              - title: XML Text
+                description: The license text is provided in XML format.
+                required: [ text_xml ]
+              - title: Plain Text
+                description: The license text is provided in plain text format.
+                required: [ text_plain ]
             allOf:
               - $ref: https://controlman.repodynamics.com/schema/license-component
-              - required: [ name ]
-              - anyOf:
-                  - required: [ text_xml ]
-                  - required: [ text_plain ]
         additionalProperties:
           title: SPDX Component
           description: |
-              Information about an SPDX component of the license expression.
+            Information about an SPDX component of the license expression.
+            
+            These are automatically retrieved from the SPDX database and
+            do not need to be manually defined. However, you can still add additional data
+            or customize configurations such as output filepaths here.
           $ref: https://controlman.repodynamics.com/schema/license-component
       config:
+        description: |
+          Configurations for output license documents.
+          
+          These are general configurations that apply to all license components.
+          They include license customization and formatting options.
         type: object
         default: { }
         properties:
           text:
+            description: Configurations for the main file of all license components.
             default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
           header:
+            description: |
+              Configurations for license header (a.k.a. copyright notice) files.
+              
+              Note that separate license headers are not included in all licenses.
             default: { }
             $ref: https://controlman.repodynamics.com/schema/license-component-config
   copyright:
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
     description: |
       Copyright notice of the project.
       
-      :::{admonition} Usage
-      :class: dropdown note
+      It must be a one-line string.
       
-      By default, the copyright notice
-      is included in several places,
+      :::{admonition} Usage
+      :class: dropdown note toggle-shown
+      
+      By default, the copyright notice is included in several places,
       such as license texts,
       the [main docstring](#ccc-pkg-file---init---py-docstring) of the package,
       and the [footer](#ccc-theme-footer) of website and documentation files.
       :::
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
     default: |
       #{{
         from controlman import date
@@ -286,70 +401,116 @@ properties:
         return f"© {period} {get("team.owner.name.full")}"
       }}#
     description_default: |
-      Set to `© {period} {owner}`, where `{owner}` is the repository owner's name
+      The below default Python template sets `copyright` to
+      `© {period} {owner}`, where `{owner}` is the repository owner's name
       and period is calculated as follows:
       - If repository creation year is the same as the current year, 
         the period is set to the current year, e.g., `2024`.
       - Otherwise, the period is set to the repository creation year and the current year, e.g., `2024–2026`.
   language:
-    description: Natural language of the project.
+    description: |
+      Natural language of the project.
+      
+      It must be defined by an
+      [ISO 639-3](https://iso639-3.sil.org/code_tables/639/data) (preferred)
+      or [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
+      language code and name.
     type: object
-    default: { }
+    default:
+      code: eng
+      name: English
     required: [ code, name ]
+    examples:
+      - code: eng
+        name: English
+      - code: deu
+        name: German
     properties:
       code:
         # Refs:
         # https://github.com/ISO639
         # https://iso639-3.sil.org/code_tables/download_tables
         description: |
+          [ISO 639-3](https://iso639-3.sil.org/code_tables/639/data) (preferred) or
           [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
-          or 639-3 code of the primary natural language of the work.
+          code of the language.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
-        default: eng
       name:
-        description: Name of the language.
+        description: |
+          [ISO 639-3](https://iso639-3.sil.org/code_tables/639/data) (preferred) or
+          [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php)
+          name of the language.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
-        default: English
   role:
     description: |
       Role definitions for team members.
+      
       For each role, add a key-value pair
-      where the key is an ID for the role,
-      which can then be referenced in [team member roles](#ccc-defs-entity-roles).
+      where the key is an ID for the role.
+      The ID can then be referenced in other configurations,
+      such as [team member roles](#ccdef-entity-def-role).
+      
+      :::{admonition} Usage
+      :class: dropdown note toggle-shown
+      
+      Roles can define tasks (e.g., 
+      issue triage, development, pull request review, discussion moderation)
+      and file ownership for different parts of the project.    
+      Each team member can then be assigned any number of roles,
+      facilitating the management of a dynamic governance model.
+      :::
     type: object
     additionalProperties:
       title: Role
       description: |
         Definition of a role in the project.
+        
+        Each role must have a [`title`](#ccc-role---title), [`description`](#ccc-role---description),
+        [`abbreviation`](#ccc-role---abbreviation), and [`type`](#ccc-role---type).
+        It can optionally include [assignments](#ccc-role---assignment) and
+        [file ownership](#ccc-role---ownership) definitions.
       type: object
       additionalProperties: false
       required: [ title, description, abbreviation, type ]
       properties:
         title:
-          title: Name of the role.
+          description: Name of the role.
           $ref: https://jsonschemata.repodynamics.com/string/oneline
           examples:
             - Conceptualization
             - Software Development
             - Management
         description:
-          title: A short description of the role.
+          description: A short description of the role.
           $ref: https://jsonschemata.repodynamics.com/string/nonempty
           examples:
             - Formulation and evolution of overarching project goals and aims.
             - Implementation of the software.
             - Project administration and coordination.
         abbreviation:
-          title: Abbreviation of the role title.
+          description: Abbreviation of the role title.
           type: string
           examples:
             - CNP
             - DEV
             - MAN
         type:
-          title: Zenodo Type
           description: |
-            The type of the Zenodo record that corresponds to this role.
+            Type of the role.
+            
+            The role types are based on [DataCite's contributor vocabulary](https://schema.datacite.org/),
+            and are identical to
+            [Zenodo's contributor types](https://help.zenodo.org/docs/deposit/describe-records/contributors/),
+            with the exception that an additional `Author` role is added here.
+            
+            :::{admonition} Usage
+            :class: dropdown note toggle-shown
+
+            Role types are used to define the contribution type of contributors in Zenodo depositions.
+            They can also be used to filter team members.
+            For example, project authors can be simply extracted
+            by selecting members with a role that has the `Author` type.
+            :::
           default: ProjectMember
           enum:
             - Author
@@ -375,39 +536,74 @@ properties:
             - WorkPackageLeader
             - Other
         assignment:
-          title: Assignments
           description: |
-            Assignment of development and maintenance tasks to the role.
+            Task assignments for the role.
           type: object
           minProperties: 1
           additionalProperties: false
           properties:
             issue:
-              title: Issues
               description: |
-                Issues assigned to the role,
-                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+                Issues assigned to the role.
+                
+                This must be a RegEx pattern matching one or several [issue form IDs](#ccc-issue-forms).
+                
+                :::{admonition} Usage
+                :class: dropdown note toggle-shown
+  
+                When a new issue is opened,
+                the corresponding issue form ID is matched against this RegEx.
+                In case of a match, all members with this role are automatically assigned to the issue ticket.
+                :::
               type: string
             pull:
-              title: Pull Requests
               description: |
-                Pull requests assigned to the role,
-                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+                Pull requests assigned to the role.
+                
+                This must be a RegEx pattern matching one or several [issue form IDs](#ccc-issue-forms).
+
+                :::{admonition} Usage
+                :class: dropdown note toggle-shown
+  
+                When a new pull request is opened,
+                the corresponding issue form ID is matched against this RegEx.
+                In case of a match, all members with this role
+                are automatically assigned to the pull request.
+                :::
               type: string
             review:
               title: Pull Request Reviews
               description: |
-                Pull request reviews assigned to the role,
-                defined by a RegEx pattern matching [issue form IDs](#ccc-issue-forms).
+                Pull request reviews assigned to the role.
+                
+                This must be a RegEx pattern matching one or several [issue form IDs](#ccc-issue-forms).
+
+                :::{admonition} Usage
+                :class: dropdown note toggle-shown
+  
+                When a pull request is marked ready for review,
+                the corresponding issue form ID is matched against this RegEx.
+                In case of a match, all members with this role
+                are automatically assigned to the pull request as reviewers.
+                :::
               type: string
             discussion:
-              title: Discussion Categories
               description: |
-                Discussion categories assigned to the role,
-                defined by a RegEx pattern matching [discussion form slugs](#ccc-discussion-category).
+                Discussion categories assigned to the role.
+                
+                This must be a RegEx pattern matching one or several
+                [discussion category slugs](#ccc-discussion-category).
+
+                :::{admonition} Usage
+                :class: dropdown note toggle-shown
+  
+                When a new discussion is opened,
+                the corresponding category slug is matched against this RegEx.
+                In case of a match, all members with this role
+                are automatically assigned to the discussion.
+                :::
               type: string
         ownership:
-          title: Ownership
           description: |
             Ownership of different parts of the project.
           $ref: https://controlman.repodynamics.com/schema/code-owner
@@ -415,23 +611,18 @@ properties:
     description: |
       Natural and legal persons involved in the project.
       
-      For each person (e.g., copyright holders, authors, maintainers, research groups, institutions, etc.),
-      define a key-value pair, where the key is the ID of the person.
-      The ID can then be used to reference the person in other configurations
-      using templating
-      (e.g. see [`maintainer`](#ccc-maintainer) and [`citation`](#ccc-citation)).
+      For each person (e.g., copyright holders, authors, maintainers, managers, supervisors),
+      add a key-value pair where the key is an ID for the person.
+      The ID can then be referenced in other configurations.
       Also, the information of each person can be used directly
-      (e.g. see [`copyright.notice`](#ccc-copyright-notice)).
-      Note that the [`owner`](#ccc-team-owner) key is always automatically added.
+      (cf. default value of [`copyright.notice`](#ccc-copyright-notice)).
 
       :::{admonition} Automatic Data Filling
       :class: important
 
-      For any person added here, additional information will be automatically filled
-      from web APIs, if available (see the [`Entity`](#ccc-defs-entity) object).
-      This is not done for other `Entity` objects defined elsewhere in the control center.
-      It is therefore recommended to define all persons involved in the project here,
-      and reference them elsewhere using templating.
+      For each person, additional information is automatically added
+      from web APIs, if available (cf. [Entity Definition](#ccdef-entity-def)).
+      Note that the [`owner`](#ccc-team-owner) key is always automatically added.
       :::
     type: object
     properties:
@@ -439,19 +630,29 @@ properties:
         title: Owner
         description: |
           The repository owner on GitHub.
-          The `github` key is always automatically filled with information from the GitHub API.
+          
+          The [`github`](#ccdefs-entity-def-github) key is always automatically
+          filled with information from the GitHub API.
           Any other keys that are not provided are also 
           automatically filled, as along as they have a corresponding information
-          in the GitHub API (cf. [`Entity`](#ccc-defs-entity)).
+          in the GitHub API (cf. [Entity Definition](#ccdef-entity-def)).
         $ref: https://controlman.repodynamics.com/schema/entity-def
     additionalProperties:
       title: Person
-      description: A natural person or entity involved in the project.
-      allOf:
-        - $ref: https://controlman.repodynamics.com/schema/entity-def
-        - anyOf:
-            - required: [ github ]
-            - required: [ name ]
+      description: |
+        A natural person or entity involved in the project.
+        
+        For each person, at least either a GitHub account or name must be provided.
+      $ref: https://controlman.repodynamics.com/schema/entity-def
+      anyOf:
+        - title: GitHub Account
+          description: |
+            The person's GitHub username/ID is provided.
+          required: [ github ]
+        - title: Name
+          description: |
+            The person's name it provided.
+          required: [ name ]
   citation:
     description: |
       Citation information of the project.
@@ -459,40 +660,41 @@ properties:
     additionalProperties: false
     properties:
       cff:
-        title: Citation File
+        title: CFF
         description: |
-          This is primarily used to automatically maintain a
-          [CITATION file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)
-          ([Citation File Format (CFF)](https://citation-file-format.github.io/)) for the project.
-          However, information that are only defined here, such as [`authors`](#ccc-citation-authors),
-          [`contacts`](#ccc-citation-contacts), and [`preferred_citation`](#ccc-citation-preferred_citation),
-          are also used in other places, such as the project's website, README, and package metadata.
-          :::
-    
-          :::{admonition} Citation File Format (CFF)
-          :class: dropdown seealso
+          Configurations for the
+          [`CITATION.cff` file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files).
           
-          This object closely follows the
+          These configurations are used to automatically maintain a citation file for the project
+          in the [Citation File Format](https://citation-file-format.github.io/) (CFF). 
+          They closely follow the
           [CFF v1.2.0 schema](https://github.com/citation-file-format/citation-file-format/blob/main/schema-guide.md)
-          (cf. [in JSON format](https://citation-file-format.github.io/1.2.0/schema.json)).
-          However, it is simplified (e.g., `entity` and `person` are merged into [`Entity`](#ccc-defs-entity)),
-          and many fields are automatically filled, e.g.:
-          
-          - `doi` (given you have [activated your Zenodo account](#install-zenodo)),
-            `version` and `date-released`are automatically filled for each new release.
-          - `cff-version` is automatically added to the file.
-          :::
+          (cf. [JSON format](https://citation-file-format.github.io/1.2.0/schema.json)),
+          with some simplifications (e.g., `entity` and `person` are merged into a single [`Entity Definition`](#ccdef-entity-def)).
         type: object
         additionalProperties: false
-        required: [ message, title, authors, type, order ]
+        required: [ order, message, title, authors, type ]
         properties:
           order:
+            description: |
+              Keys to include in the output `CITATION.cff` file.
+              
+              Keys are written in the exact order given here.
+              Note that any keys not mentioned here will also be dropped from the
+              output file, even when the key is defined.
             type: array
             uniqueItems: true
             contains:
+              title: Required Keys
+              description: |
+                Keys that are required in the `CITATION.cff` file and
+                thus must also be present in this array.
               enum: [ message, title, authors, type, cff-version ]
             minContains: 5
             items:
+              title: Key
+              description: |
+                A top-level key in the `CITATION.cff` file.
               type: string
               enum:
                 - abstract
@@ -539,30 +741,31 @@ properties:
               - references
               - cff-version
           message:
-            title: Message
+            $ref: https://jsonschemata.repodynamics.com/string/nonempty
             description: |
               A message to include in the citation file.
-              On GitHub, this is also displayed when a user clicks on the ***Cite this repository*** button
-              on the repository's main page.
+              
+              On GitHub, this is also displayed when a user clicks on the
+              ***Cite this repository*** button.
             examples:
               - If you use this software, please cite both the article from preferred-citation and the software itself.
               - If you use this software, please cite it using the metadata from this file.
               - Please cite this software using these metadata.
               - Please cite this software using the metadata from 'preferred-citation'.
             default: If you use ${{ name }}$, please cite it using this reference.
-            $ref: https://jsonschemata.repodynamics.com/string/nonempty
           title:
-            title: Title
             description: |
               Title of the citation.
-              This can be your project's [name](#ccc-name), [title](#ccc-title),
-              a combination of both, or any other custom title.
             default: >-
               #{{
                 name = get("name")
                 title = get("title")
                 return f"{name}: {title}" if title else name
               }}#
+            description_default: |
+              If the project has defined a [`title`](#ccc-title),
+              the citation title is set to `{name}: {title}` (e.g., "My Project: A Python Project"),
+              otherwise it is set to [`name`](#ccc-name).
             examples:
               - '${{ name }}$: ${{ title }}$'
               - ${{ name }}$
@@ -570,9 +773,10 @@ properties:
               - A Custom Title
             $ref: https://jsonschemata.repodynamics.com/string/nonempty
           authors:
-            title: Authors
             description: |
-              Core author(s) of the project, ordered by contribution (highest first).
+              Citation authors.
+              
+              Authors are listed in the exact order given here.
               
               :::{admonition} Usage
               :class: dropdown note
@@ -1107,6 +1311,7 @@ properties:
   funding:
     description: |
       Available funding options of the project.
+      
       You can specify up to four
       [sponsored GitHub accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors),
       up to four custom URLs,
@@ -1222,42 +1427,10 @@ properties:
             - https://paypal.me/EXAMPLE-PAYPAL-USERNAME
             - https://example.com/donate
           $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-  code_owners:
-    title: Code Owners
-    description: |
-      Pull request reviewers for different parts of the project.
-      This is used to automatically maintain the
-      [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-      file (cf. [`doc.code_owners`](#ccc-doc.code_owners)),
-      which will then be used to automatically assign reviewers to pull requests
-      based on the glob pattern of the modified files.
-    type: object
-    additionalProperties: false
-    required: [ path ]
-    properties:
-      path:
-        title: File Path
-          Path to the
-          [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-          file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
-          and placed either in the `.github` directory, the `docs` directory,
-          or the root of the repository.
-        type: string
-        default: .github/CODEOWNERS
-        pattern: ^(?:|.github/|docs/)CODEOWNERS$
-        examples:
-          - CODEOWNERS
-          - .github/CODEOWNERS
-          - docs/CODEOWNERS
-      url:
-        title: URL
-        description: URL of the repository's `CODEOWNERS` file.
-        default: ${{ repo.url.blob }}$/${{ .path }}$
-        examples:
-          - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
-        $ref: https://jsonschemata.repodynamics.com/url/https
   color:
     description: |
+      Color palette of the the project.
+      
       Colors of the project's light and dark themes.
       Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
       such as hexadecimal, RGB, HSL, or named colors.
@@ -1265,18 +1438,95 @@ properties:
     required: [ primary, secondary ]
     properties:
       primary:
-        title: Primary
         description: Primary color of the project.
         $ref: https://controlman.repodynamics.com/schema/themed-color
       secondary:
-        title: Secondary
         description: Secondary color of the project.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      accent:
+        description: Accent color of the project.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      background:
+        description: |
+          Background color.
+
+          In the website, this corresponds to the color of the canvas;
+          i.e. the deepest layer.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      on-background:
+        description: |
+          Color for elements directly on top of background.
+
+          In the website, this corresponds e.g., to the color of the header navbar,
+          providing slight contrast against the background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      surface:
+        description: |
+          Surface color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      on-surface:
+        description: |
+          Color for elements directly on top of surface.
+
+          In the website, this corresponds e.g., to the color of the sidebar directives,
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      info:
+        description: Semantic color for info blocks.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      warning:
+        description: Semantic color for warning blocks.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      success:
+        description: Semantic color for success blocks.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      attention:
+        description: Semantic color for attention blocks.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      danger:
+        description: Semantic color for danger blocks.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      text-base:
+        description: Base color for texts.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      text-muted:
+        description: Color for muted texts.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      shadow:
+        description: Color for shadows.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      border:
+        description: Color for borders.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      border-muted:
+        description: Color for muted borders.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      blockquote-notch:
+        description: Color for block-quote notches.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      inline-code:
+        description: Color for inline codes.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      inline-code-links:
+        description: Color for inline code links.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      target:
+        description: Color for target components.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      table:
+        description: Color for tables.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      table-row-hover:
+        description: Color for table rows on hover.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+      table-inner-border:
+        description: Color for table inner borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
   # Documentation
   document:
     description: |
-      Definition of dynamic documentation files for the project,
-      such as README files that are displayed to users on landing pages of
+      Dynamic documentation files for the project.
+      
+      These include README files that are displayed to users on landing pages of
       project's repositories, such as GitHub, PyPI, and Anaconda, as well as
       README files in different directories of the repository providing
       technical information to contributors and reviewers.
@@ -1739,8 +1989,8 @@ properties:
     $ref: https://controlman.repodynamics.com/schema/pkg
   # ITS
   commit:
-    title: Configurations for different types of commits in your repository.
-    description: Commit types, sub-types and descriptions
+    description: |
+      Configurations for different commit types.
     type: object
     additionalProperties: false
     required: [ config, auto ]
@@ -1997,8 +2247,9 @@ properties:
                     committer:
                       $ref: https://controlman.repodynamics.com/schema/role-priority
   label:
-    title: GitHub labels settings for the project
     description: |
+      Label configurations for issues, pull requests, and discussions.
+      
       [GitHub docs](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels)
     type: object
     default: { }
@@ -2161,9 +2412,8 @@ properties:
       default: { }
       $ref: https://controlman.repodynamics.com/schema/label-group
   issue:
-    title: Issues
     description: |
-      Configurations of the project's issue tracking system (cf. [GitHub Issues](https://docs.github.com/en/issues/tracking-your-work-with-issues)).
+      Configurations for [issues](https://docs.github.com/en/issues/tracking-your-work-with-issues).
 
       These include [issue form](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#creating-issue-forms)
       templates used to automatically maintain issue ticket forms,
@@ -2381,8 +2631,8 @@ properties:
       protocol:
         $ref: https://controlman.repodynamics.com/schema/protocol
   pull:
-    title: Pull Requests
-    description: GitHub pull request settings for the project
+    description: |
+      Configurations for pull requests.
     type: object
     additionalProperties: false
     properties:
@@ -2416,10 +2666,8 @@ properties:
           default:
             type: string
   discussion:
-    title: GitHub Discussions
     description: |
-      [GitHub Discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions)
-      configurations of the repository.
+      Configurations for [discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions).
     type: object
     additionalProperties: false
     properties:
@@ -2582,10 +2830,48 @@ properties:
                         value: |
                           ### The thrilling conclusion
                           _to our template_
+  code_owners:
+    title: Code Owners
+    description: |
+      Configurations for the
+      [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) file.
+      
+      If present, a CODEOWNERS file is automatically maintained at the given [`path`](#ccc-code-owners-path),
+      using file ownership information defined for team members.
+      For each pull request, GitHub will then automatically add the owners of each
+      modified file in that pull request as reviewers.
+      Note that you can also assign issue-form-specific review tasks to each role
+      (cf. [`ccc.role.*.assignment.review`](#ccc-role---assignment-review)).
+    type: object
+    additionalProperties: false
+    required: [ path ]
+    properties:
+      path:
+        title: File Path
+          Path to the
+          [`CODEOWNERS`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+          file. This file must be named `CODEOWNERS` (case-sensitive, without extension)
+          and placed either in the `.github` directory, the `docs` directory,
+          or the root of the repository.
+        type: string
+        default: .github/CODEOWNERS
+        pattern: ^(?:|.github/|docs/)CODEOWNERS$
+        examples:
+          - CODEOWNERS
+          - .github/CODEOWNERS
+          - docs/CODEOWNERS
+      url:
+        title: URL
+        description: URL of the repository's `CODEOWNERS` file.
+        default: ${{ repo.url.blob }}$/${{ .path }}$
+        examples:
+          - "https://github.com/RepoDynamics/PyPackIT/blob/main/CODEOWNERS"
+        $ref: https://jsonschemata.repodynamics.com/url/https
   # VCS
   repo:
-    title: GitHub/Git repository settings.
     description: |
+      Configurations for the GitHub/Git repository.
+      
       These include general GitHub repository metadata
       such as description, topics (keywords), and homepage URL,
       as well as security configurations, merge strategies,
@@ -3098,8 +3384,9 @@ properties:
                   - "https://github.com/RepoDynamics/PyPackIT/deployments"
                 $ref: https://jsonschemata.repodynamics.com/url/https
   branch:
-    title: GitHub/Git branch settings.
-    description:
+    description: |
+      Configurations for repository branches.
+      
       These include names/prefixes and protection rules for different branch types.
     type: object
     default: { }
@@ -3132,7 +3419,8 @@ properties:
           name: auto-update/
         $ref: https://controlman.repodynamics.com/schema/branch
   tag:
-    title: Configurations for the repository tags.
+    description: |
+      Configurations for git tags.
     type: object
     default: { }
     additionalProperties: false
@@ -3198,6 +3486,8 @@ properties:
               - "Release {{ release }}"
               - "r{{ release }}"
   file:
+    description: |
+      Configurations for individual files.
     type: object
     additionalProperties: false
     properties:
@@ -3276,7 +3566,8 @@ properties:
             - required: [ sources ]
   # CI
   control:
-    title: Configurations for the project's control center.
+    description: |
+      Configurations for the project's control center.
     type: object
     additionalProperties: false
     required: [ path, cache ]
@@ -3947,8 +4238,9 @@ properties:
                     type: string
                     default: en
   local:
-    title: Directory structure of the repository.
     description: |
+      Configurations for local clones of the project.
+      
       From the seven [main directories](/manual/fundamentals/structure/index.md) in your repository
       that |{{ccc.name}}| manages and works with,
       the [GitHub directory](/manual/fundamentals/structure/github.md)
@@ -4108,7 +4400,7 @@ properties:
   # Auto
   project:
     description: |
-      Data about the project.
+      Automatically generated data about the project.
       
       These are all read-only data,
       automatically generated during synchronization.

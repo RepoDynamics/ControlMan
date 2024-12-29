@@ -1,0 +1,52 @@
+$id: https://controlman.repodynamics.com/schema/dep-direct
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Package Dependency
+description: Definition of a package as a dependency.
+type: object
+allOf:
+  - $ref: https://controlman.repodynamics.com/schema/dep-indirect
+  - anyOf:
+      - required: [ conda ]
+      - required: [ pip ]
+    properties:
+      pip:
+        title: pip
+        description: Specifications for the `pip` package manager.
+        type: object
+        required: [ spec ]
+        properties:
+          spec:
+            type: string
+            description: |
+              Dependency specification for pip, according to 
+              [PEP 508](https://peps.python.org/pep-0508/#specification).
+              For more details, see
+              [Version Specifiers](https://packaging.python.org/en/latest/specifications/version-specifiers/#id5)
+              in PyPA's Python Packaging User Guide and
+              [Requirement Specifiers](https://pip.pypa.io/en/stable/reference/requirement-specifiers/)
+              in pip documentation.
+            examples:
+              - "numpy >= 1.21.2"
+      conda:
+        description: Specifications for the `conda` package manager.
+        type: object
+        required: [ spec, channel ]
+        properties:
+          spec:
+            description: |
+              Dependency specification for Conda, according to
+              [Conda Build](https://conda.io/projects/conda-build/en/stable/resources/package-spec.html#package-match-specifications).
+            examples:
+              - ">=1.21.2"
+            type: string
+          channel:
+            description: Anaconda channel where the package is available.
+            type: string
+            default: conda-forge
+            examples:
+              - anaconda
+              - my-channel
+          selector:
+            description: |
+              Line selector to apply to the dependency.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline

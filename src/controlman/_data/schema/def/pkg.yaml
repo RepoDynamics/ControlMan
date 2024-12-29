@@ -169,9 +169,9 @@ properties:
       These are:
       - `Development Status`: Based on the latest version tag on the branch. 
       - `License`: Based on [`license.id`](#ccc-license.id), for supported licenses. 
-      - `Operating System`: Based on the provided [`os`](#ccc-defs-pkg_config.os) configurations.
-      - `Programming Language`: Based on the provided [`python.version`](#ccc-defs-pkg_config.python.version.spec) configurations.
-      - `Typed`: Based on [`typed`](#ccc-defs-pkg_config.typed).
+      - `Operating System`: Based on the provided [`os`](#ccdef-pkg-os) configurations.
+      - `Programming Language`: Based on the provided [`python.version`](#ccdef-pkg-python-version-spec) configurations.
+      - `Typed`: Based on [`typed`](#ccdef-pkg-typed).
       Here you can add additional classifiers, such as `Topic` or `Intended Audience`.
       For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/),
       or the [trove-classifiers](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
@@ -243,7 +243,9 @@ properties:
   authors:
     title: Authors
     description: |
-      Core authors of the package, ordered by contribution (highest first).
+      Core authors of the package.
+      
+      ordered by contribution (highest first).
       Authors are defined by their [team](#ccc-team)-member IDs.
 
       :::{admonition} Usage
@@ -258,12 +260,13 @@ properties:
     $ref: https://controlman.repodynamics.com/schema/entity-ids
     default: |
       #{{
-          return [
-            member["id"] for member in team_members_with_role_types(
-              "Author",
-              active_only=True,
-            )
-          ]
+        return [
+          {"id": int_author["id"], "member": True}
+          for int_author in team_members_with_role_types("Author", active_only=True)
+        ] + [
+          {"id"}: ext_author["id"], "member": False}
+          for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
+        ]
       }}#
     examples:
       - ${{ citation.cff.authors }}$
