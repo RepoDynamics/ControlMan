@@ -10,18 +10,17 @@ description: |
   and do not need to be manually added to the control center configuration files.
 type: object
 additionalProperties: false
-required: [ name, repo, branch, control ]
 properties:
   name:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
     description: |
       Name of the project.
       
-      It has no restrictions on itself and can be any valid unicode string.
+      The name has no restrictions on itself and can be any valid unicode string.
       However, to avoid confusion and make it easier for others to find and identify the project,
       it is recommended to **keep the project name as similar as possible to the
       [repository name](#ccc-repo-name), [distribution name](#ccc-pkg-name)
-      and [import name](#ccc-pkg-import_name) of the package,
+      and [import name](#ccc-pkg-import-name) of the package,
       and other project components**, which generally have stricter naming requirements.
       Therefore, while these can be separately set to custom values,
       it is recommended to allow the project name to be derived from the repository name (see default),
@@ -1310,23 +1309,18 @@ properties:
                 required: [ access_conditions ]
   funding:
     description: |
-      Available funding options of the project.
+      Configurations for the
+      [`FUNDING.yml` file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
+      
+      These configurations are used to automatically maintain a `FUNDING.yml` file for the project,
+      which is used by GitHub to display a sponsor button in your repository.
+      Clicking on the button opens the ***Sponsor this project*** section,
+      where a list of links to the specified funding platforms is displayed to the user.
       
       You can specify up to four
       [sponsored GitHub accounts](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors),
       up to four custom URLs,
       and one account per supported external funding platform.
-
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      These settings are used to automatically maintain the GitHub `FUNDING` configuration file,
-      which is used to
-      [display a sponsor button in your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository).
-      Clicking on the button opens the ***Sponsor this project*** section,
-      where a list of links to your specified funding platforms is displayed to the user,
-      allowing them to sponsor your project.
-      :::
     examples:
       - github: [ '${{ owner.username }}$', EXAMPLE-GITHUB-USERNAME ]
         custom: [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME' ]
@@ -1387,10 +1381,18 @@ properties:
         description: |
           [Buy Me a Coffee](https://www.buymeacoffee.com/) username.
         $ref: https://jsonschemata.repodynamics.com/string/oneline
+      thanks_dev:
+        title: Thanks.dev
+        description: |
+          [thanks.dev](https://thanks.dev/home) account address.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        examples:
+          - u/gh/USERNAME
       github:
         title: GitHub Sponsors
         description: |
           Usernames of up to four [GitHub Sponsors](https://docs.github.com/en/sponsors/) accounts.
+          
           One of these can be a
           [sponsored organization account](https://docs.github.com/en/sponsors/receiving-sponsorships-through-github-sponsors/setting-up-github-sponsors-for-your-organization),
           while the others must be
@@ -1402,12 +1404,14 @@ properties:
           title: GitHub Sponsors Account
           description: |
             GitHub username of a sponsored account.
+            
             This can be either a personal or an organization account.
           $ref: https://jsonschemata.repodynamics.com/id/github/user
       custom:
         title: Custom
         description: |
           URLs to up to four custom funding platforms.
+          
           These can be any URL, such as a PayPal donation link.
         examples:
           - [ 'https://paypal.me/EXAMPLE-PAYPAL-USERNAME', 'https://example.com/donate' ]
@@ -1562,8 +1566,182 @@ properties:
       :::
     type: object
     additionalProperties:
-      title: Configuration for a directory README file.
-      $ref: https://controlman.repodynamics.com/schema/docfile
+      title: Document
+      description: |
+        Definition of a dynamic document.
+      type: object
+      additionalProperties: false
+      required: [ content, output ]
+      properties:
+        content:
+          description: Content of the document.
+          type: object
+        output:
+          description: |
+            Configurations for document output files.
+            
+            A document can be simultaneously maintained in
+            multiple output formats at different locations.
+            For each output format/location,
+            add a key-value pair where the key
+            is an ID for that specific output.
+          type: object
+          additionalProperties:
+            title: Output
+            description: |
+              Definition of an output for the document.
+            type: object
+            properties:
+              target:
+                description: |
+                  Target output format.
+                default: github
+                oneOf:
+                  - type: string
+                  - type: object
+              filters:
+                description: |
+                  Filters to apply to document content for this output.
+                  
+                  When filters are specified, document components are
+                  included in the output only if
+                  - they have no conditions defined, or
+                  - at least one of the defined conditions matches one of the filters.
+                  
+                  :::{admonition} Usage
+                  :class: dropdown note toggle-shown
+                  
+                  Filters can be used to dynamically generate similar versions
+                  of a document from the same source. For example,
+                  you may want to output both a short version and a long version for a document.
+                  To do so, you can e.g., add "short" and "long" conditions to the respective
+                  document content. Then, for the long version, define no filters
+                  to include all content in the output. For the short version,
+                  add "short" as a filter, so that only components with a "short" condition are included.
+                  :::
+                type: array
+                items:
+                  type: string
+              heading_number_explicit:
+                description: |
+                  Whether to explicitly add heading numbers to each heading.
+                type: boolean
+                default: false
+              path:
+                $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+                description: |
+                  Path of the output document.
+                  
+                  The document's index file is maintained at this filepath.
+                  If the output format generates other files and directories,
+                  these will be added to the same directory as the index file.
+                  
+                  Note that the repository [README](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
+                  file and [community health files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
+                  are only recognized by GitHub when placed at certain paths, as follows:
+
+                  :::{rubric} [`README`](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
+                  :heading-level: 3
+                  :::
+                  The file must be na`med `README` (case-sensitive) and placed either in the
+                  `.github` directory, the `docs` directory, or the root of the repository,
+                  and can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  If more than one of such files are present, the order of precedence is
+                  `.github`, then root, and finally the `docs` directory.
+                  - RegEx pattern: `^(?:|.github/|docs/)README(?i:.(txt|md|rst))?$`
+                  - Examples:
+                    - `README`
+                    - `README.md`
+                    - `.github/README.txt`
+                    - `docs/README.rst`
+
+                  :::{rubric} [`CONTRIBUTING`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+                  :heading-level: 3
+                  :::
+                  The file must be named `CONTRIBUTING` (case-insensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. It can have the extensions `.txt`, `.md`, or `.rst`.
+                  - RegEx pattern: `^(?:|.github/|docs/)(?i:CONTRIBUTING(?:.(txt|md|rst))?)$`
+                  - Examples:
+                    - `CONTRIBUTING`
+                    - `CONTRIBUTING.md`
+                    - `contributing.rst`
+                    - `docs/CONTRIBUTING.txt`
+                    - `.github/contributing.md`
+
+                  :::{rubric} [`GOVERNANCE`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/)
+                  :heading-level: 3
+                  :::
+                  The file must be named `GOVERNANCE` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  - RegEx pattern: `^(?:|.github/|docs/)GOVERNANCE(?i:.(txt|md|rst))?$`
+                  examples:
+                    - `GOVERNANCE`
+                    - `GOVERNANCE.md`
+                    - `docs/GOVERNANCE.txt`
+                    - `.github/GOVERNANCE.md`
+
+                  :::{rubric} [`SECURITY`](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
+                  :heading-level: 3
+                  :::
+                  The file must be named `SECURITY` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  - RegEx pattern: `^(?:|.github/|docs/)SECURITY(?i:.(txt|md|rst))?$`
+                  - Examples:
+                    - `SECURITY`
+                    - `SECURITY.md`
+                    - `docs/SECURITY.txt`
+                    - `.github/SECURITY.md`
+
+                  :::{rubric} [`SUPPORT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-support-resources-to-your-project)
+                  :heading-level: 3
+                  :::
+                  The file must be named `SUPPORT` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository. 
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  - RegEx pattern: `^(?:|.github/|docs/)SUPPORT(?i:.(txt|md|rst))?$`
+                  - Examples:
+                    - `SUPPORT`
+                    - `SUPPORT.md`
+                    - `docs/SUPPORT.txt`
+                    - `.github/SUPPORT.md`
+
+                  :::{rubric} [`CODE_OF_CONDUCT`](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
+                  :heading-level: 3
+                  :::
+                  The file must be named `CODE_OF_CONDUCT` (case-sensitive)
+                  and placed either in the `.github` directory, the `docs` directory,
+                  or the root of the repository.
+                  It can have the extensions `.txt`, `.md`, or `.rst` (case-insensitive).
+                  - RegEx pattern: `^(?:|.github/|docs/)CODE_OF_CONDUCT(?i:.(txt|md|rst))?$`
+                  - Examples:
+                    - `CODE_OF_CONDUCT`
+                    - `CODE_OF_CONDUCT.md`
+                    - `docs/CODE_OF_CONDUCT.txt`
+                    - `.github/CODE_OF_CONDUCT.MD`
+
+                  Note that for "Code of conduct" to be marked as complete in the repository's community profile,
+                  GitHub only accepts the
+                  [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
+                  and the [Citizen Code of Conduct](http://stumptownsyndicate.org/).
+                examples:
+                  - README.md
+                  - .github/README.md
+                  - docs/SECURITY.md
+                  - .github/contributing.md
+              url:
+                title: URL
+                description: |
+                  URL of the file on GitHub.
+                default: ${{ repo.url.blob }}$/${{ .path }}$
+                examples:
+                  - "https://github.com/RepoDynamics/PyPackIT/blob/main/README.md"
+                $ref: https://jsonschemata.repodynamics.com/url/https
   web:
     title: Website
     description: Configurations for the project's website.
@@ -1793,7 +1971,8 @@ properties:
             default: false
         required: [ dependency ]
       theme:
-        title: Theme of the website.
+        description: |
+          HTML theme of the website.
         type: object
         additionalProperties: false
         required: [ dependency ]
@@ -1814,7 +1993,9 @@ properties:
               - $ref: https://controlman.repodynamics.com/schema/dep-direct
               - $ref: https://controlman.repodynamics.com/schema/dep-indirect
           config:
-            title: Configuration options for the theme.
+            title: HTML Theme Options
+            description: |
+
             type: object
             additionalProperties: true
       extension:
@@ -3394,27 +3575,27 @@ properties:
     required: [ main, release, pre, dev, auto ]
     properties:
       main:
-        title: Configurations for the default (aka main, trunk) branch of the repository.
+        description: Configurations for the default (a.k.a. main, trunk) branch of the repository.
         default:
           name: main
         $ref: https://controlman.repodynamics.com/schema/branch
       release:
-        title: Configurations for release branches.
+        description: Configurations for release branches.
         default:
           name: release/v
         $ref: https://controlman.repodynamics.com/schema/branch
       pre:
-        title: Configurations for pre-release branches.
+        description: Configurations for pre-release branches.
         default:
           name: pre-release/v
         $ref: https://controlman.repodynamics.com/schema/branch
       dev:
-        title: Configurations for development branches.
+        description: Configurations for development branches.
         default:
           name: dev/
         $ref: https://controlman.repodynamics.com/schema/branch
       auto:
-        title: Configurations for auto-update branches.
+        description: Configurations for auto-update branches.
         default:
           name: auto-update/
         $ref: https://controlman.repodynamics.com/schema/branch
@@ -3427,7 +3608,7 @@ properties:
     required: [ version ]
     properties:
       version:
-        title: Configurations for version tags.
+        description: Configurations for version tags.
         type: object
         default: { }
         additionalProperties: false
