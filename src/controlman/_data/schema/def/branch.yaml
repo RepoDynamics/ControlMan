@@ -31,15 +31,15 @@ properties:
     required: [ enforcement, bypass_actors ]
     properties:
       enforcement:
-        description: |
-          Enforcement level of the ruleset; one of:
-          - 'active': Enforce rules.
-          - 'disabled': Do not enforce rules.
-          - 'evaluate': Allows admins to test rules before enforcing them.
-            Admins can view insights on the Rule Insights page.
-            This is only available with GitHub Enterprise.
+        description: Enforcement level of the ruleset.
         type: string
-        enum: [ disabled, evaluate, active ]
+        enum: [ active, disabled, evaluate ]
+        description_enum:
+          - 'Enforce rules:'
+          - 'Do not enforce rules:'
+          - |
+            Allow admins to test rules before enforcing them
+            (only available with GitHub Enterprise):
         default: active
       bypass_actors:
         description: |

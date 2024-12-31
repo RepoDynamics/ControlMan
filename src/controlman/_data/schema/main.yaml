@@ -270,6 +270,7 @@ properties:
               title_underline: ""
     type: object
     required: [ expression ]
+    additionalProperties: false
     properties:
       expression:
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
