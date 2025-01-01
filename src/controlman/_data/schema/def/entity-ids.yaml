@@ -1,14 +1,13 @@
 $id: https://controlman.repodynamics.com/schema/entity-ids
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Entity IDs
-description: |
-  A list of persons (members or contributors) defined by their IDs.
+summary: A list of persons (members or contributors) defined by their IDs.
 type: array
 uniqueItems: true
 items:
   title: Entity ID
+  summary: An entity can either be defined as a string or a mapping.
   description: |
-    An entity can either be defined as a string or a mapping.
     If it is a string, it is the member or contributor ID of the entity.
     To avoid possible conflicts, you can also use the `member` key to
     explicitly specify whether the ID belongs to a team member or a contributor.
@@ -20,26 +19,23 @@ items:
     - {id: some_contributor_id, member: false}
   oneOf:
     - title: ID Only
+      summary: Member or contributor defined by their ID.
       description: |
-        Member or contributor defined by their ID.
-        
         As long as there is no conflict between member IDs and contributor IDs,
         it is safe to use this format, omitting the person's membership status.
       $ref: https://controlman.repodynamics.com/schema/member-id
     - title: ID and Membership
+      summary: Member or contributor defined by their ID and membership status.
       description: |
-        Member or contributor defined by their ID and membership status.
-        
         By specifying both the ID and membership satus of a person,
         possible ID conflicts can be avoided.
       type: object
       properties:
         id:
           title: ID
-          description: Member or contributor ID of the person.
+          summary: Member or contributor ID of the person.
           $ref: https://controlman.repodynamics.com/schema/member-id
         member:
-          description: |
-            Whether the ID corresponds to a member ID defined in [`$.team`](#ccc-team).
+          summary: Whether the ID corresponds to a member ID defined in [`$.team`](#ccc-team).
           type: boolean
           default: true
