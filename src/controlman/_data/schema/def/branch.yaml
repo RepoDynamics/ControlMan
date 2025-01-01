@@ -34,7 +34,7 @@ properties:
         description: Enforcement level of the ruleset.
         type: string
         enum: [ active, disabled, evaluate ]
-        description_enum:
+        enum_description:
           - 'Enforce rules:'
           - 'Do not enforce rules:'
           - |
