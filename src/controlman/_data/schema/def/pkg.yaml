@@ -88,7 +88,7 @@ properties:
       - `My--Project`
       - `mY-._.-ProjEcT`
       ::::
-    description_default: |
+    default_description: |
       By default, the project name is converted to a valid non-normalized package name
       according to PyPA rules. This is done by replacing all characters that are not
       ASCII alphanumeric, hyphens, underscores, or periods with a hyphen,
@@ -113,7 +113,7 @@ properties:
       and the import name will be `my_package`.
     type: string
     pattern: ^[a-zA-Z_]|[a-zA-Z_][a-zA-Z0-9_]*$
-    description_default: |
+    default_description: |
       By default, the distribution package [name](#cccdef-pkg-name)
       is converted to a valid Python identifier according to
       [Python rules](https://docs.python.org/3/reference/lexical_analysis.html#identifiers). 
@@ -287,7 +287,7 @@ properties:
       For example, they are displayed on the package's homepage on PyPI and TestPyPI.
       :::
     $ref: https://controlman.repodynamics.com/schema/entity-ids
-    description_default: All maintainers defined in `$.maintainers`.
+    default_description: All maintainers defined in `$.maintainers`.
     default: |
       #{{
           return [
