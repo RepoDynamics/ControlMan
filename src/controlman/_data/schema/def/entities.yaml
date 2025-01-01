@@ -1,7 +1,7 @@
 $id: https://controlman.repodynamics.com/schema/entities
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Entities
-description: A list of team members or other natural or legal persons.
+summary: A list of team members or other natural or legal persons.
 type: array
 uniqueItems: true
 minItems: 1
