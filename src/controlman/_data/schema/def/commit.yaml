@@ -1,13 +1,12 @@
 $id: https://controlman.repodynamics.com/schema/commit
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Commit
-description: |
-  General configurations for a commit.
+summary: General configurations for a commit.
 type: object
 required: [ type ]
 properties:
   type:
-    description: |
+    summary: |
       A [Conventional Commits](https://www.conventionalcommits.org/)-like
       type for the commit message.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
@@ -24,7 +23,7 @@ properties:
       - chore
       - revert
   scope:
-    description: |
+    summary: |
       A [Conventional Commits](https://www.conventionalcommits.org/)-like
       scope for the commit message.
     oneOf:
@@ -36,6 +35,5 @@ properties:
       - docs
       - [ pkg, test ]
   type_description:
-    description: |
-      General description of this kind of commit.
+    summary: General description of this kind of commit.
     type: string
