@@ -1,9 +1,8 @@
 $id: https://controlman.repodynamics.com/schema/entity
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Entity
-description: |
-  A team member or other natural or legal person.
-  
+summary: A team member or other natural or legal person.
+description: |  
   This can either be an [entity definition](#ccdef-entity-def)
   or the ID of an entity already defined in [`$.team`](#ccc-team).
 oneOf:
