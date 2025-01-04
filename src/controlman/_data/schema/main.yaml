@@ -1,4 +1,4 @@
-$id: https://controlman.repodynamics.com/schema
+$id: https://controlman.repodynamics.com/schema/metadata
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Control Center Configurations
 summary: >-
@@ -1196,7 +1196,8 @@ properties:
                       - active
         allOf:
           - title: Publication Type Requirement
-            summary: `publication_type` must be present if `upload_type` is set to `"publication"`.
+            summary: >-
+              `publication_type` must be present if `upload_type` is set to `"publication"`.
             if:
               properties:
                 upload_type:
@@ -1204,7 +1205,8 @@ properties:
             then:
               required: [ publication_type ]
           - title: Image Type Requirement
-            summary: `image_type` must be present if `upload_type` is set to `"image"`.
+            summary: >-
+              `image_type` must be present if `upload_type` is set to `"image"`.
             if:
               properties:
                 upload_type:
@@ -1212,7 +1214,8 @@ properties:
             then:
               required: [ image_type ]
           - title: License Requirement
-            summary: `license` must be present if `access_right` is set to `"open"` or `"embargoed"`.
+            summary: >-
+              `license` must be present if `access_right` is set to `"open"` or `"embargoed"`.
             if:
               properties:
                 access_right:
@@ -1220,7 +1223,8 @@ properties:
             then:
               required: [ license ]
           - title: Embargo Date Requirement
-            summary: `embargo_date` must be present if `access_right` is set to `"embargoed"`.
+            summary: >-
+              `embargo_date` must be present if `access_right` is set to `"embargoed"`.
             if:
               properties:
                 access_right:
@@ -1228,7 +1232,8 @@ properties:
             then:
               required: [ embargo_date ]
           - title: Access Conditions Requirement
-            summary: `access_conditions` must be present if `access_right` is set to `"restricted"`.
+            summary: >-
+              `access_conditions` must be present if `access_right` is set to `"restricted"`.
             if:
               properties:
                 access_right:
@@ -1286,7 +1291,8 @@ properties:
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       tidelift:
         title: Tidelift
-        summary: [Tidelift](https://tidelift.com/) package address.
+        summary: >-
+          [Tidelift](https://tidelift.com/) package address.
         description: |
           This is a string with the format `<PLATFORM-NAME>/<PACKAGE-NAME>`,
           where `<PACKAGE-NAME>` is the name of your package,
@@ -1963,7 +1969,7 @@ properties:
         $ref: https://controlman.repodynamics.com/schema/env
       url:
         title: URL
-        title: Website URLs.
+        summary: Website URLs.
         type: object
         default: { }
         properties:

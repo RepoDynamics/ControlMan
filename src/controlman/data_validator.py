@@ -528,8 +528,7 @@ def get_registry():
         return _referencing.Resource.from_contents(schema, default_specification=spec)
 
     resources = []
-    def_schemas_path = _schema_dir_path
-    for schema_filepath in def_schemas_path.glob("**/*.yaml"):
+    for schema_filepath in _schema_dir_path.glob("**/*.yaml"):
         schema_dict = _ps.read.yaml_from_file(path=schema_filepath)
         resources.append(make_resource(schema_dict))
     registry, _ = _mdit_schema.make_registry(dynamic=False, crawl=True, add_resources=resources)

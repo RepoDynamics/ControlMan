@@ -1,18 +1,18 @@
 $id: https://controlman.repodynamics.com/schema/identifier
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Identifier
-description: A Citation File Format identifier for the work.
+summary: A Citation File Format (CFF) identifier for the work.
 type: object
 additionalProperties: false
 required: [ type, value ]
 properties:
   type:
-    description: Type of the identifier.
+    summary: Type of the identifier.
     type: string
     enum: [ doi, url, swh, other ]
   value:
-    description: |
-      Value of the identifier.
+    summary: Value of the identifier.
+    description: |      
       Depending on `type`, this must be:
       - `doi`: A Digital Object Identifier (DOI) 
          conforming to the regex pattern `^10\.\d{4,9}(\.\d+)?/[A-Za-z0-9:/_;\-\.\(\)\[\]\\]+$`.
@@ -26,7 +26,7 @@ properties:
       - https://example.com
       - swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2
   description:
-    description: A description for the identifier value.
+    summary: A description for the identifier value.
     $ref: https://jsonschemata.repodynamics.com/string/nonempty
     examples:
       - The version DOI for this version, which has a relation childOf with the concept
@@ -34,7 +34,9 @@ properties:
       - The identifier provided by Archival Repository, which points to this version
         of the software.
 allOf:
-  - if:
+  - title: DOI
+    summary: Conditions for when the identifier is a DOI.
+    if:
       properties:
         type:
           const: doi
@@ -42,7 +44,9 @@ allOf:
       properties:
         value:
           $ref: https://jsonschemata.repodynamics.com/id/doi
-  - if:
+  - title: URL
+    summary: Conditions for when the identifier is a URL.
+    if:
       properties:
         type:
           const: url
@@ -50,16 +54,19 @@ allOf:
       properties:
         value:
           $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-  - if:
+  - title: SWH ID
+    summary: Conditions for when the identifier is a [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html).
+    if:
       properties:
         type:
           const: swh
     then:
       properties:
         value:
+          summary: >-
+            [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html).
           description: |
-            [Software Heritage identifier](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html)
-            without further qualifiers, such as origin, visit, anchor, and path.
+            The identifier must be provided without further qualifiers, such as origin, visit, anchor, and path.
           type: string
           format: swh
           pattern: ^swh:1:(snp|rel|rev|dir|cnt):[0-9a-fA-F]{40}$
