@@ -111,7 +111,7 @@ def _create_external_tag_constructor(
             if cached_data:
                 return cached_data
         url, *jsonpath_expr = tag_value.split(' ', 1)
-        file_ext = url.split('.')[-1]
+        file_ext = url.split('.')[-1].lower()
         try:
             data_raw_whole = _pl.http.request(
                 url=url,
@@ -139,14 +139,14 @@ def _create_external_tag_constructor(
         else:
             raise ValueError(f"Invalid file extension {file_ext} for URL {url}")
         if jsonpath_expr:
-            jsonpath_expr = _jsonpath.parse(jsonpath_expr[0])
-            matches = jsonpath_expr.find(data)
-            if not matches:
+            try:
+                data = _ps.update.TemplateFiller().fill(
+                    data=data,
+                    template=jsonpath_expr,
+                )
+            except Exception as e:
                 raise ValueError(
                     f"No match found for JSONPath '{jsonpath_expr}' in the JSON data from '{url}'")
-            data = [match.value for match in matches]
-            if len(data) == 1:
-                data = data[0]
         if cache_manager:
             cache_manager.set(typ="extension", key=tag_value, value=data)
         return data

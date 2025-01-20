@@ -20,11 +20,19 @@ FILENAME_LOCAL_CONFIG = "config.yaml"
 DIRNAME_CC_HOOK = "hooks"
 
 FILENAME_CC_HOOK_REQUIREMENTS = "requirements.txt"
-FILENAME_CC_HOOK_STAGED = "staged.py"
-FILENAME_CC_HOOK_INLINE = "inline.py"
+FILENAME_CC_HOOK_STAGED = "cca.py"
+FILENAME_CC_HOOK_INLINE = "cca_inline.py"
 
-FUNCNAME_CC_HOOK_POST_LOAD = "post_load"
-FUNCNAME_CC_HOOK_POST_DATA = "post_data"
+FUNCNAME_CC_HOOK_INIT = "initialization"
+FUNCNAME_CC_HOOK_LOAD = "load"
+FUNCNAME_CC_HOOK_LOAD_VALID = "load_validation"
+FUNCNAME_CC_HOOK_AUGMENT = "augmentation"
+FUNCNAME_CC_HOOK_AUGMENT_VALID = "augmentation_validation"
+FUNCNAME_CC_HOOK_TEMPLATE = "templating"
+FUNCNAME_CC_HOOK_TEMPLATE_VALID = "templating_validation"
+FUNCNAME_CC_HOOK_OUTPUT = "output_generation"
+FUNCNAME_CC_HOOK_SYNC = "synchronization"
+FUNCNAME_CC_HOOK_FINAL = "finalization"
 
 CC_EXTENSION_TAG = u"!ext"
 

@@ -18,12 +18,10 @@ class PythonDataGenerator:
     def __init__(
         self,
         data: _ps.NestedDict,
-        git_manager: _Git,
         cache: CacheManager,
         github_api: pylinks.api.GitHub,
     ):
         self._data = data
-        self._git = git_manager
         self._cache = cache
         self._github_api = github_api
         return

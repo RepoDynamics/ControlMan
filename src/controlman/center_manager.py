@@ -43,11 +43,11 @@ class CenterManager:
         self._path_cc = cc_path
         self._data_before: _ps.NestedDict = data_before
         self._data_main: _ps.NestedDict = data_main
+        self._github_token = github_token
         self._github_api = _pylinks.api.github(token=github_token)
         self._future_vers = future_versions or {}
 
         self._path_root = self._git.repo_path
-        self._hook_manager = _HookManager(dir_path=self._path_cc / const.DIRNAME_CC_HOOK)
         relpath_local_cache = self._data_before.get("local.cache.path")
         path_local_cache = None
         retention_hours = self._data_before.get("control.cache.retention_hours", {})
@@ -66,6 +66,16 @@ class CenterManager:
             path_local_cache=path_local_cache,
             retention_hours=retention_hours,
         )
+        self._hook_manager = _HookManager(
+            dir_path=self._path_cc / const.DIRNAME_CC_HOOK,
+            repo_path=self._git.repo_path,
+            ccc=self._data_before,
+            ccc_main=self._data_main,
+            cache_manager=self._cache_manager,
+            github_token=self._github_token,
+        )
+        with _logger.sectioning("CCA Initialization Hooks"):
+            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_INIT)
         self._data_raw: _ps.NestedDict | None = None
         self._data: _ps.NestedDict | None = None
         self._files: list[_GeneratedFile] = []
@@ -77,28 +87,34 @@ class CenterManager:
     def load(self) -> _ps.NestedDict:
         if self._data_raw:
             return self._data_raw
-        with _logger.sectioning("Configuration File Load"):
+        with _logger.sectioning("Config Files Load"):
             full_data = _data_loader.load(
                 path_cc=self._path_cc,
                 cache_manager=self._cache_manager,
             )
-        with _logger.sectioning("Post-Load User Hooks"):
-            self._hook_manager.generate(
-                const.FUNCNAME_CC_HOOK_POST_LOAD,
-                full_data,
-            )
+        with _logger.sectioning("CCA Load Hooks"):
+            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_LOAD, data=full_data)
         with _logger.sectioning("Post-Load Data Validation"):
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
+        with _logger.sectioning("CCA Load Validation Hooks"):
+            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_LOAD_VALID, data=full_data)
         code_context_call = {
             "changelog": ChangelogManager(repo_path=self._git.repo_path)
         }
         inline_hooks = self._hook_manager.inline_hooks
         if inline_hooks:
-            code_context_call["hook"] = inline_hooks.InlineHooks(self._git.repo_path, self._data_before)
+            code_context_call["hook"] = inline_hooks.Hooks(
+                repo_path=self._git.repo_path,
+                ccc=self._data_before,
+                ccc_main=self._data_main,
+                cache_manager=self._cache_manager,
+                github_token=self._github_token,
+            )
         self._data_raw = _ps.NestedDict(
             full_data,
             code_context={
                 "repo_path": self._path_root,
+                "ccc_main": self._data_main,
                 "ccc": self._data_before,
                 "slugify": _pylinks.string.to_slug,
                 "fill_entity": _functools.partial(
@@ -132,18 +148,22 @@ class CenterManager:
                 data_main=self._data_main,
                 future_versions=self._future_vers,
             )
+        with _logger.sectioning("CCA Augmentation Hooks"):
+            self._hook_manager.generate(
+                const.FUNCNAME_CC_HOOK_AUGMENT,
+                data,
+            )
         with _logger.sectioning("Post-Generation Data Validation"):
             # Validate again to fill default values that depend on generated data
             # Example: A key may be referencing `team.owner.email.url`, which has a default
             # value based on `team.owner.email.id`. But since `team.owner` is generated
             # dynamically, the default value for `team.owner.email.url` is not set in the initial validation.
             _data_validator.validate(data=data(), source="source", before_substitution=True)
-        with _logger.sectioning("Post-Generation User Hooks"):
+        with _logger.sectioning("CCA Augmentation Validation Hooks"):
             self._hook_manager.generate(
-                const.FUNCNAME_CC_HOOK_POST_DATA,
+                const.FUNCNAME_CC_HOOK_AUGMENT_VALID,
                 data,
             )
-            self._cache_manager.save()
         with _logger.sectioning("Template Resolution"):
             data["var"] = controlman.read_variables(repo_path=self._path_root)
             data.fill()
@@ -152,10 +172,21 @@ class CenterManager:
                 "All template variables have been successfully resolved.",
             )
             data.pop("var")
+        with _logger.sectioning("CCA Templating Hooks"):
+            self._hook_manager.generate(
+                const.FUNCNAME_CC_HOOK_TEMPLATE,
+                data,
+            )
         data = _ps.NestedDict(_ps.update.remove_keys(data(), const.RELATIVE_TEMPLATE_KEYS))
         with _logger.sectioning("Final Data Validation"):
             _data_validator.validate(data=data(), source="source")
+        with _logger.sectioning("CCA Templating Validation Hooks"):
+            self._hook_manager.generate(
+                const.FUNCNAME_CC_HOOK_TEMPLATE_VALID,
+                data,
+            )
         self._data = data
+        self._cache_manager.save()
         return self._data
 
     def generate_files(self) -> list[_GeneratedFile]:
@@ -181,6 +212,13 @@ class CenterManager:
                 all_paths.append((changed_key, DynamicFileChangeType[change_type.upper()]))
         self._changes = all_paths
         dirs = self._compare_dirs()
+        with _logger.sectioning("CCA Output Generation Hooks"):
+            self._hook_manager.generate(
+                const.FUNCNAME_CC_HOOK_OUTPUT,
+                data=self._data,
+                files=self._files,
+                dirs=dirs,
+            )
         return self._changes, files, dirs
 
     def report(self) -> _ControlCenterReporter:
@@ -242,6 +280,8 @@ class CenterManager:
                             destination_path = self._path_root.joinpath(destination).joinpath(_Path(source).stem)
                             destination_path.parent.mkdir(parents=True, exist_ok=True)
                             _shutil.copy2(self._path_root.joinpath(source), destination_path)
+        with _logger.sectioning("CCA Synchronization Hooks"):
+            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_SYNC)
         return
 
     def _compare_dirs(self):

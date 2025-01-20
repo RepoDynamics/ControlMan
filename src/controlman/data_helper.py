@@ -21,7 +21,7 @@ def team_members_with_role_types(
     role_types: str | Sequence[str],
     active_only: bool = True,
 ) -> list[dict]:
-    """Get team members with a specific role type.
+    """Get team members with specific role types.
 
     Parameters
     ----------

@@ -162,20 +162,25 @@ properties:
     default: ${{ keywords }}$
     $ref: https://jsonschemata.repodynamics.com/array/unique-strings
   classifiers:
-    title: |
-      Project's [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers).
+    summary: >-
+      [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers)
+      for the package.
     description: |
-      The main classifiers are automatically generated based on the project's metadata.
-      These are:
-      - `Development Status`: Based on the latest version tag on the branch. 
-      - `License`: Based on [`license.id`](#ccc-license.id), for supported licenses. 
-      - `Operating System`: Based on the provided [`os`](#ccdef-pkg-os) configurations.
-      - `Programming Language`: Based on the provided [`python.version`](#ccdef-pkg-python-version-spec) configurations.
-      - `Typed`: Based on [`typed`](#ccdef-pkg-typed).
-      Here you can add additional classifiers, such as `Topic` or `Intended Audience`.
-      For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/),
-      or the [trove-classifiers](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
-      package from PyPA.
+      Classifiers are categorized into the following groups:
+      - Development Status
+      - Environment
+      - Framework
+      - Intended Audience
+      - License
+      - Natural Language
+      - Operating System
+      - Programming Language
+      - Topic
+      - Typing
+      
+      For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/)
+      or the [`trove-classifiers`](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
+      Python package from PyPA.
     type: array
     uniqueItems: true
     items:
@@ -193,16 +198,10 @@ properties:
       [PyPA specifications](https://packaging.python.org/en/latest/specifications/pyproject-toml/#urls).
       For each entry, the key defines the resource name displayed on PyPI,
       and the value defines the URL.
-      Following keys (case-insensitive) are automatically recognized by PyPI (cf.
-      [PyPI Warehouse source code](https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62))
-      and displayed with an icon:
-      - `home`, `homepage`, `home page`
-      - `download`
-      - `changelog`, `change log`, `changes`, `release notes`, `news`, `what's new`, `history`
-      - `documentation`, `docs`
-      - Keys starting with:
-        - `issue`, `bug`, `tracker`, `report`
-        - `sponsor`, `funding`, `donate`, `donation`
+      Some keys and URL patterns are recognized by PyPI
+      and displayed with a custom icon.
+      For more details, see [PyPI documentation](https://docs.pypi.org/project_metadata/#icons)
+      and the corresponding [Warehouse source code](https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62).
     default:
       Homepage: ${{ web.url.home }}$
       Source: ${{ repo.url.home }}$
@@ -264,7 +263,7 @@ properties:
           {"id": int_author["id"], "member": True}
           for int_author in team_members_with_role_types("Author", active_only=True)
         ] + [
-          {"id"}: ext_author["id"], "member": False}
+          {"id": ext_author["id"], "member": False}
           for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
         ]
       }}#

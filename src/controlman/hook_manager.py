@@ -1,3 +1,6 @@
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 from pathlib import Path as _Path
 
 from loggerman import logger as _logger
@@ -7,12 +10,21 @@ import mdit as _mdit
 
 from controlman import const as _const, exception as _exception
 
+if _TYPE_CHECKING:
+    from pyserials.nested_dict import NestedDict
+    from controlman.cache_manager import CacheManager
+
 
 class HookManager:
 
     def __init__(
         self,
         dir_path: _Path,
+        repo_path: _Path,
+        ccc: NestedDict,
+        ccc_main: NestedDict,
+        cache_manager: CacheManager,
+        github_token: str | None = None,
         module_name_staged: str = _const.FILENAME_CC_HOOK_STAGED,
         module_name_inline: str = _const.FILENAME_CC_HOOK_INLINE,
         filename_env: str = _const.FILENAME_CC_HOOK_REQUIREMENTS,
@@ -111,30 +123,38 @@ class HookManager:
             opened=True,
             type=env_log_type,
         )
-        self._generator = load_module(module_name_staged)
         self.inline_hooks = load_module(module_name_inline)
+        self._generator = load_module(module_name_staged)
+        if self._generator:
+            self._generator = self._generator.Hooks(
+                repo_path=repo_path,
+                ccc=ccc,
+                ccc_main=ccc_main,
+                cache_manager=cache_manager,
+                github_token=github_token,
+            )
         return
 
-    def generate(self, func_name: str, *args, **kwargs):
+    def generate(self, method: str, *args, **kwargs):
         log_title = "Hook Execution"
         if not self._generator:
             _logger.info(
                 log_title,
                 _mdit.inline_container(
-                    "No user hook module found. Skipping hook ",
-                    _mdit.element.code_span(func_name),
+                    "No CCA hook module found. Skipping hook ",
+                    _mdit.element.code_span(method),
                     "."
                 ),
             )
             return
-        hook = getattr(self._generator, func_name, None)
+        hook = getattr(self._generator, method, None)
         if not hook:
             _logger.info(
                 log_title,
                 _mdit.inline_container(
-                    "No user hook function found. Skipping hook ",
-                    _mdit.element.code_span(func_name),
-                    "."
+                    "No CCA hook found for stage ",
+                    _mdit.element.code_span(method),
+                    ". Skipping hook."
                 ),
             )
             return
@@ -151,20 +171,20 @@ class HookManager:
                 log_title,
                 _mdit.inline_container(
                     "Failed to execute user hook ",
-                    _mdit.element.code_span(func_name),
+                    _mdit.element.code_span(method),
                     "."
                 ),
                 error_traceback,
             )
             raise _exception.data_gen.ControlManHookError(
                 details=error_traceback,
-                hook_name=func_name,
+                hook_name=method,
             ) from None
         _logger.success(
             log_title,
             _mdit.inline_container(
                 "Successfully executed user hook ",
-                _mdit.element.code_span(func_name),
+                _mdit.element.code_span(method),
                 "."
             ),
         )

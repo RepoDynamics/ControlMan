@@ -2300,7 +2300,7 @@ properties:
             For each commit a key-value pair must be added
             where the key is the ID of the commit type,
             to reference in other configurations.
-          unevaluatedProperties: false
+#          unevaluatedProperties: false
           allOf:
             - $ref: https://controlman.repodynamics.com/schema/commit-auto
             - type: object
@@ -2988,6 +2988,15 @@ properties:
       modified file in that pull request as reviewers.
       Note that you can also assign issue-form-specific review tasks to each role
       (cf. [`ccc.role.*.assignment.review`](#ccc-role---assignment-review)).
+      
+      :::{admonition} Considerations
+      :class: important
+      
+      - Code owners must have write permissions to the repository.
+      - For code owners to be automatically requested for reviews, protection rules for
+        [requiring pull request reviews](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-pull-request-reviews-before-merging)
+        must be enabled.
+      :::
     type: object
     additionalProperties: false
     required: [ path ]
@@ -3047,11 +3056,14 @@ properties:
           - Another description different from project title.
       topics:
         summary: |
-          Project
+          Project keywords or
           [topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics).
         description: |
-          These keywords help others find your project on GitHub,
-          and can include project's intended purpose, subject area,
+          These keywords help others find your project on GitHub
+          through various
+          [search](https://docs.github.com/en/search-github/searching-on-github/searching-for-repositories)
+          and [filtering](https://docs.github.com/en/search-github/searching-on-github/searching-topics) options.
+          They can include project's intended purpose, subject area,
           affinity groups, and other important qualities.
           Note that GitHub only accepts up to 20 topics.
         type: array

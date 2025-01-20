@@ -43,7 +43,6 @@ def generate(
     if data.get("pkg"):
         _PythonDataGenerator(
             data=data,
-            git_manager=git_manager,
             cache=cache_manager,
             github_api=github_api,
         ).generate()

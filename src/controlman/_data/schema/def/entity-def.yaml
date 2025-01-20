@@ -161,8 +161,7 @@ properties:
     description: Roles of the entity and their priorities.
     $ref: https://controlman.repodynamics.com/schema/role-priority
   ownership:
-    description: |
-      Ownership of different parts of the project.
+    summary: Ownership of different parts of the project.
     $ref: https://controlman.repodynamics.com/schema/code-owner
   affiliation:
     title: Affiliation
