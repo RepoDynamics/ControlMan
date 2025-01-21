@@ -123,6 +123,7 @@ class HookManager:
             opened=True,
             type=env_log_type,
         )
+
         self.inline_hooks = load_module(module_name_inline)
         self._generator = load_module(module_name_staged)
         if self._generator:

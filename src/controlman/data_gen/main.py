@@ -9,6 +9,7 @@ from controlman import data_helper as _helper
 from controlman.cache_manager import CacheManager
 from controlman import exception as _exception
 from controlman import date
+import controlman
 
 
 class MainDataGenerator:
@@ -224,6 +225,18 @@ class MainDataGenerator:
             category_obj["is_answerable"] = category["isAnswerable"]
             category_obj["description"] = category["description"]
         return
+
+    def _vars(self):
+        var = controlman.read_variables(repo_path=self._git.repo_path)
+        zenodo = self._data["citation.zenodo"]
+        if zenodo:
+            if not zenodo.get("concept"):
+                concept_doi = var["zenodo"]["concept"]["doi"]
+                if concept_doi:
+                    zenodo["concept"] = {"doi": concept_doi, "id": var["zenodo"]["concept"]["id"]}
+        return
+
+
 
 
 def normalize_license_filename(filename: str) -> str:

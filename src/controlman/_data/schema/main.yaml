@@ -882,6 +882,16 @@ properties:
         additionalProperties: false
         required: [ title, description, upload_type, access_right ]
         properties:
+          concept:
+            summary: Concept record data.
+            type: object
+            required: [doi, id]
+            properties:
+              doi:
+                $ref: https://jsonschemata.repodynamics.com/id/doi
+              id:
+                type: integer
+                minimum: 0
           title:
             summary: Title of the deposition.
             default: ${{ citation.cff.title }}$
