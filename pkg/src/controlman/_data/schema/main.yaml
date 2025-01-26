@@ -21,7 +21,7 @@ properties:
       [repository name](#ccc-repo-name), [distribution name](#ccc-pkg-name)
       and [import name](#ccc-pkg-import-name) of the package,
       and other project components**, which generally have stricter naming requirements.
-      Therefore, while these can be separately set to custom values,
+      While these names can be separately set to custom values,
       it is recommended to allow the project name to be derived from the repository name (see default),
       and other names from the project name. 
       
@@ -51,7 +51,7 @@ properties:
     $ref: https://jsonschemata.repodynamics.com/string/oneline
     summary: Title or motto of the project.
     description: |
-      It must be a one-line string, i.e., no newlines allowed.
+      It must be a one-line string, i.e., newlines are not allowed.
       
       :::{admonition} Usage
       :class: dropdown note toggle-shown
@@ -1375,89 +1375,279 @@ properties:
       Colors of the project's light and dark themes.
       Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
       such as hexadecimal, RGB, HSL, or named colors.
+    $comment: |
+      Color names and values taken from pydata-sphinx-theme:
+      - https://github.com/pydata/pydata-sphinx-theme/blob/main/src/pydata_sphinx_theme/assets/styles/variables/_color.scss
+      - https://github.com/pydata/pydata-sphinx-theme/blob/main/src/pydata_sphinx_theme/assets/styles/extensions/_sphinx_design.scss
     type: object
     required: [ primary, secondary ]
     properties:
       primary:
         summary: Primary color of the project.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(189 87 30)  #0a7d91
+          dark: hsl(189 54 51)  #3fb1c5
+      primary-bg:
+        summary: Primary background.
+        description: |
+          In the website, this is sparingly used.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(189 54 88)  #d0ecf1
+          dark: hsl(189 85 11)  #042c33
       secondary:
         summary: Secondary color of the project.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(262 75 58)  #8045e5
+          dark: hsl(263 98 68)  #9c5ffd
+      secondary-bg:
+        summary: Secondary background.
+        description: |
+          In the website, this is sparingly used, e.g., for announcement banner.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(267 100 89)  #e0c7ff
+          dark: hsl(262 58 24)  #341a61
       accent:
         summary: Accent color of the project.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(308 59 48)  #c132af
+          dark: hsl(308 65 70)  #e47fd7
+      accent-bg:
+        summary: Accent background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(307 64 92)  #f8dff5
+          dark: hsl(308 59 17)  #46123f
+      info:
+        summary: Semantic info color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(219 82 53)  #276be9
+          dark: hsl(219 82 71)  #79a3f2
+      info-bg:
+        summary: Info background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(219 84 93)  #dce7fc
+          dark: hsl(219 88, 19)  #06245d
+      warning:
+        summary: Semantic warning color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(24 93 50)  #f66a0a
+          dark: hsl(25 100 64)  #ff9245
+      warning-bg:
+        summary: Warning background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(29 74 89)  #f8e3d0
+          dark: hsl(24 96 20)  #652a02
+      success:
+        summary: Semantic success color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(149 100 26)  #00843f
+          dark: hsl(149 36 54)  #5fb488
+      success-bg:
+        summary: Success background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(150 37 88)  #d6ece1
+          dark: hsl(149 100 9)  #002f17
+      attention:
+        summary: Semantic attention color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.warning }}$
+      attention-bg:
+        summary: Attention background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.warning-bg }}$
+      danger:
+        summary: Semantic danger color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(351 68 51)  #d72d47
+          dark: hsl(352 66% 72)  #e78894
+      danger-bg:
+        summary: Danger background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(353 67 93)  #f9e1e4
+          dark: hsl(350 64 19)  #4e111b
+      light:
+        summary: Semantic light color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(210 9 96)  #f3f4f5
+          dark: hsl(210 9 96)  #f3f4f5
+      light-bg:
+        summary: Light background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(210 9 97)  #f7f7f8
+          dark: hsl(210 9 67)  #a5a5b1
+      dark:
+        summary: Semantic dark color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(218 19 16)  #222832
+          dark: hsl(218 19 16)  #222832
+      dark-bg:
+        summary: Dark background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(218 19 16)  #222832
+          dark: hsl(218 19 16)  #222832
+      muted:
+        summary: Semantic muted color.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(216 20 20)  #29313d
+          dark: hsl(210 9 96)  #f3f4f5
+      muted-bg:
+        summary: Muted background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(216 20 44)  #5a6c87
+          dark: hsl(216 20 14)  #1d222b
       background:
         summary: Background color.
         description: |
           In the website, this corresponds to the color of the canvas;
           i.e. the deepest layer.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(0 0 100)  #ffffff
+          dark: hsl(216 20 10)  #14181e
       on-background:
         summary: Color for elements directly on top of background.
         description: |
           In the website, this corresponds e.g., to the color of the header navbar,
           providing slight contrast against the background.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(0 0 100)  #ffffff
+          dark: hsl(218 19 16)  #222832
       surface:
         summary: Surface color.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(210 9 96)  #f3f4f5
+          dark: hsl(216 20 20)  #29313d
       on-surface:
         summary: Color for elements directly on top of surface.
         description: |
           In the website, this corresponds e.g., to the color of the sidebar directives,
         $ref: https://controlman.repodynamics.com/schema/themed-color
-      info:
-        summary: Semantic color for info blocks.
+        default:
+          light: hsl(218 19 16)  #222832
+          dark: hsl(210 9 96)  #f3f4f5
+      heading:
+        summary: Color for heading titles.
+        description: |
+          In the website, this is used as the color of `<h1>` to `<h6>` elements.
         $ref: https://controlman.repodynamics.com/schema/themed-color
-      warning:
-        summary: Semantic color for warning blocks.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-      success:
-        summary: Semantic color for success blocks.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-      attention:
-        summary: Semantic color for attention blocks.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-      danger:
-        summary: Semantic color for danger blocks.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.text-base }}$
       text-base:
         summary: Base color for texts.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(218 19 16)  #222832
+          dark: hsl(208 18 84)  #ced6dd
       text-muted:
         summary: Color for muted texts.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(216 20 35)  #48566b
+          dark: hsl(215 11 65)  #9ca4af
+      link:
+        summary: Color for links.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.primary }}$
+      link-hover:
+        summary: Color for links on mouse hover.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.secondary }}$
       shadow:
         summary: Color for shadows.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: rgba(0 0 0 0.1)
+          dark: rgba(0 0 0 0.1)
       border:
         summary: Color for borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(213 11 84)  #d1d5da
+          dark: hsl(216 20 35)  #48566b
       border-muted:
         summary: Color for muted borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: rgba(23, 23, 26, 0.2)
+          dark: hsl(216 20 20)  #29313d
       blockquote-notch:
         summary: Color for block-quote notches.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(215 12 46)  #677384
+          dark: hsl(215 11 65)  #9ca4af
       inline-code:
         summary: Color for inline codes.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(308 59 36)  #912583
+          dark: hsl(307 65 87)  #f3c7ee
       inline-code-links:
         summary: Color for inline code links.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(189 86 23)  #085d6c
+          dark: hsl(189 54 51)  #3fb1c5
       target:
         summary: Color for target components.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(37 80 77)  #f3cf95
+          dark: hsl(53 93 21)  #675c04
       table:
         summary: Color for tables.
         $ref: https://controlman.repodynamics.com/schema/themed-color
-      table-row-hover:
-        summary: Color for table rows on hover.
+        default:
+          light: hsl(216 20 10)  #14181e
+          dark: hsl(0 0 100)  #ffffff
+      table-row-hover-bg:
+        summary: Color for table rows on mouse hover.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(267 95 85)  #d5b4fd
+          dark: hsl(262 59 35)  #4b258f
       table-inner-border:
         summary: Color for table inner borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
+        default:
+          light: hsl(216 11 91)  #e5e7ea
+          dark: hsl(215 19 26)  #364150
+      table-outer-border:
+        summary: Color for table outer borders.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.surface }}$
+      table-heading-bg:
+        summary: Color for table heading background.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.surface }}$
+      table-row-zebra-high-bg:
+        summary: Color for high-contrast table rows in zebra mode.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.on-background }}$
+      table-row-zebra-low-bg:
+        summary: Color for low-contrast table rows in zebra mode.
+        $ref: https://controlman.repodynamics.com/schema/themed-color
+        default: ${{ color.surface }}$
   # Documentation
   document:
     summary: Dynamic documentation files for the project.
@@ -1720,9 +1910,9 @@ properties:
             default:
               import_name: sphinx
               pip:
-                spec: sphinx == 7.4.7
+                spec: sphinx == 8.1.3
               conda:
-                spec: sphinx == 7.4.7
+                spec: sphinx == 8.1.3
                 channel: conda-forge
               url:
                 docs: https://www.sphinx-doc.org/
@@ -1913,9 +2103,9 @@ properties:
             default:
               import_name: pydata_sphinx_theme
               pip:
-                spec: pydata-sphinx-theme == 0.15.4
+                spec: pydata-sphinx-theme == 0.16.1
               conda:
-                spec: pydata-sphinx-theme == 0.15.4
+                spec: pydata-sphinx-theme == 0.16.1
                 channel: conda-forge
               url:
                 docs: https://pydata-sphinx-theme.readthedocs.io/
@@ -1944,6 +2134,94 @@ properties:
               summary: Extension configurations to be added to the Sphinx configuration.
               type: object
               additionalProperties: true
+      css:
+        title: CSS
+        summary: CSS stylesheet definitions.
+        description: |
+          These stylesheets are dynamically added to the website during builds.
+          For each stylesheet, add a key-value pair where the
+          key is an ID for the stylesheet,
+          and the value is a mapping defining CSS selectors, 
+          property names, and corresponding values.
+        type: object
+        additionalProperties:
+          title: Stylesheet
+          summary: |
+            A series of property-value pairs with common property-name prefix and/or suffixes,
+            for a common CSS selector.
+          description: |
+            You can either define a single `selector` with optional `prefix` and `suffix`,
+            or defines a series of `cases`, each with its own selector, prefix, and suffix.
+          type: object
+          additionalProperties: false
+          required: [ properties ]
+          oneOf:
+            - required: [ selector ]
+            - required: [ cases ]
+          properties:
+            selector:
+              summary: Single CSS selector to apply all properties to.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+              description: |
+                If you use this instead of `cases`, then all `properties` must be strings.
+              examples:
+                - 'html[data-theme="light"]'
+                - '.some-class-name'
+                - '#some-id'
+            prefix:
+              summary: Single prefix to prepend to all property names.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+              examples:
+                - '--'
+                - '--pst-color-'
+            suffix:
+              summary: Single suffix to append to all property names.
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            cases:
+              summary: Cases for applying properties.
+              description: |
+                To remove redundancy, you can define multiple selectors
+                (each with optional property-names prefix and suffix)
+                to apply properties to. For example, you may define
+                color variables to be applied to `html[data-theme="light"]`
+                and `html[data-theme="dark"]` selectors.
+              type: object
+              minProperties: 1
+              additionalProperties:
+                type: object
+                additionalProperties: false
+                required: [ selector ]
+                properties:
+                  selector:
+                    summary: CSS selector to apply properties to.
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                  prefix:
+                    summary: Prefix to prepend to property names.
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                  suffix:
+                    summary: Suffix to append to property names.
+                    $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            properties:
+              summary: Properties to apply to the selector.
+              description: |
+                Each key here defines the middle part of a CSS property name.
+                It is prefixed and suffixed (if defined) to generate the full name.
+                If you have defined a single selector for this stylesheet,
+                then all values must be strings. Otherwise, values must be mappings
+                from case IDs to corresponding values as strings.
+              type: object
+              additionalProperties:
+                title: Property
+                summary: The value of the CSS property.
+                description: |
+                  If you have defined a single selector for this stylesheet,
+                  then this must be a string. Otherwise, it must be a mapping
+                  from case IDs to corresponding values as strings.
+                oneOf:
+                  - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+                  - type: object
+                    additionalProperties:
+                      $ref: https://jsonschemata.repodynamics.com/string/nonempty
       page:
         summary: Paths to important pages on the website.
         description:
