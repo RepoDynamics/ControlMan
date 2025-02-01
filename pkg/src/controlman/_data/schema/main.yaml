@@ -3931,6 +3931,11 @@ properties:
     type: object
     additionalProperties: false
     properties:
+      dynamic:
+        summary: Configurations for creating and maintaining dynamic files in the repository.
+        type: object
+        additionalProperties:
+          $ref: https://controlman.repodynamics.com/schema/dynamic-file
       duplicate:
         summary: Definition of duplicate locations for repository files.
         description: |  
