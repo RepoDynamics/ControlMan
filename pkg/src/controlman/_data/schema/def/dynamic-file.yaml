@@ -1,0 +1,92 @@
+$id: https://controlman.repodynamics.com/schema/dynamic-file
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Dynamic File
+summary: Configurations for generating and maintaining a dynamic file.
+description: |
+  Dynamically define the content and output path of a file.
+type: object
+additionalProperties: false
+required: [ type, path, content ]
+properties:
+  name:
+    summary: Display name of the file.
+    $ref: https://jsonschemata.repodynamics.com/string/oneline
+    description: |
+      This is **not** the filename,
+      but a display name for documentation.
+    examples:
+      - MyTool Configuration File
+      - SomeData Data File
+      - SomeCool Source File
+  type:
+    summary: Format of the dynamic file.
+    description: |
+      If `txt` is selected, the content will be written to the given file as is.
+      For other types, the content will be written in the specified format.
+    type: string
+    enum: [ yaml, json, toml, txt ]
+  path:
+    summary: Path to write the output file.
+    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+    description: |
+      Changing the path will automatically remove the file from the old path
+      and add the (updated) file to the new path during the next synchronization.
+    examples:
+      - .github/.pre-commit-config.yaml
+  content:
+    summary: Content of the file.
+    description: |
+      The content will be written to the given filepath in the format specified by `type`.
+    type: [ string, array, object ]
+  content_setting:
+    item_separator:
+      type: string
+      default: "\n"
+    item_prefix:
+      type: string
+      default: ""
+    item_suffix:
+      type: string
+      default: ""
+  file_setting:
+    type: object
+    additionalProperties: false
+    default: { }
+    properties:
+      end_of_file_newline:
+        type: boolean
+        default: true
+      sort_keys:
+        type: boolean
+        default: true
+      json:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          indent:
+            type: [ integer, 'null' ]
+            default: 3
+      yaml:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          mapping_indent:
+            type: integer
+            minimum: 2
+            default: 2
+          sequence_indent:
+            type: integer
+            minimum: 2
+            default: 4
+          sequence_indent_offset:
+            type: integer
+            minimum: 0
+            default: 2
+          multiline_string:
+            enum: [ quote, block ]
+            default: block
+          remove_top_level_indent:
+            type: boolean
+            default: true
