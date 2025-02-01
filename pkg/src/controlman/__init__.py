@@ -75,7 +75,7 @@ def from_json_file(
         data = _ps.read.json_from_file(path=_Path(repo_path) / filepath)
     except _ps.exception.read.PySerialsReadException as e:
         raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=filepath) from None
-    _data_validator.validate(data=data)
+    _data_validator.validate(data=data, fill_defaults=False)
     return _ps.NestedDict(data)
 
 
@@ -94,7 +94,7 @@ def from_json_file_at_commit(
         raise _exception.load.ControlManInvalidMetadataError(
             cause=e, filepath=filepath, commit_hash=commit_hash
         ) from None
-    _data_validator.validate(data=data)
+    _data_validator.validate(data=data, fill_defaults=False)
     return _ps.NestedDict(data)
 
 
@@ -117,7 +117,7 @@ def from_json_string(data: str) -> _ps.NestedDict:
         data = _ps.read.json_from_string(data=data)
     except _ps.exception.read.PySerialsReadException as e:
         raise _exception.load.ControlManInvalidMetadataError(e) from None
-    _data_validator.validate(data=data)
+    _data_validator.validate(data=data, fill_defaults=False)
     return _ps.NestedDict(data)
 
 
