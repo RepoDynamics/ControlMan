@@ -33,6 +33,7 @@ def validate(
     schema: _Literal["main", "local", "cache", "entity", "variables", "changelog", "contributors"] = "main",
     source: _Literal["source", "compiled"] = "compiled",
     before_substitution: bool = False,
+    fill_defaults: bool = True,
 ) -> None:
     """Validate data against a schema."""
     schema_dict = get_schema(schema=schema)
@@ -47,7 +48,7 @@ def validate(
             schema=schema_dict,
             validator=_jsonschema.Draft202012Validator,
             registry=_registry_before if before_substitution else _registry_after,
-            fill_defaults=True,
+            fill_defaults=fill_defaults,
             iter_errors=True,
         )
     except _ps.exception.validate.PySerialsJsonSchemaValidationError as e:
