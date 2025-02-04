@@ -39,13 +39,69 @@ properties:
       The content will be written to the given filepath in the format specified by `type`.
     type: [ string, array, object ]
   content_setting:
-    item_separator:
+    filter:
+      summary: Filters to apply to values.
+      description: |
+        This is only used when the content is a sequence or mapping.
+        In this case, you can define a JSONPath to match paths within
+        the content, and a filter function to remove paths based on their value.
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties: false
+        required: [ jsonpath, function ]
+        properties:
+          jsonpath:
+            title: JSONPath
+            summary: JSONPath expression matching paths to filter.
+            $ref: https://jsonschemata.repodynamics.com/string/oneline
+          function:
+            summary: Python lambda expression to use as filter.
+            description: |
+              The lambda expression must define a single parameter,
+              which receives the value at each path matched by the JSONPath expression.
+              It must then return a boolean, indicating whether to remove (True)
+              the path.
+            default: 'lambda value: value is None'
+            default_description: |
+              The default lambda expression removes values that are `None`:
+            examples:
+              - 'lambda value: value is None'
+            examples_description:
+              - 'Remove `None` values:'
+          inplace:
+            summary: Whether to apply the filter inplace.
+            description: |
+              When set to `True` the content in `metadata.json`
+              will match the content of the file, as the filters
+              are applied before writing the metadata file.
+              Otherwise (when set to `False`), the filters
+              are only applied to the output file, but not
+              to `content` in the` metadata.json` file.
+            type: boolean
+            default: true
+    separator:
+      summary: Custom string to use as separator between content.
+      description: |
+        This is only used when the output filetype is plain text,
+        and the content is a sequence or a mapping. In such cases,
+        this separator is used to join the sequence elements or mapping values, respectively.
       type: string
       default: "\n"
-    item_prefix:
+    prefix:
+      summary: Custom string to prepend to all content items.
+      description: |
+        This is only used when the output filetype is plain text,
+        and the content is a sequence or a mapping. In such cases,
+        this prefix is prepended to the beginning of each sequence element or mapping value, respectively.
       type: string
       default: ""
-    item_suffix:
+    suffix:
+      summary: Custom string to append to all content items.
+      description: |
+        This is only used when the output filetype is plain text,
+        and the content is a sequence or a mapping. In such cases,
+        this suffix is appended to the end of each sequence element or mapping value, respectively.
       type: string
       default: ""
   file_setting:
