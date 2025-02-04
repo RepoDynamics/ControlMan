@@ -32,6 +32,10 @@ class ChangelogManager:
         return self._contrib
 
     @property
+    def changelogs(self) -> list[dict]:
+        return self._changelogs
+
+    @property
     def current_public(self) -> Changelog:
         for changelog in self._changelogs:
             if changelog["type"] != "local":
