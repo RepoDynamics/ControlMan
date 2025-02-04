@@ -98,9 +98,12 @@ class CenterManager:
             _data_validator.validate(data=full_data, source="source", before_substitution=True)
         with _logger.sectioning("CCA Load Validation Hooks"):
             self._hook_manager.generate(const.FUNCNAME_CC_HOOK_LOAD_VALID, data=full_data)
+        changelog_manager = ChangelogManager(repo_path=self._git.repo_path)
         code_context_call = {
-            "changelog": ChangelogManager(repo_path=self._git.repo_path)
+            "changelog": changelog_manager
         }
+        full_data["changelogs"] = changelog_manager.changelogs
+        full_data["contributor"] = changelog_manager.contributor
         inline_hooks = self._hook_manager.inline_hooks
         if inline_hooks:
             code_context_call["hook"] = inline_hooks.Hooks(
@@ -172,6 +175,8 @@ class CenterManager:
                 "All template variables have been successfully resolved.",
             )
             data.pop("var")
+            data.pop("changelogs")
+            data.pop("contributor")
         with _logger.sectioning("CCA Templating Hooks"):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_TEMPLATE,
