@@ -3,6 +3,7 @@ from enum import Enum as _Enum
 
 
 class DynamicFileType(_Enum):
+    CUSTOM = ("custom", "Custom")
     CONFIG = ("config", "Configuration")
     TOOL_ENV_CONDA = ("tool_env_conda", "Tool Conda Environment")
     TOOL_ENV_PIP = ("tool_env_pip", "Tool Pip Environment")
