@@ -18,6 +18,8 @@ properties:
       - MyTool Configuration File
       - SomeData Data File
       - SomeCool Source File
+  description:
+    type: string
   type:
     summary: Format of the dynamic file.
     description: |
@@ -27,12 +29,7 @@ properties:
     enum: [ yaml, json, toml, txt ]
   path:
     summary: Path to write the output file.
-    $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-    description: |
-      Changing the path will automatically remove the file from the old path
-      and add the (updated) file to the new path during the next synchronization.
-    examples:
-      - .github/.pre-commit-config.yaml
+    $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
   content:
     summary: Content of the file.
     description: |
