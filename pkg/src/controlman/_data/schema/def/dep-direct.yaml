@@ -59,6 +59,10 @@ allOf:
                 description: |
                   Line selector to apply to the dependency.
                 $ref: https://jsonschemata.repodynamics.com/string/oneline
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: https://anaconda.org/${{ .channel }}$/${{ .name }}$
           pip:
             title: pip
             summary: Specifications for the `pip` package manager.
@@ -106,15 +110,43 @@ allOf:
                   [Environment marker](https://packaging.python.org/en/latest/specifications/dependency-specifiers/#environment-markers)
                   to apply to the dependency.
                 $ref: https://jsonschemata.repodynamics.com/string/oneline
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: https://pypi.org/project/${{ .name }}$
           apt:
             summary: Specifications for the `apt-get` package manager.
             type: object
-            required: [ spec ]
+            required: [ name ]
             properties:
-              spec:
+              name:
+                summary: Name of the package.
                 description: |
-                  Dependency specification for `apt-get`.
+                  This is the name of the package as it is known in the APT repository.
+                default: |
+                  #{{
+                    import re
+                    dep_name = get("..name")
+                    name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", dep_name).lower()
+                    return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", name_normalized)
+                  }}#
+              version:
                 type: string
+                summary: Version of the package.
+                examples:
+                  - "1.21.2"
+              release:
+                summary: |
+                  OS distribution release of the package version.
+                type: string
+                examples:
+                  - jammy
+                  - focal
+                  - bookworm
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: https://packages.debian.org/${{ .name }}$
           brew:
             summary: Specifications for the [Homebrew](https://brew.sh/) (`brew`) package manager.
             description: |
@@ -163,6 +195,14 @@ allOf:
                     "denji/nginx/nginx-full", link: :overwrite, args: ["with-rmtp"], restart_service: :always
                   - >-
                     "gnupg" if OS.mac?
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: >-
+                  https://formulae.brew.sh/#{{
+                    typ = get(".type")
+                    return {"brew": "formula"}.get(typ, typ) 
+                  }}#/${{ ...name }}$
           choco:
             summary: Specifications for the [Chocolately](https://chocolatey.org) (`choco`) package manager.
             description: |
@@ -213,6 +253,9 @@ allOf:
               force_x86:
                 summary: Force 32-bit installation.
                 type: boolean
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
           winget:
             summary: >-
               Specifications for the 
@@ -267,6 +310,14 @@ allOf:
                   - user
                   - machine
                 default: user
+              homepage:
+                summary: URL of the package homepage.
+                $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+                default: >-
+                  https://formulae.brew.sh/#{{
+                    typ = get(".type")
+                    return {"brew": "formula"}.get(typ, typ) 
+                  }}#/${{ ...name }}$
           bash:
             summary: Custom bash script to install the package.
             type: string
