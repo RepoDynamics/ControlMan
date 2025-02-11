@@ -11,7 +11,7 @@ description: |
   An example are [Sphinx's built-in extensions](https://www.sphinx-doc.org/en/master/usage/extensions/index.html#built-in-extensions)
   that are included in Sphinx, but need to be declared in the `conf.py` file to be used.
 type: object
-required: [ import_name ]
+required: [ name, import_name ]
 properties:
   import_name:
     description: |
@@ -49,18 +49,14 @@ properties:
       docs:
         description: URL of the module documentation.
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      pip:
-        description: URL of the pip package.
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      conda:
-        description: URL of the conda package.
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-      bin:
-        description: URL of the binary package.
-        $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
       source:
         description: URL of the source code.
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  file:
+    summary: Dynamic files related to the module.
+    type: object
+    additionalProperties:
+      $ref: https://controlman.repodynamics.com/schema/dynamic-file
   intersphinx_mapping:
     description: Intersphinx mapping definition of the module.
     type: object
