@@ -50,6 +50,8 @@ allOf:
                 examples:
                   - ">=1.21.2"
                 type: string
+                default: >-
+                  #{{ return get("..pip.version", "") }}#
               build:
                 summary: |
                   Build string according to
@@ -63,6 +65,25 @@ allOf:
                 summary: URL of the package homepage.
                 $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
                 default: https://anaconda.org/${{ .channel }}$/${{ .name }}$
+              spec:
+                summary: Full match specification.
+                readOnly: true
+                type: object
+                properties:
+                  environment:
+                    summary: Specification for an `environment.yml` file.
+                    type: string
+                    default: |-
+                      #{{
+                        spec = [get("..channel")]
+                        for part_name, part_prefix in (
+                          ("subdir", "/"), ("name", "::"), ("version", " "), ("build", " ")
+                        ):
+                            part = get(f"..{part_name}")
+                            if part:
+                                spec.append(f"{part_prefix}{part}")
+                        return "".join(spec)
+                      }}#
           pip:
             title: pip
             summary: Specifications for the `pip` package manager.
@@ -97,6 +118,8 @@ allOf:
                   [version Specifiers](https://packaging.python.org/en/latest/specifications/version-specifiers/#id5).
                 examples:
                   - ">=1.21.2"
+                default: >-
+                  #{{ return get("..conda.version", "") }}#
               extras:
                 summary: >-
                   List of 
@@ -114,6 +137,24 @@ allOf:
                 summary: URL of the package homepage.
                 $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
                 default: https://pypi.org/project/${{ .name }}$
+              spec:
+                summary: Full dependency specifier.
+                readOnly: true
+                type: object
+                properties:
+                  pep508:
+                    type: string
+                    default: |-
+                      #{{
+                        spec = [get("..name")]
+                        if extras := get("..extras"):
+                            spec.append(f"[{','.join(extras)}]")
+                        if version := get("..version"):
+                            spec.append(version)
+                        if marker := get("..marker"):
+                            spec.append(f"; {marker}")
+                        return " ".join(spec)
+                      }}#
           apt:
             summary: Specifications for the `apt-get` package manager.
             type: object
