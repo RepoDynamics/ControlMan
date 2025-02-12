@@ -1,0 +1,19 @@
+$id: https://controlman.repodynamics.com/schema/config
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Custom Configuration
+summary: Definition of a custom configuration.
+description: |
+  A configuration defines some `content`
+  and optionally a `jsonschema` to validate and/or augment the content.
+type: object
+additionalProperties: false
+required: [ content ]
+properties:
+  content:
+    summary: Configuration content.
+  jsonschema:
+    summary: JSON schema for the configuration.
+    description: |
+      This is used to validate the configuration content.
+      If the content does not match the schema, an error will be raised.
+    type: object
