@@ -1,24 +1,29 @@
-from gittidy import Git as _Git
-from pylinks.api import GitHub as _GitHubAPI
-from pyserials.nested_dict import NestedDict as _NestedDict
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 import controlman as _controlman
 from controlman import const as _const
-from controlman.cache_manager import CacheManager as _CacheManager
 from controlman.data_gen.main import MainDataGenerator as _MainDataGenerator
 from controlman.data_gen.python import PythonDataGenerator as _PythonDataGenerator
 from controlman.data_gen.repo import RepoDataGenerator as _RepoDataGenerator
 
+if _TYPE_CHECKING:
+    from gittidy import Git
+    from pylinks.api import GitHub
+    from pyserials.nested_dict import NestedDict
+    from controlman.cache_manager import CacheManager
+
 
 def generate(
-    git_manager: _Git,
-    cache_manager: _CacheManager,
-    github_api: _GitHubAPI,
-    data: _NestedDict,
-    data_before: _NestedDict,
-    data_main: _NestedDict,
+    git_manager: Git,
+    cache_manager: CacheManager,
+    github_api: GitHub,
+    data: NestedDict,
+    data_before: NestedDict,
+    data_main: NestedDict,
     future_versions: dict[str, str],
-) -> _NestedDict:
+) -> NestedDict:
     _MainDataGenerator(
         data=data,
         cache_manager=cache_manager,
