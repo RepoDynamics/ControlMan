@@ -1433,7 +1433,7 @@ properties:
         $ref: https://controlman.repodynamics.com/schema/themed-color
         default:
           light: hsl(219 84 93)  #dce7fc
-          dark: hsl(219 88, 19)  #06245d
+          dark: hsl(219 88 19)  #06245d
       warning:
         summary: Semantic warning color.
         $ref: https://controlman.repodynamics.com/schema/themed-color
@@ -1576,8 +1576,8 @@ properties:
         summary: Color for shadows.
         $ref: https://controlman.repodynamics.com/schema/themed-color
         default:
-          light: rgba(0 0 0 0.1)
-          dark: rgba(0 0 0 0.1)
+          light: rgba(0 0 0 / 0.1)
+          dark: rgba(0 0 0 / 0.1)
       border:
         summary: Color for borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
@@ -1588,7 +1588,7 @@ properties:
         summary: Color for muted borders.
         $ref: https://controlman.repodynamics.com/schema/themed-color
         default:
-          light: rgba(23, 23, 26, 0.2)
+          light: rgba(23 23 26 / 0.2)
           dark: hsl(216 20 20)  #29313d
       blockquote-notch:
         summary: Color for block-quote notches.
