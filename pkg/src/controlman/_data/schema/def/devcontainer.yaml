@@ -1,7 +1,7 @@
 $id: https://controlman.repodynamics.com/schema/devcontainer
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Dev Container
-summary: A `devcontainer.json` file definition.
+title: Dev Container Metadata
+summary: A [`devcontainer.json`](https://containers.dev/implementors/json_reference/) file definition.
 description: |
   Docs: https://containers.dev/implementors/json_reference/
   Ref: https://github.com/devcontainers/spec/blob/main/schemas/devContainer.base.schema.json
@@ -17,7 +17,9 @@ properties:
     description: A name for the dev container which can be displayed to the user.
   features:
     type: object
-    description: Features to add to the dev container.
+    summary: Features to add to the dev container.
+    description: |
+      A list of [available features](https://containers.dev/features) can be found on the Dev Containers website.
     additionalProperties: true
   overrideFeatureInstallOrder:
     type: array
@@ -621,14 +623,28 @@ properties:
               errorMessage: "Expected format: '${publisher}.${name}', '-${publisher}.${name}'
                 or '${publisher}.${name}@${version}'. Example: 'ms-dotnettools.csharp'."
           settings:
-            $ref: vscode://schemas/settings/machine
+            type: object
             description: Machine specific settings that should be copied into the
               container. These are only copied when connecting to the container for
               the first time, rebuilding the container then triggers it again.
+              [Default settings](https://code.visualstudio.com/docs/getstarted/settings#_default-settings)
+              are documented in the VS Code documentation.
               Note that [you can also add](https://github.com/microsoft/vscode-remote-release/issues/9951)
               `launch` and `tasks` object here, corresponding to the
               [launch.json](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations)
               and [tasks.json](https://code.visualstudio.com/docs/editor/tasks) configuration files.
+            properties:
+              tasks:
+                summary: [Tasks](https://code.visualstudio.com/docs/editor/tasks) configurations.
+                description: |
+                  This corresponds to the [`tasks.json`](https://code.visualstudio.com/docs/editor/tasks-appendix) 
+                  configuration file in VS Code.
+                  You can also use [variables](https://code.visualstudio.com/docs/editor/variables-reference)
+                  in the `command`, `args` and `options` 
+                  [fields](https://code.visualstudio.com/docs/editor/tasks#_variable-substitution).
+                  Note that support for including tasks directly in the `devcontainer.json` file
+                  might [change](https://github.com/microsoft/vscode-remote-release/issues/9951)
+                  in the future in favor of using a separate `tasks.json` file.
           devPort:
             type: integer
             description: The port VS Code can use to connect to its backend.
