@@ -47,15 +47,11 @@ def load(
         except _ps.exception.read.PySerialsInvalidDataError as e:
             raise _exception.ControlManInvalidConfigFileDataError(cause=e) from None
         try:
-            log = _ps.update.dict_from_addon(
+            log = _ps.update.recursive_update(
                 data=full_data,
                 addon=data,
-                append_list=True,
-                append_dict=True,
-                raise_duplicates=True,
-                raise_type_mismatch=True,
             )
-        except _ps.exception.update.PySerialsUpdateDictFromAddonError as e:
+        except _ps.exception.update.PySerialsUpdateRecursiveDataError as e:
             raise _exception.ControlManDuplicateConfigFileDataError(filepath=filepath, cause=e) from None
         log_admonitions = []
         for key, title in (
