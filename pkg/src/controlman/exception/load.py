@@ -83,7 +83,7 @@ class ControlManDuplicateConfigFileDataError(ControlManConfigFileReadException):
     def __init__(
         self,
         filepath: _Path,
-        cause: _ps.exception.update.PySerialsUpdateDictFromAddonError,
+        cause: _ps.exception.update.PySerialsUpdateRecursiveDataError,
     ):
         problem = _mdit.inline_container(
             "The value of type ",
