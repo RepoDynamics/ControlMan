@@ -1,32 +1,32 @@
-from gittidy import Git as _Git
-import pylinks
-from loggerman import logger as _logger
-import pyserials as _ps
-import mdit as _mdit
-from licenseman import spdx as _spdx
+from __future__ import annotations as _annotations
 
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+from licenseman import spdx as _spdx
+from loggerman import logger as _logger
+import mdit as _mdit
+import pyserials as _ps
+
+import controlman
 from controlman import data_helper as _helper
-from controlman.cache_manager import CacheManager
 from controlman import exception as _exception
 from controlman import date
-import controlman
+
+if _TYPE_CHECKING:
+    from gittidy import Git
+    from pylinks.api import GitHub
+    from pyserials.nested_dict import NestedDict
+    from controlman.cache_manager import CacheManager
 
 
 class MainDataGenerator:
 
-    _SOCIAL_URL = {
-        "orcid": 'orcid.org/',
-        "researchgate": 'researchgate.net/profile/',
-        "linkedin": 'linkedin.com/in/',
-        "twitter": 'twitter.com/',
-    }
-
     def __init__(
         self,
-        data: _ps.NestedDict,
+        data: NestedDict,
         cache_manager: CacheManager,
-        git_manager: _Git,
-        github_api: pylinks.api.GitHub,
+        git_manager: Git,
+        github_api: GitHub,
     ):
         self._data = data
         self._git = git_manager
@@ -40,6 +40,7 @@ class MainDataGenerator:
         self._team()
         self._license()
         self._discussion_categories()
+        self._vars()
         return
 
     def _repo(self) -> None:
@@ -192,13 +193,9 @@ class MainDataGenerator:
                         "text_plain": path_text,
                         "header_plain": path_header if header_xml else "",
                 }
-                _ps.update.dict_from_addon(
-                    data=user_data,
+                _ps.update.recursive_update(
+                    source=user_data,
                     addon=out_data,
-                    append_list=True,
-                    append_dict=True,
-                    raise_duplicates=False,
-                    raise_type_mismatch=True,
                 )
         return
 
@@ -235,8 +232,6 @@ class MainDataGenerator:
                 if concept_doi:
                     zenodo["concept"] = {"doi": concept_doi, "id": var["zenodo"]["concept"]["id"]}
         return
-
-
 
 
 def normalize_license_filename(filename: str) -> str:
