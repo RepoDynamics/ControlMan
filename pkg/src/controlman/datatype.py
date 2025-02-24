@@ -46,6 +46,7 @@ class DynamicFileChangeType(_Enum):
     ADDED = DynamicFileChangeTypeContent("Added", "🟢")
     UNCHANGED = DynamicFileChangeTypeContent("Unchanged", "⚪️")
     DISABLED = DynamicFileChangeTypeContent("Disabled", "⚫")
+    INACTIVE = DynamicFileChangeTypeContent("Inactive", "🔵")
 
 
 class DynamicFile(_NamedTuple):
