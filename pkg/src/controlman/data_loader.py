@@ -1,6 +1,5 @@
 from pathlib import Path as _Path
 
-import jsonpath_ng as _jsonpath
 import ruamel.yaml as _yaml
 
 import pyserials as _ps
@@ -48,7 +47,7 @@ def load(
             raise _exception.ControlManInvalidConfigFileDataError(cause=e) from None
         try:
             log = _ps.update.recursive_update(
-                data=full_data,
+                source=full_data,
                 addon=data,
             )
         except _ps.exception.update.PySerialsUpdateRecursiveDataError as e:
