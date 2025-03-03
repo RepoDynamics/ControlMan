@@ -9,7 +9,7 @@ additionalProperties: false
 required: [ status, name, summary, type, path, content ]
 properties:
   status:
-    summary: Status of the file.
+    summary: Sync status of the file.
     description: |
       Use this to toggle synchronization or to delete the file,
       without removing the configuration.
@@ -33,14 +33,19 @@ properties:
   description:
     summary: A detailed description of the file.
     $ref: https://jsonschemata.repodynamics.com/string/nonempty
-  metadata:
-    summary: Definition of metadata for the file.
+  data:
+    summary: Definition of data for the file.
     description: |
       You can use this to add labels, tags, or other metadata
       to the file. These are not written to the output file,
       but are stored in the metadata file and can be used
       for documentation or other purposes.
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
+      
+      This is also useful when you want to generate content
+      in a custom format. In this case, the `content` field
+      can contain Python templates that use the configurations
+      defined here to generate the content.
+    $ref: https://controlman.repodynamics.com/schema/dynamic-data
   type:
     summary: Format of the dynamic file.
     description: |
@@ -68,14 +73,6 @@ properties:
     description: |
       The content will be written to the given filepath in the format specified by `type`.
     type: [ string, array, object ]
-  config:
-    summary: Custom configurations for the file.
-    description: |
-      This is useful when you want to generate content
-      in a custom format. In this case, the `content` field
-      can contain Python templates that use the configurations
-      defined here to generate the content.
-    $ref: https://controlman.repodynamics.com/schema/dynamic-data
   content_setting:
     filter:
       summary: Filters to apply to values.
