@@ -18,9 +18,9 @@ properties:
     type: integer
     minimum: 0
     default: 2
-  multiline_string:
-    enum: [ quote, block ]
-    default: block
+  block_string:
+    type: boolean
+    default: true
   remove_top_level_indent:
     type: boolean
     default: true
