@@ -3,6 +3,13 @@ from enum import Enum as _Enum
 
 
 class DynamicFileType(_Enum):
+    DEVCONTAINER_METADATA = ("devcontainer_metadata", "Devcontainer Metadata")
+    DEVCONTAINER_DOCKERFILE = ("devcontainer_dockerfile", "Devcontainer Dockerfile")
+    DEVCONTAINER_APT = ("devcontainer_apt", "Devcontainer Apt Packages")
+    DEVCONTAINER_CONDA = ("devcontainer_conda", "Devcontainer Conda Environment")
+    DEVCONTAINER_TASK = ("devcontainer_task", "Devcontainer Bash Tasks")
+    DEVCONTAINER_FEATURE_METADATA = ("devcontainer_feature_metadata", "Devcontainer Feature Metadata")
+    DEVCONTAINER_FEATURE_INSTALL = ("devcontainer_feature_install", "Devcontainer Feature Install Script")
     CUSTOM = ("custom", "Custom")
     CONFIG = ("config", "Configuration")
     TOOL_ENV_CONDA = ("tool_env_conda", "Tool Conda Environment")
