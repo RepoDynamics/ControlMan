@@ -446,27 +446,16 @@ properties:
   # Compose-specific
   dockerComposeFile:
     description: Path to the docker-compose file(s) used to start the services.
-    default:
-      - |
-        #{{ 
-          import os
-          container_id = get("...__key__")
-          dovcontainer_path = os.path.abspath(get("..path"))
-          docker_compose_path = os.path.abspath(get("dev.docker-compose.path"))
-          return os.path.relpath(docker_compose_path, os.path.dirname(dovcontainer_path))
-        }}#
     default_description: |
-      The path to the docker-compose file from the current devcontainer is automatically added:
-    type:
-      - string
-      - array
+      The path to the docker-compose file from the current devcontainer is automatically added.
+    type: array
     items:
       type: string
   service:
     type: string
     description: The service you want to work on. This is considered the primary
       container for your dev environment which your editor will connect to.
-    default: ${{ ..__key__ }}$
+    default: '#{{ return get("..__key__").removeprefix("devcontainer_") }}#'
   runServices:
     type: array
     description: An array of services that should be started and stopped.
