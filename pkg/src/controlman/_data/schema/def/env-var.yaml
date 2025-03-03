@@ -1,0 +1,20 @@
+$id: https://controlman.repodynamics.com/schema/env-var
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Environment Variables
+summary: Definition of environment variables.
+type: object
+additionalProperties:
+  title: Environment Variable
+  summary: A single environment variable.
+  type: object
+  properties:
+    key:
+      summary: Environment variable key.
+      default: ${{ .__key__ }}$
+      $ref: https://jsonschemata.repodynamics.com/string/oneline
+    value:
+      summary: Environment variable value.
+      $ref: https://jsonschemata.repodynamics.com/string/oneline
+    description:
+      summary: Description of the environment variable.
+      $ref: https://jsonschemata.repodynamics.com/string/nonempty
