@@ -225,7 +225,7 @@ class MainDataGenerator:
 
     def _vars(self):
         var = controlman.read_variables(repo_path=self._git.repo_path)
-        zenodo = self._data["citation.zenodo"]
+        zenodo = self._data["zenodo"]
         if zenodo:
             if not zenodo.get("concept"):
                 concept_doi = var["zenodo"]["concept"]["doi"]
