@@ -1,0 +1,33 @@
+$id: https://controlman.repodynamics.com/schema/bash-task
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Bash Task
+type: object
+additionalProperties: false
+required: [ alias ]
+oneOf:
+  - required: [ script ]
+  - required: [ process ]
+properties:
+  script:
+    summary: Bash script to execute.
+    type: string
+  process:
+    summary: Process to execute.
+    type: array
+    items:
+      type: string
+  alias:
+    summary: Shell alias for the task.
+    type: string
+    minLength: 1
+    pattern: ^[a-zA-Z0-9_]+$
+    default: ${{ .__key__ }}$
+  name:
+    summary: Name of the task.
+    type: string
+  description:
+    summary: Description of the task.
+    type: string
+  notes:
+    description: Additional notes related to the task.
+    type: string
