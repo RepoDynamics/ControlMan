@@ -8,7 +8,6 @@ description: |
 type: object
 additionalProperties: false
 required:
-  - dockerComposeFile
   - service
   - workspaceFolder
 properties:
@@ -47,7 +46,6 @@ properties:
             format: uri
             description: A URL to documentation about the secret.
         additionalProperties: false
-      additionalProperties: false
     additionalProperties: false
   forwardPorts:
     type: array
