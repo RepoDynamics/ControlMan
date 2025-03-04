@@ -1,4 +1,4 @@
-$id: https://controlman.repodynamics.com/schema/dependency-conda-env
+$id: https://controlman.repodynamics.com/schema/dependency-pip-env
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Pip Environment Dependency
 summary: Declaration of a pip package dependency for an environment.
