@@ -18,6 +18,7 @@ properties:
       [dependency specifier](https://packaging.python.org/en/latest/specifications/dependency-specifiers/)
       (cf. [requirement specifier](https://pip.pypa.io/en/stable/reference/requirement-specifiers/)).
     type: object
+    default: { }
     required: [ name, full ]
     properties:
       name:
@@ -59,21 +60,18 @@ properties:
       full:
         summary: Full dependency specifier.
         readOnly: true
-        type: object
-        properties:
-          pep508:
-            type: string
-            default: |-
-              #{{
-                spec = [get("..name")]
-                if extras := get("..extras"):
-                    spec.append(f"[{','.join(extras)}]")
-                if version := get("..version"):
-                    spec.append(version)
-                if marker := get("..marker"):
-                    spec.append(f"; {marker}")
-                return " ".join(spec)
-              }}#
+        type: string
+        default: |-
+          #{{
+            spec = [get("..name")]
+            if extras := get("..extras"):
+                spec.append(f"[{','.join(extras)}]")
+            if version := get("..version"):
+                spec.append(version)
+            if marker := get("..marker"):
+                spec.append(f"; {marker}")
+            return " ".join(spec)
+          }}#
   url:
     title: URL
     description: URLs to resources related to the module.
