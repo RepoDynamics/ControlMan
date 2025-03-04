@@ -13,7 +13,7 @@ import pyserials as _ps
 from mdit.data import schema as _mdit_schema
 from loggerman import logger as _logger
 
-from controlman import exception as _exception
+from controlman import exception as _exception, const as _const
 
 
 _schema_dir_path = _pkgdata.get_package_path_from_caller(top_level=True) / "_data" / "schema"
@@ -469,9 +469,10 @@ class DataValidator:
 
 def modify_schema(schema: dict) -> dict:
     schema.pop("$schema", None)  # see: https://github.com/python-jsonschema/jsonschema/issues/1295
-    if "properties" in schema:
-        for key, subschema in schema["properties"].items():
-            schema["properties"][key] = modify_schema(subschema)
+    for key in ("properties", "patternProperties"):
+        if key in schema:
+            for subkey, subschema in schema[key].items():
+                schema[key][subkey] = modify_schema(subschema)
     if "additionalProperties" in schema and isinstance(schema["additionalProperties"], dict):
         schema["additionalProperties"] = modify_schema(schema["additionalProperties"])
     if "prefixItems" in schema:
@@ -541,8 +542,9 @@ def _add_custom_keys(schema: dict):
         if "additionalProperties" in subschema:
             return not bool(subschema["additionalProperties"])
         return True
-    _js.edit.add_property(schema, "__custom__", {}, conditioner=conditioner)
-    _js.edit.add_property(schema, "__custom_template__", {}, conditioner=conditioner)
+    _js.edit.add_property(schema, _const.CUSTOM_KEY, {}, conditioner=conditioner)
+    for key in _const.RELATIVE_TEMPLATE_KEYS:
+        _js.edit.add_property(schema, key, {}, conditioner=conditioner)
     return
 
 
