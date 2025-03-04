@@ -20,6 +20,8 @@ properties:
     summary: Features to add to the dev container.
     description: |
       A list of [available features](https://containers.dev/features) can be found on the Dev Containers website.
+      Official features can be found in the 
+      [Dev Containers GitHub repository](https://github.com/devcontainers/features/tree/main/src).
     additionalProperties: true
   overrideFeatureInstallOrder:
     type: array
@@ -624,7 +626,8 @@ properties:
               and [tasks.json](https://code.visualstudio.com/docs/editor/tasks) configuration files.
             properties:
               tasks:
-                summary: [Tasks](https://code.visualstudio.com/docs/editor/tasks) configurations.
+                summary: >-
+                  [Tasks](https://code.visualstudio.com/docs/editor/tasks) configurations.
                 description: |
                   This corresponds to the [`tasks.json`](https://code.visualstudio.com/docs/editor/tasks-appendix) 
                   configuration file in VS Code.
