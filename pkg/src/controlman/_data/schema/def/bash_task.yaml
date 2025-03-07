@@ -20,7 +20,7 @@ properties:
     summary: Shell alias for the task.
     type: string
     minLength: 1
-    pattern: ^[a-zA-Z0-9_]+$
+    pattern: ^[a-zA-Z0-9_-]+$
     default: ${{ .__key__ }}$
   name:
     summary: Name of the task.
