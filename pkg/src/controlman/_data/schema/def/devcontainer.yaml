@@ -323,17 +323,19 @@ properties:
       items:
         type: string
   postCreateCommand:
-    type:
-      - string
-      - array
-      - object
+    type: object
     description: A command to run after creating the container. This command is
       run after "updateContentCommand" and before "postStartCommand". If this
       is a single string, it will be run in a shell. If this is an array of strings,
       it will be run as a single command without shell. If this is an object,
       each provided command will be run in parallel.
-    items:
-      type: string
+    default: { }
+    properties:
+      source_tasks:
+        summary: Source the tasks file in the user's bashrc.
+        type: string
+        default: >-
+          echo 'source ${{ ..workspaceFolder }}$/${{ ...path }}$/${{ devcontainer.containers.rel_path.tasks }}$' >> ~/.bashrc
     additionalProperties:
       type:
         - string

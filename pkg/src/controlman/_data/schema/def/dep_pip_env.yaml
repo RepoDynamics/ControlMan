@@ -63,12 +63,12 @@ properties:
         type: string
         default: |-
           #{{
-            spec = [get("..name")]
-            if extras := get("..extras"):
+            spec = [get(".name")]
+            if extras := get(".extras"):
                 spec.append(f"[{','.join(extras)}]")
-            if version := get("..version"):
+            if version := get(".version"):
                 spec.append(version)
-            if marker := get("..marker"):
+            if marker := get(".marker"):
                 spec.append(f"; {marker}")
             return " ".join(spec)
           }}#

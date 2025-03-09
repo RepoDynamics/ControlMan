@@ -1,6 +1,7 @@
 from pathlib import Path as _Path
 import shutil as _shutil
 import functools as _functools
+import re as _re
 
 import controlman
 from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
@@ -119,6 +120,7 @@ class CenterManager:
                 "repo_path": self._path_root,
                 "ccc_main": self._data_main,
                 "ccc": self._data_before,
+                "cache_manager": self._cache_manager,
                 "slugify": _pylinks.string.to_slug,
                 "fill_entity": _functools.partial(
                     _helper.fill_entity,
@@ -134,6 +136,7 @@ class CenterManager:
             code_context_call=code_context_call,
             relative_template_keys=const.RELATIVE_TEMPLATE_KEYS,
             relative_key_key="__key__",
+            skip_key_func=_skip_key_func,
         )
         return self._data_raw
 
@@ -162,13 +165,13 @@ class CenterManager:
             # value based on `team.owner.email.id`. But since `team.owner` is generated
             # dynamically, the default value for `team.owner.email.url` is not set in the initial validation.
             _data_validator.validate(data=data(), source="source", before_substitution=True)
+        _data_gen.validate_user_schema(data, before_substitution=True)
         with _logger.sectioning("CCA Augmentation Validation Hooks"):
             self._hook_manager.generate(
                 const.FUNCNAME_CC_HOOK_AUGMENT_VALID,
                 data,
             )
         with _logger.sectioning("Template Resolution"):
-            data["var"] = controlman.read_variables(repo_path=self._path_root)
             data.fill()
             _logger.success(
                 "Filled Data",
@@ -265,7 +268,15 @@ class CenterManager:
                 if generated_file.change in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
                     filepath_before_abs.unlink(missing_ok=True)
 
-        for duplicate in self._data_before.get("file.duplicate", {}).values():
+        self._apply_duplicates()
+        with _logger.sectioning("CCA Synchronization Hooks"):
+            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_SYNC)
+        return
+
+    def _apply_duplicates(self):
+        for key, duplicate in self._data_before.items():
+            if not key.startswith("copy_"):
+                continue
             if "source" in duplicate:
                 for destination in duplicate["destinations"]:
                     self._path_root.joinpath(destination).unlink(missing_ok=True)
@@ -274,7 +285,9 @@ class CenterManager:
                     for source in self._path_root.glob(source_glob):
                         for destination in duplicate["destinations"]:
                             self._path_root.joinpath(destination).joinpath(_Path(source).stem).unlink(missing_ok=True)
-        for duplicate in self._data.get("file.duplicate", {}).values():
+        for key, duplicate in self._data.items():
+            if not key.startswith("copy_"):
+                continue
             if "source" in duplicate:
                 for destination in duplicate["destinations"]:
                     _shutil.copy2(self._path_root.joinpath(duplicate["source"]), self._path_root.joinpath(destination))
@@ -285,8 +298,6 @@ class CenterManager:
                             destination_path = self._path_root.joinpath(destination).joinpath(_Path(source).stem)
                             destination_path.parent.mkdir(parents=True, exist_ok=True)
                             _shutil.copy2(self._path_root.joinpath(source), destination_path)
-        with _logger.sectioning("CCA Synchronization Hooks"):
-            self._hook_manager.generate(const.FUNCNAME_CC_HOOK_SYNC)
         return
 
     def _compare_dirs(self):
@@ -322,37 +333,41 @@ class CenterManager:
                 )
             )
             to_apply.append((path, path_before, status))
-        for path_key in ("web", "pkg", "test"):
+
+        for path_key, value in self._data.items():
+            if not path_key.startswith("pypkg_"):
+                continue
+
             root_path, root_path_before, root_status = self._compare_dir(f"{path_key}.path.root")
             dirs.append(
                 _DynamicDir(
-                    type=DynamicDirType[f"{path_key.upper()}_ROOT"],
+                    type=DynamicDirType.PKG_ROOT,
                     path=root_path,
                     path_before=root_path_before,
                     change=root_status
                 )
             )
             to_apply.append((root_path, root_path_before, root_status))
+
             source_path, source_path_before, source_path_before_real, source_change = compare_source(
                 main_key=path_key, root_path=root_path, root_path_before=root_path_before
             )
             dirs.append(
                 _DynamicDir(
-                    type=DynamicDirType[f"{path_key.upper()}_SRC"],
+                    type=DynamicDirType.PKG_SRC,
                     path=source_path,
                     path_before=source_path_before_real,
                     change=source_change
                 )
             )
             to_apply.append((source_path, source_path_before, source_change))
-            if path_key == "web":
-                continue
+
             import_path, import_path_before, import_path_before_real, import_change = compare_import(
                 main_key=path_key, source_path=source_path, source_path_before=source_path_before, source_path_before_real=source_path_before_real
             )
             dirs.append(
                 _DynamicDir(
-                    type=DynamicDirType[f"{path_key.upper()}_IMPORT"],
+                    type=DynamicDirType.PKG_IMPORT,
                     path=import_path,
                     path_before=import_path_before_real,
                     change=import_change
@@ -385,3 +400,38 @@ class CenterManager:
             status = DynamicFileChangeType.UNCHANGED if path_exists else DynamicFileChangeType.ADDED
         return status
 
+
+def _skip_key_func(key_parts: list[str]) -> bool:
+    if not key_parts:
+        return False
+
+    key_parts = list(reversed(key_parts))
+
+    # Define valid prefixes as sequences of fields
+    valid_prefixes = [
+        [_re.compile(r"data_.*"), "jsonschema", "schema"],
+        [_re.compile(r"file_.*"), "data", "jsonschema", "schema"],
+        [_re.compile(r"devcontainer_.*"), "file", _re.compile(r".*"), "data", "jsonschema", "schema"],
+        [_re.compile(r"devcontainer_.*"), "apt", _re.compile(r".*"), "data", "jsonschema", "schema"],
+        [_re.compile(r"devcontainer_.*"), "environment", _re.compile(r".*"), _re.compile(r"conda|pip|file"),
+         _re.compile(r".*"), "data", "jsonschema", "schema"],
+        [_re.compile(r"pypkg_.*"), "file", _re.compile(r".*"), "data", "jsonschema", "schema"],
+    ]
+
+    # Check if the path matches any of the valid prefixes
+    prefix_len = 0
+    for prefix in valid_prefixes:
+        if len(key_parts) >= len(prefix) and all(
+            (isinstance(p, str) and p == key_parts[i]) or (isinstance(p, _re.Pattern) and p.match(key_parts[i]))
+            for i, p in enumerate(prefix)
+        ):
+            prefix_len = len(prefix)
+            break
+    else:
+        return False
+
+    # Check if "default" appears but not immediately after "properties"
+    for i in range(prefix_len, len(key_parts)):
+        if key_parts[i] == "default" and key_parts[i - 1] != "properties":
+            return True
+    return False

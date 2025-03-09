@@ -1,22 +1,18 @@
 """Python Package File Generator"""
 
-# Standard libraries
 from typing import Literal
 import textwrap
 from pathlib import Path as _Path
 import re as _re
 import copy
 
-# Non-standard libraries
 import pyserials as _ps
 import pysyntax as _pysyntax
 from loggerman import logger
-import pylinks as _pl
 
 import controlman
 from controlman.datatype import DynamicFileType, DynamicFile
 from controlman import const as _const
-from controlman.file_gen import unit as _unit
 
 
 class PythonPackageFileGenerator:
@@ -42,7 +38,7 @@ class PythonPackageFileGenerator:
         self._contributors = controlman.read_contributors(self._path_repo)
         return
 
-    def generate(self, typ: Literal["pkg", "test"], pyproject_tool_config: dict | str | None = None) -> list[DynamicFile]:
+    def generate(self, typ: str) -> list[DynamicFile]:
         self._type = typ
         self._pkg = _ps.NestedDict(self._data[typ])
         self._pkg_before = _ps.NestedDict(self._data_before[typ] or {})
@@ -54,11 +50,9 @@ class PythonPackageFileGenerator:
             self._path_src_before = self._path_root_before / self._data_before[f"{typ}.path.source_rel"]
             self._path_import_before = self._path_src_before / self._pkg_before["import_name"]
         return (
-            self.requirements()
-            + self.pyproject(pyproject_tool_config)
+            self.pyproject()
             + self.python_files()
             + self.typing_marker()
-            + self.manifest()
             + self.conda()
         )
 
@@ -69,8 +63,8 @@ class PythonPackageFileGenerator:
         if self.is_disabled("typed"):
             return []
         file = DynamicFile(
-            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
-            subtype=("typed", "Typing Marker"),
+            type=DynamicFileType.PKG_CONFIG,
+            subtype=(f"{self._type}_typing", f"{self._type} Typing Marker"),
             content=(
                 "# PEP 561 marker file. See https://peps.python.org/pep-0561/\n"
                 if self._pkg["typed"] else None
@@ -79,36 +73,6 @@ class PythonPackageFileGenerator:
             path_before=f"{self._pkg_before['path.import']}/{_const.FILENAME_PACKAGE_TYPING_MARKER}" if self._pkg_before['path.import'] else None,
         )
         return [file]
-
-    def requirements(self) -> list[DynamicFile]:
-        if self.is_disabled("dependency"):
-            return []
-        conda_env_file = {
-            "type": DynamicFileType[f"{self._type.upper()}_CONFIG"],
-            "subtype": ("env_conda", "Conda Environment"),
-            "path": self._data[f"{self._type}.dependency.env.conda.path"],
-            "path_before": self._data_before[f"{self._type}.dependency.env.conda.path"],
-        }
-        pip_env_file = {
-            "type": DynamicFileType[f"{self._type.upper()}_CONFIG"],
-            "subtype": ("env_pip", "Pip Environment"),
-            "path": self._data[f"{self._type}.dependency.env.pip.path"],
-            "path_before": self._data_before[f"{self._type}.dependency.env.pip.path"],
-        }
-        if not self._data[f"{self._type}.dependency"]:
-            return [DynamicFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
-        dependencies = list(self._data.get(f"{self._type}.dependency.core", {}).values())
-        for optional_dep_group in self._data.get(f"{self._type}.dependency.optional", {}).values():
-            dependencies.extend(list(optional_dep_group["package"].values()))
-        conda_env, pip_env, pip_full = _unit.create_environment_files(
-            dependencies=dependencies,
-            env_name=_pl.string.to_slug(self._data[f"{self._type}.dependency.env.conda.name"]),
-            python_version_spec=self._data[f"{self._type}.python.version.spec"]
-        )
-        return [
-            DynamicFile(content=conda_env, **conda_env_file),
-            DynamicFile(content=pip_env if pip_full else "", **pip_env_file)
-        ]
 
     def conda(self):
         out = []
@@ -128,8 +92,8 @@ class PythonPackageFileGenerator:
                 changelog=changelog,
             ).generate()
             file = DynamicFile(
-                type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
-                subtype=(f"conda_recipe_meta_{typ}", f"Conda Recipe {typ.title()} Metadata"),
+                type=DynamicFileType.PKG_CONFIG,
+                subtype=(f"{self._type}_conda_recipe_meta_{typ}", f"{self._type} Conda Recipe {typ.title()} Metadata"),
                 content=meta,
                 path=f"{self._pkg[f"conda.recipe.path.{typ}"]}/meta.yaml",
                 path_before=f"{self._pkg_before[f'conda.recipe.path.{typ}']}/meta.yaml",
@@ -138,11 +102,13 @@ class PythonPackageFileGenerator:
         return out
 
     def python_files(self) -> list[DynamicFile]:
-        # Generate import name mapping
         mapping = {}
+        # Generate import name mapping for dependencies
         core_dep_before = self._pkg_before.get("dependency", {}).get("core", {})
         for core_dep_name, core_dep in self._pkg.get("dependency", {}).get("core", {}).items():
-            if core_dep_name in core_dep_before and (
+            if core_dep_name in core_dep_before and all(
+                "import_name" in dep for dep in (core_dep, core_dep_before[core_dep_name])
+            ) and (
                 core_dep["import_name"] != core_dep_before[core_dep_name]["import_name"]
             ):
                 mapping[core_dep_before[core_dep_name]["import_name"]] = core_dep["import_name"]
@@ -151,15 +117,20 @@ class PythonPackageFileGenerator:
             optional_dep_before |= opt_dep_group_before["package"]
         for opt_dep_name, opt_dep_group in self._pkg.get("dependency", {}).get("optional", {}).items():
             for opt_dep_name, opt_dep in opt_dep_group["package"].items():
-                if opt_dep_name in optional_dep_before and (
+                if opt_dep_name in optional_dep_before and all(
+                    "import_name" in dep for dep in (opt_dep, optional_dep_before[opt_dep_name])
+                ) and (
                     opt_dep["import_name"] != optional_dep_before[opt_dep_name]["import_name"]
                 ):
                     mapping[optional_dep_before[opt_dep_name]["import_name"]] = opt_dep["import_name"]
-        if "import_name" in self._pkg_before and self._pkg["import_name"] != self._pkg_before["import_name"]:
-            mapping[self._pkg_before["import_name"]] = self._pkg["import_name"]
-        if self._type == "test":
-            if self._data_before["pkg.import_name"] and self._data["pkg.import_name"] != self._data_before["pkg.import_name"]:
-                mapping[self._data_before["pkg.import_name"]] = self._data["pkg.import_name"]
+        # Generate import name mapping for internal packages
+        for key, pkg in self._data.items():
+            if not key.startswith("pypkg_"):
+                continue
+            pkg_before = self._data_before[key] or {}
+            import_name_before = pkg_before.get("import_name")
+            if import_name_before and pkg["import_name"] != import_name_before:
+                mapping[import_name_before] = pkg["import_name"]
         # Get all file glob matches
         path_to_globs_map = {}
         abs_path = self._path_repo / (self._path_import_before or self._path_import)
@@ -197,7 +168,7 @@ class PythonPackageFileGenerator:
             fullpath_import_before = self._path_repo / (self._path_import_before or self._path_import)
             out.append(
                 DynamicFile(
-                    type=DynamicFileType[f"{self._type.upper()}_SOURCE"],
+                    type=DynamicFileType.PKG_SOURCE,
                     subtype=(str(subtype), subtype_display),
                     content=file_content,
                     path=str(self._path_import / filepath.relative_to(fullpath_import_before)),
@@ -285,134 +256,50 @@ class PythonPackageFileGenerator:
                 header_comments_replacement = f"{header_comments_replacement.strip()}{newlines}{header_comments_text}"
         return _pysyntax.modify.header_comments(file_content, header_comments_replacement)
 
-    def manifest(self) -> list[DynamicFile]:
-        if self.is_disabled("manifest"):
-            return []
-        file_content = "\n".join(self._pkg.get("manifest", []))
+    def pyproject(self) -> list[DynamicFile]:
+        pyproject = {
+            "build-system": {"requires": "array"},
+            "project": {
+                "license-files": "array",
+                "keywords": "array",
+                "classifiers": "array",
+                "authors": "array_of_inline_tables",
+                "maintainers": "array_of_inline_tables",
+                "dependencies": "array",
+                "optional-dependencies": "table_of_arrays",
+                "entry-points": "table_of_tables",
+                "dynamic": "array",
+            },
+        }
+        out = {}
+        for key, value in self._pkg["pyproject"].items():
+            if not value:
+                continue
+            if key in pyproject:
+                out[key] = self._convert_to_toml_format(data=value, types=pyproject[key])
+            else:
+                out[key] = value
+        file_content = _ps.write.to_toml_string(data=out, sort_keys=False)
         file = DynamicFile(
-            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
-            subtype=("manifest", "Manifest"),
-            content=file_content,
-            path=str(self._path_root / _const.FILENAME_PACKAGE_MANIFEST),
-            path_before=str(self._path_root_before / _const.FILENAME_PACKAGE_MANIFEST) if self._path_root_before else None,
-        )
-        return [file]
-
-    def pyproject(self, tool_config: dict | str | None) -> list[DynamicFile]:
-        if tool_config:
-            if isinstance(tool_config, str):
-                tool_config = _ps.read.toml_from_string(data=tool_config, as_dict=False)
-            if not isinstance(tool_config, dict) or list(tool_config.keys()) != ["tool"]:
-                raise ValueError("Invalid pyproject.toml tool configuration")
-            tool_config["project"] = self.pyproject_project()
-            tool_config["build-system"] = self.pyproject_build_system()
-            for build_tool_name, build_tool_config in self._pkg["build"].get("tool", {}).items():
-                tool_config["tool"][build_tool_name] = build_tool_config
-            pyproject = tool_config
-        else:
-            pyproject = {
-                "project": self.pyproject_project(),
-                "build-system": self.pyproject_build_system(),
-            }
-            tool_config = self._pkg["build"].get("tool", {})
-            if tool_config:
-                pyproject["tool"] = tool_config
-        file_content = _ps.write.to_toml_string(data=pyproject, sort_keys=False)
-        file = DynamicFile(
-            type=DynamicFileType[f"{self._type.upper()}_CONFIG"],
-            subtype=("pyproject", "PyProject"),
+            type=DynamicFileType.PKG_CONFIG,
+            subtype=(f"{self._type}_pyproject", f"{self._type.upper()} PyProject"),
             content=file_content,
             path=str(self._path_root / _const.FILENAME_PKG_PYPROJECT),
             path_before=str(self._path_root_before / _const.FILENAME_PKG_PYPROJECT) if self._path_root_before else None,
         )
         return [file]
 
-    def pyproject_build_system(self) -> dict:
-        requirements = []
-        for req in self._pkg["dependency.build"].values():
-            spec = req.get("pip", {}).get("spec")
-            if spec:
-                requirements.append(spec)
-        data = {
-            "requires": ("array", requirements),
-            "build-backend": ("str", self._data[f"{self._type}.build.backend"]),
-        }
-        output = {}
-        for key, (dtype, val) in data.items():
-            if val:
-                output[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
-        return output
-
-    def pyproject_project(self) -> dict:
-        license = {"text": self._data["license.expression"]} if self._data["license.expression"] else None
-        data = {
-            "name": ("str", self._pkg["name"]),
-            "description": ("str", self._pkg["description"]),
-            "keywords": ("array", self._pkg["keywords"]),
-            "classifiers": ("array", self._pkg["classifiers"]),
-            "license": ("inline_table", license),
-            "urls": ("table", self._pkg["urls"]),
-            "authors": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("authors", [])]),
-            "maintainers": ("array_of_inline_tables", [self._make_person_entry(author_id) for author_id in self._pkg.get("maintainers", [])]),
-            "readme": ("table", self._pkg["readme"]),
-            "requires-python": ("str", self._pkg["python.version.spec"]),
-            "dependencies": ("array", self.pyproject_project_dependencies),
-            "optional-dependencies": ("table_of_arrays", self.pyproject_project_optional_dependencies),
-            "entry-points": ("table_of_tables", self.pyproject_project_entry_points),
-            "gui-scripts": ("table", self._scripts(typ="gui")),
-            "scripts": ("table", self._scripts(typ="cli")),
-            "dynamic": ("array", ["version"]),
-        }
-        project = {}
-        for key, (dtype, val) in data.items():
-            if val:
-                project[key] = _ps.format.to_toml_object(data=val, toml_type=dtype)
-        return project
-
-    def _make_person_entry(self, person_id: str | dict) -> dict[str, str]:
-        if isinstance(person_id, str):
-            person = self._data["team"][person_id] or self._contributors[person_id]
-        elif person_id["member"]:
-            person = self._data["team"][person_id["id"]]
-        else:
-            person = self._contributors[person_id["id"]]
-        person_entry = {"name": person["name"]["full"]}
-        if "email" in person:
-            person_entry["email"] = person["email"]["id"]
-        return person_entry
-
-    @property
-    def pyproject_project_dependencies(self):
-        deps = []
-        for core_dep in self._pkg.get("dependency.core", {}).values():
-            pip = core_dep.get("pip")
-            if pip:
-                deps.append(pip["spec"])
-        return deps
-
-    @property
-    def pyproject_project_optional_dependencies(self):
-        opt_deps = {}
-        for opt_dep_group in self._pkg.get("dependency.optional", {}).values():
-            opt_deps[opt_dep_group["name"]] = [dep["pip"]["spec"] for dep in opt_dep_group["package"].values()]
-        return opt_deps
-
-    @property
-    def pyproject_project_entry_points(self):
-        entry_points = {}
-        for entry_group in self._data.get(f"{self._type}.entry.api", {}).values():
-            entry_group_out = {}
-            for entry_point in entry_group["entry"].values():
-                entry_group_out[entry_point["name"]] = entry_point["ref"]
-            entry_points[entry_group["name"]] = entry_group_out
-        return entry_points
-
-    def _scripts(self, typ: Literal["cli", "gui"]) -> dict[str, str]:
-        scripts = {}
-        for entry in self._data.get(f"{self._type}.entry.{typ}", {}).values():
-            if entry["pypi"]:
-                scripts[entry["name"]] = entry["ref"]
-        return scripts
+    @staticmethod
+    def _convert_to_toml_format(data: dict, types: dict) -> dict:
+        out = {}
+        for key, val in data.items():
+            if not val:
+                continue
+            if key in types:
+                out[key] = _ps.format.to_toml_object(data=val, toml_type=types[key])
+            else:
+                out[key] = val
+        return out
 
     @staticmethod
     def _get_whitespace(string: str, leading: bool) -> str:
@@ -627,7 +514,7 @@ class CondaRecipeGenerator:
 
     def _make_about(self):
         about = copy.deepcopy(self._meta["about"])
-        readme = self._pkg.get("readme", {})
+        readme = self._pkg["pyproject"]["project"].get("readme", {})
         if "text" in readme:
             about["description"] = readme["text"]
         elif "file" in readme:

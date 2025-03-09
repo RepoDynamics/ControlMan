@@ -2,6 +2,7 @@ from __future__ import annotations as _annotations
 
 from typing import TYPE_CHECKING as _TYPE_CHECKING
 
+from packaging import specifiers as _specifiers
 from licenseman import spdx as _spdx
 from loggerman import logger as _logger
 import mdit as _mdit
@@ -40,6 +41,7 @@ class MainDataGenerator:
         self._team()
         self._license()
         self._discussion_categories()
+        self._package_python_versions()
         self._vars()
         return
 
@@ -221,6 +223,78 @@ class MainDataGenerator:
             category_obj["updated_at"] = date.to_internal(date.from_github(category["updatedAt"]))
             category_obj["is_answerable"] = category["isAnswerable"]
             category_obj["description"] = category["description"]
+        return
+
+    def _package_python_versions(self) -> None:
+
+        def get_python_releases():
+            release_versions = self._cache.get("python", "releases")
+            if release_versions:
+                return release_versions
+            release_versions = self._gh_api.user("python").repo("cpython").semantic_versions(tag_prefix="v")
+            live_versions = []
+            for version in release_versions:
+                version_tuple = tuple(map(int, version.split(".")))
+                if version_tuple[0] < 2:
+                    continue
+                if version_tuple[0] == 2 and version_tuple[1] < 3:
+                    continue
+                live_versions.append(version)
+            live_versions = sorted(live_versions, key=lambda x: tuple(map(int, x.split("."))))
+            self._cache.set("python", "releases", live_versions)
+            return live_versions
+
+        current_python_versions = get_python_releases()
+
+        for pkg_key, pkg in self._data.items():
+            if not pkg_key.startswith("pypkg_"):
+                continue
+            python_ver_key = f"{pkg_key}.python.version"
+            version_spec_key = f"{python_ver_key}.spec"
+            spec_str = self._data.fill(version_spec_key)
+            if not spec_str:
+                _exception.load.ControlManSchemaValidationError(
+                    source="source",
+                    before_substitution=True,
+                    problem="The package has not specified a Python version specifier.",
+                    json_path=version_spec_key,
+                    data=self._data(),
+                )
+            try:
+                spec = _specifiers.SpecifierSet(spec_str)
+            except _specifiers.InvalidSpecifier as e:
+                raise _exception.load.ControlManSchemaValidationError(
+                    source="source",
+                    before_substitution=True,
+                    problem=f"Invalid Python version specifier '{spec_str}'.",
+                    json_path=version_spec_key,
+                    data=self._data(),
+                ) from None
+
+            micro_str = []
+            minor_str = []
+            for compat_ver_micro_str in spec.filter(current_python_versions):
+                micro_str.append(compat_ver_micro_str)
+                compat_ver_micro_int = tuple(map(int, compat_ver_micro_str.split(".")))
+                compat_ver_minor_str = ".".join(map(str, compat_ver_micro_int[:2]))
+                if compat_ver_minor_str in minor_str:
+                    continue
+                minor_str.append(compat_ver_minor_str)
+
+            if len(micro_str) == 0:
+                raise _exception.load.ControlManSchemaValidationError(
+                    source="source",
+                    before_substitution=True,
+                    problem=f"The Python version specifier '{spec_str}' does not match any "
+                    f"released Python version: '{current_python_versions}'.",
+                    json_path=version_spec_key,
+                    data=self._data(),
+                )
+            output = {
+                "micros": sorted(micro_str, key=lambda x: tuple(map(int, x.split(".")))),
+                "minors": sorted(minor_str, key=lambda x: tuple(map(int, x.split(".")))),
+            }
+            self._data[python_ver_key].update(output)
         return
 
     def _vars(self):

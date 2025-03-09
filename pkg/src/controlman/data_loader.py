@@ -52,27 +52,28 @@ def load(
             )
         except _ps.exception.update.PySerialsUpdateRecursiveDataError as e:
             raise _exception.ControlManDuplicateConfigFileDataError(filepath=filepath, cause=e) from None
-        log_admonitions = []
-        for key, title in (
-            ("added", "Added"),
-            ("list_appended", "Appended List"),
-            ("skipped", "Skipped"),
-        ):
-            if not log[key]:
-                continue
-            key_list = _mdit.element.unordered_list(
-                [_mdit.element.code_span(item) for item in sorted(log[key])]
-            )
-            log_admonitions.append(
-                _mdit.element.admonition(
-                    title=f"{title} Keys",
-                    body=key_list,
-                    dropdown=True,
-                )
-            )
+        # log_admonitions = []
+        # for key, title in (
+        #     ("added", "Added"),
+        #     ("list_appended", "Appended List"),
+        #     ("skipped", "Skipped"),
+        # ):
+        #     if not log[key]:
+        #         continue
+        #     key_list = _mdit.element.unordered_list(
+        #         [_mdit.element.code_span(item) for item in sorted(log[key])]
+        #     )
+        #     log_admonitions.append(
+        #         _mdit.element.admonition(
+        #             title=f"{title} Keys",
+        #             body=key_list,
+        #             dropdown=True,
+        #         )
+        #     )
         _logger.success(
             "Loaded Configurations",
-            _mdit.block_container(*log_admonitions),
+            _logger.data_block({k: [str(v) for v in value] for k, value in log.items()}),
+            # _mdit.block_container(*log_admonitions),
         )
         return
 

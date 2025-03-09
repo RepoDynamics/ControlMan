@@ -15,4 +15,4 @@ properties:
     description: |
       This is used to validate the configuration content.
       If the content does not match the schema, an error will be raised.
-    type: object
+    $ref: https://controlman.repodynamics.com/schema/jsonschema

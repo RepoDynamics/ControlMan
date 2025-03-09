@@ -9,6 +9,9 @@ properties:
   name:
     description: Name of the artifact.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
+  path:
+    summary: Path or glob pattern to files to include in the artifact.
+    type: string
   merge:
     description: |
       Configurations for merging this artifact into another.

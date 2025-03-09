@@ -31,9 +31,9 @@ patternProperties:
     required: [ feature, install ]
     properties:
       path:
-        description: Path to the directory containing the Feature.
+        description: Path (from the `.devcontainers` directory) to the directory containing the Feature.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: .devcontainer/${{ devcontainer.features.dir_name }}$/${{ .feature.id }}$
+        default: ${{ devcontainer.features.dir_name }}$/${{ .feature.id }}$
       feature:
         summary: Feature metadata.
         description: |
@@ -360,11 +360,12 @@ patternProperties:
       task_in_env_prefix:
         type: string
         default: >-
-          conda run --cwd '${{ .container.workspaceFolder }}$' -n {env_name}'
+          conda run --cwd '${{ .container.workspaceFolder }}$' -n {env_name} --live-stream -vv
       environment:
         type: object
         additionalProperties:
           type: object
+          default: { }
           required: [ name ]
           anyOf:
             - required: [ conda ]
@@ -390,84 +391,22 @@ patternProperties:
               type: object
               additionalProperties:
                 $ref: https://controlman.repodynamics.com/schema/bash-task
+            path:
+              summary: Path to the environment file.
+              type: string
+              pattern: ^\.devcontainer/
+              default: |
+                  #{{
+                    devcontainer_dir = get("...path")
+                    env_dir = get("devcontainer.containers.rel_path.environment")
+                    conda_dir = get("devcontainer.containers.rel_path.conda")
+                    return f"{devcontainer_dir}/{env_dir}/{conda_dir}/{get(".__key__")}.yaml"
+                  }}#
       file:
         summary: Dynamic files related to the container.
         type: object
         additionalProperties:
           $ref: https://controlman.repodynamics.com/schema/dynamic-file
-  ^pyfile_:
-    title: Python Files
-    summary: Configurations for Python source files.
-    description: |
-      Configurations for a set of Python source files defined by a glob pattern.
-    type: object
-    additionalProperties: false
-    required: [ glob ]
-    anyOf:
-      - required: [ docstring ]
-      - required: [ header_comments ]
-    properties:
-      glob:
-        description: |
-          Glob pattern to match source files.
-          The pattern is relative to the [import package directory](#cccdef-pkg-path-import).
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
-      docstring:
-        description: |
-          Docstring configurations for the source files.
-        type: object
-        additionalProperties: false
-        required: [ mode, content ]
-        properties:
-          content:
-            description: |
-              Content of the docstring.
-            type: string
-          mode:
-            description: |
-              Mode of the docstring.
-            type: string
-            enum: [ append, prepend, replace ]
-            default: append
-          max_line_length:
-            description: |
-              Maximum line length of the docstring.
-            type: integer
-            minimum: 0
-      header_comments:
-        description: |
-          Header comments for the source files.
-        type: object
-        additionalProperties: false
-        required: [ mode, content ]
-        properties:
-          mode:
-            description: |
-              Mode of the header comments.
-            type: string
-            enum: [ append, prepend, replace ]
-            default: append
-          content:
-            description: |
-              Content of the header comments.
-            type: string
-          max_line_length:
-            description: |
-              Maximum line length of the comments.
-            type: integer
-            minimum: 0
-          line_continuation_indent:
-            description: |
-              Indentation of line continuation.
-            type: integer
-            minimum: 0
-            default: 0
-          empty_lines:
-            description: |
-              Number of empty lines between comments.
-            type: integer
-            minimum: 0
-            default: 1
   ^pypkg_:
     title: Python Package
     summary: Configurations for a Python package in the project.
@@ -1169,7 +1108,12 @@ properties:
             minimum: 0
       title:
         summary: Title of the deposition.
-        default: ${{ citation.cff.title }}$
+        default: |
+          #{{
+            name = get("name")
+            title = get("title")
+            return f"{name}: {title}" if title else name
+          }}#
         $ref: https://jsonschemata.repodynamics.com/string/oneline
       creators:
         $ref: https://controlman.repodynamics.com/schema/entity-ids
@@ -1188,7 +1132,8 @@ properties:
           - [ owner, some_author_id ]
       description:
         summary: Description of the deposition.
-        default: ${{ citation.cff.abstract }}$
+        default: >-
+          #{{ return get("abstract") }}#
         $ref: https://jsonschemata.repodynamics.com/string/nonempty
       upload_type:
         summary: Type of the deposition.
@@ -1204,7 +1149,7 @@ properties:
           - publication
           - software
           - video
-        default: ${{ citation.cff.type }}$
+        default: software
       access_right:
         summary: Access rights for the project.
         type: string
@@ -1525,324 +1470,11 @@ properties:
               const: restricted
         then:
           required: [ access_conditions ]
-  citation:
-    summary: Citation information of the project.
-    type: object
-    additionalProperties: false
-    properties:
-      doi:
-        type: array
-        items:
-          type: object
-          additionalProperties: false
-          required: [ value, description ]
-          properties:
-            value:
-              $ref: https://jsonschemata.repodynamics.com/id/doi
-            description:
-              $ref: https://jsonschemata.repodynamics.com/string/oneline
-        default: |
-          #{{
-            out = []
-            preferred = get("citation.cff.preferred_citation", {})
-            preferred_doi = preferred.get("doi")
-            name = get("name")
-            if preferred_doi:
-              description = f"{name} paper in {preferred.get("journal") or preferred.get("publisher")}"
-              out.append({"value": preferred_doi, "description": description})
-            zenodo_concept_doi = get("citation.zenodo.concept.doi")
-            if zenodo_concept_doi:
-              description = f"{name} immutable record on Zenodo"
-              out.append({"value": zenodo_concept_doi, "description": description})
-            latest_doi = get("citation.cff.doi")
-            if latest_doi:
-              description = f"{name} latest release (v{get("citation.cff.version")})"
-              out.append({"value": latest_doi, "description": description})
-          }}#
-
-  color:
-    summary: Color palette of the the project.
-    description: |
-      Colors of the project's light and dark themes.
-      Each color can be defined using any valid [CSS color format](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value),
-      such as hexadecimal, RGB, HSL, or named colors.
-    $comment: |
-      Color names and values taken from pydata-sphinx-theme:
-      - https://github.com/pydata/pydata-sphinx-theme/blob/main/src/pydata_sphinx_theme/assets/styles/variables/_color.scss
-      - https://github.com/pydata/pydata-sphinx-theme/blob/main/src/pydata_sphinx_theme/assets/styles/extensions/_sphinx_design.scss
-    type: object
-    required: [ primary, secondary ]
-    properties:
-      primary:
-        summary: Primary color of the project.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(189 87 30)  #0a7d91
-          dark: hsl(189 54 51)  #3fb1c5
-      primary-bg:
-        summary: Primary background.
-        description: |
-          In the website, this is sparingly used.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(189 54 88)  #d0ecf1
-          dark: hsl(189 85 11)  #042c33
-      secondary:
-        summary: Secondary color of the project.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(262 75 58)  #8045e5
-          dark: hsl(263 98 68)  #9c5ffd
-      secondary-bg:
-        summary: Secondary background.
-        description: |
-          In the website, this is sparingly used, e.g., for announcement banner.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(267 100 89)  #e0c7ff
-          dark: hsl(262 58 24)  #341a61
-      accent:
-        summary: Accent color of the project.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(308 59 48)  #c132af
-          dark: hsl(308 65 70)  #e47fd7
-      accent-bg:
-        summary: Accent background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(307 64 92)  #f8dff5
-          dark: hsl(308 59 17)  #46123f
-      info:
-        summary: Semantic info color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(219 82 53)  #276be9
-          dark: hsl(219 82 71)  #79a3f2
-      info-bg:
-        summary: Info background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(219 84 93)  #dce7fc
-          dark: hsl(219 88 19)  #06245d
-      warning:
-        summary: Semantic warning color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(24 93 50)  #f66a0a
-          dark: hsl(25 100 64)  #ff9245
-      warning-bg:
-        summary: Warning background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(29 74 89)  #f8e3d0
-          dark: hsl(24 96 20)  #652a02
-      success:
-        summary: Semantic success color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(149 100 26)  #00843f
-          dark: hsl(149 36 54)  #5fb488
-      success-bg:
-        summary: Success background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(150 37 88)  #d6ece1
-          dark: hsl(149 100 9)  #002f17
-      attention:
-        summary: Semantic attention color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.warning }}$
-      attention-bg:
-        summary: Attention background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.warning-bg }}$
-      danger:
-        summary: Semantic danger color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(351 68 51)  #d72d47
-          dark: hsl(352 66% 72)  #e78894
-      danger-bg:
-        summary: Danger background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(353 67 93)  #f9e1e4
-          dark: hsl(350 64 19)  #4e111b
-      light:
-        summary: Semantic light color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(210 9 96)  #f3f4f5
-          dark: hsl(210 9 96)  #f3f4f5
-      light-bg:
-        summary: Light background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(210 9 97)  #f7f7f8
-          dark: hsl(210 9 67)  #a5a5b1
-      dark:
-        summary: Semantic dark color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(218 19 16)  #222832
-          dark: hsl(218 19 16)  #222832
-      dark-bg:
-        summary: Dark background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(218 19 16)  #222832
-          dark: hsl(218 19 16)  #222832
-      muted:
-        summary: Semantic muted color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(216 20 20)  #29313d
-          dark: hsl(210 9 96)  #f3f4f5
-      muted-bg:
-        summary: Muted background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(216 20 44)  #5a6c87
-          dark: hsl(216 20 14)  #1d222b
-      background:
-        summary: Background color.
-        description: |
-          In the website, this corresponds to the color of the canvas;
-          i.e. the deepest layer.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(0 0 100)  #ffffff
-          dark: hsl(216 20 10)  #14181e
-      on-background:
-        summary: Color for elements directly on top of background.
-        description: |
-          In the website, this corresponds e.g., to the color of the header navbar,
-          providing slight contrast against the background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(0 0 100)  #ffffff
-          dark: hsl(218 19 16)  #222832
-      surface:
-        summary: Surface color.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(210 9 96)  #f3f4f5
-          dark: hsl(216 20 20)  #29313d
-      on-surface:
-        summary: Color for elements directly on top of surface.
-        description: |
-          In the website, this corresponds e.g., to the color of the sidebar directives,
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(218 19 16)  #222832
-          dark: hsl(210 9 96)  #f3f4f5
-      heading:
-        summary: Color for heading titles.
-        description: |
-          In the website, this is used as the color of `<h1>` to `<h6>` elements.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.text-base }}$
-      text-base:
-        summary: Base color for texts.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(218 19 16)  #222832
-          dark: hsl(208 18 84)  #ced6dd
-      text-muted:
-        summary: Color for muted texts.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(216 20 35)  #48566b
-          dark: hsl(215 11 65)  #9ca4af
-      link:
-        summary: Color for links.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.primary }}$
-      link-hover:
-        summary: Color for links on mouse hover.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.secondary }}$
-      shadow:
-        summary: Color for shadows.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: rgba(0 0 0 / 0.1)
-          dark: rgba(0 0 0 / 0.1)
-      border:
-        summary: Color for borders.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(213 11 84)  #d1d5da
-          dark: hsl(216 20 35)  #48566b
-      border-muted:
-        summary: Color for muted borders.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: rgba(23 23 26 / 0.2)
-          dark: hsl(216 20 20)  #29313d
-      blockquote-notch:
-        summary: Color for block-quote notches.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(215 12 46)  #677384
-          dark: hsl(215 11 65)  #9ca4af
-      inline-code:
-        summary: Color for inline codes.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(308 59 36)  #912583
-          dark: hsl(307 65 87)  #f3c7ee
-      inline-code-links:
-        summary: Color for inline code links.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(189 86 23)  #085d6c
-          dark: hsl(189 54 51)  #3fb1c5
-      target:
-        summary: Color for target components.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(37 80 77)  #f3cf95
-          dark: hsl(53 93 21)  #675c04
-      table:
-        summary: Color for tables.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(216 20 10)  #14181e
-          dark: hsl(0 0 100)  #ffffff
-      table-row-hover-bg:
-        summary: Color for table rows on mouse hover.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(267 95 85)  #d5b4fd
-          dark: hsl(262 59 35)  #4b258f
-      table-inner-border:
-        summary: Color for table inner borders.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default:
-          light: hsl(216 11 91)  #e5e7ea
-          dark: hsl(215 19 26)  #364150
-      table-outer-border:
-        summary: Color for table outer borders.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.surface }}$
-      table-heading-bg:
-        summary: Color for table heading background.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.surface }}$
-      table-row-zebra-high-bg:
-        summary: Color for high-contrast table rows in zebra mode.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.on-background }}$
-      table-row-zebra-low-bg:
-        summary: Color for low-contrast table rows in zebra mode.
-        $ref: https://controlman.repodynamics.com/schema/themed-color
-        default: ${{ color.surface }}$
   web:
     title: Website
     summary: Configurations for the project's website.
     type: object
+    default: { }
     additionalProperties: false
     required: [ url ]
     properties:
@@ -3264,7 +2896,8 @@ properties:
     required: [ docker-compose ]
     properties:
       docker-compose:
-        summary: `docker-compose` configurations for the development environment.
+        summary: >-
+          `docker-compose` configurations for the development environment.
         description: |
           These configurations define the services and containers used in the development environment,
           allowing for [connceting to multiple containers](https://code.visualstudio.com/remote/advancedcontainers/connect-multiple-containers).
@@ -3315,6 +2948,7 @@ properties:
           rel_path:
             summary: Relative paths from the directory containing devcontainer configurations.
             type: object
+            default: { }
             properties:
               tasks:
                 summary: Path to the output tasks file.
@@ -3323,7 +2957,7 @@ properties:
               environment:
                 summary: Path to the environment directory.
                 $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
-                default: env
+                default: environment
               apt:
                 summary: Path to the apt packages file relative to the environment directory.
                 $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
@@ -3419,7 +3053,7 @@ properties:
       web:
         type: object
         additionalProperties: false
-        required: [ name, artifact, env, action ]
+        required: [ name, artifact, container, env, action ]
         default: { }
         properties:
           name:
@@ -3444,6 +3078,9 @@ properties:
                 $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                 default:
                   name: Website - v{{ version }} - GH-Pages
+          container:
+            summary: Specification of the devcontainer for build.
+            $ref: https://controlman.repodynamics.com/schema/workflow-devcontainer
           env:
             summary: Configuration for the GitHub deployment environment.
             $ref: https://controlman.repodynamics.com/schema/workflow-env
@@ -3464,6 +3101,12 @@ properties:
                 type: string
                 enum: [ auto, disabled ]
                 default: auto
+      refactor:
+        type: object
+        properties:
+          pre_commit_config:
+            summary: Configuration for pre-commit hooks.
+            type: object
       lint:
         type: object
         default: { }
@@ -3486,6 +3129,12 @@ properties:
           task_name:
             type: string
             default: 'py{{ python }} | {{ os }}'
+          codecov:
+            type: object
+            properties:
+              codecov_yml_path:
+                type: string
+                default: .github/.codecov.yml
           artifact:
             type: object
             additionalProperties: false
@@ -3495,6 +3144,7 @@ properties:
                 $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                 default:
                   name: Test Report - {{ source }} - v{{ version }} - py{{ python }} - {{ os }}
+                  path: report
                   merge:
                     name: Test Reports - {{ source }} - v{{ version }}
                     pattern: Test Report -*
@@ -4021,7 +3671,6 @@ properties:
     properties:
       file:
         type: object
-        additionalProperties: false
         properties:
           config:
             type: object
@@ -4076,9 +3725,9 @@ properties:
             additionalProperties:
               type: string
           pkg_config:
-            $ref: https://controlman.repodynamics.com/schema/dynamicfile-pkg
+            type: object
           test_config:
-            $ref: https://controlman.repodynamics.com/schema/dynamicfile-pkg
+            type: object
           pkg_source:
             type: object
             additionalProperties:
@@ -4109,3 +3758,7 @@ properties:
           yaml:
             default: { }
             $ref: https://controlman.repodynamics.com/schema/dynamic-file-setting-yaml
+  changelogs:
+    $ref: https://controlman.repodynamics.com/schema/changelog
+  contributor:
+    $ref: https://controlman.repodynamics.com/schema/contributors

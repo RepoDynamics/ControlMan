@@ -78,7 +78,7 @@ class RepoDataGenerator:
                 new_prefix = self._data.fill("branch.pre.name")
                 branch_name = f"{new_prefix}{branch.removeprefix(pre_release_prefix)}"
             version_info = {"branch": branch_name}
-            pkg_info = branch_metadata["pkg"]
+            pkg_info = branch_metadata["pypkg_main"]
             if pkg_info:
                 package_managers = [
                     package_man_name for platform_name, package_man_name in (
@@ -86,36 +86,33 @@ class RepoDataGenerator:
                     ) if platform_name in pkg_info
                 ]
                 if branch == curr_branch:
-                    branch_metadata.fill("pkg.entry")
-                    branch_metadata.fill("test.entry")
+                    branch_metadata.fill("pypkg_main.entry")
+                    branch_metadata.fill("pypkg_test.entry")
                 version_info |= {
-                    "python_versions": branch_metadata["pkg.python.version.minors"],
-                    "os_names": [
-                        branch_metadata[f"pkg.os.{name}.name"] for name in ("linux", "macos", "windows")
-                        if name in branch_metadata["pkg.os"]
-                    ],
+                    "python_versions": branch_metadata["pypkg_main.python.version.minors"],
+                    "os_names": [os["name"] for os in branch_metadata["pypkg_main.os"].values()],
                     "package_managers": package_managers,
                     "python_api_names": [
-                        script["name"] for script in branch_metadata.get("pkg.entry.python", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_main.entry.python", {}).values()
                     ],
                     "test_python_api_names": [
-                        script["name"] for script in branch_metadata.get("test.entry.python", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_test.entry.python", {}).values()
                     ],
                     "cli_names": [
-                        script["name"] for script in branch_metadata.get("pkg.entry.cli", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_main.entry.cli", {}).values()
                     ],
                     "test_cli_names": [
-                        script["name"] for script in branch_metadata.get("test.entry.cli", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_test.entry.cli", {}).values()
                     ],
                     "gui_names": [
-                        script["name"] for script in branch_metadata.get("pkg.entry.gui", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_main.entry.gui", {}).values()
                     ],
                     "test_gui_names": [
-                        script["name"] for script in branch_metadata.get("test.entry.gui", {}).values()
+                        script["name"] for script in branch_metadata.get("pypkg_test.entry.gui", {}).values()
                     ],
                     "api_names": [
                         script["name"]
-                        for group in branch_metadata.get("pkg.entry.api", {}).values()
+                        for group in branch_metadata.get("pypkg_main.entry.api", {}).values()
                         for script in group["entry"].values()
                     ]
                 }

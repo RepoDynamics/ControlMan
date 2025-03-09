@@ -19,46 +19,21 @@ description: |
   :::
 type: object
 additionalProperties: false
-required: [ path, name, import_name, os, python, build ]
+required: [ path, name, import_name, os, python ]
 properties:
-  path:
-    description: |
-      Local paths to package resources.
-    type: object
-    default: { }
-    additionalProperties: false
-    required: [ root, source, source_rel, import ]
-    properties:
-      root:
-        description: |
-          Path to package root directory relative to the repository root.
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: pkg
-      source_rel:
-        description: Path to package source directory relative to the package root directory.
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: src
-      source:
-        description: Path to package source directory relative to the repository root.
-        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        default: ${{ .root }}$/${{ .source_rel }}$
-      import:
-        description: Path to package top-level import directory relative to the repository root.
-        type: string
-        default: ${{ .source }}$/${{ ..import_name }}$
   name:
     description: |
       Name of the Python distribution package.
-      
+
       For consistency, it is strongly recommended to
       **choose a project name that is most similar to a valid package name**,
       and leave the package name to be automatically generated.
       For example, you can name your project `My Project`,
       and the package name will be `My-Project`.
-      
+
       ::::{admonition} PyPA Naming Rules
       :class: dropdown attention
-      
+
       According to [Python Packaging Authority (PyPA)](https://packaging.python.org/en/latest/specifications/name-normalization/),
       the package name must consist only of ASCII alphanumeric characters,
       hyphens, underscores, and periods.
@@ -105,7 +80,7 @@ properties:
   import_name:
     description: |
       Name of the top-level Python import package.
-      
+
       For consistency, it is strongly recommended to
       **choose a package name that is most similar to a valid import name**,
       and leave the import name to be automatically generated.
@@ -123,209 +98,90 @@ properties:
     default: |
       #{{
         import re
-        
+
         pkg_name = get(".name")
         import_name_raw = re.sub(r"[^a-zA-Z0-9]", "_", pkg_name.lower())
         return re.sub(r"^[0-9]+", "", import_name_raw)
       }}#
-  description:
-    title: Package Description
+  path:
     description: |
-      A single-line description or slogan of the package.
-      
-      :::{admonition} Usage
-      :class: dropdown note
-
-      The description is added to the package metadata (see the
-      [`project.description`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#description)
-      key of the `pyproject.toml` file) and is used by indexing services and package managers
-      to provide a brief overview of the package.
-      For example, it is displayed on the package's homepage on PyPI and TestPyPI.
-      :::
-    default: ${{ title }}$
-    $ref: https://jsonschemata.repodynamics.com/string/oneline
-  keywords:
-    title: Keywords
-    description: |
-      Keywords categorizing the package.
-      
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      Keywords are added to the package metadata (see the
-      [`project.keywords`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#keywords)
-      key of the `pyproject.toml` file) and are used by indexing services and package managers
-      to categorize the package and make it easier to find.
-      For example, they are displayed on the package's homepage on PyPI and TestPyPI,
-      and can be used to filter packages in search results.
-      :::
-    default: ${{ keywords }}$
-    $ref: https://jsonschemata.repodynamics.com/array/unique-strings
-  classifiers:
-    summary: >-
-      [Trove classifiers](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers)
-      for the package.
-    description: |
-      Classifiers are categorized into the following groups:
-      - Development Status
-      - Environment
-      - Framework
-      - Intended Audience
-      - License
-      - Natural Language
-      - Operating System
-      - Programming Language
-      - Topic
-      - Typing
-      
-      For a full list of classifiers, see the [PyPI classifiers list](https://pypi.org/classifiers/)
-      or the [`trove-classifiers`](https://github.com/pypa/trove-classifiers/blob/main/src/trove_classifiers/__init__.py)
-      Python package from PyPA.
-    type: array
-    uniqueItems: true
-    items:
-      title: Trove classifier
-      type: string
-      pattern: '^.+( :: [^::]+)+$'
-      default: [ 'Natural Language :: English' ]
-      examples:
-        - 'Intended Audience :: Science/Research'
-        - 'Topic :: Scientific/Engineering :: Artificial Intelligence'
-  urls:
-    title: Project URLs
-    description: |
-      URLs of project resources according to
-      [PyPA specifications](https://packaging.python.org/en/latest/specifications/pyproject-toml/#urls).
-      For each entry, the key defines the resource name displayed on PyPI,
-      and the value defines the URL.
-      Some keys and URL patterns are recognized by PyPI
-      and displayed with a custom icon.
-      For more details, see [PyPI documentation](https://docs.pypi.org/project_metadata/#icons)
-      and the corresponding [Warehouse source code](https://github.com/pypi/warehouse/blob/e69029dc1b23eb2436a940038b927e772238a7bf/warehouse/templates/packaging/detail.html#L20-L62).
-    default:
-      Homepage: ${{ web.url.home }}$
-      Source: ${{ repo.url.home }}$
-      Download: ${{ repo.url.releases.home }}$
-      Issue-Tracker: ${{ repo.url.issues.home }}$
+      Local paths to package resources.
     type: object
-    additionalProperties:
-      title: URL
-      description: URL of a project resource
-      $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-  readme:
-    title: README
-    description: |
-      Full description of the package.
-      https://packaging.python.org/en/latest/specifications/pyproject-toml/#readme
-    type: object
+    default: { }
     additionalProperties: false
-    oneOf:
-      - required: [ file ]
-      - required: [ text ]
-    required: [ content-type ]
+    required: [ root, source, source_rel, import ]
     properties:
-      file:
+      root:
+        description: |
+          Path to package root directory relative to the repository root.
         $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-        description: Filepath to the README file.
-      text:
-        $ref: https://jsonschemata.repodynamics.com/string/nonempty
-        description: Content of the README file.
-      content-type:
+        default: pkg
+      source_rel:
+        description: Path to package source directory relative to the package root directory.
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+        default: src
+      source:
+        description: Path to package source directory relative to the repository root.
+        $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+        default: ${{ .root }}$/${{ .source_rel }}$
+      import_rel:
+        description: Path to package top-level import directory relative to the package source directory.
         type: string
-        enum:
-          - text/markdown
-          - text/x-rst
-          - text/plain
-        default: text/markdown
-      charset:
-        $ref: https://jsonschemata.repodynamics.com/string/oneline
-  authors:
-    title: Authors
-    description: |
-      Core authors of the package.
-      
-      ordered by contribution (highest first).
-      Authors are defined by their [team](#ccc-team)-member IDs.
-
-      :::{admonition} Usage
-      :class: dropdown note
-      
-      Authors are added to the package metadata (see the
-      [`project.authors`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
-      key of the `pyproject.toml` file) and are used by indexing services and package managers
-      to provide credit to the authors of the package.
-      For example, they are displayed on the package's homepage on PyPI and TestPyPI.
-      :::
-    $ref: https://controlman.repodynamics.com/schema/entity-ids
-    default: |
-      #{{
-        return [
-          {"id": int_author["id"], "member": True}
-          for int_author in team_members_with_role_types("Author", active_only=True)
-        ] + [
-          {"id": ext_author["id"], "member": False}
-          for ext_author in changelog.current_public.contributors_with_role_types("Author", member=False)
-        ]
-      }}#
-    examples:
-      - ${{ citation.cff.authors }}$
-      - [ owner, some_author_id ]
-  maintainers:
-    title: Maintainers
-    description: |
-      Core maintainers of the package, ordered by contribution (highest first).
-      Maintainers are defined by their [team](#ccc-team)-member IDs.
-
-      :::{admonition} Usage
-      :class: dropdown note
-
-      Maintainers are added to the package metadata (see the
-      [`project.maintainers`](https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers)
-      key of the `pyproject.toml` file) and are used by indexing services and package managers
-      to provide credit to the maintainers of the package.
-      For example, they are displayed on the package's homepage on PyPI and TestPyPI.
-      :::
-    $ref: https://controlman.repodynamics.com/schema/entity-ids
-    default_description: All maintainers defined in `$.maintainers`.
-    default: |
-      #{{
-          return [
-            member["id"] for member in team_members_with_role_types(
-              ["ContactPerson", "ProjectManager", "DataManager", "ProjectLeader", "Supervisor"],
-              active_only=True,
-            )
-          ]
-      }}#
-    examples:
-      - ${{ citation.cff.authors }}$
-      - [ owner, some_author_id ]
-  license:
-    type: string
-    default: ${{ license.expression }}$
+        default: ${{ .source_rel }}$/${{ ..import_name }}$
+      import:
+        description: Path to package top-level import directory relative to the repository root.
+        type: string
+        default: ${{ .source }}$/${{ ..import_name }}$
   typed:
     description: Whether the package is typed
     type: boolean
     default: true
   os:
     title: OS
-    description: Operating systems for the project
-    examples:
-      - linux:
-          runner: ubuntu-latest
-        macos:
-        windows:
+    summary: Supported platforms and operating systems.
     type: object
     minProperties: 1
     additionalProperties:
+      title: OS/Platform
+      summary: Configurations for a supported OS/platform.
+      description: |
+        A platform must define a 
+        [GitHub Actions runner](https://docs.github.com/en/actions/using-github-hosted-runners).
       type: object
       additionalProperties: false
-      required: [ name, runner ]
+      required: [ name, platform, runner ]
       properties:
         name:
           description: Display name of the OS.
           $ref: https://jsonschemata.repodynamics.com/string/oneline
+        platform:
+          summary: Name of the platform for the runner.
+          type: string
+          default: ${{ .__key__ }}$
+          enum:
+            - emscripten-wasm32
+            - linux-32
+            - linux-64
+            - linux-aarch64
+            - linux-armv6l
+            - linux-armv7l
+            - linux-ppc64
+            - linux-ppc64le
+            - linux-riscv32
+            - linux-riscv64
+            - linux-s390x
+            - osx-64
+            - osx-arm64
+            - wasi-wasm32
+            - win-32
+            - win-64
+            - win-arm64
+            - zos-z
         runner:
-          description: GitHub Actions runner for the OS.
+          summary: >-
+            Name of the 
+            [GitHub Actions runner](https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories) 
+            for this platform.
           type: string
           examples:
             - ubuntu-latest
@@ -343,7 +199,7 @@ properties:
         builds:
           description: |
             List of [cibuildwheel build identifiers](https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip)
-            to build.
+            to build on the corresponding GitHub Actions runner.
           type: array
           minItems: 1
           uniqueItems: true
@@ -353,6 +209,9 @@ properties:
               - cp313-macosx_x86_64
               - cp312-win_arm64
               - cp312-manylinux_i686
+        data:
+          summary: Additional data for the platform.
+          type: object
   python:
     title: Python configurations for the package.
     description: |
@@ -485,12 +344,12 @@ properties:
         description: Build dependencies.
         type: object
         additionalProperties:
-          $ref: https://controlman.repodynamics.com/schema/dep-direct
+          $ref: https://controlman.repodynamics.com/schema/dependency
       core:
         title: Package core dependencies.
         type: object
         additionalProperties:
-          $ref: https://controlman.repodynamics.com/schema/dep-direct
+          $ref: https://controlman.repodynamics.com/schema/dependency
       optional:
         title: Optional Dependencies
         description: Optional dependencies for the project
@@ -498,6 +357,7 @@ properties:
         additionalProperties:
           type: object
           additionalProperties: false
+          required: [ name, description, package, env ]
           properties:
             name:
               type: string
@@ -506,226 +366,84 @@ properties:
             package:
               type: object
               additionalProperties:
-                $ref: https://controlman.repodynamics.com/schema/dep-direct
-      env:
-        $ref: https://controlman.repodynamics.com/schema/env-file
-        default:
-          conda:
-            name: ${{ ....import_name }}$
-            path: ${{ ....path.root }}$/environment.yaml
-          pip:
-            path: ${{ ....path.root }}$/requirements.txt
-  source_file:
-    description: |
-      Configurations for Python source files.
-    type: object
-    additionalProperties:
-      title: File Configurations
-      description: |
-        Configurations for a set of Python source files defined by a glob pattern.
-      type: object
-      additionalProperties: false
-      required: [ glob ]
-      anyOf:
-        - required: [ docstring ]
-        - required: [ header_comments ]
-      properties:
-        glob:
-          description: |
-            Glob pattern to match source files.
-            The pattern is relative to the [import package directory](#cccdef-pkg-path-import).
-          $ref: https://jsonschemata.repodynamics.com/string/oneline
-        docstring:
-          description: |
-            Docstring configurations for the source files.
-          type: object
-          additionalProperties: false
-          required: [ mode, content ]
-          properties:
-            content:
-              description: |
-                Content of the docstring.
-              type: string
-            mode:
-              description: |
-                Mode of the docstring.
-              type: string
-              enum: [ append, prepend, replace ]
-              default: append
-            max_line_length:
-              description: |
-                Maximum line length of the docstring.
-              type: integer
-              minimum: 0
-        header_comments:
-          description: |
-              Header comments for the source files.
-          type: object
-          additionalProperties: false
-          required: [ mode, content ]
-          properties:
-            mode:
-              description: |
-                Mode of the header comments.
-              type: string
-              enum: [ append, prepend, replace ]
-              default: append
-            content:
-              description: |
-                  Content of the header comments.
-              type: string
-            max_line_length:
-              description: |
-                Maximum line length of the comments.
-              type: integer
-              minimum: 0
-            line_continuation_indent:
-              description: |
-                Indentation of line continuation.
-              type: integer
-              minimum: 0
-              default: 0
-            empty_lines:
-              description: |
-                Number of empty lines between comments.
-              type: integer
-              minimum: 0
-              default: 1
-  manifest:
-    title: MANIFEST.in configurations.
-    description: |
-      The `MANIFEST.in` file is used to [control files and directories](https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html#controlling-files-in-the-distribution)
-      when creating a source distribution of the package.
-      It is used by the `sdist` command of `setuptools` to determine which files
-      to include in the source distribution.
-    type: array
-    examples:
-      - - graft ${{ dir.pkg.import }}$
-        - global-exclude *.py[cod] __pycache__ *.so
-    uniqueItems: true
-    items:
-      type: string
-  build:
-    title: Build system definitions.
-    description: |
-      References:
-      - [Python Packaging User Guide](https://packaging.python.org) by the Python Packaging Authority (PyPA)
-      - [Setuptools User Guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)   
-      - [Pip User Guide](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
-    type: object
-    properties:
-      backend:
-        description: Build backend
-        type: string
-        examples:
-          - setuptools.build_meta
-      tool:
-        title: Build system definitions
+                $ref: https://controlman.repodynamics.com/schema/dependency
+#      group:
+#        summary: Compatibility definitions for optional dependency groups.
+#        description: |
+#          Define compatibility between optional dependency groups.
+#        type: object
+#        additionalProperties:
+#          type: object
+#          additionalProperties: false
+#          required: [ name, description, optionals, compatible ]
+#          properties:
+#            name:
+#              type: string
+#            description:
+#              type: string
+#            optionals:
+#              summary: Included optional groups.
+#              type: array
+#              items:
+#                type: string
+#            compatible:
+#              summary: Whether the optional groups are compatible (True) or not (False).
+#              type: boolean
+      variant:
+        summary: Build and dependency variants.
         description: |
-          Configurations for the build backend, e.g.,
-          [Setuptools]([SetupTools](https://setuptools.pypa.io/).
+          Variants of the package with different dependencies.
         type: object
-        additionalProperties:
-          type: object
         properties:
-          setuptools:
-            title: Setuptools configurations
+          zip_keys:
+            summary: Variant keys to couple.
+            description: |
+              See [Coupling keys](https://docs.conda.io/projects/conda-build/en/latest/resources/variants.html#coupling-keys)
+              in `conda-build` and [Zip keys](https://rattler.build/latest/variants/#zip-keys)
+              in `rattler-build` documentation.
+            type: array
+            uniqueItems: true
+            items:
+              title: Coupled Keys
+              summary: A set of coupled variant keys.
+              description: |
+                These must be keys of the variant dictionary.
+                Note that all corresponding variant values must be sequences of the same length.
+              type: array
+              uniqueItems: true
+              minItems: 2
+              items:
+                type: string
+          pin_run_as_build:
+            summary: Package versions that must match during build and run.
+            description: |
+              See [Customizing compatibility](https://docs.conda.io/projects/conda-build/en/latest/resources/variants.html#customizing-compatibility)
+              in `conda-build` and [Pin run as build](https://rattler.build/latest/variants/#pin-run-as-build)
+              in `rattler-build` documentation.
             type: object
-            properties:
-              include-package-data:
-                title: Include package data
-                type: boolean
-              packages:
-                title: Package definitions
-                type: object
-                properties:
-                  find:
-                    title: Find packages
-                    type: object
-                    properties:
-                      where:
-                        title: Where to find packages
-                        type: array
-                        items:
-                          type: string
-                      namespaces:
-                        title: Include namespaces
-                        type: boolean
-              cmdclass:
-                title: Command classes
-                type: object
-          versioningit:
-            title: Versioningit
+            additionalProperties:
+              type: object
+              properties:
+                min_pin:
+                  type: string
+                max_pin:
+                  type: string
+          variants:
+            summary: Variant definitions.
+            description: |
+              For each variant, add a key-value pair 
+              with the value being a sequence of possible variants for the key.
             type: object
-            properties:
-              vcs:
-                type: object
-                default: { }
-                properties:
-                  method:
-                    type: string
-                    enum: [ git, hg, svn ]
-                    default: git
-                  match:
-                    type: array
-                    default: [ '${{ tag.version.prefix }}$[0-9]*.[0-9]*.[0-9]*']
-                    items:
-                      type: string
-                  default-tag:
-                    type: string
-                    default: ${{ tag.version.prefix }}$0.0.0
-              tag2version:
-                type: object
-                default: { }
-                properties:
-                  rmprefix:
-                    type: string
-                    default: ${{ tag.version.prefix }}$
-              format:
-                type: object
-                default: {}
-                properties:
-                  distance:
-                    type: string
-                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{rev}'
-                  dirty:
-                    type: string
-                    default: '{base_version}+0.{committer_date:%Y.%m.%d}.{rev}.dirty'
-                  distance-dirty:
-                    type: string
-                    default: '{base_version}+{distance}.{committer_date:%Y.%m.%d}.{rev}.dirty'
-              onbuild:
-                type: object
-                default: { }
-                properties:
-                  method:
-                    type: string
-                    enum: [ replace-version ]
-                    default: replace-version
-                  regex:
-                    type: string
-                    default: '^__version_details__: dict\[str, str\] = (?P<version>.*)'
-                  require-match:
-                    type: boolean
-                    default: true
-                  source-file:
-                    type: string
-                    default: '${{ .....path.source_rel }}$/${{ .....import_name }}$/__init__.py'
-                  build-file:
-                    type: string
-                    default: '${{ .....import_name }}$/__init__.py'
-                  replacement:
-                    type: string
-                    default: |
-                      {{
-                          "version": "{version}",
-                          "build_date": "{build_date:%Y.%m.%d}",
-                          "committer_date": "{committer_date:%Y.%m.%d}",
-                          "author_date": "{author_date:%Y.%m.%d}",
-                          "branch": "{branch}",
-                          "distance": "{distance}",
-                          "commit_hash": "{revision}",
-                      }}
+            additionalProperties:
+              title: Variant
+              summary: Definition of
+              type: array
+              minItems: 2
+              items:
+                type: [ string, integer, boolean ]
+  pyproject:
+    summary: Configurations for the `pyproject.toml` file.
+    $ref: https://jsonschemata.repodynamics.com/config/python/pyproject
   pypi:
     title: URLs of the project's PyPI package.
     type: object
@@ -735,7 +453,7 @@ properties:
         type: boolean
         default: |
           #{{
-            return all("pip" in dep for dep in get("..dependency.core").values())
+            return all("pip" in dep["install"] for dep in get("..dependency.core").values())
           }}#
       url:
         title: URLs of the package on PyPI.
@@ -769,7 +487,7 @@ properties:
         type: boolean
         default: |
           #{{
-            return all("conda" in dep for dep in get("..dependency.core").values())
+            return all("conda" in dep["install"] for dep in get("..dependency.core").values())
           }}#
       recipe:
         title: Conda Recipe
@@ -981,3 +699,115 @@ properties:
                 return f"https://anaconda.org/{channel}/{pkg_name}".lower()
               }}#
             $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+  source_file:
+    type: object
+    additionalProperties:
+      summary: Configurations for Python source files.
+      description: |
+        Configurations for a set of Python source files defined by a glob pattern.
+      type: object
+      additionalProperties: false
+      required: [ glob ]
+      anyOf:
+        - required: [ docstring ]
+        - required: [ header_comments ]
+      properties:
+        glob:
+          description: |
+            Glob pattern to match source files.
+            The pattern is relative to the [import package directory](#cccdef-pkg-path-import).
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        docstring:
+          description: |
+            Docstring configurations for the source files.
+          type: object
+          additionalProperties: false
+          required: [ mode, content ]
+          properties:
+            content:
+              description: |
+                Content of the docstring.
+              type: string
+            mode:
+              description: |
+                Mode of the docstring.
+              type: string
+              enum: [ append, prepend, replace ]
+              default: append
+            max_line_length:
+              description: |
+                Maximum line length of the docstring.
+              type: integer
+              minimum: 0
+        header_comments:
+          description: |
+            Header comments for the source files.
+          type: object
+          additionalProperties: false
+          required: [ mode, content ]
+          properties:
+            mode:
+              description: |
+                Mode of the header comments.
+              type: string
+              enum: [ append, prepend, replace ]
+              default: append
+            content:
+              description: |
+                Content of the header comments.
+              type: string
+            max_line_length:
+              description: |
+                Maximum line length of the comments.
+              type: integer
+              minimum: 0
+            line_continuation_indent:
+              description: |
+                Indentation of line continuation.
+              type: integer
+              minimum: 0
+              default: 0
+            empty_lines:
+              description: |
+                Number of empty lines between comments.
+              type: integer
+              minimum: 0
+              default: 1
+  file:
+    summary: Dynamic files related to the package.
+    type: object
+    additionalProperties:
+      $ref: https://controlman.repodynamics.com/schema/dynamic-file
+  test:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        name:
+          type: string
+          default: ${{ .__key__ }}$
+        runner:
+          type: string
+        script:
+          type: object
+          properties:
+            install_env:
+              type: string
+            install_pkg:
+              type: string
+            test:
+              type: string
+        conda_env:
+          type: object
+          properties:
+            name:
+              type: string
+            path:
+              type: string
+        codecov:
+          type: object
+          properties:
+            env:
+              type: object
+        report_artifact_suffix:
+          type: string

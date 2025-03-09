@@ -7,10 +7,12 @@ description: |
   After the specified duration,
   the cached data is considered stale
   and will be automatically synced with the source.
+  Set the retention hours to `.inf` to disable cache expiration.
 type: object
-additionalProperties: false
 default: { }
-required: [ extension, repo, user, orcid, doi, python ]
+required: [ extension, repo, user, orcid, doi, python, license ]
+additionalProperties:
+  $ref: https://jsonschemata.repodynamics.com/number/non-negative
 properties:
   extension:
     description: |

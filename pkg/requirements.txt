@@ -5,16 +5,16 @@ referencing == 0.35.1
 jsonpath-ng == 1.6.1
 ruamel.yaml == 0.18.6
 Jinja2 >= 3, < 4
-PyLinks == 0.0.0.dev71
-LoggerMan == 0.0.0.dev88
-PySerials == 0.0.0.dev61
-GitTidy == 0.0.0.dev86
+PyLinks == 0.0.0.dev72
+LoggerMan == 0.0.0.dev89
+PySerials == 0.0.0.dev62
+GitTidy == 0.0.0.dev87
 PkgData == 0.0.0.dev5
-PyShellMan == 0.0.0.dev48
+PyShellMan == 0.0.0.dev49
 PySyntax == 0.0.0.dev6
-ExceptionMan == 0.0.0.dev58
-MDit == 0.0.0.dev58
-JSONSchemata == 0.0.0.dev57
+ExceptionMan == 0.0.0.dev59
+MDit == 0.0.0.dev59
+JSONSchemata == 0.0.0.dev58
 VersionMan == 0.0.0.dev250
 HTMP == 0.0.0.dev5
-LicenseMan == 0.0.0.dev45
+LicenseMan == 0.0.0.dev46

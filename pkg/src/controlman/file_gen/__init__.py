@@ -6,7 +6,6 @@ from controlman import datatype as _dtype, const as _const
 from controlman.file_gen.config import ConfigFileGenerator as _ConfigFileGenerator
 from controlman.file_gen.forms import FormGenerator as _FormGenerator
 from controlman.file_gen.python import PythonPackageFileGenerator as _PythonPackageFileGenerator
-from controlman.file_gen import readme as _readme_gen
 
 
 def generate(
@@ -20,40 +19,29 @@ def generate(
         repo_path=repo_path,
     ).generate()
     generated_files.extend(form_files)
-    config_files, pyproject_pkg, pyproject_test = _ConfigFileGenerator(
+    config_files = _ConfigFileGenerator(
         data=data,
         data_before=data_before,
         repo_path=repo_path,
     ).generate()
     generated_files.extend(config_files)
-    if data["pkg"]:
-        package_files = _PythonPackageFileGenerator(
-            data=data,
-            data_before=data_before,
-            repo_path=repo_path,
-        ).generate(typ="pkg", pyproject_tool_config=pyproject_pkg)
-        generated_files.extend(package_files)
-    if data["test"]:
-        test_files = _PythonPackageFileGenerator(
-            data=data,
-            data_before=data_before,
-            repo_path=repo_path,
-        ).generate(typ="test", pyproject_tool_config=pyproject_test)
-        generated_files.extend(test_files)
-    readme_files = _readme_gen.generate(
-        data=data,
-        data_before=data_before,
-        repo_path=repo_path
-    )
-    generated_files.extend(readme_files)
+    for key, value in data.items():
+        if key.startswith("pypkg_"):
+            package_files = _PythonPackageFileGenerator(
+                data=data,
+                data_before=data_before,
+                repo_path=repo_path,
+            ).generate(typ=key)
+            generated_files.extend(package_files)
     out = []
     data_entry = {
         _dtype.DynamicFileType.CONFIG.value[0]: {"meta": _const.FILEPATH_METADATA},
     }
     for generated_file in generated_files:
-        generated_file_full = _compare_file(generated_file, repo_path=repo_path)
-        out.append(generated_file_full)
-        if generated_file_full.change not in (
+        if generated_file.change is None:
+            generated_file = _compare_file(generated_file, repo_path=repo_path)
+        out.append(generated_file)
+        if generated_file.change not in (
             _dtype.DynamicFileChangeType.DISABLED,
             _dtype.DynamicFileChangeType.REMOVED,
         ):

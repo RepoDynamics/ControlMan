@@ -99,7 +99,7 @@ class CacheManager:
 
     def set(self, typ: str, key: str, value: dict | list | str | int | float | bool):
         new_item = {
-            "timestamp": date.to_internal(date.from_now()),
+            "timestamp": date.to_iso(date.from_now()),
             "data": value,
         }
         self._cache.setdefault(typ, {})[key] = new_item
@@ -136,5 +136,7 @@ class CacheManager:
 
     def _is_expired(self, typ: str, timestamp: str) -> bool:
         time_delta = _datetime.timedelta(hours=self._retention_hours[typ])
-        exp_date = date.from_internal(timestamp) + time_delta
+        if not time_delta:
+            return False
+        exp_date = date.from_iso(timestamp) + time_delta
         return exp_date <= _datetime.datetime.now(tz=_datetime.UTC)

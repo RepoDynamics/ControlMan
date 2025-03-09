@@ -1,22 +1,17 @@
 from __future__ import annotations as _annotations
-from typing import TYPE_CHECKING as _TYPE_CHECKING
+
 from pathlib import Path as _Path
 from xml.etree import ElementTree as _ElementTree
 import copy as _copy
+import os as _os
 
 from loggerman import logger
 import pyserials as _ps
-import pylinks
-from pylinks.exception.api import WebAPIError as _WebAPIError
 from licenseman.spdx import license_text as _license_text
 
-import controlman
-from controlman.datatype import DynamicFile, DynamicFileType
+from controlman.datatype import DynamicFile, DynamicFileType, DynamicFileChangeType
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
-
-if _TYPE_CHECKING:
-    from typing import Literal
 
 
 class ConfigFileGenerator:
@@ -31,76 +26,17 @@ class ConfigFileGenerator:
         self._path_repo = repo_path
         return
 
-    def generate(self) -> tuple[list[DynamicFile], dict | str | None, dict | str | None]:
-        tools_out, pyproject_pkg, pyproject_test = self.tools()
+    def generate(self) -> list[DynamicFile]:
         return (
             self._generate_license()
-            + self.generate_codeowners()
-            + self.citation()
-            + self.web_requirements()
-            + self.web_toc()
-            + self.funding()
-            + tools_out
             + self.issue_template_chooser()
-            + self.gitignore()
-            + self.gitattributes()
-        ), pyproject_pkg, pyproject_test
+            + self.dynamic_files()
+            + self.devcontainers()
+            + self.devcontainer_features()
+        )
 
     def _is_disabled(self, key: str) -> bool:
         return not (self._data[key] or self._data_before[key])
-
-    def generate_codeowners(self) -> list[DynamicFile]:
-        """
-
-        Returns
-        -------
-
-        References
-        ----------
-        https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
-        """
-        path_key = "code_owners.path"
-        if self._is_disabled(path_key):
-            return []
-        codeowners_files = {
-            "type": DynamicFileType.CONFIG,
-            "subtype": ("codeowners", "Code Owners"),
-            "path": self._data[path_key],
-            "path_before": self._data_before[path_key],
-        }
-        data: dict[int, dict[str, list[str]]] = {}
-        pattern_description: dict[str, str] = {}
-        for member in self._data["team"].values():
-            for glob_def in member.get("ownership", []):
-                data.setdefault(glob_def["priority"], {}).setdefault(glob_def["glob"], []).append(
-                    member["github"]["id"]
-                )
-                if glob_def.get("description"):
-                    pattern_description[glob_def["glob"]] = glob_def["description"]
-            for member_role in member.get("role", {}).keys():
-                for glob_def in self._data["role"][member_role].get("ownership", []):
-                    data.setdefault(glob_def["priority"], {}).setdefault(glob_def["glob"], []).append(
-                        member["github"]["id"]
-                    )
-                    if glob_def.get("description"):
-                        pattern_description[glob_def["glob"]] = glob_def["description"]
-        if not data:
-            return [DynamicFile(**codeowners_files)]
-        # Get the maximum length of patterns to align the columns when writing the file
-        max_len = max(
-            [len(glob_pattern) for priority_dic in data.values() for glob_pattern in priority_dic.keys()]
-        )
-        lines = []
-        for priority_defs in [defs for priority, defs in sorted(data.items())]:
-            for pattern, reviewers_list in sorted(priority_defs.items()):
-                comment = pattern_description.get(pattern, "")
-                for comment_line in comment.splitlines():
-                    lines.append(f"# {comment_line}")
-                reviewers = " ".join(
-                    [f"@{reviewer_id}" for reviewer_id in sorted(set(reviewers_list))]
-                )
-                lines.append(f"{pattern: <{max_len}}   {reviewers}{"\n" if comment else ''}")
-        return [DynamicFile(content="\n".join(lines), **codeowners_files)]
 
     def _generate_license(self) -> list[DynamicFile]:
         if self._is_disabled("license"):
@@ -119,13 +55,10 @@ class ConfigFileGenerator:
                     if not text:
                         config_component = component_data.get(f"{part}_config", {}).get(output_type, {})
                         config_default = self._data[f"license.config.{part}.{output_type}"] or {}
-                        _ps.update.dict_from_addon(
-                            data=config_component,
+                        _ps.update.recursive_update(
+                            source=config_component,
                             addon=config_default,
-                            append_list=True,
-                            append_dict=True,
-                            raise_duplicates=False,
-                            raise_type_mismatch=False,
+                            type_mismatch="skip",
                         )
                         xml_elem = _ElementTree.fromstring(xml)
                         text = _license_text.SPDXLicenseTextPlain(xml_elem).generate(**config_component)
@@ -142,233 +75,6 @@ class ConfigFileGenerator:
                     )
                     files.append(file)
         return files
-
-    def web_toc(self) -> list[DynamicFile]:
-        if self._is_disabled("web.toc"):
-            return []
-        toc_file = {
-            "type": DynamicFileType.WEB_CONFIG,
-            "subtype": ("toc", "Table of Contents"),
-            "path": f"{self._data["web.path.source"]}/{self._data["web.toc.path"]}" if self._data["web.toc"] else None,
-            "path_before": f"{self._data_before["web.path.source"]}/{self._data_before["web.toc.path"]}" if self._data_before["web.toc"] else None,
-        }
-        toc = self._data["web.toc"]
-        if not toc:
-            return [DynamicFile(**toc_file)]
-        toc_content = _ps.write.to_yaml_string(data={k: v for k, v in toc.items() if k != "path"}, end_of_file_newline=True)
-        return [DynamicFile(content=toc_content, **toc_file)]
-
-    def web_requirements(self) -> list[DynamicFile]:
-        if self._is_disabled("web"):
-            return []
-        conda_env_file = {
-            "type": DynamicFileType.WEB_CONFIG,
-            "subtype": ("env_conda", "Conda Environment"),
-            "path": self._data["web.env.file.conda.path"],
-            "path_before": self._data_before["web.env.file.conda.path"],
-        }
-        pip_env_file = {
-            "type": DynamicFileType.WEB_CONFIG,
-            "subtype": ("env_pip", "Pip Environment"),
-            "path": self._data["web.env.file.pip.path"],
-            "path_before": self._data_before["web.env.file.pip.path"],
-        }
-        if not self._data["web"]:
-            return [DynamicFile(**env_file) for env_file in (conda_env_file, pip_env_file)]
-        dependencies = []
-        for path in ("web.sphinx.dependency", "web.theme.dependency"):
-            dependency = self._data.get(path)
-            if dependency:
-                dependencies.append(dependency)
-        for extension in self._data.get("web.extension", {}).values():
-            dependency = extension.get("dependency")
-            if dependency:
-                dependencies.append(dependency)
-        for add_dep in self._data.get("web.env.dependency", {}).values():
-            dependencies.append(add_dep)
-        conda_env, pip_env, pip_full = _unit.create_environment_files(
-            dependencies=dependencies,
-            env_name=pylinks.string.to_slug(self._data["web.env.file.conda.name"]),
-            python_version_spec=self._data["web.env.file.conda.python"],
-        )
-        return [
-            DynamicFile(content=conda_env, **conda_env_file),
-            DynamicFile(content=pip_env if pip_full else None, **pip_env_file)
-        ]
-
-    def funding(self) -> list[DynamicFile]:
-        """
-        References
-        ----------
-        https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files
-        """
-        if self._is_disabled("funding"):
-            return []
-        funding_file = {
-            "type": DynamicFileType.CONFIG,
-            "subtype": ("funding", "Funding"),
-            "path": _const.FILEPATH_FUNDING_CONFIG,
-            "path_before": _const.FILEPATH_FUNDING_CONFIG,
-        }
-        if not self._data["funding"]:
-            return [DynamicFile(**funding_file)]
-        output = {}
-        for funding_platform, users in self._data["funding"].items():
-            if isinstance(users, list):
-                output[funding_platform] = _ps.format.to_yaml_array(data=users, inline=True)
-            else:
-                output[funding_platform] = users
-        file_content = _ps.write.to_yaml_string(data=output, end_of_file_newline=True)
-        return [DynamicFile(content=file_content, **funding_file)]
-
-    def tools(self) -> tuple[list[DynamicFile], dict | str | None, dict | str | None]:
-        # Collect all environment and config data per env/config file
-        env_conda = {}
-        env_pip = {}
-        conf = {}
-        for tool_name, tool in self._data.get("tool", {}).items():
-            tool_env = tool.get("env")
-            if tool_env:
-                env_file = tool_env["file"]
-                env_conda_entry = env_conda.setdefault(
-                    env_file["conda"]["path"], {"name": env_file["conda"]["name"], "deps": [], "tool_names": [], "python": []}
-                )
-                if env_conda_entry["name"] != env_file["conda"]["name"]:
-                    raise ValueError()
-                env_conda_entry["deps"].extend(list(tool_env["dependency"].values()))
-                env_conda_entry["tool_names"].append(tool_name)
-                env_conda_entry["python"].append(env_file["conda"]["python"])
-                env_file_pip = env_file.get("pip")
-                if env_file_pip:
-                    env_pip_entry = env_pip.setdefault(env_file_pip["path"], {"deps": [], "tool_names": []})
-                    env_pip_entry["deps"].extend(list(tool_env["dependency"].values()))
-                    env_pip_entry["tool_names"].append(tool_name)
-            conf_file = tool.get("config", {}).get("file")
-            if conf_file:
-                conf_entry = conf.setdefault(conf_file["path"], {"type": conf_file["type"], "contents": [], "tool_names": []})
-                if conf_entry["type"] != conf_file["type"]:
-                    raise ValueError()
-                if conf_file["type"] == "txt":
-                    if not isinstance(conf_file["content"], str):
-                        raise ValueError()
-                elif not isinstance(conf_file["content"], (list, dict)):
-                    raise ValueError()
-                for content in conf_entry["contents"]:
-                    if type(content) is not type(conf_file["content"]):
-                        raise ValueError()
-                conf_entry["contents"].append(_copy.deepcopy(conf_file["content"]))
-                conf_entry["tool_names"].append(tool_name)
-        out = []
-        # Write conda environment files
-        for conda_env_path, conda_env_data in env_conda.items():
-            python = set(spec for spec in conda_env_data["python"] if spec)
-            if len(python) > 1 :
-                raise ValueError("Multiple different python versions defined for the same conda environment file.")
-            conda_env = _unit.create_environment_files(
-                dependencies=conda_env_data["deps"],
-                env_name=conda_env_data["name"],
-                python_version_spec=python.pop() if python else ""
-            )[0]
-            out.append(
-                DynamicFile(
-                    type=DynamicFileType.TOOL_ENV_CONDA,
-                    subtype=("_".join(conda_env_data["tool_names"]), ", ".join(conda_env_data["tool_names"])),
-                    content=conda_env,
-                    path=conda_env_path,
-                    path_before=conda_env_path
-                )
-            )
-        # Write pip environment files
-        for pip_env_path, pip_env_data in env_pip.items():
-            _, pip_env, pip_full = _unit.create_environment_files(dependencies=pip_env_data["deps"])
-            if not pip_full:
-                logger.warning(f"Tool environment file '{pip_env_path}' does not contain all dependencies.")
-            out.append(
-                DynamicFile(
-                    type=DynamicFileType.TOOL_ENV_PIP,
-                    subtype=("_".join(pip_env_data["tool_names"]), ", ".join(pip_env_data["tool_names"])),
-                    content=pip_env,
-                    path=pip_env_path,
-                    path_before=pip_env_path
-                )
-            )
-        # Write configuration files
-        pyproject_pkg = None
-        pyproject_test = None
-        untouchable_paths = []
-        # These are package and test-suite pyproject.toml files that are being used
-        # regardless of whether other tools use it as their configuration file.
-        for typ in ("pkg", "test"):
-            pkg_root = self._data[f"{typ}.path.root"]
-            untouchable_paths.append(str(_Path(pkg_root) / _const.FILENAME_PKG_PYPROJECT) if pkg_root else None)
-        for conf_path, conf_data in conf.items():
-            if conf_data["type"] == "txt":
-                content = "\n\n".join(conf_data["contents"])
-                full = content
-            else:
-                if isinstance(conf_data["contents"][0], list):
-                    full = [elem for content in conf_data["contents"] for elem in content]
-                else:
-                    for dic in conf_data["contents"][1:]:
-                        _ps.update.dict_from_addon(
-                            data=conf_data["contents"][0],
-                            addon=dic,
-                            append_list=True,
-                            append_dict=True,
-                            raise_duplicates=True,
-                        )
-                    full = conf_data["contents"][0]
-                content = _ps.write.to_string(
-                    data=full,
-                    data_type=conf_data["type"],
-                    end_of_file_newline=True,
-                    sort_keys=True,
-                )
-            if "codecov" in conf_data["tool_names"]:
-                self.validate_codecov_config(config=content)
-            if conf_path not in untouchable_paths:
-                out.append(
-                    DynamicFile(
-                        type=DynamicFileType.TOOL_CONFIG,
-                        subtype=("_".join(conf_data["tool_names"]), ", ".join(conf_data["tool_names"])),
-                        content=content,
-                        path=conf_path,
-                        path_before=conf_path
-                    )
-                )
-            elif conf_path == untouchable_paths[0]:
-                pyproject_pkg = full
-            elif conf_path == untouchable_paths[1]:
-                pyproject_test = full
-        # Check old data to remove obsoleted files
-        env_conda_old = {}
-        env_pip_old = {}
-        conf_old = {}
-        for tool_name, tool in self._data_before.get("tool", {}).items():
-            tool_env = tool.get("env")
-            if tool_env:
-                env_conda_old.setdefault(tool_env["file"]["conda"]["path"], []).append(tool_name)
-                env_file_pip = tool_env["file"].get("pip")
-                if env_file_pip:
-                    env_pip_old.setdefault(env_file_pip["path"], []).append(tool_name)
-            conf_file = tool.get("config", {}).get("file")
-            if conf_file:
-                conf_old.setdefault(conf_file["path"], []).append(tool_name)
-        for dic_old, dic_new, typ in (
-            (env_conda_old, env_conda, DynamicFileType.TOOL_ENV_CONDA),
-            (env_pip_old, env_pip, DynamicFileType.TOOL_ENV_PIP),
-            (conf_old, conf, DynamicFileType.TOOL_CONFIG),
-        ):
-            for path, tool_names in dic_old.items():
-                if path not in dic_new and path not in untouchable_paths:
-                    out.append(
-                        DynamicFile(
-                            type=typ,
-                            subtype=("_".join(tool_names), ", ".join(tool_names)),
-                            path_before=path
-                        )
-                    )
-        return out, pyproject_pkg, pyproject_test
 
     def issue_template_chooser(self) -> list[DynamicFile]:
         if self._is_disabled("issue"):
@@ -388,180 +94,280 @@ class ConfigFileGenerator:
         file_content = _ps.write.to_yaml_string(data=config, end_of_file_newline=True) if config else ""
         return [DynamicFile(content=file_content, **generate_file)]
 
-    def gitignore(self) -> list[DynamicFile]:
-        file_content = "\n".join(self._data.get("repo.gitignore", []))
-        generated_file = DynamicFile(
-            type=DynamicFileType.CONFIG,
-            subtype=("gitignore", "Git Ignore"),
-            content=file_content,
-            path=_const.FILEPATH_GITIGNORE,
-            path_before=_const.FILEPATH_GITIGNORE
-        )
-        return [generated_file]
-
-    def gitattributes(self) -> list[DynamicFile]:
-        if not (self._data["repo.gitattributes"] or self._data_before["repo.gitattributes"]):
-            return []
+    def dynamic_file(self, key: str, file: dict, file_before: dict | None):
         file_info = {
-            "type": DynamicFileType.CONFIG,
-            "subtype": ("gitattributes", "Git Attributes"),
-            "path": _const.FILEPATH_GIT_ATTRIBUTES,
-            "path_before": _const.FILEPATH_GIT_ATTRIBUTES,
+            "type": DynamicFileType.CUSTOM,
+            "subtype": (key, file.get("name", key)),
         }
-        file_content = ""
-        attributes = self._data.get("repo.gitattributes", [])
-        max_len_pattern = max([len(list(attribute.keys())[0]) for attribute in attributes])
-        max_len_attr = max(
-            [max(len(attr) for attr in list(attribute.values())[0]) for attribute in attributes]
+        if file["status"] == "delete":
+            file_info["path_before"] = file["path"]
+            return DynamicFile(**file_info)
+        if file["status"] == "inactive":
+            file_info["path_before"] = file["path"]
+            file_info["change"] = DynamicFileChangeType.INACTIVE
+            return DynamicFile(**file_info)
+        if file["type"] == "md":
+            content = _unit.create_md_content(file, repo_path=self._path_repo)
+        else:
+            content_setting = file["content_setting"]
+            file_setting = file["file_setting"]
+            content = _unit.create_dynamic_file(
+                file_type=file["type"],
+                content=file["content"],
+                filters=[
+                    (filter_["jsonpath"], eval(filter_["function"]), filter_["inplace"])
+                    for filter_ in content_setting.get("filter", {}).values()
+                ],
+                order=content_setting.get("order"),
+                content_item_separator=content_setting["separator"],
+                content_item_prefix=content_setting["prefix"],
+                content_item_suffix=content_setting["suffix"],
+                end_of_file_newline=file_setting["eof_newline"],
+                sort_keys=file_setting["sort_keys"],
+                indent=file_setting["json"]["indent"],
+                mapping_indent=file_setting["yaml"]["mapping_indent"],
+                sequence_indent=file_setting["yaml"]["sequence_indent"],
+                sequence_indent_offset=file_setting["yaml"]["sequence_indent_offset"],
+                block_string=file_setting["yaml"]["block_string"],
+                remove_top_level_indent=file_setting["yaml"]["remove_top_level_indent"],
+            )
+        return DynamicFile(
+            content=content,
+            path=file["path"],
+            path_before=file_before["path"] if file_before else None,
+            **file_info,
         )
-        for attribute in attributes:
-            pattern = list(attribute.keys())[0]
-            attrs = list(attribute.values())[0]
-            attrs_str = "  ".join(f"{attr: <{max_len_attr}}" for attr in attrs).strip()
-            file_content += f"{pattern: <{max_len_pattern}}    {attrs_str}\n"
-        return [DynamicFile(content=file_content, **file_info)]
 
-    def citation(self) -> list[DynamicFile]:
+    def dynamic_files(self) -> list[DynamicFile]:
+        out = []
+        for key, value in self._data.items():
+            if key.startswith("file_"):
+                out.append(self.dynamic_file(key=key, file=value, file_before=self._data_before[key]))
+            elif key.startswith("devcontainer_"):
+                for file_key, file in value.get("file", {}).items():
+                    out.append(
+                        self.dynamic_file(
+                            key=f"{key}_{file_key}",
+                            file=file,
+                            file_before=self._data_before.get(key, {}).get("file", {}).get(file_key),
+                        )
+                    )
+                for env_key, env in value.get("environment", {}).items():
+                    for file_key, file in env.get("file", {}).items():
+                        out.append(
+                            self.dynamic_file(
+                                key=f"{key}_{env_key}_{file_key}",
+                                file=file,
+                                file_before=self._data_before.get(key, {}).get("environment", {}).get(env_key, {}).get("file", {}).get(file_key),
+                            )
+                        )
+            elif key.startswith("pypkg_"):
+                for file_key, file in value.get("file", {}).items():
+                    out.append(
+                        self.dynamic_file(
+                            key=f"{key}_{file_key}",
+                            file=file,
+                            file_before=self._data_before.get(key, {}).get("file", {}).get(file_key),
+                        )
+                    )
+        return out
 
-        def create_identifier(ident: dict):
-            return {
-                k: v for k, v in ident.items() if k not in ("relation", "resource_type")
-            }
+    def devcontainers(self) -> list[DynamicFile]:
 
-        def create_repository(repo: dict):
-            out = {}
-            for in_key, out_key in (
-                ("build", "repository-artifact"),
-                ("source", "repository-code"),
-                ("other", "repository"),
-            ):
-                if in_key in repo:
-                    out[out_key] = repo[in_key]
-            return out
-
-        def create_person(id_: str | dict):
-            if isinstance(id_, str):
-                entity = self._data["team"].get(id_) or contributors.get(id_)
-                if not entity:
-                    raise ValueError(f"Person '{id_}' not found in team or contributor data.")
-            elif id_["member"]:
-                entity = self._data["team"].get(id_["id"])
-                if not entity:
-                    raise ValueError(f"Person '{id_["id"]}' not found in team data.")
-            else:
-                entity = contributors.get(id_["id"])
-                if not entity:
-                    raise ValueError(f"Contributor ID {id_["id"]} not found.")
-            _out = {}
-            if entity["name"].get("legal"):
-                _out["name"] = entity["name"]["legal"]
-                for in_key, out_key in (
-                    ("location", "location"),
-                    ("date_start", "date-start"),
-                    ("date_end", "date-end"),
-                ):
-                    if entity.get(in_key):
-                        _out[out_key] = entity[in_key]
-            else:
-                name = entity["name"]
-                for in_key, out_key in (
-                    ("last", "family-names"),
-                    ("first", "given-names"),
-                    ("particle", "name-particle"),
-                    ("suffix", "name-suffix"),
-                    ("affiliation", "affiliation")
-                ):
-                    if name.get(in_key):
-                        _out[out_key] = name[in_key]
-            for contact_type, contact_key in (("orcid", "url"), ("email", "id")):
-                if entity.get(contact_type):
-                    _out[contact_type] = entity[contact_type][contact_key]
-            for key in (
-                "alias",
-                "website",
-                "tel",
-                "fax",
-                "address",
-                "city",
-                "region",
-                "country",
-                "post-code",
-            ):
-                if entity.get(key):
-                    _out[key] = entity[key]
-            return _out
-
-        def create_reference(ref: dict):
-            entity_list_keys = [
-                "authors", "contacts", "editors", "editors-series", "recipients", "senders", "translators"
-            ]
-            entity_keys = ["conference", "database-provider", "institution", "location", "publisher"]
-            out = {
-                k: v for k, v in ref.items() if k not in ["repository", "identifiers"] + entity_list_keys + entity_keys
-            }
-            for entity_list_key in entity_list_keys:
-                if entity_list_key not in ref:
-                    continue
-                if entity_list_key == "contacts":
-                    out_key = "contact"
-                else:
-                    out_key = entity_list_key
-                out[out_key] = [create_person(entity=entity) for entity in ref[entity_list_key]]
-            for entity_key in entity_keys:
-                if entity_key in ref:
-                    out[entity_key] = create_person(entity=ref[entity_key])
-            if "repository" in ref:
-                out |= create_repository(ref["repository"])
-            if "identifiers" in ref:
-                out["identifiers"] = [create_identifier(ident) for ident in ref["identifiers"]]
-            return out
-
-        if not (self._data.get("citation.cff") or self._data_before.get("citation.cff")):
-            return []
-        generated_file = {
-            "type": DynamicFileType.CONFIG,
-            "subtype": ("citation", "Citation"),
-            "path": _const.FILEPATH_CITATION_CONFIG,
-            "path_before": _const.FILEPATH_CITATION_CONFIG,
-        }
-        cite = self._data["citation.cff"]
-        if not cite:
-            return [DynamicFile(**generated_file)]
-        contributors = controlman.read_contributors(repo_path=self._path_repo)
-        out = {
-            k.replace("_", "-"): v for k, v in cite.items() if v and k in [
-                "message", "title", "license", "url", "type", "keywords", "abstract",
-                "version", "date_released", "doi", "commit", "license_url"
-            ]
-        }
-        out["cff-version"] = "1.2.0"
-        out["authors"] = [create_person(id_=entity) for entity in cite["authors"]]
-        if cite.get("repository"):
-            out |= create_repository(cite["repository"])
-        if cite.get("identifiers"):
-            out["identifiers"] = [create_identifier(ident) for ident in cite["identifiers"]]
-        if cite.get("contacts"):
-            out["contact"] = [create_person(id_=entity) for entity in cite["contacts"]]
-        if cite.get("preferred_citation"):
-            out["preferred-citation"] = create_reference(cite["preferred_citation"])
-        if cite.get("references"):
-            out["references"] = [create_reference(ref) for ref in cite["references"]]
-        out_sorted = {k: out[k] for k in cite["order"] if k in out}
-        file_content = _ps.write.to_yaml_string(data=out_sorted, end_of_file_newline=True)
-        return [DynamicFile(content=file_content, **generated_file)]
-
-    def validate_codecov_config(self, config: str) -> None:
-        try:
-            # Validate the config file
-            # https://docs.codecov.com/docs/codecov-yaml#validate-your-repository-yaml
-            pylinks.http.request(
-                verb="POST",
-                url="https://codecov.io/validate",
-                data=config.encode(),
+        def create_docker_compose():
+            path_depth = len(docker_compose_path.split("/")) - 1
+            path_to_root_from_compose_file = "../" * path_depth if path_depth else "."
+            config = docker_compose_data["config"]
+            services = config.setdefault("services", {})
+            for container_id, container in devcontainers.items():
+                service_name = container["container"]["service"]
+                if service_name in services:
+                    raise ValueError(f"Service '{service_name}' for devcontainer '{container_id}' already exists in docker-compose file.")
+                service = container.get("service", {})
+                # service["image"] = f"devcontainer_{container_id}"
+                service.setdefault("build", {}).update(
+                    {
+                        "context": path_to_root_from_compose_file,
+                        "dockerfile": f"{container["path"]}/Dockerfile",
+                    }
+                )
+                services[service_name] = {
+                    "container_name": service_name,
+                    "volumes": [
+                        # Mount the root folder that contains .git
+                        f"{path_to_root_from_compose_file}:{container["container"]["workspaceFolder"]}:cached"
+                    ],
+                    # Override default command so things don't shut down after the process ends.
+                    "command": "sleep infinity",
+                } | service
+            docker_compose_file = DynamicFile(
+                type=DynamicFileType.CONFIG,
+                subtype=("docker-compose", "Docker Compose"),
+                content=_unit.create_dynamic_file(
+                    file_type="yaml",
+                    content=config,
+                    **self._data["default"]["file_setting"]["yaml"],
+                ) if services else "",
+                path=docker_compose_path,
+                path_before=self._data_before[f"devcontainer.docker-compose.path"],
             )
-        except _WebAPIError as e:
-            logger.error(
-                "CodeCov Configuration File Validation",
-                "Validation of Codecov configuration file failed.", str(e)
+            out.append(docker_compose_file)
+            return
+
+        def create_task_function(task: dict, env_name: str, task_in_env_prefix: str) -> str:
+            lines = [f"{task["alias"]}() {{"]
+            indent = 4 * " "
+            if "script" in task:
+                lines.extend([f"{indent}{line}" for line in task["script"].strip().splitlines()])
+            else:
+                cmd_prefix = task_in_env_prefix.format(env_name=env_name).strip()
+                cmd = f"{cmd_prefix} {" ".join(task["process"])}"
+                lines.append(f"{indent}{cmd}")
+            lines.append("}")
+            return "\n".join(lines)
+
+        out = []
+        docker_compose_data = self._data["devcontainer.docker-compose"]
+        docker_compose_path = docker_compose_data["path"]
+        devcontainers = {
+            k.removeprefix("devcontainers_"): v
+            for k, v in self._data.items() if k.startswith("devcontainer_")
+        }
+        create_docker_compose()
+        env_dirname = self._data["devcontainer.containers.rel_path.environment"]
+        apt_path = self._data["devcontainer.containers.rel_path.apt"]
+        conda_path = self._data["devcontainer.containers.rel_path.conda"]
+        tasks_path = self._data["devcontainer.containers.rel_path.tasks"]
+
+        env_dirname_before = self._data_before["devcontainer.containers.rel_path.environment"] or env_dirname
+        apt_path_before = self._data_before["devcontainer.containers.rel_path.apt"] or apt_path
+        conda_path_before = self._data_before["devcontainer.containers.rel_path.conda"] or conda_path
+        tasks_path_before = self._data_before["devcontainer.containers.rel_path.tasks"] or tasks_path
+
+        for container_id, container in devcontainers.items():
+            container_before = self._data_before.get(f"devcontainer_{container_id}", {})
+            dir_path = container["path"]
+            dir_path_before = container_before.get("path", dir_path)
+            dockerfile = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_DOCKERFILE,
+                subtype=(container_id, container["container"].get("name", container_id)),
+                content=_unit.create_dynamic_file(
+                    file_type="txt",
+                    content=container["dockerfile"],
+                ),
+                path=f"{dir_path}/Dockerfile",
+                path_before=f"{dir_path_before}/Dockerfile",
             )
-        return
+            out.append(dockerfile)
+            # devcontainer.json file
+            container_path = f"{dir_path}/devcontainer.json"
+            container["container"].setdefault("dockerComposeFile", []).append(
+                _os.path.relpath(docker_compose_path, _os.path.dirname(container_path))
+            )
+            container_file = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_METADATA,
+                subtype=(container_id, container.get("name", container_id)),
+                content=_unit.create_dynamic_file(
+                    file_type="json",
+                    content=container["container"],
+                    **self._data["default"]["file_setting"]["json"],
+                ),
+                path=container_path,
+                path_before=f"{dir_path_before}/devcontainer.json",
+            )
+            out.append(container_file)
+            # apt.txt file
+            apt_file = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_APT,
+                subtype=(container_id, container.get("name", container_id)),
+                content=_unit.create_dynamic_file(
+                    file_type="txt",
+                    content=[pkg["spec"]["full"] for pkg in container["apt"].values()],
+                ) if container.get("apt") else None,
+                path=f"{dir_path}/{env_dirname}/{apt_path}",
+                path_before=f"{dir_path_before}/{env_dirname_before}/{apt_path_before}",
+            )
+            out.append(apt_file)
+            # conda environment files
+            for env_id, env in container.get("environment", {}).items():
+                env_file = DynamicFile(
+                    type=DynamicFileType.DEVCONTAINER_CONDA,
+                    subtype=(env_id, env["name"]),
+                    content=_unit.create_dynamic_file(
+                        file_type="yaml",
+                        content=_unit.create_env_file_conda(
+                            packages=list(env.get("conda", {}).values()),
+                            pip_packages=list(env.get("pip", {}).values()),
+                            env_name=env["name"],
+                        ),
+                        **self._data["default"]["file_setting"]["yaml"],
+                    ),
+                    path=env["path"],
+                    path_before=container_before.get("environment", {}).get(env_id, {}).get("path"),
+                )
+                out.append(env_file)
+            # bash task file
+            tasks = []
+            for task in container.get("task", {}).values():
+                tasks.append(
+                    create_task_function(
+                        task=task,
+                        env_name="base",
+                        task_in_env_prefix=container["task_in_env_prefix"]
+                    )
+                )
+            for environment in container.get("environment", {}).values():
+                for task in environment.get("task", {}).values():
+                    tasks.append(
+                        create_task_function(
+                            task=task,
+                            env_name=environment["name"],
+                            task_in_env_prefix=container["task_in_env_prefix"]
+                        )
+                    )
+            task_file = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_TASK,
+                subtype=(container_id, container.get("name", container_id)),
+                content=_unit.create_dynamic_file(
+                    file_type="txt",
+                    content=tasks,
+                    content_item_separator="\n\n",
+                ) if tasks else None,
+                path=f"{dir_path}/{tasks_path}",
+                path_before=f"{dir_path_before}/{tasks_path_before}",
+            )
+            out.append(task_file)
+        return out
+
+    def devcontainer_features(self) -> list[DynamicFile]:
+        out = []
+        for key, feat in self._data.items():
+            if not key.startswith("devfeature_"):
+                continue
+            path = f".devcontainer/{feat["path"]}"
+            feat_before = self._data_before.get(key, {})
+            path_before = f".devcontainer/{feat_before["path"]}" if feat_before else None
+            metadata = feat["feature"]
+            feature_file = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_FEATURE_METADATA,
+                subtype=(metadata["id"], metadata["name"]),
+                content=_unit.create_dynamic_file(
+                    file_type="json",
+                    content=metadata,
+                    **self._data["default"]["file_setting"]["json"],
+                ),
+                path=f"{path}/devcontainer-feature.json",
+                path_before=f"{path_before}/devcontainer-feature.json" if feat_before else None,
+            )
+            install_file = DynamicFile(
+                type=DynamicFileType.DEVCONTAINER_FEATURE_INSTALL,
+                subtype=(metadata["id"], metadata["name"]),
+                content=_unit.create_dynamic_file(
+                    file_type="txt",
+                    content=feat["install"],
+                ),
+                path=f"{path}/install.sh",
+                path_before=f"{path_before}/install.sh" if feat_before else None,
+            )
+            out.extend([feature_file, install_file])
+        return out

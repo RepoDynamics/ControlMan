@@ -36,21 +36,17 @@ FUNCNAME_CC_HOOK_FINAL = "finalization"
 
 CC_EXTENSION_TAG = u"!ext"
 
-RELATIVE_TEMPLATE_KEYS = ["__custom_template__"]
-CUSTOM_KEY = "__custom__"
+RELATIVE_TEMPLATE_KEYS = ["__temp__"]
+CUSTOM_KEY = "__data__"
 
 # GitHub Constants
 DIRPATH_ISSUES = ".github/ISSUE_TEMPLATE"
 FILEPATH_ISSUES_CONFIG = f"{DIRPATH_ISSUES}/config.yml"
-FILEPATH_FUNDING_CONFIG = ".github/FUNDING.yml"
-FILEPATH_CITATION_CONFIG = "CITATION.cff"
 DIRPATH_DISCUSSIONS = ".github/DISCUSSION_TEMPLATE"
 FILEPATH_PULL_TEMPLATE_MAIN = ".github/pull_request_template.md"
 DIRPATH_PULL_TEMPLATES = ".github/PULL_REQUEST_TEMPLATE"
 
 # Git Constants
-FILEPATH_GITIGNORE = ".gitignore"
-FILEPATH_GIT_ATTRIBUTES = ".gitattributes"
 ISSUE_FORM_TOP_LEVEL_KEYS = (
     "name",
     "description",
@@ -67,5 +63,4 @@ ISSUE_FORM_BODY_TOP_LEVEL_KEYS = (
 
 # Python Constants
 FILENAME_PACKAGE_TYPING_MARKER = "py.typed"
-FILENAME_PACKAGE_MANIFEST = "MANIFEST.in"
 FILENAME_PKG_PYPROJECT = "pyproject.toml"

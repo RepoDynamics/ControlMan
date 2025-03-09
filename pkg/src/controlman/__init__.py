@@ -28,6 +28,7 @@ def manager(
     github_token: str | None = None,
     future_versions: dict[str, str] | None = None,
     control_center_path: str | None = None,
+    validate: bool = True,
 ):
     if isinstance(repo, (str, _Path)):
         repo = _Git(path=repo)
@@ -38,7 +39,7 @@ def manager(
                 raise ValueError(f"Invalid control center path '{cc_path}'")
             data_before = _ps.NestedDict()
         else:
-            data_before = from_json_file(repo_path=repo.repo_path)
+            data_before = from_json_file(repo_path=repo.repo_path, validate=validate)
             cc_path = repo.repo_path / data_before["control.path"]
     else:
         cc_path = repo.repo_path / data_before["control.path"]
@@ -56,6 +57,7 @@ def manager(
 def from_json_file(
     repo_path: str | _Path,
     filepath: str = const.FILEPATH_METADATA,
+    validate: bool = True,
 ) -> _ps.NestedDict:
     """Load control center data from the full JSON file.
 
@@ -65,6 +67,8 @@ def from_json_file(
         Path to the repository root.
     filepath : str, default: controlman.const.FILEPATH_METADATA
         Relative path to the JSON file in the repository.
+    validate
+        Validate the data against the schema.
 
     Raises
     ------
@@ -75,7 +79,8 @@ def from_json_file(
         data = _ps.read.json_from_file(path=_Path(repo_path) / filepath)
     except _ps.exception.read.PySerialsReadException as e:
         raise _exception.load.ControlManInvalidMetadataError(cause=e, filepath=filepath) from None
-    _data_validator.validate(data=data, fill_defaults=False)
+    if validate:
+        _data_validator.validate(data=data, fill_defaults=False)
     return _ps.NestedDict(data)
 
 

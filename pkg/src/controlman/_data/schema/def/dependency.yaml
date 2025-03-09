@@ -7,7 +7,7 @@ description: |
   to run, build, test, or develop the project. 
   Dependencies can be installed using package managers or custom scripts.
 type: object
-required: [ name, import_name, install ]
+required: [ name, install ]
 properties:
   import_name:
     description: |
@@ -17,6 +17,7 @@ properties:
   name:
     description: Name of the module.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
+    default: ${{ .__key__ }}$
   description:
     description: A description for the module.
     type: string
@@ -48,11 +49,6 @@ properties:
       source:
         description: URL of the source code.
         $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
-  file:
-    summary: Dynamic files related to the module.
-    type: object
-    additionalProperties:
-      $ref: https://controlman.repodynamics.com/schema/dynamic-file
   intersphinx_mapping:
     description: Intersphinx mapping definition of the module.
     type: object
@@ -99,7 +95,7 @@ properties:
             default: |
               #{{
                 import re
-                dep_name = get("..name")
+                dep_name = get("...name")
                 name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", dep_name).lower()
                 return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", name_normalized)
               }}#
@@ -133,22 +129,18 @@ properties:
           spec:
             summary: Full match specification.
             readOnly: true
-            type: object
-            properties:
-              environment:
-                summary: Specification for an `environment.yml` file.
-                type: string
-                default: |-
-                  #{{
-                    spec = [get("..channel")]
-                    for part_name, part_prefix in (
-                      ("subdir", "/"), ("name", "::"), ("version", " "), ("build", " ")
-                    ):
-                        part = get(f"..{part_name}")
-                        if part:
-                            spec.append(f"{part_prefix}{part}")
-                    return "".join(spec)
-                  }}#
+            type: string
+            default: |-
+              #{{
+                spec = [get(".channel")]
+                for part_name, part_prefix in (
+                  ("subdir", "/"), ("name", "::"), ("version", " "), ("build", " ")
+                ):
+                    part = get(f".{part_name}")
+                    if part:
+                        spec.append(f"{part_prefix}{part}")
+                return "".join(spec)
+              }}#
       pip:
         title: pip
         summary: Specifications for the `pip` package manager.
@@ -169,7 +161,7 @@ properties:
             default: |
               #{{
                 import re
-                dep_name = get("..name")
+                dep_name = get("...name")
                 name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", dep_name).lower()
                 return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", name_normalized)
               }}#
@@ -183,8 +175,6 @@ properties:
               [version Specifiers](https://packaging.python.org/en/latest/specifications/version-specifiers/#id5).
             examples:
               - ">=1.21.2"
-            default: >-
-              #{{ return get("..conda.version", "") }}#
           extras:
             summary: >-
               List of 
@@ -205,21 +195,18 @@ properties:
           spec:
             summary: Full dependency specifier.
             readOnly: true
-            type: object
-            properties:
-              pep508:
-                type: string
-                default: |-
-                  #{{
-                    spec = [get("..name")]
-                    if extras := get("..extras"):
-                        spec.append(f"[{','.join(extras)}]")
-                    if version := get("..version"):
-                        spec.append(version)
-                    if marker := get("..marker"):
-                        spec.append(f"; {marker}")
-                    return " ".join(spec)
-                  }}#
+            type: string
+            default: |-
+              #{{
+                spec = [get(".name")]
+                if extras := get(".extras"):
+                    spec.append(f"[{','.join(extras)}]")
+                if version := get(".version"):
+                    spec.append(version)
+                if marker := get(".marker"):
+                    spec.append(f"; {marker}")
+                return " ".join(spec)
+              }}#
       apt:
         summary: Specifications for the `apt-get` package manager.
         type: object
@@ -232,7 +219,7 @@ properties:
             default: |
               #{{
                 import re
-                dep_name = get("..name")
+                dep_name = get("...name")
                 name_normalized = re.sub(r"[^a-zA-Z0-9._-]", "-", dep_name).lower()
                 return re.sub(r"^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$", "", name_normalized)
               }}#
@@ -431,7 +418,7 @@ properties:
         summary: Custom PowerShell script to install the package.
         type: string
   selector:
-    summary: Dependency selector.
+    summary: Selector to apply to the dependency.
     $ref: https://jsonschemata.repodynamics.com/string/oneline
   validator:
     summary: Dependency installation validator.
