@@ -2578,7 +2578,7 @@ properties:
         examples:
           - MDEwOlJlcG9zaXRvcnkxMjk2MjY5
       owner:
-        summary: itHub username of the repository owner.
+        summary: GitHub username of the repository owner.
         type: string
       name:
         summary: Repository name.
