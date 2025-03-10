@@ -343,17 +343,12 @@ properties:
       items:
         type: string
   postStartCommand:
-    type:
-      - string
-      - array
-      - object
+    type: object
     description: A command to run after starting the container. This command is
       run after "postCreateCommand" and before "postAttachCommand". If this is
       a single string, it will be run in a shell. If this is an array of strings,
       it will be run as a single command without shell. If this is an object,
       each provided command will be run in parallel.
-    items:
-      type: string
     additionalProperties:
       type:
         - string
