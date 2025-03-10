@@ -230,7 +230,7 @@ class ConfigFileGenerator:
         docker_compose_data = self._data["devcontainer.docker-compose"]
         docker_compose_path = docker_compose_data["path"]
         devcontainers = {
-            k.removeprefix("devcontainers_"): v
+            k.removeprefix("devcontainer_"): v
             for k, v in self._data.items() if k.startswith("devcontainer_")
         }
         create_docker_compose()

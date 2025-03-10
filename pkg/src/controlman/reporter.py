@@ -20,14 +20,18 @@ class ControlCenterReporter:
         self.files = files
         self.dirs = dirs
         self.has_changed_metadata = bool(self.metadata)
-        self.has_changed_files = any(
-            file.change not in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED)
-            for file in self.files
-        )
-        self.has_changed_dirs = any(
-            dir_.change not in (DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED)
-            for dir_ in self.dirs
-        )
+        self.changed_files = [
+            file for file in self.files if file.change not in (
+                DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED, DynamicFileChangeType.INACTIVE
+            )
+        ]
+        self.changed_dirs = [
+            dir_ for dir_ in self.dirs if dir_.change not in (
+                DynamicFileChangeType.DISABLED, DynamicFileChangeType.UNCHANGED, DynamicFileChangeType.INACTIVE
+            )
+        ]
+        self.has_changed_files = bool(self.changed_files)
+        self.has_changed_dirs = bool(self.changed_dirs)
         self.has_changes = self.has_changed_metadata or self.has_changed_files or self.has_changed_dirs
         return
 
