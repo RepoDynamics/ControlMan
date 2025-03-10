@@ -54,7 +54,7 @@ class FormGenerator:
                     problem=f"Issue form {form["id"]} does not have a 'checkboxes' element; no marker could be added.",
                     json_path=f"issue.forms[{form_idx}].body",
                 )
-            file_content = _ps.write.to_yaml_string(data=form_output, end_of_file_newline=True)
+            file_content = _ps.write.to_yaml_string(data=_copy.deepcopy(form_output), end_of_file_newline=True)
             filename = f"{form_idx + 1:02}_{form['id']}.yaml"
             path = f"{_const.DIRPATH_ISSUES}/{filename}"
             out.append(
