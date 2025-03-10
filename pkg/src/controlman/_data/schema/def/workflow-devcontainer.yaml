@@ -24,7 +24,7 @@ properties:
     summary: A name for the image created from the container.
     type: string
     default: >-
-      #{{ return f"{get('name')}-{get('.id').replace('_', '-')}".lower() }}#
+      #{{ return f"{slugify(get('name'))}-devcontainer-{get('.id').replace('_', '-')}".lower() }}#
   ref:
     summary: Git reference to trigger image push.
     type: string
