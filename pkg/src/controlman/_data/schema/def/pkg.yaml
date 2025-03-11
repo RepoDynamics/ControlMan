@@ -809,5 +809,5 @@ properties:
           properties:
             env:
               type: object
-        report_artifact_suffix:
+        artifact_name_suffix:
           type: string

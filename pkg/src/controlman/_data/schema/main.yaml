@@ -3125,10 +3125,7 @@ properties:
         properties:
           name:
             type: string
-            default: Test ({{ source }} - v{{ version }})
-          task_name:
-            type: string
-            default: 'py{{ python }} | {{ os }}'
+            default: Test ({{ pkg.name }} - v{{ version }})
           codecov:
             type: object
             properties:
@@ -3143,13 +3140,13 @@ properties:
               report:
                 $ref: https://controlman.repodynamics.com/schema/workflow-artifact
                 default:
-                  name: Test Report - {{ source }} - v{{ version }} - py{{ python }} - {{ os }}
+                  name: 'Test Report - '
                   path: report
                   merge:
                     name: Test Reports - {{ source }} - v{{ version }}
                     pattern: Test Report -*
           action:
-            description: Type of action for lint tasks.
+            description: Type of action for test tasks.
             type: string
             enum: [ auto, disabled ]
             default: auto
