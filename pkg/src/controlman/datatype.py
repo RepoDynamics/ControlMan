@@ -63,6 +63,7 @@ class DynamicFile(_NamedTuple):
     path: str | None = None
     path_before: str | None = None
     change: DynamicFileChangeType | None = None
+    executable: bool = False
 
 
 class DynamicDir(_NamedTuple):
