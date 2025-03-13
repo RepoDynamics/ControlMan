@@ -1,9 +1,12 @@
 from __future__ import annotations as _annotations
 
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 from pathlib import Path as _Path
 from xml.etree import ElementTree as _ElementTree
 import copy as _copy
 import os as _os
+import re as _re
+import shlex as _shlex
 
 from loggerman import logger
 import pyserials as _ps
@@ -13,6 +16,8 @@ from controlman.datatype import DynamicFile, DynamicFileType, DynamicFileChangeT
 from controlman.file_gen import unit as _unit
 from controlman import const as _const
 
+if _TYPE_CHECKING:
+    from typing import Literal
 
 class ConfigFileGenerator:
     def __init__(
@@ -98,6 +103,7 @@ class ConfigFileGenerator:
         file_info = {
             "type": DynamicFileType.CUSTOM,
             "subtype": (key, file.get("name", key)),
+            "executable": file["type"] == "exec",
         }
         if file["status"] == "delete":
             file_info["path_before"] = file["path"]
@@ -214,17 +220,64 @@ class ConfigFileGenerator:
             out.append(docker_compose_file)
             return
 
-        def create_task_function(task: dict, env_name: str, task_in_env_prefix: str) -> str:
+        def quote_shell_arguments(args: list[str] | None) -> list[str]:
+            """Quotes arguments safely for Bash while preserving special shell parameters."""
+            return [
+                f'"{arg}"' if unquoted_task_process_patterns.match(arg) else _shlex.quote(arg)
+                for arg in (args or [])
+            ]
+
+        def resolve_task_settings(
+            devcontainer: dict,
+            typ: Literal["local", "global"],
+            environment: dict | None = None
+        ):
+            typ2 = "environment" if environment else "root"
+            jsonpath = f"default.task_setting.{typ}.{typ2}"
+            settings = self._data.get(jsonpath, {})
+            settings_filled = _unit.fill_jinja_templates(
+                templates=settings,
+                jsonpath=jsonpath,
+                env_vars={"devcontainer": devcontainer, "environment": environment or {}}
+            )
+            out = _copy.deepcopy(devcontainer.get("task_setting", {}).get(typ, {}).get(typ2, {}))
+            _ps.update.recursive_update(
+                source=out,
+                addon=settings_filled,
+            )
+            return out
+
+        def create_task_function(
+            task: dict,
+            task_setting: dict,
+        ) -> str:
+            def add_lines(content: str):
+                lines.extend([(f"{indent}{line}" if line else "") for line in content.splitlines()])
+                return
+
             lines = [f"{task["alias"]}() {{"]
             indent = 4 * " "
             if "script" in task:
-                lines.extend([f"{indent}{line}" for line in task["script"].strip().splitlines()])
+                settings = task_setting.get("script", {})
+                add_lines(settings.get("prepend", ""))
+                add_lines(task["script"])
+                add_lines(settings.get("append", ""))
             else:
-                cmd_prefix = task_in_env_prefix.format(env_name=env_name).strip()
-                cmd = f"{cmd_prefix} {" ".join(task["process"])}"
-                lines.append(f"{indent}{cmd}")
+                settings = task_setting.get("process", {})
+                cmd = settings.get("prepend", [])
+                cmd.extend(task["process"])
+                cmd.extend(settings.get("append", []))
+                cmd_quoted = quote_shell_arguments(cmd)
+                add_lines(" ".join(cmd_quoted))
             lines.append("}")
             return "\n".join(lines)
+
+        unquoted_task_process_patterns = _re.compile(
+            r'^\$(\d+|\*|@)$'  # Matches $1, $2, ..., $@, $*
+            r'|^\$\{[^}]+\}$'  # Matches ${VAR}, ${ARRAY[@]}, ${1}, etc.
+            r'|^\$\w+$'  # Matches $VAR
+            r'|^\$\(.+\)$'  # Matches $(command)
+        )
 
         out = []
         docker_compose_data = self._data["devcontainer.docker-compose"]
@@ -234,15 +287,6 @@ class ConfigFileGenerator:
             for k, v in self._data.items() if k.startswith("devcontainer_")
         }
         create_docker_compose()
-        env_dirname = self._data["devcontainer.containers.rel_path.environment"]
-        apt_path = self._data["devcontainer.containers.rel_path.apt"]
-        conda_path = self._data["devcontainer.containers.rel_path.conda"]
-        tasks_path = self._data["devcontainer.containers.rel_path.tasks"]
-
-        env_dirname_before = self._data_before["devcontainer.containers.rel_path.environment"] or env_dirname
-        apt_path_before = self._data_before["devcontainer.containers.rel_path.apt"] or apt_path
-        conda_path_before = self._data_before["devcontainer.containers.rel_path.conda"] or conda_path
-        tasks_path_before = self._data_before["devcontainer.containers.rel_path.tasks"] or tasks_path
 
         for container_id, container in devcontainers.items():
             container_before = self._data_before.get(f"devcontainer_{container_id}", {})
@@ -255,8 +299,8 @@ class ConfigFileGenerator:
                     file_type="txt",
                     content=container["dockerfile"],
                 ),
-                path=f"{dir_path}/Dockerfile",
-                path_before=f"{dir_path_before}/Dockerfile",
+                path=f"{container["path"]["dockerfile"]}",
+                path_before=f"{container_before.get("path", {}).get("dockerfile")}",
             )
             out.append(dockerfile)
             # devcontainer.json file
@@ -284,8 +328,8 @@ class ConfigFileGenerator:
                     file_type="txt",
                     content=[pkg["spec"]["full"] for pkg in container["apt"].values()],
                 ) if container.get("apt") else None,
-                path=f"{dir_path}/{env_dirname}/{apt_path}",
-                path_before=f"{dir_path_before}/{env_dirname_before}/{apt_path_before}",
+                path=f"{container["path"]["apt"]}",
+                path_before=f"{container_before.get("path", {}).get("apt")}",
             )
             out.append(apt_file)
             # conda environment files
@@ -307,36 +351,37 @@ class ConfigFileGenerator:
                 )
                 out.append(env_file)
             # bash task file
-            tasks = []
+            tasks = {"local": [], "global": []}
             for task in container.get("task", {}).values():
-                tasks.append(
-                    create_task_function(
-                        task=task,
-                        env_name="base",
-                        task_in_env_prefix=container["task_in_env_prefix"]
-                    )
-                )
-            for environment in container.get("environment", {}).values():
-                for task in environment.get("task", {}).values():
-                    tasks.append(
+                for typ in tasks.keys():
+                    tasks[typ].append(
                         create_task_function(
                             task=task,
-                            env_name=environment["name"],
-                            task_in_env_prefix=container["task_in_env_prefix"]
+                            task_setting=resolve_task_settings(devcontainer=container, typ=typ),
                         )
                     )
-            task_file = DynamicFile(
-                type=DynamicFileType.DEVCONTAINER_TASK,
-                subtype=(container_id, container.get("name", container_id)),
-                content=_unit.create_dynamic_file(
-                    file_type="txt",
-                    content=tasks,
-                    content_item_separator="\n\n",
-                ) if tasks else None,
-                path=f"{dir_path}/{tasks_path}",
-                path_before=f"{dir_path_before}/{tasks_path_before}",
-            )
-            out.append(task_file)
+            for environment in container.get("environment", {}).values():
+                for task in environment.get("task", {}).values():
+                    for typ in tasks.keys():
+                        tasks[typ].append(
+                            create_task_function(
+                                task=task,
+                                task_setting=resolve_task_settings(devcontainer=container, typ=typ, environment=environment),
+                            )
+                        )
+            for typ in tasks.keys():
+                task_file = DynamicFile(
+                    type=DynamicFileType.DEVCONTAINER_TASK,
+                    subtype=(container_id, container.get("name", container_id)),
+                    content=_unit.create_dynamic_file(
+                        file_type="txt",
+                        content=tasks[typ],
+                        content_item_separator="\n\n",
+                    ) if tasks[typ] else None,
+                    path=f"{container["path"][f"tasks_{typ}"]}",
+                    path_before=f"{container_before.get("path", {}).get(f"tasks_{typ}")}",
+                )
+                out.append(task_file)
         return out
 
     def devcontainer_features(self) -> list[DynamicFile]:
