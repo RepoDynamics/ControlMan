@@ -79,7 +79,7 @@ def validate_user_schema(data: NestedDict, before_substitution: bool):
             validate_data(f"{key}.data", dynamic_file["data"])
         return
 
-    def validate_files_or_deps(key: str, dynamic_files):
+    def validate_files_or_deps(key: str, dynamic_files: str | dict):
         if isinstance(dynamic_files, str):
             dynamic_files = data.fill(key)
         for file_key, file in dynamic_files.items():
@@ -98,6 +98,8 @@ def validate_user_schema(data: NestedDict, before_substitution: bool):
                 validate_files_or_deps(f"{k}.file", v["file"])
             if "apt" in v:
                 validate_files_or_deps(f"{k}.apt", v["apt"])
+            if "task" in v:
+                validate_files_or_deps(f"{k}.task", v["task"])
             if "environment" in v:
                 envs = v["environment"]
                 if isinstance(envs, str):
@@ -105,7 +107,7 @@ def validate_user_schema(data: NestedDict, before_substitution: bool):
                 for env_key, env in envs.items():
                     if isinstance(env, str):
                         env = data.fill(f"{k}.environment.{env_key}")
-                    for key in ("conda", "pip", "file"):
+                    for key in ("conda", "pip", "file", "task"):
                         if key in env:
                             validate_files_or_deps(f"{k}.environment.{env_key}.{key}", env[key])
         elif k.startswith("pypkg_"):
