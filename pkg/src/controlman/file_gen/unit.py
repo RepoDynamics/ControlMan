@@ -11,6 +11,8 @@ import jsonpath_ng as _jpath
 import mdit as _mdit
 import pyserials as _ps
 import pylinks as _pl
+import jinja2 as _jinja
+from loggerman import logger as _logger
 
 if _TYPE_CHECKING:
     from typing import Literal, Callable, Any, Sequence
@@ -149,7 +151,7 @@ def create_environment_files(
 
 
 def create_dynamic_file(
-    file_type: Literal["yaml", "json", "toml", "txt"],
+    file_type: Literal["yaml", "json", "toml", "txt", "exec"],
     content,
     filters: Sequence[tuple[str, Callable[[Any], bool], bool]] = (),
     content_item_separator: str = "\n",
@@ -179,7 +181,14 @@ def create_dynamic_file(
                 if not inplace:
                     jsonpath = _jpath.parse(jsonpath_str)
                     content = jsonpath.filter(filter_func, content)
-    if file_type == "txt":
+    if order:
+        key_priority = {key: index for index, key in enumerate(order)}
+        sorted_items = sorted(
+            content.items(),
+            key=lambda item: key_priority.get(item[0], len(order))
+        )
+        content = dict(sorted_items)
+    if file_type in ("txt", "exec"):
         if isinstance(content, str):
             return content
         elif isinstance(content, (list, dict)):
@@ -188,13 +197,6 @@ def create_dynamic_file(
                 for content_item in (content if isinstance(content, list) else content.values())
             )
         raise ValueError(f"Content type {type(content)} not supported for dynamic files.")
-    if order:
-        key_priority = {key: index for index, key in enumerate(order)}
-        sorted_items = sorted(
-            content.items(),
-            key=lambda item: key_priority.get(item[0], len(order))
-        )
-        content = dict(sorted_items)
     return _ps.write.to_string(
         data=content,
         data_type=file_type,
@@ -226,6 +228,35 @@ def create_md_content(file: dict, repo_path: str | _Path) -> str:
     return doc_str
 
 
+def fill_jinja_templates(templates: dict | list | str, jsonpath: str, env_vars: dict | None = None) -> dict:
+
+    def recursive_fill(template, path):
+        if isinstance(template, dict):
+            filled = {}
+            for key, value in template.items():
+                new_path = f"{path}.{key}"
+                filled[recursive_fill(key, new_path)] = recursive_fill(value, new_path)
+            return filled
+        if isinstance(template, list):
+            filled = []
+            for idx, value in enumerate(template):
+                new_path = f"{path}[{idx}]"
+                filled.append(recursive_fill(value, new_path))
+            return filled
+        if isinstance(template, str):
+            try:
+                filled = _jinja.Template(template).render(env_vars)
+            except Exception as e:
+                _logger.critical(
+                    "Jinja Templating",
+                    f"Failed to render Jinja template at '{path}': {e}",
+                    _logger.traceback()
+                )
+                raise ValueError(f"Failed to render Jinja template at '{path}'") from e
+            return filled
+        return template
+
+    return recursive_fill(templates, jsonpath)
 
 
 
