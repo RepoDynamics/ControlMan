@@ -330,15 +330,55 @@ patternProperties:
     required: [ container, dockerfile, path ]
     properties:
       path:
-        summary: Path to the directory containing the devcontainer configuration.
-        type: string
-        pattern: ^\.devcontainer(?:/[a-zA-Z0-9_-]+)?$
-        default: |
-          #{{
-            container_id = get(".__key__").removeprefix("devcontainer_")
-            suffix = "" if container_id == "main" else f"/{get("devcontainer.containers.dir_prefix")}{container_id}"
-            return f".devcontainer{suffix}"
-          }}#
+        summary: Paths to the devcontainer directories and files.
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          root:
+            summary: Path to the directory containing the devcontainer configuration.
+            type: string
+            pattern: ^\.devcontainer(?:/[a-zA-Z0-9_-]+)?$
+            default: |
+              #{{
+                container_id = get("..__key__").removeprefix("devcontainer_")
+                suffix = "" if container_id == "main" else f"/{get("devcontainer.containers.dir_prefix")}{container_id}"
+                return f".devcontainer{suffix}"
+              }}#
+          tasks_local:
+            summary: Path to the local tasks script file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ .root }}$/${{ devcontainer.container.rel_path.tasks_local }}$
+          tasks_global:
+            summary: Path to the global tasks script file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ .root }}$/${{ devcontainer.container.rel_path.tasks_global }}$
+          environment:
+            summary: Path to the environment directory.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ .root }}$/${{ devcontainer.container.rel_path.environment }}$
+          conda_rel:
+            summary: Path to the conda directory relative to the environment directory.
+            type: string
+            default: ${{ devcontainer.container.rel_path.conda }}$
+          conda:
+            summary: Path to the conda environment directory.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            readOnly: true
+            default: ${{ .environment }}$/${{ .conda_rel }}$
+          apt_rel:
+            summary: Path to the apt file relative to the environment directory.
+            type: string
+            default: ${{ devcontainer.container.rel_path.apt }}$
+          apt:
+            summary: Path to the apt file.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            readOnly: true
+            default: ${{ .environment }}$/${{ .apt_rel }}$
+          dockerfile:
+            summary: Path to the Dockerfile.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: ${{ .root }}$/Dockerfile
       service:
         type: object
       dockerfile:
@@ -357,10 +397,8 @@ patternProperties:
         type: object
         additionalProperties:
           $ref: https://controlman.repodynamics.com/schema/bash-task
-      task_in_env_prefix:
-        type: string
-        default: >-
-          conda run --cwd '${{ .container.workspaceFolder }}$' -n {env_name} --live-stream -vv
+      task_setting:
+        $ref: https://controlman.repodynamics.com/schema/bash-task-setting
       environment:
         type: object
         additionalProperties:
@@ -393,15 +431,8 @@ patternProperties:
                 $ref: https://controlman.repodynamics.com/schema/bash-task
             path:
               summary: Path to the environment file.
-              type: string
-              pattern: ^\.devcontainer/
-              default: |
-                  #{{
-                    devcontainer_dir = get("...path")
-                    env_dir = get("devcontainer.containers.rel_path.environment")
-                    conda_dir = get("devcontainer.containers.rel_path.conda")
-                    return f"{devcontainer_dir}/{env_dir}/{conda_dir}/{get(".__key__")}.yaml"
-                  }}#
+              $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+              default: ${{ ...path.conda }}$/${{ .__key__ }}$.yaml
       file:
         summary: Dynamic files related to the container.
         type: object
@@ -2950,10 +2981,14 @@ properties:
             type: object
             default: { }
             properties:
-              tasks:
-                summary: Path to the output tasks file.
+              tasks_local:
+                summary: Path to the output local tasks file.
                 $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
-                default: tasks.sh
+                default: tasks_local.sh
+              tasks_global:
+                summary: Path to the output global tasks file.
+                $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
+                default: tasks_global.sh
               environment:
                 summary: Path to the environment directory.
                 $ref: https://controlman.repodynamics.com/schema/dynamic-file-path
@@ -3638,6 +3673,15 @@ properties:
     additionalProperties: false
     default: { }
     properties:
+      build:
+        type: object
+        default: { }
+        additionalProperties: false
+        properties:
+          path:
+            summary: Path to the local build directory.
+            $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
+            default: .local/build
       cache:
         type: object
         default: { }
@@ -3755,6 +3799,8 @@ properties:
           yaml:
             default: { }
             $ref: https://controlman.repodynamics.com/schema/dynamic-file-setting-yaml
+      task_setting:
+        $ref: https://controlman.repodynamics.com/schema/bash-task-setting
   changelogs:
     $ref: https://controlman.repodynamics.com/schema/changelog
   contributor:
