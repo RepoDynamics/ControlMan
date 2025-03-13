@@ -2,6 +2,7 @@ from pathlib import Path as _Path
 import shutil as _shutil
 import functools as _functools
 import re as _re
+import stat as _stat
 
 import controlman
 from versionman.pep440_semver import PEP440SemVer as _PEP440SemVer
@@ -254,9 +255,13 @@ class CenterManager:
         for generated_file in generated_files:
             filepath_abs = self._path_root / generated_file.path if generated_file.path else None
             filepath_before_abs = self._path_root / generated_file.path_before if generated_file.path_before else None
-            if generated_file.change is DynamicFileChangeType.REMOVED:
+            if generated_file.change in (
+                DynamicFileChangeType.REMOVED,
+                DynamicFileChangeType.MOVED,
+                DynamicFileChangeType.MOVED_MODIFIED
+            ):
                 filepath_before_abs.unlink(missing_ok=True)
-            elif generated_file.change in (
+            if generated_file.change in (
                 DynamicFileChangeType.ADDED,
                 DynamicFileChangeType.MODIFIED,
                 DynamicFileChangeType.MOVED_MODIFIED,
@@ -265,9 +270,8 @@ class CenterManager:
                 filepath_abs.parent.mkdir(parents=True, exist_ok=True)
                 with open(filepath_abs, "w") as f:
                     f.write(f"{generated_file.content.strip()}\n")
-                if generated_file.change in (DynamicFileChangeType.MOVED, DynamicFileChangeType.MOVED_MODIFIED):
-                    filepath_before_abs.unlink(missing_ok=True)
-
+                if generated_file.executable:
+                    filepath_abs.chmod(filepath_abs.stat().st_mode | _stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH)
         self._apply_duplicates()
         with _logger.sectioning("CCA Synchronization Hooks"):
             self._hook_manager.generate(const.FUNCNAME_CC_HOOK_SYNC)
