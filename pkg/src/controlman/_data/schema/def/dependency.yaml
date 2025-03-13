@@ -118,6 +118,9 @@ properties:
               Build string according to
               [Conda Build](https://conda.io/projects/conda-build/en/stable/resources/package-spec.html#package-match-specifications).
             type: string
+          subdir:
+            summary: Subdirectory of the package.
+            type: string
           selector:
             description: |
               Line selector to apply to the dependency.
