@@ -47,7 +47,7 @@ def generate(
         ):
             type_dict = data_entry.setdefault(generated_file.type.value[0], {})
             if generated_file.subtype[0] in type_dict:
-                raise RuntimeError(f"Duplicate dynamic file subtype: {generated_file.subtype[0]}")
+                raise RuntimeError(f"Duplicate dynamic file type and subtype: {generated_file.type.value[0]} {generated_file.subtype[0]}")
             type_dict[generated_file.subtype[0]] = generated_file.path
     data["project.file"] = data_entry
     metadata_file = _dtype.DynamicFile(

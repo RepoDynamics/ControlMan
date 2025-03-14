@@ -194,7 +194,7 @@ class ConfigFileGenerator:
                 service.setdefault("build", {}).update(
                     {
                         "context": path_to_root_from_compose_file,
-                        "dockerfile": f"{container["path"]}/Dockerfile",
+                        "dockerfile": container["path"]["dockerfile"],
                     }
                 )
                 services[service_name] = {
@@ -290,8 +290,6 @@ class ConfigFileGenerator:
 
         for container_id, container in devcontainers.items():
             container_before = self._data_before.get(f"devcontainer_{container_id}", {})
-            dir_path = container["path"]
-            dir_path_before = container_before.get("path", dir_path)
             dockerfile = DynamicFile(
                 type=DynamicFileType.DEVCONTAINER_DOCKERFILE,
                 subtype=(container_id, container["container"].get("name", container_id)),
@@ -304,10 +302,11 @@ class ConfigFileGenerator:
             )
             out.append(dockerfile)
             # devcontainer.json file
-            container_path = f"{dir_path}/devcontainer.json"
+            container_path = f"{container["path"]["root"]}/devcontainer.json"
             container["container"].setdefault("dockerComposeFile", []).append(
                 _os.path.relpath(docker_compose_path, _os.path.dirname(container_path))
             )
+            dir_path_before = container_before.get("path", {}).get("root")
             container_file = DynamicFile(
                 type=DynamicFileType.DEVCONTAINER_METADATA,
                 subtype=(container_id, container.get("name", container_id)),
@@ -317,7 +316,7 @@ class ConfigFileGenerator:
                     **self._data["default"]["file_setting"]["json"],
                 ),
                 path=container_path,
-                path_before=f"{dir_path_before}/devcontainer.json",
+                path_before=f"{dir_path_before}/devcontainer.json" if dir_path_before else None,
             )
             out.append(container_file)
             # apt.txt file
@@ -371,7 +370,7 @@ class ConfigFileGenerator:
                         )
             for typ in tasks.keys():
                 task_file = DynamicFile(
-                    type=DynamicFileType.DEVCONTAINER_TASK,
+                    type=DynamicFileType[f"DEVCONTAINER_TASK_{typ.upper()}"],
                     subtype=(container_id, container.get("name", container_id)),
                     content=_unit.create_dynamic_file(
                         file_type="txt",

@@ -115,6 +115,10 @@ class CenterManager:
                 cache_manager=self._cache_manager,
                 github_token=self._github_token,
             )
+
+        def get_prefix(get, prefix: str):
+            return [get(key) for key in full_data.keys() if key.startswith(prefix)]
+
         self._data_raw = _ps.NestedDict(
             full_data,
             code_context={
@@ -133,6 +137,7 @@ class CenterManager:
                 "team_members_with_role_types": _helper.team_members_with_role_types,
                 "team_members_without_role_types": _helper.team_members_without_role_types,
                 "team_members_with_role_ids": _helper.team_members_with_role_ids,
+                "get_prefix": get_prefix,
             },
             code_context_call=code_context_call,
             relative_template_keys=const.RELATIVE_TEMPLATE_KEYS,

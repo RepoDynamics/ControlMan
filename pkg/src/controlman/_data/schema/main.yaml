@@ -348,19 +348,19 @@ patternProperties:
           tasks_local:
             summary: Path to the local tasks script file.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ .root }}$/${{ devcontainer.container.rel_path.tasks_local }}$
+            default: ${{ .root }}$/${{ devcontainer.containers.rel_path.tasks_local }}$
           tasks_global:
             summary: Path to the global tasks script file.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ .root }}$/${{ devcontainer.container.rel_path.tasks_global }}$
+            default: ${{ .root }}$/${{ devcontainer.containers.rel_path.tasks_global }}$
           environment:
             summary: Path to the environment directory.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: ${{ .root }}$/${{ devcontainer.container.rel_path.environment }}$
+            default: ${{ .root }}$/${{ devcontainer.containers.rel_path.environment }}$
           conda_rel:
             summary: Path to the conda directory relative to the environment directory.
             type: string
-            default: ${{ devcontainer.container.rel_path.conda }}$
+            default: ${{ devcontainer.containers.rel_path.conda }}$
           conda:
             summary: Path to the conda environment directory.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
@@ -369,7 +369,7 @@ patternProperties:
           apt_rel:
             summary: Path to the apt file relative to the environment directory.
             type: string
-            default: ${{ devcontainer.container.rel_path.apt }}$
+            default: ${{ devcontainer.containers.rel_path.apt }}$
           apt:
             summary: Path to the apt file.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
