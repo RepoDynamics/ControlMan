@@ -97,4 +97,5 @@ def _compare_file(file: _dtype.DynamicFile, repo_path: _Path) -> _dtype.DynamicF
         path=file.path,
         path_before=path_before,
         change=typ,
+        executable=file.executable,
     )

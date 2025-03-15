@@ -412,6 +412,7 @@ class ConfigFileGenerator:
                 ),
                 path=f"{path}/install.sh",
                 path_before=f"{path_before}/install.sh" if feat_before else None,
+                executable=True,
             )
             out.extend([feature_file, install_file])
         return out
