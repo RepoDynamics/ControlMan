@@ -342,6 +342,7 @@ class ConfigFileGenerator:
                             packages=list(env.get("conda", {}).values()),
                             pip_packages=list(env.get("pip", {}).values()),
                             env_name=env["name"],
+                            variables=list(env.get("variable", {}).values()),
                         ),
                         **self._data["default"]["file_setting"]["yaml"],
                     ),

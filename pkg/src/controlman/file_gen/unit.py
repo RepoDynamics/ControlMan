@@ -22,6 +22,7 @@ def create_env_file_conda(
     packages: list[dict] | None = None,
     pip_packages: list[dict] | None = None,
     env_name: str | None = None,
+    variables: list[dict] | None = None,
 ) -> dict:
     """Create a Conda
     [environment.yml](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually)
@@ -37,9 +38,8 @@ def create_env_file_conda(
         List of dictionaries with pip package details.
     env_name
         Name of the conda environment.
-    indent:
-        Number of spaces to use for indentation.
-        If `None`, a compact format is used with no indentation or newlines.
+    variables:
+        Environment variables to set in the conda environment.
     """
     file = {}
     if env_name:
@@ -51,6 +51,10 @@ def create_env_file_conda(
         pip_specs = sorted([pkg["spec"]["full"] for pkg in pip_packages])
         dependencies.append({"pip": pip_specs})
     file["dependencies"] = dependencies
+    if variables:
+        # https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html#setting-environment-variables
+        # https://stackoverflow.com/questions/31598963/how-to-set-specific-environment-variables-when-activating-conda-environment
+        file["variables"] = {var["key"]: var["value"] for var in variables}
     return file
 
 

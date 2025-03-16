@@ -429,6 +429,10 @@ patternProperties:
               type: object
               additionalProperties:
                 $ref: https://controlman.repodynamics.com/schema/bash-task
+            variable:
+              type: object
+              additionalProperties:
+                $ref: https://controlman.repodynamics.com/schema/env-var
             path:
               summary: Path to the environment file.
               $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
@@ -3673,15 +3677,15 @@ properties:
     additionalProperties: false
     default: { }
     properties:
-      build:
+      temp:
         type: object
         default: { }
         additionalProperties: false
         properties:
           path:
-            summary: Path to the local build directory.
+            summary: Path to the local temporary directory.
             $ref: https://jsonschemata.repodynamics.com/path/posix/absolute-from-cwd
-            default: .local/build
+            default: .local/temp
       cache:
         type: object
         default: { }
