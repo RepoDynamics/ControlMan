@@ -84,6 +84,8 @@ class PythonPackageFileGenerator:
         else:
             changelog = {}
         for typ, changelog in (("local", None), ("global", changelog)):
+            if "conda" not in self._pkg:
+                continue
             meta = CondaRecipeGenerator(
                 meta=self._pkg["conda.recipe.meta"],
                 pkg=self._pkg,
@@ -272,14 +274,14 @@ class PythonPackageFileGenerator:
             },
         }
         out = {}
-        for key, value in self._pkg["pyproject"].items():
+        for key, value in sorted(self._pkg["pyproject"].items()):
             if not value:
                 continue
             if key in pyproject:
                 out[key] = self._convert_to_toml_format(data=value, types=pyproject[key])
             else:
                 out[key] = value
-        file_content = _ps.write.to_toml_string(data=out, sort_keys=False)
+        file_content = _ps.write.to_toml_string(data=out, sort_keys=True)
         file = DynamicFile(
             type=DynamicFileType.PKG_CONFIG,
             subtype=(f"{self._type}_pyproject", f"{self._type.upper()} PyProject"),
@@ -292,7 +294,7 @@ class PythonPackageFileGenerator:
     @staticmethod
     def _convert_to_toml_format(data: dict, types: dict) -> dict:
         out = {}
-        for key, val in data.items():
+        for key, val in sorted(data.items()):
             if not val:
                 continue
             if key in types:
